@@ -32712,7 +32712,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [favVp, setFavVp] = useState(0);        // the window resized: lay it out again, as live does
   // ── the viewer ──
   const favCur = favView ? (favs[favView.i] || null) : null;
+  const favFromMineRef = useRef(null);   // the Favorites opened from a tile of Mine: its ✕ goes back to that tab of Mine
   const _favOpen = ()=>{
+    favFromMineRef.current=null;
     setNavMenuOpen(false);
     if(micActive || recording) return;
     try{ if(playing && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
@@ -43472,7 +43474,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(mineEdit){ setMineArm(null); setMineRen({it, v:it.t||''}); return; }   // Edit: a tap renames
           if(it.type==='music'){ _load(()=>loadFromMyMusic(it.rec)); return; }
           if(it.type==='image'){ _load(()=>loadFromMyImg(it.rec)); return; }
-          const i=favs.findIndex(x=>x.id===it.rec.id); _close(); try{ if(studioHome && (feedAt>=0 || feedLoaded!==null)) _feedExit(); }catch(_){} _favOpen(); setFavView({i:Math.max(0,i)});
+          const i=favs.findIndex(x=>x.id===it.rec.id); _close(); try{ if(studioHome && (feedAt>=0 || feedLoaded!==null)) _feedExit(); }catch(_){} { const tab=showMine; _favOpen(); favFromMineRef.current=tab||'all'; } setFavView({i:Math.max(0,i)});
         };
         const _del = async (it)=>{
           if(mineArm!==it.k){ setMineArm(it.k); _stBuzz(8); return; }
@@ -44008,7 +44010,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           <style>{STUDIO_FX_CSS+`.pf-st-fav .pf-sf-meta{animation:pfSfIn .32s ease both}.pf-st-fav .pf-st-acts{margin-top:2px}.pf-sf-clr{width:40px;height:40px;padding:0;border-radius:50%;border:1px solid rgba(242,238,232,.18);background:rgba(10,8,18,.55);color:rgba(242,238,232,.75);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}.pf-sf-clr.on{background:rgba(220,70,90,.92);border-color:transparent;color:#fff}@keyframes pfSfIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style>
           {/* the top: ✕ · ♥ Favorites, where you are · clear all */}
           <div style={{flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'calc(env(safe-area-inset-top, 0px) + 10px) max(12px, env(safe-area-inset-right, 0px)) 6px max(12px, env(safe-area-inset-left, 0px))'}}>
-            <button type="button" className="pf-st-min" style={{position:'static'}} onClick={(e)=>{ e.stopPropagation(); _favClose(); }} aria-label={_favT('close')} title={_favT('close')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <button type="button" className="pf-st-min" style={{position:'static'}} onClick={(e)=>{ e.stopPropagation(); const bk=favFromMineRef.current; favFromMineRef.current=null; _favClose(); if(bk) _mineOpen(bk); }} aria-label={_favT('close')} title={_favT('close')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
             <div style={{flex:1,minWidth:0,textAlign:'center',lineHeight:1.35}}>
               {favClearArmed ? (<div role="status" style={{fontSize:(.56*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',color:'#ff8a9a',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{_favT('clearAllQ').replace('{n}', left)}</div>) : (<>
               <div style={{fontSize:(.54*effScale)+'rem',fontWeight:600,letterSpacing:'.26em',textTransform:'uppercase',color:'#f0c040'}}>♥ {_favT('label')}</div>
