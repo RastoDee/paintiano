@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Send version 1.1 (with build PF_BUILD, default 118) to App Review. Checks first: the exact app, version 1.1 in PREPARE_FOR_SUBMISSION,
+"""Send version 1.1 (with build PF_BUILD, default 138) to App Review. Checks first: the exact app, version 1.1 in PREPARE_FOR_SUBMISSION (or DEVELOPER_REJECTED after a withdrawal),
 the expected build on it. Uses an empty open draft if one exists, otherwise opens one. Anything unexpected = stop, nothing sent."""
 import os, sys, json, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(compile(open(os.path.join(HERE, 'asc.py'), encoding='utf-8').read().split("\nNOTES = {")[0], 'asc_head', 'exec'))
-WANT = os.environ.get('PF_BUILD', '118')
+WANT = os.environ.get('PF_BUILD', '138')
 step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); app = [d for d in j['data'] if d['attributes'].get('bundleId') == BUNDLE][0]['id']
 s, j = call('GET', f'/v1/apps/{app}/appStoreVersions?filter[platform]=IOS&filter[versionString]=1.1&limit=3')
 vs = j.get('data', []) if s == 200 else []
 if len(vs) != 1: print('version 1.1 not found exactly once - nothing was submitted'); sys.exit(2)
 v = vs[0]; vid = v['id']; st = v['attributes'].get('appStoreState'); print('version', v['attributes'].get('versionString'), st, '| release', v['attributes'].get('releaseType'))
 s, j = call('GET', f'/v1/appStoreVersions/{vid}/build'); bld = (j.get('data') or {}).get('attributes', {}).get('version'); print('build on the version:', bld)
-if st != 'PREPARE_FOR_SUBMISSION' or str(bld) != WANT: print('not the expected state/build - nothing was submitted'); sys.exit(3)
+if st not in ('PREPARE_FOR_SUBMISSION', 'DEVELOPER_REJECTED') or str(bld) != WANT: print('not the expected state/build - nothing was submitted'); sys.exit(3)
 
 step('draft')
 s, j = call('GET', f'/v1/reviewSubmissions?filter[app]={app}&filter[platform]=IOS&limit=20')

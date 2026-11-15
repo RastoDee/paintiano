@@ -49,7 +49,7 @@ s, j = call('GET', f'/v1/builds?filter[app]={app}&filter[preReleaseVersion.versi
 bs = j.get('data', []) if s == 200 else []
 for b in bs: print('  build', b['attributes'].get('version'), b['attributes'].get('processingState'), b['attributes'].get('uploadedDate'), 'expired' if b['attributes'].get('expired') else '')
 import time
-MIN = int(os.environ.get('PF_MIN_BUILD', '118'))   # the build made for this version (an upload shows up at Apple a few minutes late)
+MIN = int(os.environ.get('PF_MIN_BUILD', '138'))   # the build made for this version (an upload shows up at Apple a few minutes late)
 if os.environ.get('PF_ATTACH') == '1':   # the newest upload may still be processing at Apple: wait for it (up to 20 minutes) instead of taking an older build
     for _ in range(60):
         if bs and int(bs[0]['attributes'].get('version') or 0) >= MIN and bs[0]['attributes'].get('processingState') == 'VALID': break
