@@ -42442,7 +42442,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     { const f=()=>{ delete card.dataset.fdz; fd.ready=true; }; _fdWhenNew(sig0, f, f); }
     _fdSet(fd, 0); return fd; };
   const _sdEnd = (fd, v, back)=>{ v=v||0; const N=stNavRef.current;   // back: the phone took the touch — the painting goes back, never on
-    _fdDbg(fd, v, back, back ? 'back' : 'end');
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_sdClear(fd)); if(Math.abs(fd.d)>30) N.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)), to = go ? -fd.dir*fd.L : 0;
     const hold = go ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
@@ -43050,15 +43049,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(fd.mode==='rub'){ _fdSet(fd, Math.sign(raw)*rb(Math.abs(raw))); return; }
     const d = fd.dir>0 ? Math.max(-L, Math.min(0, raw)) : Math.min(L, Math.max(0, raw)); _fdSet(fd, d); };
   // let go: v = the finger's speed along the axis (px/ms)
-  // hidden tools on: a line says what a drag ended as (For You and the Studio's full screen) — to find a swipe that does not take on a phone
-  const fdLookRef = useRef(null); fdLookRef.current = ()=> [style || (randomMode ? '~'+(shuffleStyle||'') : 'mosaic'), painterStage.join('+'), 'ph'+(phaseIndex|0), 'sv'+(shufVariant|0), notesMode ? 'N' : '', (()=>{ try{ const f=fuRollRef.current; return f ? 'fu'+JSON.stringify(f).length+':'+JSON.stringify(f).slice(0,26) : ''; }catch(_){ return ''; } })(), sigActiveRef.current ? 'SIG' : ''].join('|') + (playing ? ' ▶' : ' ‖');
-  const _fdDbg = (fd, v, back, why)=>{ try{ if(localStorage.getItem('paintiano_hid_ok')!=='1') return; const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*(v||0);
-    const go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)); const lk=()=>{ try{ return fdLookRef.current ? fdLookRef.current() : '?'; }catch(_){ return '?'; } };
-    const W=window, t0=Date.now(); W.__pfFdLog=(W.__pfFdLog||[]).slice(-5); const say=(x)=>{ W.__pfFdLog.push(x); W.__pfFdLog=W.__pfFdLog.slice(-6); let el=document.getElementById('pf-fd-dbg'); if(!el){ el=document.createElement('div'); el.id='pf-fd-dbg'; el.style.cssText='position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 150px);z-index:2147483600;padding:6px 10px;border-radius:10px;background:rgba(0,0,0,.86);color:#9f9;font:600 11px/1.4 ui-monospace,Menlo,monospace;pointer-events:none;white-space:pre-wrap;word-break:break-all'; document.body.appendChild(el); } el.textContent=W.__pfFdLog.join('\n'); clearTimeout(W.__pfFdT); W.__pfFdT=setTimeout(()=>{ try{ el.remove(); W.__pfFdLog=[]; }catch(_){} }, 12000); };
-    say((fd.st?'ST ':'FY ')+fd.ax+' '+fd.mode+' p='+p.toFixed(2)+' v='+fv.toFixed(2)+' '+(why||'end')+' rdy='+(fd.ready?1:0)+' → '+(fd.mode==='rub'?'RUB':go?'GO':'BACK')+' | '+lk()+' imm='+(document.querySelector('.pf-app-root.pf-immersive')?1:0));
-    [400, 1200, 2500].forEach(ms=>setTimeout(()=>say(' +'+ms+'ms '+lk()), ms)); }catch(_){} };
   const _fdEnd = (fd, v, back)=>{ v=v||0;   // back: the phone took the touch — the card goes back, never on
-    _fdDbg(fd, v, back, back ? 'back' : 'end');
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
     const hold = (go && fd.mode==='pre') ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it

@@ -44501,7 +44501,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? ((FC.piece==='own' && _feedSnap()) || H.u || null) : undefined)) : undefined }); }
             else if(!FC && st.ax==='x' && !st.b){ const dir = dx<0 ? 1 : -1, nb=_homeNb(dir); if(nb && nb.u) st.fd = _fdLock('x', dir, { sideU:nb.u, onGo:()=>_homeGo(nb.k) }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
-        const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd){ _fdDbg(st.fd, 0, false, 'CANCEL'); _fdEnd(st.fd, 0); } };   // the phone took the touch: the drag ends where it is — past a quarter the card goes on, short of it back
+        const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0, true); };   // the phone took the touch: the card goes back
         // ← → on your home: through the paintings you left unfinished — each way's own card (Music, Image, Mood from image, Mood,
         // Compose, Mic, in the ✦ Change order), round and round; ▶ goes back to the one in front
         const _hkOf = (h)=> h ? (h.k || (h.src==='image' ? 'image' : 'music')) : null;
@@ -46935,7 +46935,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             if(!s.ax && (Math.abs(dx)>10 || Math.abs(dy)>10)){ s.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x'; if(!_holdingRef.current && !s.e && e.touches.length===1) s.fd = _sdLock(s.ax, s.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1)); if(s.fd){ _swipeWasGestureRef.current = true; _holdCancel(); } }
             if(s.fd) _fdMove(s.fd, s.ax==='y' ? dy : dx); }
         }}
-        onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _fdDbg(s.fd, 0, false, 'CANCEL'); _sdEnd(s.fd, 0); } }}   // the phone took the touch: the drag ends where it is — past a quarter the painting goes on, short of it back
+        onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _sdEnd(s.fd, 0, true); } }}   // the phone took the touch: the painting goes back
         onTouchEnd={e=>{
           { const t0=e.changedTouches && e.changedTouches[0]; if(_btlDragUp(t0 ? t0.clientX : null, t0 ? t0.clientY : null)){ _holdEnd(); const o=_swipeStartRef.current; _swipeStartRef.current=null; if(o && o.fd) _sdEnd(o.fd, 0, true); return; } }   // carried: not a swipe, not a tap
           _holdEnd();
