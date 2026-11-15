@@ -1,6 +1,6 @@
 Nouveautés de la version 1.1
 • Battle — un nouvel onglet. Vote pour des peintures, envoie la tienne. La première manche commence le 1er décembre.
-• ♥ joue maintenant : touche un favori et il se repeint, avec sa musique.
+• Les favoris jouent maintenant : touche-en un et il se repeint, avec sa musique.
 • Composer : touche pour arrêter où tu veux, ajoute ou retire des notes sur place, glisse la ligne pour parcourir ton morceau.
 • Studio : écarte deux doigts deux fois pour ne garder que la peinture.
 • Mes créations : tout supprimer d’un geste, avec annulation.

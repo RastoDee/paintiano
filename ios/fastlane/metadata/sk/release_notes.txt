@@ -1,6 +1,6 @@
 Novinky vo verzii 1.1
 • Battle — nová karta. Hlasuj za obrazy, pošli vlastný. Prvé kolo štartuje 1. decembra.
-• ♥ teraz hrá: ťukni na obľúbený a namaľuje sa znova, aj s hudbou.
+• Obľúbené teraz hrajú: ťukni na obraz a namaľuje sa znova, aj s hudbou.
 • Komponovanie: ťuknutím zastavíš kdekoľvek, tóny pridáš alebo uberieš priamo tam, čiarou sa posúvaš skladbou.
 • Štúdio: roztiahni dva prsty dvakrát a ostane len maľba.
 • Moje: vymazať všetko jedným ťuknutím, s možnosťou vrátiť.

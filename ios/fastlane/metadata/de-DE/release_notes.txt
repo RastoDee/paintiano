@@ -1,6 +1,6 @@
 Neu in 1.1
 • Battle — ein neuer Tab. Stimme für Bilder ab, schick dein eigenes. Die erste Runde startet am 1. Dezember.
-• ♥ spielt jetzt: Tippe auf einen Favoriten und er malt sich noch einmal, mit seiner Musik.
+• Favoriten spielen jetzt: Tippe auf einen und er malt sich noch einmal, mit seiner Musik.
 • Komponieren: Tippe zum Anhalten, füge Töne genau dort ein oder nimm sie heraus, zieh die Linie durch dein Stück.
 • Studio: Zwei Finger zweimal spreizen — nur noch das Bild.
 • Meine: alles mit einem Tipp löschen, mit Rückgängig.

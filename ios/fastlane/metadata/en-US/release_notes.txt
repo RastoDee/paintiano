@@ -1,6 +1,6 @@
 New in 1.1
 • Battle — a new tab. Vote on paintings, send your own. First round starts December 1.
-• ♥ now plays: tap a favorite and it paints itself again, with its music.
+• Favorites now play: tap one and it paints itself again, with its music.
 • Compose: tap to stop anywhere, add or take out notes right there, drag the line to move through your piece.
 • Studio: spread two fingers twice for just the painting.
 • Mine: delete all in one tap, with undo.

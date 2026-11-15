@@ -1,6 +1,6 @@
 Novedades de la versión 1.1
 • Battle — una pestaña nueva. Vota pinturas, envía la tuya. La primera ronda empieza el 1 de diciembre.
-• ♥ ahora suena: toca un favorito y se vuelve a pintar, con su música.
+• Los favoritos ahora suenan: toca uno y se vuelve a pintar, con su música.
 • Componer: toca para parar donde quieras, añade o quita notas ahí mismo, arrastra la línea para moverte por tu pieza.
 • Estudio: separa dos dedos dos veces y queda solo la pintura.
 • Mío: borrar todo con un toque, con deshacer.
