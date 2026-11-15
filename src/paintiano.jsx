@@ -28181,6 +28181,17 @@ const STUDIO_FX_CSS = `
 .pf-mic-rec span{display:block;width:50px;height:50px;border-radius:50%;background:#ff4d64;transition:width .22s ease, height .22s ease, border-radius .22s ease}
 .pf-mic-rec.on{box-shadow:0 0 34px rgba(255,77,100,.4)}
 .pf-mic-rec.on span{width:24px;height:24px;border-radius:7px}
+/* the Mic, one spread: its buttons in one small row (no captions), so the painting really grows */
+.pf-live-1 .pf-st-micdock{flex-direction:row!important;justify-content:center!important;align-items:center!important;gap:22px!important;padding-top:8px!important;padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px))!important}
+.pf-live-1 .pf-mic-row{width:auto!important;gap:22px!important;align-items:center!important}
+.pf-live-1 .pf-mic-col{width:auto!important}
+.pf-live-1 .pf-mic-lbl,.pf-live-1 .pf-mic-hint{display:none!important}
+.pf-live-1 .pf-mic-rec,.pf-live-1 .pf-mic-cam{width:48px!important;height:48px!important}
+.pf-live-1 .pf-mic-rec span{width:34px;height:34px}
+.pf-live-1 .pf-mic-rec.on span{width:18px;height:18px;border-radius:5px}
+.pf-live-1 .pf-mic-cam svg{width:22px;height:22px}
+.pf-live-1 .pf-mic-lv:empty{display:none!important}
+.pf-mic-song{flex-shrink:0;width:48px;height:48px;padding:0;border-radius:50%;border:2px solid rgba(240,215,138,.85);background:linear-gradient(135deg,rgba(240,215,138,.22),rgba(201,168,76,.1));color:#f0d78a;font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}   /* the Mic, one spread: ✦ Open as a song, round like its neighbours */
 .pf-st-paused.gone{opacity:0;transform:scale(.9);transition:opacity .9s ease, transform .9s ease}
 @keyframes pfStPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
 .pf-st-bar{position:fixed;left:0;right:0;z-index:10001;display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px max(18px, env(safe-area-inset-right, 0px)) 0 max(18px, env(safe-area-inset-left, 0px));pointer-events:none}
@@ -46537,31 +46548,34 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               </div>)}
             <div ref={stMicRef} className="pf-st-micdock" onClick={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10003,boxSizing:'border-box',padding:'6px max(18px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',alignItems:'center',gap:10,background:stFill ? 'transparent' : '#07060c'}}>
               {/* the instrument under the Studio's buttons (as Compose has its keys): one REC */}
-              <div style={{display:'flex',alignItems:'flex-start',justifyContent:'center',gap:40,width:'100%',maxWidth:380}}>
-                {!micSong && (<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,width:96}}>
+              <div className="pf-mic-row" style={{display:'flex',alignItems:'flex-start',justifyContent:'center',gap:40,width:'100%',maxWidth:380}}>
+                {!micSong && (<div className="pf-mic-col" style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,width:96}}>
                   <button type="button" className={'pf-mic-rec'+(micActive?' on':'')} onClick={_rec} aria-label={micActive ? 'stop' : 'REC'}><span/></button>
-                  <span style={{fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#f2eee8'}}>REC</span>
-                  <span style={{fontSize:10,marginTop:-5,color:'rgba(242,238,232,.5)',whiteSpace:'nowrap'}}>{_stT('recS')}</span>
+                  <span className="pf-mic-lbl" style={{fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#f2eee8'}}>REC</span>
+                  <span className="pf-mic-lbl" style={{fontSize:10,marginTop:-5,color:'rgba(242,238,232,.5)',whiteSpace:'nowrap'}}>{_stT('recS')}</span>
                 </div>)}
-                {!micSong && (<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,width:96,opacity:micActive?.3:1,transition:'opacity .2s'}}>
-                  <button type="button" disabled={micActive} onClick={()=>{ if(micActive) return; try{ refCamVid.current && refCamVid.current.click(); }catch(_){} }} aria-label={_stT('camT')} style={{width:68,height:68,borderRadius:'50%',border:'2px solid rgba(240,215,138,.85)',background:'rgba(28,24,40,.85)',color:'#f0d78a',display:'flex',alignItems:'center',justifyContent:'center',cursor:micActive?'default':'pointer',padding:0,WebkitTapHighlightColor:'transparent'}}>
+                {!micSong && (<div className="pf-mic-col" style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,width:96,opacity:micActive?.3:1,transition:'opacity .2s'}}>
+                  <button type="button" className="pf-mic-cam" disabled={micActive} onClick={()=>{ if(micActive) return; try{ refCamVid.current && refCamVid.current.click(); }catch(_){} }} aria-label={_stT('camT')} style={{width:68,height:68,borderRadius:'50%',border:'2px solid rgba(240,215,138,.85)',background:'rgba(28,24,40,.85)',color:'#f0d78a',display:'flex',alignItems:'center',justifyContent:'center',cursor:micActive?'default':'pointer',padding:0,WebkitTapHighlightColor:'transparent'}}>
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5z"/></svg>
                   </button>
-                  <span style={{fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#f0d78a'}}>{_stT('camT')}</span>
-                  <span style={{fontSize:10,marginTop:-5,color:'rgba(242,238,232,.5)',whiteSpace:'nowrap'}}>{_stT('camS')}</span>
+                  <span className="pf-mic-lbl" style={{fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#f0d78a'}}>{_stT('camT')}</span>
+                  <span className="pf-mic-lbl" style={{fontSize:10,marginTop:-5,color:'rgba(242,238,232,.5)',whiteSpace:'nowrap'}}>{_stT('camS')}</span>
                 </div>)}
               </div>
               {/* while it listens: the level */}
-              <div style={{minHeight:30,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <div className="pf-mic-lv" style={{minHeight:30,display:'flex',alignItems:'center',justifyContent:'center'}}>
                 {micActive ? (
                   <div aria-hidden="true" style={{display:'flex',alignItems:'flex-end',gap:4,height:24}}>
                     {W.map((w,i)=>(<i key={i} style={{display:'block',width:4,borderRadius:2,height:Math.round(4+20*lv*w),background:voice?'rgba(255,130,130,.9)':'rgba(122,179,255,.9)',transition:'height .08s'}}/>))}
                   </div>
-                ) : (take && hasMicBlob) ? (
+                ) : (take && hasMicBlob) ? (stLiveLv===1 ? (
+                  <button type="button" className="pf-mic-song" onClick={_micOpenSong} aria-label={_stT('micSong')} title={_stT('micSong')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
+                ) : (
                   <button type="button" onClick={_micOpenSong} style={{..._chip,borderColor:'rgba(240,215,138,.55)',color:'#f0d78a',background:'linear-gradient(135deg,rgba(240,215,138,.2),rgba(201,168,76,.1))',textTransform:'none',letterSpacing:'.02em',fontSize:(.62*effScale)+'rem',fontWeight:700}}>✦ {_stT('micSong')}</button>
+                )
                 ) : null}
               </div>
-              <div style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',fontStyle:'italic',color:micActive?(voice?'rgba(255,150,150,.9)':'rgba(140,200,255,.9)'):'rgba(201,168,76,.9)',textAlign:'center',minHeight:'1.2em',maxWidth:360}}>
+              <div className="pf-mic-hint" style={{fontSize:(.56*effScale)+'rem',letterSpacing:'.06em',fontStyle:'italic',color:micActive?(voice?'rgba(255,150,150,.9)':'rgba(140,200,255,.9)'):'rgba(201,168,76,.9)',textAlign:'center',minHeight:'1.2em',maxWidth:360}}>
                 {(micSong && micSong.phase==='reading') ? '' : micSong ? _stT('micPlay') : take ? _stT('micCont').split(' · ')[0] : _stT('chMicS')}
               </div>
             </div>
