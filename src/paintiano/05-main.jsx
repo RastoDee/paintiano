@@ -16306,7 +16306,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the Studio's For You tab: the painting on screen goes along — For You opens on it as its first card, playing on (or paused, as it was),
   // no jump to the painting of the day, no restart; ↑ brings the surprises, Studio takes it back. Nothing on screen (or Compose / Mic live):
   // your painting waits on the home card and the surprises start, as before
-  const _stForYou = ()=>{ if(recording||demoReelOn) return; setStChg(null); setStripOpen(false);
+  const ownCastRef = useRef(null);   // who painted your painting when it left the Studio for For You: back with the same ones it returns as it was, with others it is a taken surprise
+  const _stForYou = ()=>{ if(recording||demoReelOn) return; setStChg(null); setStripOpen(false); ownCastRef.current=[style||''].concat(painterStage).join('+');
     const isI = viewMode==='image' && !moodFromImg && !!originalImgUrl;
     const has = isI ? !!pixelRef.current : (chords.length>0 && (disp>0 || playing || holdPaused));
     if(has && !composeMode && !micActive && !micArmed && !working && !anim && feedAt<0){
@@ -17414,9 +17415,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _feedTake = ()=>{
     if(feedAt<0 || feedFly) return;
     const c=feedCards[feedAt]; if(!c || !_feedIsLoaded(c)){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }
-    if(c.piece==='own'){ setFeedIntro(null); _stBuzz(12); _feedOpen(); return; }   // your own painting, brought along from the Studio: it goes back as it is (its painter stays yours)
+    // your own painting, brought along from the Studio: with the painters it left with it goes back as it is (its painter stays yours);
+    // swiped in For You to other painters or to a fusion, it comes like any taken surprise — chosen as it is on screen
+    const _own = c.piece==='own', _ownSame = _own && ownCastRef.current===[style||''].concat(painterStage).join('+');
     setFeedIntro(null); _stBuzz(12); _feedOpen();
-    setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600);
+    if(_ownSame) return;
+    if(!_own){ setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600); }
     // What comes from the surprises is yours as it is — CHOSEN (gold), until you let it go yourself (Nov 2026; before: white, ↑ drew someone else):
     // one painter comes gold (↑ brings colours only, ← → its variants); a fusion comes locked with all its painters gold (↑ = their variants
     // and a palette, no guests — a tap on Fusion unlocks it). Mosaic alone has nobody to hold: it stays as it was (↑ goes on drawing).
