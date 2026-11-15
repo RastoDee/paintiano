@@ -3487,7 +3487,9 @@ function picassoBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // · a quick major one the papier collé guitar · otherwise the still life of the thirties.
 // ═══════════════════════════════════════════════════════════════════════════
 function picassoListen2(ctx,CW,CH,chords,lim,gc,ss,mode){ const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const dens=A.ch?A.ch.density:0.3;
-  const p = (!X.major && X.pace<0.5) ? 'blue' : (dens>0.32 && X.regular>0.6) ? 'analytic' : (X.major && X.pace>0.55) ? 'guitar' : 'still';
+  // played live (Compose, the Mic) the blue period never comes: its quiet table stands still whatever you play — the others follow the notes
+  let live=false; try{ live=!!globalThis.__PAINT_LIVE; }catch(_){}
+  const p = (!live && !X.major && X.pace<0.5) ? 'blue' : (dens>0.32 && X.regular>0.6) ? 'analytic' : (X.major && X.pace>0.55) ? 'guitar' : 'still';
   if(p==='blue') picassoBlue(ctx,CW,CH,chords,lim,gc,ss,mode); else if(p==='analytic') picassoAnalytic(ctx,CW,CH,chords,lim,gc,ss,mode); else if(p==='guitar') picassoGuitar(ctx,CW,CH,chords,lim,gc,ss,mode); else picassoStillLife(ctx,CW,CH,chords,lim,gc,ss,mode);
   try{ globalThis.__PC_LISTEN=Object.assign({},globalThis.__PC_LISTEN||{},{listen:p}); }catch(_){} }
 

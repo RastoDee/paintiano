@@ -4517,6 +4517,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const fuStyle = fuPick;
   const fuStyleNow = proStatus!=='free' ? fuStyle : 'A';
   try{ globalThis.__PAINT_FU_STYLE = fuStyleNow; }catch(_){}
+  try{ globalThis.__PAINT_LIVE = !!(composeMode || micActive); }catch(_){}   // the painters know the notes come as you play them (Compose, the Mic): Picasso listens leaves out the blue period there
   // the composers' own Fusion style (Jam session) — a separate switch; until it is first touched it follows the painters' value
   const [jamFlipN, setJamFlipN] = useState(0);
   const [, setJamTick] = useState(0);

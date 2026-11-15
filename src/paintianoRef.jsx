@@ -5841,7 +5841,9 @@ function picassoBlue(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // · a quick major one the papier collé guitar · otherwise the still life of the thirties.
 // ═══════════════════════════════════════════════════════════════════════════
 function picassoListen2(ctx,CW,CH,chords,lim,gc,ss,mode){ const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const dens=A.ch?A.ch.density:0.3;
-  const p = (!X.major && X.pace<0.5) ? 'blue' : (dens>0.32 && X.regular>0.6) ? 'analytic' : (X.major && X.pace>0.55) ? 'guitar' : 'still';
+  // played live (Compose, the Mic) the blue period never comes: its quiet table stands still whatever you play — the others follow the notes
+  let live=false; try{ live=!!globalThis.__PAINT_LIVE; }catch(_){}
+  const p = (!live && !X.major && X.pace<0.5) ? 'blue' : (dens>0.32 && X.regular>0.6) ? 'analytic' : (X.major && X.pace>0.55) ? 'guitar' : 'still';
   if(p==='blue') picassoBlue(ctx,CW,CH,chords,lim,gc,ss,mode); else if(p==='analytic') picassoAnalytic(ctx,CW,CH,chords,lim,gc,ss,mode); else if(p==='guitar') picassoGuitar(ctx,CW,CH,chords,lim,gc,ss,mode); else picassoStillLife(ctx,CW,CH,chords,lim,gc,ss,mode);
   try{ globalThis.__PC_LISTEN=Object.assign({},globalThis.__PC_LISTEN||{},{listen:p}); }catch(_){} }
 
@@ -30191,6 +30193,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const fuStyle = fuPick;
   const fuStyleNow = proStatus!=='free' ? fuStyle : 'A';
   try{ globalThis.__PAINT_FU_STYLE = fuStyleNow; }catch(_){}
+  try{ globalThis.__PAINT_LIVE = !!(composeMode || micActive); }catch(_){}   // the painters know the notes come as you play them (Compose, the Mic): Picasso listens leaves out the blue period there
   // the composers' own Fusion style (Jam session) — a separate switch; until it is first touched it follows the painters' value
   const [jamFlipN, setJamFlipN] = useState(0);
   const [, setJamTick] = useState(0);
