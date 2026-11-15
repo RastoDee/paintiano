@@ -42442,6 +42442,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     { const f=()=>{ delete card.dataset.fdz; fd.ready=true; }; _fdWhenNew(sig0, f, f); }
     _fdSet(fd, 0); return fd; };
   const _sdEnd = (fd, v, back)=>{ v=v||0; const N=stNavRef.current;   // back: the phone took the touch — the painting goes back, never on
+    _fdDbg(fd, v, back, back ? 'back' : 'end');
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_sdClear(fd)); if(Math.abs(fd.d)>30) N.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)), to = go ? -fd.dir*fd.L : 0;
     const hold = go ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
@@ -43049,7 +43050,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(fd.mode==='rub'){ _fdSet(fd, Math.sign(raw)*rb(Math.abs(raw))); return; }
     const d = fd.dir>0 ? Math.max(-L, Math.min(0, raw)) : Math.min(L, Math.max(0, raw)); _fdSet(fd, d); };
   // let go: v = the finger's speed along the axis (px/ms)
+  // hidden tools on: a line says what a drag ended as (For You and the Studio's full screen) — to find a swipe that does not take on a phone
+  const _fdDbg = (fd, v, back, why)=>{ try{ if(localStorage.getItem('paintiano_postermaker')!=='1') return; const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*(v||0);
+    const go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)); let el=document.getElementById('pf-fd-dbg'); if(!el){ el=document.createElement('div'); el.id='pf-fd-dbg'; el.style.cssText='position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:2147483600;padding:6px 10px;border-radius:10px;background:rgba(0,0,0,.82);color:#9f9;font:600 12px/1.35 ui-monospace,Menlo,monospace;pointer-events:none;white-space:pre-wrap'; document.body.appendChild(el); }
+    el.textContent=(fd.st?'studio ':'foryou ')+fd.ax+' '+fd.mode+' p='+p.toFixed(2)+' v='+fv.toFixed(2)+' '+(why||'end')+' ready='+(fd.ready?1:0)+' → '+(fd.mode==='rub'?'RUB':go?'GO':'BACK'); clearTimeout(window.__pfFdT); window.__pfFdT=setTimeout(()=>{ try{ el.remove(); }catch(_){} }, 7000); }catch(_){} };
   const _fdEnd = (fd, v, back)=>{ v=v||0;   // back: the phone took the touch — the card goes back, never on
+    _fdDbg(fd, v, back, back ? 'back' : 'end');
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
     const hold = (go && fd.mode==='pre') ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
@@ -44484,7 +44490,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? ((FC.piece==='own' && _feedSnap()) || H.u || null) : undefined)) : undefined }); }
             else if(!FC && st.ax==='x' && !st.b){ const dir = dx<0 ? 1 : -1, nb=_homeNb(dir); if(nb && nb.u) st.fd = _fdLock('x', dir, { sideU:nb.u, onGo:()=>_homeGo(nb.k) }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
-        const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0, true); };   // the phone took the touch: the card goes back
+        const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd){ _fdDbg(st.fd, 0, false, 'CANCEL'); _fdEnd(st.fd, 0); } };   // the phone took the touch: the drag ends where it is — past a quarter the card goes on, short of it back
         // ← → on your home: through the paintings you left unfinished — each way's own card (Music, Image, Mood from image, Mood,
         // Compose, Mic, in the ✦ Change order), round and round; ▶ goes back to the one in front
         const _hkOf = (h)=> h ? (h.k || (h.src==='image' ? 'image' : 'music')) : null;
@@ -46918,7 +46924,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             if(!s.ax && (Math.abs(dx)>10 || Math.abs(dy)>10)){ s.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x'; if(!_holdingRef.current && !s.e && e.touches.length===1) s.fd = _sdLock(s.ax, s.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1)); if(s.fd){ _swipeWasGestureRef.current = true; _holdCancel(); } }
             if(s.fd) _fdMove(s.fd, s.ax==='y' ? dy : dx); }
         }}
-        onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _sdEnd(s.fd, 0, true); } }}   // the phone took the touch: the painting goes back
+        onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _fdDbg(s.fd, 0, false, 'CANCEL'); _sdEnd(s.fd, 0); } }}   // the phone took the touch: the drag ends where it is — past a quarter the painting goes on, short of it back
         onTouchEnd={e=>{
           { const t0=e.changedTouches && e.changedTouches[0]; if(_btlDragUp(t0 ? t0.clientX : null, t0 ? t0.clientY : null)){ _holdEnd(); const o=_swipeStartRef.current; _swipeStartRef.current=null; if(o && o.fd) _sdEnd(o.fd, 0, true); return; } }   // carried: not a swipe, not a tap
           _holdEnd();
