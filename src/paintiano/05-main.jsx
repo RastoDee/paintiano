@@ -16315,8 +16315,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const isI = viewMode==='image' && !moodFromImg && !!originalImgUrl;
     const has = isI ? !!pixelRef.current : (chords.length>0 && (disp>0 || playing || holdPaused));
     if(has && !composeMode && !micActive && !micArmed && !working && !anim && feedAt<0){
-      let u=null; try{ u=_feedSnap(); }catch(_){} try{ const tt=_vidTitle(); feedOwnTtlRef.current = (tt && tt!=='Paintiano') ? tt : ''; }catch(_){ feedOwnTtlRef.current=''; }
-      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:isI?'img':undefined, piece:'own', own:true, sel:null, u, pu:u, l:'', dir:'none' };
+      let u=null; try{ u = isI ? originalImgUrl : _feedSnap(); }catch(_){} try{ const tt=_vidTitle(); feedOwnTtlRef.current = (tt && tt!=='Paintiano') ? tt : ''; }catch(_){ feedOwnTtlRef.current=''; }
+      const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:isI?'img':undefined, piece:'own', own:true, sel:null, u, pu:isI ? null : u, l:'', dir:'none' };   // a picture: the card draws the picture itself — a snapshot of the stage's canvas is only the scan's light on black, and lay over it while paused
       feedResumeRef.current=null; feedStartRef.current=null; feedStepsRef.current=[]; feedPieceRef.current=true; feedLookRef.current=null;
       setFeedIntro(null); setFeedCards([c]); setFeedAt(0); setFeedLoaded(isI ? 'iown' : 'own'); setFeedHiRes(!isI);
       if(metaHide){ feedCleanRef.current=true; setFeedClean(true); let seen=false; try{ seen=localStorage.getItem('paintiano_clean_hint')==='1'; localStorage.setItem('paintiano_clean_hint','1'); }catch(_){} if(!seen) setFeedCleanHint(Date.now()); }   // the Studio without its words (the second spread): For You opens just the painting too — a pinch brings everything back
