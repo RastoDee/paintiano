@@ -2432,7 +2432,7 @@ const STUDIO_FX_CSS = `
 .pf-chb.r{background:rgba(255,90,90,.18);color:#ffb3b3}
 .pf-chb.x{margin-left:auto}
 .pf-chb.g{background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408;padding:8px 13px;display:inline-flex;align-items:center}
-.pf-chb.r,.pf-tx-undo{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.pf-chb.r,.pf-tx-undo,.pf-tx-bin{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
 .pf-ch-undo{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 auto 8px;width:max-content;max-width:100%;padding:7px 8px 7px 16px;border-radius:20px;background:rgba(20,16,30,.97);border:1px solid rgba(242,238,232,.18);color:#f2eee8;font-size:calc(min(var(--pf-read-scale,1),1.15) * 13px);white-space:nowrap}
 .pf-ch-undo button{font:inherit;font-weight:600;height:28px;padding:0 13px;border-radius:14px;border:1px solid rgba(240,192,64,.6);background:transparent;color:#f0c040;cursor:pointer}
 .pf-chn{font-size:11.5px;color:rgba(242,238,232,.6);font-variant-numeric:tabular-nums;padding:0 2px}
@@ -20715,7 +20715,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           a swipe down the look panel from the top, a swipe up the next painting (see studioOn). */}
       {studioLive && !composeMode && (<style>{`.pf-studio-mic .pf-transport-dock{visibility:hidden!important;pointer-events:none!important}
 .pf-studio-mic .pf-mic-preset,.pf-studio-mic .pf-mic-recov{display:none!important}`}</style>)}
-      {studioLive && (<style>{`.pf-studio-live .pf-transport-row > *:not(.pf-tx-scale):not(.pf-tx-undo):not(.pf-tx-micstop):not(.pf-tx-micsrc):not(.pf-tx-micre){display:none!important}`}</style>)}
+      {studioLive && (<style>{`.pf-studio-live .pf-transport-row > *:not(.pf-tx-scale):not(.pf-tx-undo):not(.pf-tx-ed):not(.pf-tx-micstop):not(.pf-tx-micsrc):not(.pf-tx-micre){display:none!important}`}</style>)}
       {studioFs && (()=>{
         const _img = viewMode==='image' && !moodFromImg;
         const _live = studioLive;
@@ -22227,12 +22227,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       {isActiveView && !basicMode && (
       <div role="region" aria-label="playback controls" ref={stDockRef} className="pf-transport-dock" style={favView?{display:'none'}:isActiveView?{position:'fixed',bottom:0,left:0,right:0,zIndex:studioLive?10003:50,background:'rgba(4,3,8,0.97)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderTop:'1px solid rgba(201,168,76,.15)',padding:'8px 8px calc(10px + env(safe-area-inset-bottom))'}:{}}>
       {studioFs && composeMode && stChUndo && (<div className="pf-ch-undo" role="status" onTouchStart={(e)=>e.stopPropagation()}>{_stT('mnDeleted').replace('{n}', stChUndo.n)}<button type="button" onClick={_stChUndoGo}>{_favT('undo')}</button></div>)}
-      {studioFs && composeMode && stChEdit==='sel' && (<div className="pf-chbar" onTouchStart={(e)=>e.stopPropagation()}>
-        <button type="button" className="pf-chb g" onClick={_stCompGo} aria-label={t('play')}><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg></button>
-        <span className="pf-chn">{(selectedChordIdx==null ? 0 : selectedChordIdx)+1}/{chords.length}</span>
-        <button type="button" className="pf-chb r" {..._stDelHold}>{_stT('chDel')}</button>
-        <button type="button" className="pf-chb x" onClick={_stChClose} aria-label="✕">✕</button>
-      </div>)}
       {/* Recording save row — appears in dock when a recording is ready */}
       {micListening&&(
         <div style={{fontSize:(.48*effScale)+'rem',letterSpacing:'.08em',color:'rgba(100,200,255,.35)',textAlign:'center',marginBottom:4,lineHeight:1.5}}>
@@ -22281,7 +22275,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           return chord
             ? <span>{[...active].sort((a,b)=>a-b).map(noteName).join(' · ')} <span style={{color:'rgba(201,168,76,.78)',fontSize:(.6*effScale)+'rem',letterSpacing:'.08em'}}>· {chord}</span></span>
             : sorted.map(noteName).join(' · ');
-        })():composeMode&&chords.length>0?((effectiveStyle&&effectiveStyle!=='notes')||(studioFs&&stChEdit==='sel')?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'\u00a0'}   {/* nothing sounding: the line stays, empty (a lone dash read as a stray mark) */}
+        })():(composeMode&&chords.length>0&&studioFs&&stChEdit==='sel')?(<span><b style={{color:'#f2eee8',fontWeight:700}}>{(selectedChordIdx==null ? 0 : selectedChordIdx)+1}</b> / {chords.length} {t('chordsOnly')}</span>):composeMode&&chords.length>0?((effectiveStyle&&effectiveStyle!=='notes')?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'\u00a0'}   {/* nothing sounding: the line stays, empty (a lone dash read as a stray mark) */}
       </div>
       {showAdvanced && composeMode && (
         <div style={{display:'flex',gap:8,justifyContent:'center',alignItems:'center',marginBottom:6,padding:'8px 12px',borderRadius:14,background:'rgba(140,255,180,.06)',border:'1px solid rgba(140,255,180,.25)',maxWidth:'fit-content',marginLeft:'auto',marginRight:'auto',flexWrap:'wrap'}}>
@@ -22298,6 +22292,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         </div>
       )}
       <div className="pf-transport-row" style={{display:'flex',gap:6,justifyContent:'center',marginBottom:6,fontSize:(.55*effScale)+'rem',letterSpacing:'.08em',flexWrap:'wrap',alignItems:'center'}}>
+        {/* Compose in the Studio with a chord chosen: ▶ (on from it) · Scale · the bin (a tap: the chord, held: it and all before it) · ✕ — in the row itself, no bar */}
+        {studioFs && composeMode && stChEdit==='sel' && (<button type="button" className="pf-lift pf-tx-ed" onClick={_stCompGo} aria-label={t('play')} style={{...txStyle('neutral',{effScale,icon:true}),border:'none',color:'#1a1408',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',boxShadow:'0 0 18px rgba(240,200,90,.4)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg></button>)}
         <button className="pf-tx-scale" onClick={()=>{ setShowAdvanced(v=>!v); }} title="scale snap — tap notes to a musical key" style={{...txStyle((paintScale!=='off'||showAdvanced)?'active':'ghost',{effScale}),display:composeMode?'inline-flex':'none',minWidth:96,justifyContent:'center'}}>
           <TxIcon n="notes" s={13*effScale}/>{paintScale!=='off'?PAINT_SCALES[paintScale].label:t('scaleBtn')}
         </button>
@@ -22546,9 +22542,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           title={recording?t('stopRecFirst'):undefined}
           style={txStyle(clearArmed?'danger':'ghost',{effScale,on:clearArmed,disabled:recording})}>{clearArmed?t('clearConfirm'):t('clear')}</button>
         
-        {composeMode&&(
+        {composeMode && !(studioFs && stChEdit==='sel') &&(
           <button className="pf-lift pf-tx-undo" {..._stUndoHold} disabled={!chords.length||busy||recording} aria-label="remove last chord" title="remove last chord (Backspace)" style={{...txStyle('neutral',{effScale,icon:true,disabled:(!chords.length||busy||recording)})}}><TxIcon n="undo" s={14*effScale}/></button>
         )}
+        {studioFs && composeMode && stChEdit==='sel' && (<>
+          <button type="button" className="pf-lift pf-tx-ed pf-tx-bin" {..._stDelHold} aria-label={_stT('chDel')} title={_stT('chDel')} style={{...txStyle('neutral',{effScale,icon:true}),border:'1px solid rgba(255,110,130,.5)',color:'#ff9db4',background:'rgba(255,90,110,.08)'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
+          <button type="button" className="pf-lift pf-tx-ed" onClick={_stChClose} aria-label="✕" style={{...txStyle('neutral',{effScale,icon:true}),border:'1px solid rgba(255,255,255,.16)',color:'#f2eee8'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </>)}
       </div>
       {composeMode && !working && (
       <div ref={kbScrollRef} className="pf-piano-dock" style={{overflowX:'auto',maxWidth:'100%',marginTop:12,paddingBottom:4,touchAction:'pan-x',WebkitOverflowScrolling:'touch'}}>
