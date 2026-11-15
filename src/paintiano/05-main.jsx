@@ -5106,7 +5106,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     }
   };
   // ← (Studio and Surprise me): the next variant of what is on screen — the same painter, or the same Fusion with a new combination
-  // of its members' variants; the drawing only (the palette stays), random without repeats until all have been seen
+  // of its members' variants, random without repeats until all have been seen. In the Studio a white palette changes with it (a new one,
+  // not the one on screen) and a gold one stays — what is white changes, what is gold holds (_variantNext); For You: the drawing only
   const variantBagRef = useRef({ key:'', bag:[] });
   const _variantRoll = ()=>{
     if(viewMode==='image') return false;
@@ -5136,12 +5137,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const varHistRef = useRef({key:'', st:[], fw:[]});
   const _varKey = ()=> [(info && info.title) || '', style || '', painterStage.join('+'), randomMode ? 1 : 0, randomMode ? ((shuffleStyle==='notes' && style===null ? 'mosaic' : shuffleStyle) || '') : ''].join('|');
   // ← a new variant, → back; after → the next ← goes forward again through the ones already seen (as the surprises do) — only past the last one a new one is drawn
-  const _variantSnap = ()=>({ ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode || (style===null && randomMode && shuffleStyle==='notes'), fu:fuRollRef.current || null });
-  const _variantPut = (v)=>{ if(style===null && (!shuffleStyle || shuffleStyle==='mosaic')) _artQuiet(v.nt ? 'notes' : ''); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); _setFuRoll(v.fu); };
-  const _variantNext = ()=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ H.key=k; H.st=[]; H.fw=[]; }
+  const _variantSnap = ()=>({ md:mode, ph:phaseIndex|0, sv:shufVariant|0, nt:!!notesMode || (style===null && randomMode && shuffleStyle==='notes'), fu:fuRollRef.current || null });
+  const _variantPut = (v)=>{ if(style===null && (!shuffleStyle || shuffleStyle==='mosaic')) _artQuiet(v.nt ? 'notes' : ''); setPhaseIndex(v.ph); setShufVariant(v.sv); setNotesMode(v.nt); _setFuRoll(v.fu);
+    if(v.md && v.md!==mode && !palGoldRef.current && setupPalettes.includes(v.md)){ kontraAutoRef.current=false; setShowColorPalette(false); setCustomArmed(false); setMode(v.md); } };   // → and ← through the ones seen bring each variant's own palette back (a gold palette stays)
+
+  const _variantNext = (pal)=>{ const H=varHistRef.current, k=_varKey(); if(H.key!==k){ H.key=k; H.st=[]; H.fw=[]; }
     const snap=_variantSnap();
     if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); _variantPut(v); return true; }
-    const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); } return ok; };
+    if(pal) stUpPalRef.current=Date.now();   // the Studio rolls the palette itself, once (the Fusion's own roll stands down)
+    const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(pal && !palGoldRef.current) _fuRollPal(true); } return ok; };
   const _variantBack = ()=>{ const H=varHistRef.current; if(H.key!==_varKey() || !H.st.length) return false;
     const v=H.st.pop(); (H.fw || (H.fw=[])).push(_variantSnap()); if(H.fw.length>30) H.fw.shift(); _variantPut(v); return true; };
   // Keep the interval's reference to _diceRoll fresh (it's redefined each render).
@@ -16714,7 +16718,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[composeMode, studioFs]);
   const _stVariant = (back, q)=>{
     if(!((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
-    let ok=false; try{ ok = back ? _variantBack() : _variantNext(); }catch(_){} if(!ok) return false;
+    let ok=false; try{ ok = back ? _variantBack() : _variantNext(true); }catch(_){} if(!ok) return false;
     setStFavPend(false); if(!q){ _stBuzz(10); _stFlashNow(); }
     return true;
   };
