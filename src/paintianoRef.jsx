@@ -43053,7 +43053,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // hidden tools on: a line says what a drag ended as (For You and the Studio's full screen) — to find a swipe that does not take on a phone
   const _fdDbg = (fd, v, back, why)=>{ try{ if(localStorage.getItem('paintiano_postermaker')!=='1') return; const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*(v||0);
     const go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)); let el=document.getElementById('pf-fd-dbg'); if(!el){ el=document.createElement('div'); el.id='pf-fd-dbg'; el.style.cssText='position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:2147483600;padding:6px 10px;border-radius:10px;background:rgba(0,0,0,.82);color:#9f9;font:600 12px/1.35 ui-monospace,Menlo,monospace;pointer-events:none;white-space:pre-wrap'; document.body.appendChild(el); }
-    el.textContent=(fd.st?'studio ':'foryou ')+fd.ax+' '+fd.mode+' p='+p.toFixed(2)+' v='+fv.toFixed(2)+' '+(why||'end')+' ready='+(fd.ready?1:0)+' → '+(fd.mode==='rub'?'RUB':go?'GO':'BACK'); clearTimeout(_fdDbg.t); _fdDbg.t=setTimeout(()=>{ try{ el.remove(); }catch(_){} }, 7000); }catch(_){} };
+    el.textContent=(fd.st?'studio ':'foryou ')+fd.ax+' '+fd.mode+' p='+p.toFixed(2)+' v='+fv.toFixed(2)+' '+(why||'end')+' ready='+(fd.ready?1:0)+' → '+(fd.mode==='rub'?'RUB':go?'GO':'BACK'); clearTimeout(window.__pfFdT); window.__pfFdT=setTimeout(()=>{ try{ el.remove(); }catch(_){} }, 7000); }catch(_){} };
   const _fdEnd = (fd, v, back)=>{ v=v||0;   // back: the phone took the touch — the card goes back, never on
     _fdDbg(fd, v, back, back ? 'back' : 'end');
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
