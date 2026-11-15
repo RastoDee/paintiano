@@ -42266,7 +42266,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     idxRef.current=Math.min(idxRef.current, next.length); setDisp(d=>Math.min(d, next.length));
     _stChSel(Math.max(0, pos-1)); setStChEdit('sel'); };
   _stChordHoldRef.current = (x,y)=>{ if(!(studioFs && composeMode && chords.length && !playing && !anim && !working)) return false;
-    const ix=_stChordAt(x,y); if(ix==null) return false; _stBuzz(12); _stChOpen(ix); return true; };
+    const ix=_stChordAt(x,y); if(ix==null) return false; _stBuzz(12); setStChFromPaint(!!(effectiveStyle && effectiveStyle!=='notes'));   /* from a painter's look: ♪ Notes is lit and leads back to the painting at that chord */ _stChOpen(ix); return true; };
   // a chord played while one is chosen goes after it (the commit does that) and takes the frame along; leaving Compose ends the editing.
   // Play in Compose: the whole composition stays on the painting, dimmed (stGhost — a still of it under the notes as they light up). A tap stops it there:
   // the chord that just sounded is chosen, the keys put notes after it, Delete takes it out (held: it and all before it), a tap on another chord moves
