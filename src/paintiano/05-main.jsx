@@ -3151,6 +3151,8 @@ export default function Paintiano() {
   // back the original source audio instead of the synthesised piano cover.
   const listenRecorderRef = useRef(null);
   const listenChunksRef   = useRef([]);
+  const micTakeBlobRef    = useRef(async ()=>null);
+  const listenSegsRef     = useRef([]);   // every REC of one take, in order (REC carries on painting: the song and the ♥ get the whole take, not its last REC)
   const listenBlobRef     = useRef(null); // {blob, url, durationMs} once finalised
   const listenPCMRef      = useRef(null); // decoded AudioBuffer of the blob
   const originalSourceRef = useRef(null); // active BufferSourceNode during playback
@@ -7017,7 +7019,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(_mr) fav.mm={ at:_mr.addedAt||0, sz:_mr.sizeBytes||0, name:String(_mr.name||'').slice(0,120) }; }
     // a Mic take is kept nowhere else: its recording goes into the ♥ with its notes (up to ~25 MB), so ♥ → Open plays it again
     let au=null;
-    if(fav.src==='mic'){ try{ const B=listenBlobRef.current; if(B && B.blob && B.blob.size>0 && B.blob.size<=25*1024*1024){ au={ buf: await B.blob.arrayBuffer(), mime: B.type || B.blob.type || 'audio/webm' }; fav.au=1; } }catch(_){ au=null; } }
+    if(fav.src==='mic'){ try{ const B=await micTakeBlobRef.current(); if(B && B.blob && B.blob.size>0 && B.blob.size<=25*1024*1024){ au={ buf: await B.blob.arrayBuffer(), mime: B.type || B.blob.type || 'audio/webm' }; fav.au=1; } }catch(_){ au=null; } }
     const r=await favAdd(fav, clone(chords), au ? {au} : undefined);
     if(r){ setFavs(l=>[r].concat(l.filter(x=>x.id!==r.id))); _favToastShow({kind:'saved', n: favs.length+1}); try{ window.posthog && window.posthog.capture('fav_add',{src:fav.src||'', n: favs.length+1}); }catch(_){} }
     else _favToastShow({kind:'failed'});
@@ -13702,6 +13704,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           let rec; try{ rec = new MR(recordStream, _micRecOpts(mime)); }catch(_){ rec = new MR(recordStream, mime ? { mimeType: mime } : undefined); }   // a generous bitrate for the take
           listenChunksRef.current = [];
           // Clear any previous draft's blob — fresh listen session.
+          if(!(chordsRef.current && chordsRef.current.length)) listenSegsRef.current=[];
           if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
           listenBlobRef.current = null;
           rec.ondataavailable = (e)=>{ if(e.data && e.data.size>0) listenChunksRef.current.push(e.data); };
@@ -13712,6 +13715,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             const blob = new Blob(chunks, { type });
             const url = URL.createObjectURL(blob);
             listenBlobRef.current = { blob, url, type };
+            listenSegsRef.current = listenSegsRef.current.concat([{ blob, type }]);
             listenChunksRef.current = [];
             setHasMicBlob(true);
             // Decode blob → AudioBuffer in background so Play can start the
@@ -13980,6 +13984,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           let rec; try{ rec = new MR(recordStream, _micRecOpts(mime)); }catch(_){ rec = new MR(recordStream, mime ? { mimeType: mime } : undefined); }   // a generous bitrate for the take
           listenChunksRef.current = [];
           // Clear any previous draft's blob — fresh sing session.
+          if(!(chordsRef.current && chordsRef.current.length)) listenSegsRef.current=[];
           if(listenBlobRef.current?.url){ try{ URL.revokeObjectURL(listenBlobRef.current.url); }catch(_){} }
           listenBlobRef.current = null;
           listenPCMRef.current = null;
@@ -13991,6 +13996,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             const blob = new Blob(chunks, { type });
             const url = URL.createObjectURL(blob);
             listenBlobRef.current = { blob, url, type };
+            listenSegsRef.current = listenSegsRef.current.concat([{ blob, type }]);
             listenChunksRef.current = [];
             setHasMicBlob(true);
             (async()=>{
@@ -16847,8 +16853,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{ loadAudio({target:{files:[new File([wav], nm+'.wav', {type:'audio/wav'})], value:''}}); }catch(_){ micToSongRef.current=false; setWorking(false); }
   };
   loadVideoRef.current = loadVideoSound;
-  const _micOpenSong = ()=>{
-    const B=listenBlobRef.current; if(!B || !B.blob || micActive) return;
+  // the take's sound, whole: one REC as it was recorded; several (REC carried on) joined into one WAV, in order
+  const _micTakeBlob = async ()=>{ const B=listenBlobRef.current, S=listenSegsRef.current||[]; if(!B || !B.blob) return null; if(S.length<2) return { blob:B.blob, type:B.type || B.blob.type || 'audio/webm' };
+    try{ const AC=window.AudioContext || window.webkitAudioContext; const ac=new AC(); const bufs=[];
+      for(const g of S){ const ab=await g.blob.arrayBuffer(); bufs.push(await new Promise((res, rej)=>{ try{ const pr=ac.decodeAudioData(ab, res, rej); if(pr && pr.catch) pr.catch(rej); }catch(e){ rej(e); } })); }
+      const sr=bufs[0].sampleRate, n=bufs.reduce((a,b)=>a+b.length, 0), out=ac.createBuffer(1, n, sr), d=out.getChannelData(0); let o=0;
+      for(const b of bufs){ const c0=b.getChannelData(0), c1=b.numberOfChannels>1 ? b.getChannelData(1) : null; for(let i=0;i<b.length;i++) d[o+i]=c1 ? (c0[i]+c1[i])*0.5 : c0[i]; o+=b.length; }
+      try{ ac.close(); }catch(_){}
+      return { blob:new Blob([_wavFromBuffer(out)], {type:'audio/wav'}), type:'audio/wav' };
+    }catch(_){ return { blob:B.blob, type:B.type || B.blob.type || 'audio/webm' }; } };
+  micTakeBlobRef.current = _micTakeBlob;
+  const _micOpenSong = async ()=>{
+    if(micActive) return; const B=await _micTakeBlob(); if(!B || !B.blob) return;
     const type=B.type || B.blob.type || 'audio/webm';
     const ext = /mp4|aac|m4a/.test(type) ? '.m4a' : /ogg/.test(type) ? '.ogg' : /wav/.test(type) ? '.wav' : '.webm';
     const d=new Date(micTakeAt || Date.now());
