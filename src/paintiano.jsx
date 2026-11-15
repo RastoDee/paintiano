@@ -34511,7 +34511,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [feedSideDone, setFeedSideDone] = useState(()=>{ try{ return localStorage.getItem('paintiano_swiped_side')==='1'; }catch(_){ return false; } });   // ←→ a variant: known once swiped
   const [feedSidePeek, setFeedSidePeek] = useState(0); const feedSideNRef = useRef(0);
   const _sideDone = ()=>{ feedSideNRef.current=9; setFeedSidePeek(0); if(!feedSideDone){ setFeedSideDone(true); try{ localStorage.setItem('paintiano_swiped_side','1'); }catch(_){} } };
-  const [feedPosterGo, setFeedPosterGo] = useState(null);
+  const [feedPosterGo, setFeedPosterGo] = useState(null); const [feedPosterCut, setFeedPosterCut] = useState(null);   // Cut: the picture goes at once (the look changed under it)
   const [feedPeek, setFeedPeek] = useState(0);   // the surprise lifts a little and the next one shows under it (until the first swipe up)
   const feedPeekNRef = useRef({id:null, n:0});
   // Home tour: up · sideways · hold · down (only when it can go back) · tap — learned by doing, once offered after the first surprise
@@ -43184,6 +43184,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{ if(!feedUpDone || feedSideDone || !playing || feedAt<0 || feedIntro || feedSideNRef.current>=2) return; const tm=setTimeout(()=>{ feedSideNRef.current++; setFeedSidePeek(Date.now()); }, 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedSideDone, playing, feedAt, feedIntro]);
   useEffect(()=>{ if(!feedSidePeek) return; const tm=setTimeout(()=>setFeedSidePeek(0), 2000); return ()=>clearTimeout(tm); },[feedSidePeek]);
   useEffect(()=>{ if(!playing || feedAt<0) return; const c=feedCards[feedAt]; if(c && c.pu && feedPosterGo!==c.id) setFeedPosterGo(c.id); },[playing, feedAt, feedCards]);
+  // … and when its look changes while it stands still (a variant, a palette, a painter on a paused painting): the picture taken of it
+  // would cover the new look for good — the swipe went on, the painting on the screen stayed the one before
+  const feedLookSigRef = useRef({id:null, sig:''});
+  useEffect(()=>{ if(feedAt<0) return; const c=feedCards[feedAt]; if(!c || !c.pu || feedPosterGo===c.id) return;
+    const sig=[style||'', phaseIndex|0, shufVariant|0, painterStage.join('+'), mode||'', notesMode?1:0, randomMode?1:0, shuffleStyle||'', (()=>{ try{ return JSON.stringify(fuRoll||''); }catch(_){ return ''; } })()].join('|'), R=feedLookSigRef.current;
+    if(R.id!==c.id){ R.id=c.id; R.sig=sig; return; } if(R.sig!==sig){ setFeedPosterCut(c.id); setFeedPosterGo(c.id); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[feedAt, feedCards, feedPosterGo, style, phaseIndex, shufVariant, painterStage, mode, notesMode, randomMode, shuffleStyle, fuRoll]);
   useEffect(()=>{ if(playing && feedNeedTap) setFeedNeedTap(false); if(playing && !feedSoundOk) setFeedSoundOk(true); },[playing]);
   useEffect(()=>{ const on = feedLoaded!==null; feedLaRef.current = on ? 0.15 : 0; try{ Tone.getContext().lookAhead = on ? 0.15 : 0.03; }catch(_){} },[feedLoaded]);
   // any plain tap wakes a sleeping sound (iOS gives none to a swipe): then a swipe can start the card at once
@@ -44493,7 +44501,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? ((FC.piece==='own' && _feedSnap()) || H.u || null) : undefined)) : undefined }); }
             else if(!FC && st.ax==='x' && !st.b){ const dir = dx<0 ? 1 : -1, nb=_homeNb(dir); if(nb && nb.u) st.fd = _fdLock('x', dir, { sideU:nb.u, onGo:()=>_homeGo(nb.k) }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
-        const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd){ _fdDbg(st.fd, 0, false, 'CANCEL'); _fdEnd(st.fd, 0); } };   // the phone took the touch: the drag ends where it is — past a quarter the card goes on, short of it back
+        const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0, true); };   // the phone took the touch: the card goes back
         // ← → on your home: through the paintings you left unfinished — each way's own card (Music, Image, Mood from image, Mood,
         // Compose, Mic, in the ✦ Change order), round and round; ▶ goes back to the one in front
         const _hkOf = (h)=> h ? (h.k || (h.src==='image' ? 'image' : 'music')) : null;
@@ -44546,7 +44554,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   {feedUpCue && (<span className="pf-sh-up" aria-hidden="true">{[0,1].map(i=>(<svg key={i} width="26" height="14" viewBox="0 0 26 14"><path d="M3 12L13 3l10 9" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/></svg>))}</span>)}
                   {_fL && FC.u && (<img src={FC.u} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>)}
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
-                  {FC.pu && (<img className={'pf-sh-poster'+((feedPosterGo===FC.id) ? ' go' : '')} src={FC.pu} alt="" aria-hidden="true"/>)}   {/* the first screen's picture stays until the piece starts, then melts into it */}
+                  {FC.pu && feedPosterCut!==FC.id && (<img className={'pf-sh-poster'+((feedPosterGo===FC.id) ? ' go' : '')} src={FC.pu} alt="" aria-hidden="true"/>)}   {/* the first screen's picture stays until the piece starts, then melts into it */}
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
                   {_fL && feedIntro && _fPlay && (()=>{
                     if(feedIntro.k==='m'){ const _cur=chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))]; const _lit=new Set(((_cur && (_cur.n||_cur.notes)) || []).map(x=>{ const m=(x && x.m!==undefined) ? x.m : x; return ((Math.round(+m||0)%12)+12)%12; })); const _nm=_miT('names');
@@ -46927,7 +46935,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             if(!s.ax && (Math.abs(dx)>10 || Math.abs(dy)>10)){ s.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x'; if(!_holdingRef.current && !s.e && e.touches.length===1) s.fd = _sdLock(s.ax, s.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1)); if(s.fd){ _swipeWasGestureRef.current = true; _holdCancel(); } }
             if(s.fd) _fdMove(s.fd, s.ax==='y' ? dy : dx); }
         }}
-        onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _fdDbg(s.fd, 0, false, 'CANCEL'); _sdEnd(s.fd, 0); } }}   // the phone took the touch: the drag ends where it is — past a quarter the painting goes on, short of it back
+        onTouchCancel={()=>{ _btlDragUp(null, null); _holdEnd(); const s=_swipeStartRef.current; if(s && s.fd){ _swipeStartRef.current=null; _sdEnd(s.fd, 0, true); } }}   // the phone took the touch: the painting goes back
         onTouchEnd={e=>{
           { const t0=e.changedTouches && e.changedTouches[0]; if(_btlDragUp(t0 ? t0.clientX : null, t0 ? t0.clientY : null)){ _holdEnd(); const o=_swipeStartRef.current; _swipeStartRef.current=null; if(o && o.fd) _sdEnd(o.fd, 0, true); return; } }   // carried: not a swipe, not a tap
           _holdEnd();
