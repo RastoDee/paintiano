@@ -2997,7 +2997,76 @@ function _moodTitleLoc(s, mn){
     if(!k || !mn[k]) return seg; hit++; let v=String(mn[k]); if(core && core.charAt(0)!==core.charAt(0).toLowerCase()) v=v.charAt(0).toUpperCase()+v.slice(1); return (m ? m[1] : '')+v+(m ? m[3] : ''); });
   return hit ? out.join(' → ') : s;
 }
-export default function Paintiano() {
+// A notebook: the Studio as on a phone — the same app in a phone-shaped frame in the middle, dark around (the Atelier stays Pro's choice in
+// Settings → View). Decided once, at the start. The frame holds the app itself, so every tray, sheet and gesture is the phone's own:
+// the mouse draws a finger there (_pfMouseFinger), the keys come on top.
+const _pfInFrame = ()=>{ try{ return typeof window!=='undefined' && window.top!==window.self && !!window.frameElement && window.frameElement.id==='pf-desk-frame'; }catch(_){ return false; } };
+const _pfDeskStudio = ()=>{ try{ if(typeof window==='undefined' || window.top!==window.self || _pfIosApp()) return false;
+  if(!_pfShape().desk) return false; if(_proReadCache() && localStorage.getItem('paintiano_view')==='classic') return false; return true; }catch(_){ return false; } };
+const PF_DESK_KEYS = {
+  EN:['Play · pause','Next · previous','Other version','Full screen','Like','Space','2× click'],
+  SK:['Prehrať · pauza','Ďalší · predošlý','Iná verzia','Celá obrazovka','Páči sa','Medzerník','2× klik'],
+  DE:['Play · Pause','Nächstes · voriges','Andere Version','Vollbild','Gefällt mir','Leertaste','2× Klick'],
+  FR:['Lecture · pause','Suivant · précédent','Autre version','Plein écran','J’aime','Espace','2× clic'],
+  ES:['Reproducir · pausa','Siguiente · anterior','Otra versión','Pantalla completa','Me gusta','Espacio','2× clic'],
+  PT:['Tocar · pausa','Seguinte · anterior','Outra versão','Ecrã inteiro','Gosto','Espaço','2× clique'],
+  zh:['播放 · 暂停','下一幅 · 上一幅','另一版本','全屏','喜欢','空格','双击'],
+  zhTW:['播放 · 暫停','下一幅 · 上一幅','另一版本','全螢幕','喜歡','空白鍵','按兩下'],
+  ja:['再生 · 一時停止','次へ · 前へ','別バージョン','全画面','いいね','スペース','ダブルクリック'],
+};
+const PF_DESK_CSS = `
+.pf-desk-shell{position:fixed;inset:0;background:radial-gradient(120% 90% at 50% 40%,#12121c 0%,#06060c 62%);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pf-desk-shell iframe{--h:min(calc(100dvh - 28px),1000px);height:var(--h);width:min(100vw,max(372px,min(calc(var(--h) * .5),500px)));border:0;border-radius:26px;background:#000;box-shadow:0 0 0 1px rgba(255,255,255,.09),0 30px 90px rgba(0,0,0,.65);display:block}
+.pf-desk-keys{position:absolute;left:calc(50% + min(250px,max(186px,min(calc(100dvh - 28px),1000px) * .25)) + 36px);bottom:34px;display:grid;grid-template-columns:auto auto;gap:9px 12px;align-items:center;font:500 12.5px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;color:rgba(242,238,232,.5);white-space:nowrap;user-select:none}
+.pf-desk-keys kbd{justify-self:start;font:600 11.5px/1 inherit;font-family:inherit;color:rgba(242,238,232,.82);padding:5px 8px;border-radius:7px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);min-width:14px;text-align:center}
+.pf-desk-keys span.k{display:flex;gap:4px}
+@media (max-width:1100px){ .pf-desk-keys{display:none} }
+`;
+function PfDeskFrame(){
+  const ref = useRef(null);
+  const _lg = ()=>{ try{ const l=localStorage.getItem('paintiano_lang'); if(l && PF_DESK_KEYS[l]) return l; const n=(navigator.language||'en').toLowerCase(); if(n.startsWith('zh')) return /tw|hk|hant/.test(n) ? 'zhTW' : 'zh'; const u=n.slice(0,2).toUpperCase(); return PF_DESK_KEYS[u] ? u : (n.startsWith('ja') ? 'ja' : 'EN'); }catch(_){ return 'EN'; } };
+  const [lg, setLg] = useState(_lg);
+  const src = useState(()=>{ try{ return window.location.href; }catch(_){ return '/play'; } })[0];
+  useEffect(()=>{ const fr=ref.current; if(!fr) return;
+    try{ const B=window.__pfBoot; if(B && !B.done){ B.ready(); B.finish(); } }catch(_){}   // the opening plays in the frame, not twice
+    const focus = ()=>{ try{ fr.contentWindow.focus(); }catch(_){} };
+    const key = (e)=>{ if(e.metaKey || e.ctrlKey || e.altKey) return; const a=document.activeElement; if(a===fr) return;   // keys pressed beside the frame: they are the app's
+      try{ const w=fr.contentWindow; w.dispatchEvent(new w.KeyboardEvent(e.type, {key:e.key, code:e.code, bubbles:true, cancelable:true})); if(e.key===' ' || e.key.startsWith('Arrow')) e.preventDefault(); }catch(_){} if(e.type==='keyup') focus(); };
+    const st = ()=>setLg(_lg());
+    fr.addEventListener('load', focus); window.addEventListener('keydown', key); window.addEventListener('keyup', key); window.addEventListener('storage', st); window.addEventListener('mouseup', focus);
+    return ()=>{ fr.removeEventListener('load', focus); window.removeEventListener('keydown', key); window.removeEventListener('keyup', key); window.removeEventListener('storage', st); window.removeEventListener('mouseup', focus); };
+  },[]);
+  const K = PF_DESK_KEYS[lg] || PF_DESK_KEYS.EN;
+  return (<div className="pf-desk-shell"><style>{PF_DESK_CSS}</style>
+    <iframe id="pf-desk-frame" ref={ref} title="Paintiano" src={src} allow="microphone; camera; clipboard-write; autoplay; midi; web-share"/>
+    <div className="pf-desk-keys" aria-hidden="true">
+      <span className="k"><kbd>{K[5]}</kbd></span><span>{K[0]}</span>
+      <span className="k"><kbd>↓</kbd><kbd>↑</kbd></span><span>{K[1]}</span>
+      <span className="k"><kbd>→</kbd><kbd>←</kbd></span><span>{K[2]}</span>
+      <span className="k"><kbd>F</kbd></span><span>{K[3]}</span>
+      <span className="k"><kbd>{K[6]}</kbd></span><span>{K[4]}</span>
+    </div>
+  </div>);
+}
+// In the frame the mouse is a finger: press, drag and release reach the app as a touch (swipes, the pull for the looks, the carry to a Battle),
+// a click follows as it does after a tap — not after a drag, and not where the touch was taken (as a phone does). The wheel turns the paintings.
+function _pfMouseFinger(){ let st=null, eat=0, real=0;   // real: a finger of its own (a tablet on its side) — the mouse events a touch brings along are not drawn again
+  const rt=(e)=>{ if(e.isTrusted) real=Date.now(); }; window.addEventListener('touchstart', rt, {capture:true, passive:true}); window.addEventListener('touchend', rt, {capture:true, passive:true});
+  const mk=(type, tgt, e, end)=>{ const t={identifier:0, target:tgt, clientX:e.clientX, clientY:e.clientY, pageX:e.pageX, pageY:e.pageY, screenX:e.screenX, screenY:e.screenY, radiusX:1, radiusY:1, force:1};
+    const ev=new Event(type, {bubbles:true, cancelable:true}); const L=end ? [] : [t];
+    Object.defineProperty(ev,'touches',{value:L}); Object.defineProperty(ev,'targetTouches',{value:L}); Object.defineProperty(ev,'changedTouches',{value:[t]}); return ev; };
+  const own=(el)=>{ try{ return !!(el && el.closest && el.closest('input,textarea,select,[contenteditable="true"]')); }catch(_){ return false; } };
+  const dn=(e)=>{ if(e.button!==0 || own(e.target) || Date.now()-real<900){ st=null; return; } st={t:e.target, x:e.clientX, y:e.clientY, mv:false, pd:false};
+    const ev=mk('touchstart', e.target, e); e.target.dispatchEvent(ev); if(ev.defaultPrevented){ st.pd=true; e.stopPropagation(); } };
+  const mv=(e)=>{ if(!st) return; if(!st.mv && Math.hypot(e.clientX-st.x, e.clientY-st.y)>8) st.mv=true; const ev=mk('touchmove', st.t, e); st.t.dispatchEvent(ev); if(st.pd || st.mv) e.stopPropagation(); if(st.mv) e.preventDefault(); };
+  const up=(e)=>{ if(!st) return; const s=st; st=null; const ev=mk('touchend', s.t, e, true); s.t.dispatchEvent(ev);
+    if(s.pd || s.mv || ev.defaultPrevented){ e.stopPropagation(); eat=Date.now(); } };
+  const ck=(e)=>{ if(eat && Date.now()-eat<400){ eat=0; e.stopPropagation(); e.preventDefault(); } };
+  const sel=(e)=>{ if(st && st.mv) e.preventDefault(); };
+  window.addEventListener('mousedown', dn, true); window.addEventListener('mousemove', mv, true); window.addEventListener('mouseup', up, true); window.addEventListener('click', ck, true); window.addEventListener('selectstart', sel, true); window.addEventListener('dragstart', (e)=>e.preventDefault(), true);
+}
+export default function Paintiano(){ const [frame] = useState(_pfDeskStudio); return frame ? <PfDeskFrame/> : <PaintianoApp/>; }
+function PaintianoApp() {
   const canvasRef    = useRef(null);
   const canvasWrapRef = useRef(null); // wrapper around the canvas — scrolled into view when the strip closes
   const stripWrapRef = useRef(null); // wrapper around the Color·Style strip — scroll target on Play in mood-from-image so the strip + source thumbnail stay framed
@@ -8643,6 +8712,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(inputFocus.current)return;
       if(favViewRef.current)return;   // the Favorites viewer: no notes, no Play
       const _ae=document.activeElement; if(_ae&&(_ae.tagName==='INPUT'||_ae.tagName==='TEXTAREA'||_ae.isContentEditable))return;
+      if(stKeyRef.current && stKeyRef.current(e)){ e.preventDefault(); return; }   // the Studio's keys: ↓ ↑ → ← F Esc
       if(e.key==='Backspace'&&composeMode&&!busy&&!recording){e.preventDefault();undoLast();return;}
       if((e.key===' '||e.key==='Enter')&&isInteractive())return;
       if(e.key===' '){e.preventDefault();handlePauseClickRef.current?.();return;}
@@ -15396,7 +15466,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(basicModeRef.current && qrPieceRef.current==null) setBasicMode(false); },[proStatus]);
   // the iOS app: the Studio for everyone, Pro too — the Atelier and Lite are not in it (the web keeps them)
   useEffect(()=>{ if(!_pfIosApp()) return; if(viewPref!=='studio') setViewPref('studio'); if(basicMode) setBasicMode(false); },[viewPref, basicMode]);
-  const _setView = (v)=>{ if(_pfIosApp()) v='studio'; if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){} };
+  const _setView = (v)=>{ if(_pfIosApp()) v='studio'; if(v==='studio' && basicMode && liteChipRef.current){ try{ liteChipRef.current.click(); }catch(_){} } setViewPref(v); try{ localStorage.setItem('paintiano_view', v); }catch(_){} try{ window.posthog && window.posthog.capture('view_pick',{view:v}); }catch(_){}
+    // a notebook: the Studio lives in its frame, the Atelier on the whole window — the page starts again in the other one
+    try{ if(v==='classic' && _pfInFrame()){ setTimeout(()=>{ try{ window.top.location.reload(); }catch(_){} }, 120); } else if(v==='studio' && _pfDeskStudio()){ setTimeout(()=>{ try{ window.location.reload(); }catch(_){} }, 120); } }catch(_){} };
   // Pro on a phone, once: the Studio comes by itself (from Lite or Advanced). A card welcomes Pro, and Pro AI when it comes —
   // once per tier on this device (no word about the Atelier any more: it stays in Styles & palettes → View)
   const [viewInfo, setViewInfo] = useState(false);
@@ -16557,6 +16629,37 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     flash:()=>_stFlashNow(), buzz:(ms)=>_stBuzz(ms),
     hold:()=>{ metaKeepRef.current=true; setFdMeta({cap:_capLines()}); _metaWatch(_swipeStartRef); if(_swipeFlashTimerRef.current){ clearTimeout(_swipeFlashTimerRef.current); _swipeFlashTimerRef.current=null; } _setSwipeFlashKey(null); },
     free:()=>{ _metaWatchOff(); metaKeepRef.current=false; setFdMeta(null); } };
+  // A notebook's Studio (the frame, _pfInFrame): keys and the wheel. ↓ the next painting, ↑ the one before, → ← the variants — each one a swipe drawn in the
+  // middle of the screen, so For You, the Studio and the open looks tray answer as they do to a finger. F: a spread (a step; round again), Esc: a step back.
+  const stKeyRef = useRef(null); const stSwipeBusyRef = useRef(0);
+  const _stKeyFree = ()=> studioOn && !stChg && !stShare && !showMine && !favView && !btlTab && !showGuide && !showSetupModal && !recording && !document.querySelector('[role="dialog"]');
+  const _stKeySwipe = (dx, dy)=>{ const now=Date.now(); if(now-stSwipeBusyRef.current<380) return; stSwipeBusyRef.current=now;
+    try{ const x=window.innerWidth/2, y=window.innerHeight*0.42, el=document.elementFromPoint(x, y); if(!el) return;
+      const mk=(type, px, py, end)=>{ const t={identifier:0, target:el, clientX:px, clientY:py, pageX:px, pageY:py, screenX:px, screenY:py, radiusX:1, radiusY:1, force:1}; const ev=new Event(type, {bubbles:true, cancelable:true}); const L=end ? [] : [t];
+        Object.defineProperty(ev,'touches',{value:L}); Object.defineProperty(ev,'targetTouches',{value:L}); Object.defineProperty(ev,'changedTouches',{value:[t]}); return ev; };
+      el.dispatchEvent(mk('touchstart', x, y)); let n=0; const step=()=>{ n++; const k=n/5; el.dispatchEvent(mk('touchmove', x+dx*k, y+dy*k));
+        if(n<5) setTimeout(step, 16); else setTimeout(()=>{ el.dispatchEvent(mk('touchend', x+dx, y+dy, true)); }, 16); }; setTimeout(step, 16); }catch(_){} };
+  const _stKeySpread = (d)=>{   // d: +1 a step out (past the last: back to the start), -1 a step back; false: nothing to step
+    if(studioLive){ const lv=stLiveLvRef.current; if(d<0){ if(!lv) return false; _stLiveSet(lv-1); return true; } _stLiveSet(lv>=2 ? 0 : lv+1); return true; }
+    if(studioHome){ const v=feedCleanRef.current; if(d<0 && !v) return false; feedCleanRef.current=!v; setFeedClean(!v); return true; }
+    if(!studioFs) return false;
+    if(d<0){ if(stQuietRef.current){ _stQuietSet(false); return true; } if(stFillNowRef.current){ _stFillSet(false); return true; } return false; }
+    if(!stFillNowRef.current) _stFillSet(true); else if(!stQuietRef.current) _stQuietSet(true); else { _stQuietSet(false); _stFillSet(false); } return true; };
+  stKeyRef.current = (e)=>{ if(!_pfInFrame() || e.metaKey || e.ctrlKey || e.altKey || !_stKeyFree()) return false; const k=e.key;
+    if(k==='Escape') return _stKeySpread(-1);
+    if((k==='f' || k==='F') && !composeMode){ if(!e.repeat) _stKeySpread(1); return true; }
+    if(studioLive) return false;
+    if(k==='ArrowDown'){ _stKeySwipe(0, -260); return true; } if(k==='ArrowUp'){ _stKeySwipe(0, 260); return true; }
+    if(k==='ArrowRight'){ _stKeySwipe(-220, 0); return true; } if(k==='ArrowLeft'){ _stKeySwipe(220, 0); return true; }
+    return false; };
+  const stWheelRef = useRef(null);
+  stWheelRef.current = (e)=>{ if(!_stKeyFree()) return; if(e.ctrlKey){ e.preventDefault(); if(Math.abs(e.deltaY)>2 && Date.now()-stSwipeBusyRef.current>450){ stSwipeBusyRef.current=Date.now(); _stKeySpread(e.deltaY<0 ? 1 : -1); } return; }   // a pinch on the trackpad
+    if(studioLive) return;
+    try{ for(let n=e.target; n && n!==document.body && n.nodeType===1; n=n.parentNode){ const cs=getComputedStyle(n); if((/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight>n.clientHeight+2) || (/(auto|scroll)/.test(cs.overflowX) && n.scrollWidth>n.clientWidth+2)) return; } }catch(_){}   // a list under the pointer: the wheel is its own
+    const ax=Math.abs(e.deltaX), ay=Math.abs(e.deltaY); if(Math.max(ax, ay)<24) return; e.preventDefault();
+    if(ay>=ax) _stKeySwipe(0, e.deltaY>0 ? -260 : 260); else _stKeySwipe(e.deltaX>0 ? -220 : 220, 0); };
+  useEffect(()=>{ if(!_pfInFrame()) return; _pfMouseFinger(); const wh=(e)=>{ if(stWheelRef.current) stWheelRef.current(e); };
+    window.addEventListener('wheel', wh, {passive:false}); return ()=>window.removeEventListener('wheel', wh); },[]);
   const _sdOk = ()=> studioFs && stFill && !stripOpen && !studioLive && viewMode!=='image' && !demoReelOn && !recording && !stVidRec;
   const _sdCss = ()=>{ try{ if(document.getElementById('pf-fd-css')) return; const el=document.createElement('style'); el.id='pf-fd-css'; el.textContent='[data-fdz] canvas:not(.pf-fd-copy){opacity:0!important;transition:none!important} [data-fdd] canvas:not(.pf-fd-copy){transition:none!important}'; document.head.appendChild(el); }catch(_){} };
   const _sdCopyAt = (fd, off)=>{ const c=fd.copy; if(!c) return; c.style.left=(fd.bx + (fd.ax==='x' ? off : 0))+'px'; c.style.top=(fd.by + (fd.ax==='y' ? off : 0))+'px'; };
@@ -22935,7 +23038,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 </div>
               )}
               {/* View — Studio (the painting full screen, controls on a tap) or Classic (the screen as before). Phone, Advanced. */}
-              {!isDesktop && isPro && !_pfIosApp() && (
+              {isPro && !_pfIosApp() && (
               <div className="pf-setup-view" style={{border:'1px solid rgba(255,255,255,.07)',borderRadius:20,background:'rgba(255,255,255,.045)',padding:16}}>
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                   <div aria-hidden="true" style={{flex:'0 0 auto',width:40,height:40,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',background:'linear-gradient(135deg,#4de3a0,#2f9fc9)'}}>
