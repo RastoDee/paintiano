@@ -2433,6 +2433,10 @@ const STUDIO_FX_CSS = `
 .pf-chb.x{margin-left:auto}
 .pf-chb.g{background:linear-gradient(135deg,#f0d78a,#c9a84c);color:#1a1408;padding:8px 13px;display:inline-flex;align-items:center}
 .pf-chb.r,.pf-tx-undo,.pf-tx-bin{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.pf-ch-seek{padding:9px 26px 11px;touch-action:none;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+.pf-ch-seek .pf-ch-tr{position:relative;height:4px;border-radius:2px;background:rgba(255,255,255,.14)}
+.pf-ch-seek .pf-ch-tr i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:linear-gradient(90deg,#c9a84c,#f0d78a)}
+.pf-ch-seek .pf-ch-tr b{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#f0d78a;box-shadow:0 0 0 4px rgba(240,215,138,.22),0 2px 8px rgba(0,0,0,.6)}
 .pf-ch-undo{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 auto 8px;width:max-content;max-width:100%;padding:7px 8px 7px 16px;border-radius:20px;background:rgba(20,16,30,.97);border:1px solid rgba(242,238,232,.18);color:#f2eee8;font-size:calc(min(var(--pf-read-scale,1),1.15) * 13px);white-space:nowrap}
 .pf-ch-undo button{font:inherit;font-weight:600;height:28px;padding:0 13px;border-radius:14px;border:1px solid rgba(240,192,64,.6);background:transparent;color:#f0c040;cursor:pointer}
 .pf-chn{font-size:11.5px;color:rgba(242,238,232,.6);font-variant-numeric:tabular-nums;padding:0 2px}
@@ -16592,7 +16596,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     idxRef.current=Math.min(idxRef.current, next.length); setDisp(d=>Math.min(d, next.length));
     _stChSel(Math.max(0, pos-1)); setStChEdit('sel'); };
   _stChordHoldRef.current = (x,y)=>{ if(!(studioFs && composeMode && chords.length && !playing && !anim && !working)) return false;
-    const ix=_stChordAt(x,y); if(ix==null) return false; _stBuzz(12); setStChFromPaint(!!(effectiveStyle && effectiveStyle!=='notes'));   /* from a painter's look: ♪ Notes is lit and leads back to the painting at that chord */ _stChOpen(ix); return true; };
+    const ix=_stChordAt(x,y); if(ix==null) return false; _stBuzz(12); setStChFromPaint(false);
+    if(effectiveStyle && effectiveStyle!=='notes'){ _stPaintAt(chords.length-1); return true; }   // a painter's look: the painting stays, the line under it leads through the piece (♪ Notes shows the Mosaic)
+    _stChOpen(ix); return true; };
   // a chord played while one is chosen goes after it (the commit does that) and takes the frame along; leaving Compose ends the editing.
   // Play in Compose: the whole composition stays on the painting, dimmed (stGhost — a still of it under the notes as they light up). A tap stops it there:
   // the chord that just sounded is chosen, the keys put notes after it, Delete takes it out (held: it and all before it), a tap on another chord moves
@@ -16628,6 +16634,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const next=prev.slice(0,pos).concat(prev.slice(pos+1)).map((c,i)=>({...c,idx:i})); chordsRef.current=next; setChords(next); _stBuzz(10);
     if(!next.length){ idxRef.current=0; sessionStart.current=0; _stChEnd(); setDisp(0); return; }
     idxRef.current=Math.min(idxRef.current, next.length); _stPaintAt(pos-1); };
+  // … and a line under the painting is the whole piece: a drag along it moves the place (the painting shows as far as that chord)
+  const stChSeekRef = useRef(false);
+  const _stChSeekTo = (e)=>{ try{ const el=e.currentTarget.querySelector('.pf-ch-tr'), r=el.getBoundingClientRect(), n=chordsRef.current.length; if(!n || !r.width) return;
+    const at=Math.round(Math.max(0, Math.min(1, (e.clientX-r.left)/r.width))*(n-1)); if(at!==selectedChordIdxRef.current){ setStGhost(null); _stPaintAt(at); } }catch(_){} };
+  const _stChSeek = { onTouchStart:(e)=>e.stopPropagation(), onPointerDown:(e)=>{ stChSeekRef.current=true; try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){} _stChSeekTo(e); },
+    onPointerMove:(e)=>{ if(stChSeekRef.current) _stChSeekTo(e); }, onPointerUp:()=>{ stChSeekRef.current=false; }, onPointerCancel:()=>{ stChSeekRef.current=false; } };
   // the painting, stopped: a chord played goes in after the place (the commit moves the frame on) — the painting follows
   useEffect(()=>{ if(stChEdit!=='paint') return; const ix=selectedChordIdxRef.current; if(ix==null) return; const d=Math.min(chords.length, ix+1);
     if(resumeFromRef.current!==d || dispRef.current!==d){ resumeFromRef.current=d; setDisp(d); }
@@ -22311,6 +22323,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             : sorted.map(noteName).join(' · ');
         })():(composeMode&&chords.length>0&&studioFs&&(stChEdit==='sel'||stChEdit==='paint'))?(<span><b style={{color:'#f2eee8',fontWeight:700}}>{(selectedChordIdx==null ? 0 : selectedChordIdx)+1}</b> / {chords.length} {t('chordsOnly')}</span>):composeMode&&chords.length>0?((effectiveStyle&&effectiveStyle!=='notes')?`${chords.length} ${t('chordsOnly')}`:`${chords.length} ${t('chordsPlay')}`):'\u00a0'}   {/* nothing sounding: the line stays, empty (a lone dash read as a stray mark) */}
       </div>
+      {studioFs && composeMode && stChEdit==='paint' && chords.length>1 && (()=>{ const pct=Math.max(0, Math.min(100, (selectedChordIdx==null ? chords.length-1 : selectedChordIdx)/(chords.length-1)*100));
+        return (<div className="pf-ch-seek" role="slider" aria-valuemin={1} aria-valuemax={chords.length} aria-valuenow={(selectedChordIdx==null ? 0 : selectedChordIdx)+1} {..._stChSeek}><div className="pf-ch-tr"><i style={{width:pct+'%'}}/><b style={{left:pct+'%'}}/></div></div>); })()}
       {showAdvanced && composeMode && (
         <div style={{display:'flex',gap:8,justifyContent:'center',alignItems:'center',marginBottom:6,padding:'8px 12px',borderRadius:14,background:'rgba(140,255,180,.06)',border:'1px solid rgba(140,255,180,.25)',maxWidth:'fit-content',marginLeft:'auto',marginRight:'auto',flexWrap:'wrap'}}>
           <span style={{fontSize:(.5*effScale)+'rem',letterSpacing:'.1em',textTransform:'uppercase',color:'rgba(140,255,180,.6)'}}>{t('scaleSnapLabel')!=='scaleSnapLabel'?t('scaleSnapLabel'):'snap to key'}</span>
