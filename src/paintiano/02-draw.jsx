@@ -7487,7 +7487,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  Free (cap=2) sees Ornament/Frieze + Spiral Field — gold tile grid vs
   //  abstract spiral field is the strongest decorative contrast.
   {
-    // VARIANT: 0 What he heard (_kmListen, generative) · 1 The ornament dress (Nov 2026, was the Ornament grid; the grid code below stays, unused) · 2 The golden vine (Nov 2026, was the Spiral Field) · 3 The golden rain (Nov 2026: Danaë without her figure) · 4 The Kiss (Nov 2026: his low notes, her high notes on one mantle) · 5 Tree of Life · 6 Farm Garden (Nov 2026: the bed a carpet of blooms, painted sunflowers; the Mosaic Field and the Birch Forest retired). Free: 0 and 1.
+    // VARIANT: 0 What he heard (_kmListen, generative) · 1 The ornament dress (Nov 2026, was the Ornament grid; the grid code below stays, unused) · 2 The golden vine (Nov 2026, was the Spiral Field) · 3 The golden rain (Nov 2026: Danaë without her figure) · 4 The Kiss (Nov 2026: his low notes, her high notes on one mantle) · 5 Tree of Life (Nov 2026: gold bands, chord inlays, the frieze's mosaic) · 6 Farm Garden (Nov 2026: the bed a carpet of blooms, painted sunflowers; the Mosaic Field and the Birch Forest retired). Free: 0 and 1.
     const _pn=_capN(7); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_gpick===0){ _kmListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===1){ klimtPhasePatchwork(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -7812,40 +7812,64 @@ function klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   try{ globalThis.__KM_KISS={lows:L.length,highs:H.length}; }catch(_){}
 }
 
-// ── Klimt F · Tree of Life (Stoclet frieze, 1909) — on a cream-gold ground a
-// trunk set with triangles rises from a flowering mound; its branches unroll
-// sideways into great curls, each curl ending in a jewel; Egyptian eyes and
-// leaf-triangles hang from them; a black bird perches at the top. One branch
-// pair per passage of the song.
+// ── Klimt F · Tree of Life (Stoclet frieze, 1909) — on the cream gold of the frieze, laid in small squares, a trunk set
+// with triangles rises from a flowering mound; its branches unroll sideways into great curls, Egyptian eyes and
+// leaf-triangles hang from them; a black bird perches at the top. A branch pair for every passage of the piece:
+//   the branches  gold bands with a black edge and a light line, swaying out and rolling into a curl — the curl as big
+//                 as the passage is loud, as many turns as it has notes
+//   the inlays    every chord of the passage an enamel set into its branch, in time from the trunk outwards
+//   the jewels    at the heart of each curl, and on the trunk where the pair leaves it
+// It grows with the piece: the mound and the trunk first, pair after pair as the passages sound, the bird at the end.
 function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)), reveal=Math.max(0,Math.min(1,N/cn)), D=Math.min(CW,CH);
-  const jw=(t)=>_kmJewel(_picChord(chords,Math.max(0,Math.min(cn-1,Math.floor(t*cn))),gc,isBW).rgb,isBW);
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {major}=X; const dens=A.ch?A.ch.density:0.3;
+  const jwi=(i)=>_kmJewel(_picChord(chords,Math.max(0,Math.min(cn-1,i)),gc,isBW).rgb,isBW); const jw=(t)=>jwi(Math.floor(t*cn));
+  const rr=(k)=>{ const f=_seedRnd(k,ss,0,0); f(); return f; };
   const r0=_seedRnd(97,ss,0,23); r0();
-  const gg=ctx.createLinearGradient(0,0,0,CH); gg.addColorStop(0,isBW?'#e4e0d6':'#efe2bc'); gg.addColorStop(1,isBW?'#cfcabd':'#e2cb8e'); ctx.fillStyle=gg; ctx.fillRect(0,0,CW,CH);
+  const GOLD=isBW?[150,146,136]:[196,150,40], LINE=isBW?[90,86,78]:[150,104,26], LG=isBW?[226,222,214]:[240,206,110], BLK=_KM_BLK, WHT=_KM_WHT;
+  // the cream gold of the frieze, laid in small squares
+  { const base=isBW?[226,222,212]:[238,224,184], hi=isBW?[244,242,236]:[248,238,206], lo=isBW?[200,196,186]:[222,198,140];
+    ctx.fillStyle=_kmCss(_kmMix(base,lo,0.5)); ctx.fillRect(0,0,CW,CH); const nx=Math.round(CW/(D*0.032)), ny=Math.round(CH/(D*0.032)), sw=CW/nx, sh=CH/ny;
+    for(let i=0;i<nx;i++) for(let j=0;j<ny;j++){ const r=rr(59000+i*131+j); ctx.fillStyle=_kmCss(_kmMix(_kmMix(base,hi,r()*0.7),lo,r()*0.4)); ctx.fillRect(i*sw+0.4,j*sh+0.4,sw-0.4,sh-0.4); } }
   const cx=CW*(0.5+(r0()-.5)*0.04), base=CH*0.9, top=CH*0.12, tw=D*0.035;
-  const GOLD=isBW?[150,146,136]:[196,150,40], LINE=isBW?[90,86,78]:[150,104,26];
   const ops=[]; const push=(t,f)=>ops.push([t,f]);
+  // a band along points, tapering; gold, a black edge, a light line
+  const band=(P,W)=>{ const L=[],R=[]; for(let i=0;i<P.length;i++){ const a=P[Math.max(0,i-1)], b=P[Math.min(P.length-1,i+1)]; let dx=b[0]-a[0], dy=b[1]-a[1]; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl; const w=W[i]/2; L.push([P[i][0]-dy*w,P[i][1]+dx*w]); R.push([P[i][0]+dy*w,P[i][1]-dx*w]); }
+    ctx.beginPath(); ctx.moveTo(L[0][0],L[0][1]); for(const q of L) ctx.lineTo(q[0],q[1]); for(let i=R.length-1;i>=0;i--) ctx.lineTo(R[i][0],R[i][1]); ctx.closePath(); ctx.fillStyle=_kmCss(GOLD); ctx.fill();
+    ctx.strokeStyle=_kmCss(BLK,0.8); ctx.lineWidth=Math.max(1,D*0.0028); ctx.lineJoin='round'; ctx.stroke();
+    ctx.strokeStyle=_kmCss(LG,0.6); ctx.lineWidth=Math.max(0.8,D*0.0014); ctx.beginPath(); P.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); };
   // the mound of flowers at the foot
-  push(0,()=>{ ctx.fillStyle=_kmCss(isBW?[200,196,186]:[212,184,110]); ctx.beginPath(); ctx.ellipse(cx,base+CH*0.04,CW*0.32,CH*0.07,0,Math.PI,0); ctx.closePath(); ctx.fill();
-    for(let i=0;i<28;i++){ const r=_seedRnd(i+52000,ss,0,0); r(); const a=Math.PI+r()*Math.PI, d=Math.sqrt(r()); const x=cx+Math.cos(a)*CW*0.3*d, y=base+CH*0.04+Math.sin(a)*CH*0.065*d; const c=jw(r()); ctx.fillStyle=_kmCss(c); ctx.beginPath(); ctx.arc(x,y,D*(0.008+r()*0.008),0,6.2832); ctx.fill(); } });
-  // the trunk, set with triangles
-  push(0.02,()=>{ ctx.fillStyle=_kmCss(GOLD); ctx.beginPath(); ctx.moveTo(cx-tw,base); ctx.lineTo(cx-tw*0.6,top); ctx.lineTo(cx+tw*0.6,top); ctx.lineTo(cx+tw,base); ctx.closePath(); ctx.fill();
-    const nt=12; for(let i=0;i<nt;i++){ const y=base-(base-top)*(i+0.5)/nt, w=tw*(0.9-0.3*i/nt); ctx.fillStyle=_kmCss(i%2?_KM_BLK:_KM_WHT); ctx.beginPath(); ctx.moveTo(cx-w*0.6,y+w*0.5); ctx.lineTo(cx,y-w*0.6); ctx.lineTo(cx+w*0.6,y+w*0.5); ctx.closePath(); ctx.fill(); } });
-  // branch pairs: from the trunk outwards, each unrolling into a curl
-  const nb=Math.round((5+Math.round(r0()*3))*_dW((()=>{ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } })()));   // a dense piece: more branches
-  for(let k=0;k<nb;k++){ const t=(k+0.5)/nb, by=base-(base-top)*(0.12+0.8*k/nb), reach=CW*(0.42-0.2*k/nb)*(0.85+r0()*0.25), cr=D*(0.06+0.035*(1-k/nb))*(0.8+r0()*0.4), drop=CH*(0.03+r0()*0.04);
-    for(const sgn of [-1,1]) push(t,()=>{ const ex=cx+sgn*reach, ey=by-drop;
-      ctx.strokeStyle=_kmCss(GOLD); ctx.lineWidth=D*0.014; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(cx,by); ctx.bezierCurveTo(cx+sgn*reach*0.35,by-drop*2.4,cx+sgn*reach*0.7,by+drop*0.8,ex,ey); ctx.stroke();
-      _kmCurl(ctx,ex,ey-cr*0.3,cr,2.6,sgn,GOLD,D*0.011,jw(t));
-      _kmCurl(ctx,ex,ey-cr*0.3,cr,2.6,sgn,LINE,D*0.003,null);
+  push(0,()=>{ ctx.fillStyle=_kmCss(isBW?[200,196,186]:[212,184,110]); ctx.beginPath(); ctx.ellipse(cx,base+CH*0.04,CW*0.32,CH*0.07,0,Math.PI,0); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_kmCss(LINE,0.7); ctx.lineWidth=Math.max(1,D*0.003); ctx.stroke(); });
+  { const step=Math.max(1,Math.ceil(cn/(major?150:80))); for(let i=0;i<cn;i+=step){ const t=i/cn; push(t,()=>{ const r=rr(59100+i); const a=Math.PI+0.1+r()*(Math.PI-0.2), d=Math.sqrt(r())*0.92; const x=cx+Math.cos(a)*CW*0.3*d, y=base+CH*0.04+Math.sin(a)*CH*0.065*d; const s=D*0.008*(0.8+0.5*r());
+      ctx.fillStyle=_kmCss(_kmMix(jwi(i),WHT,0.15)); for(let q=0;q<5;q++){ const b=q*1.2566; ctx.beginPath(); ctx.arc(x+Math.cos(b)*s,y+Math.sin(b)*s,s*0.6,0,6.2832); ctx.fill(); } ctx.fillStyle=_kmCss(GOLD); ctx.beginPath(); ctx.arc(x,y,s*0.4,0,6.2832); ctx.fill(); }); } }
+  // the trunk, a gold band set with triangles
+  push(0.02,()=>{ const M=30, P=[], W=[]; for(let k=0;k<=M;k++){ P.push([cx,base-(base-top)*k/M]); W.push(tw*2*(1-0.4*k/M)); } band(P,W);
+    const nt=12; for(let i=0;i<nt;i++){ const y=base-(base-top)*(i+0.5)/nt, w=tw*(0.9-0.3*i/nt); ctx.fillStyle=_kmCss(i%2?BLK:WHT); ctx.beginPath(); ctx.moveTo(cx-w*0.6,y+w*0.5); ctx.lineTo(cx,y-w*0.6); ctx.lineTo(cx+w*0.6,y+w*0.5); ctx.closePath(); ctx.fill(); } });
+  // branch pairs, one for every passage
+  const nb=Math.round((5+Math.round(r0()*3))*_dW(dens)); const G=_kd2Phrases(A,Math.max(3,nb)); const npair=G.length;
+  for(let k=0;k<npair;k++){ const q=G[k]; const t=q.t0, by=base-(base-top)*(0.12+0.8*k/npair), cr=D*(0.06+0.035*(1-k/npair))*(0.75+0.5*(q.vmax||0.6))*(0.85+r0()*0.25), reach=Math.min(CW*0.49-cr*0.6, CW*(0.52-0.26*k/npair)*(0.9+r0()*0.15)), drop=CH*(0.03+r0()*0.04);   // the branches reach out to the edges of the frieze
+    const turns=1.7+0.9*Math.min(1,(q.b-q.a)/30);
+    for(const sgn of [-1,1]) push(t,()=>{ const ex=cx+sgn*reach, ey=by-drop; const c1=[cx+sgn*reach*0.35,by-drop*2.4], c2=[cx+sgn*reach*0.7,by+drop*0.8];
+      const P=[]; const M1=36; for(let j=0;j<=M1;j++){ const u=j/M1, v=1-u; P.push([v*v*v*cx+3*v*v*u*c1[0]+3*v*u*u*c2[0]+u*u*u*ex, v*v*v*by+3*v*v*u*c1[1]+3*v*u*u*c2[1]+u*u*u*ey]); }
+      // the curl continues the branch: around a centre beside its end, turning in
+      const ta=Math.atan2(P[M1][1]-P[M1-1][1],P[M1][0]-P[M1-1][0]); const dir=sgn; const ccx=ex+Math.cos(ta-dir*Math.PI/2)*cr, ccy=ey+Math.sin(ta-dir*Math.PI/2)*cr; const a0=Math.atan2(ey-ccy,ex-ccx);
+      const M2=Math.round(64*turns); for(let j=1;j<=M2;j++){ const u=j/M2; const r=cr*(1-0.9*u); const a=a0+dir*u*turns*6.2832; P.push([ccx+Math.cos(a)*r, ccy+Math.sin(a)*r]); }
+      const W=P.map((_,j)=>D*0.015*(1-0.7*j/P.length)); band(P,W);
+      // the inlays: every chord of the passage set into the branch
+      const span=Math.max(1,q.b-q.a), st=Math.max(1,Math.ceil(span/40)); for(let j=q.a;j<q.b;j+=st){ const u=((j-q.a)+0.5)/span; const idx=Math.min(P.length-1,Math.floor(u*P.length*0.92)); const p=P[idx], w=W[idx]; const e=A.ev[j]; const s=w*0.5*(0.8+0.4*((e&&e.v)||0.5));
+        ctx.fillStyle=_kmCss(jwi(j)); ctx.beginPath(); ctx.arc(p[0],p[1],s*0.5,0,6.2832); ctx.fill(); ctx.strokeStyle=_kmCss(BLK,0.6); ctx.lineWidth=Math.max(0.5,s*0.1); ctx.stroke(); }
+      // the jewel at the heart of the curl
+      ctx.fillStyle=_kmCss(jwi(q.a)); ctx.beginPath(); ctx.arc(ccx,ccy,cr*0.15,0,6.2832); ctx.fill(); ctx.strokeStyle=_kmCss(BLK,0.8); ctx.lineWidth=Math.max(1,D*0.0022); ctx.stroke();
       // hanging ornaments along the branch: an eye, leaf-triangles, small curls
-      const hx=cx+sgn*reach*0.45, hy=by-drop*0.3; _kmEye(ctx,hx,hy+D*0.04,D*0.028,0,_KM_WHT,jw(Math.min(0.999,t+0.05)));
-      for(let j=0;j<3;j++){ const lx=cx+sgn*reach*(0.62+j*0.1), ly=by+drop*0.1+D*0.03; ctx.fillStyle=_kmCss(j%2?jw(t):_KM_BLK); ctx.beginPath(); ctx.moveTo(lx-D*0.012,ly); ctx.lineTo(lx+D*0.012,ly); ctx.lineTo(lx,ly+D*0.035); ctx.closePath(); ctx.fill(); }
-      _kmCurl(ctx,cx+sgn*reach*0.25,by-drop*1.6,cr*0.4,2,-sgn,GOLD,D*0.006,null); }); }
+      const hx=cx+sgn*reach*0.45, hy=by-drop*0.3; _kmEye(ctx,hx,hy+D*0.04,D*0.028,0,WHT,jwi(Math.min(cn-1,q.a+Math.floor(span/2))));
+      for(let j=0;j<3;j++){ const lx=cx+sgn*reach*(0.62+j*0.1), ly=by+drop*0.1+D*0.03; ctx.fillStyle=_kmCss(j%2?jwi(q.a+j):BLK); ctx.beginPath(); ctx.moveTo(lx-D*0.012,ly); ctx.lineTo(lx+D*0.012,ly); ctx.lineTo(lx,ly+D*0.035); ctx.closePath(); ctx.fill(); }
+      _kmCurl(ctx,cx+sgn*reach*0.25,by-drop*1.6,cr*0.4,2,-sgn,GOLD,D*0.006,null); _kmCurl(ctx,cx+sgn*reach*0.25,by-drop*1.6,cr*0.4,2,-sgn,LINE,Math.max(0.6,D*0.0014),null);
+      // its jewel on the trunk
+      ctx.fillStyle=_kmCss(jwi(q.a)); ctx.beginPath(); ctx.arc(cx,by,tw*0.32,0,6.2832); ctx.fill(); }); }
   // the black bird at the top of the tree
-  push(0.95,()=>{ const bx=cx+D*0.02, by=top-D*0.02, s=D*0.04; ctx.fillStyle=_kmCss(_KM_BLK); ctx.beginPath(); ctx.ellipse(bx,by,s*1.2,s*0.55,-0.25,0,6.2832); ctx.fill();
+  push(0.95,()=>{ const bx=cx+D*0.02, by=top-D*0.02, s=D*0.04; ctx.fillStyle=_kmCss(BLK); ctx.beginPath(); ctx.ellipse(bx,by,s*1.2,s*0.55,-0.25,0,6.2832); ctx.fill();
     ctx.beginPath(); ctx.arc(bx+s*1.1,by-s*0.55,s*0.38,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.moveTo(bx+s*1.4,by-s*0.6); ctx.lineTo(bx+s*1.95,by-s*0.45); ctx.lineTo(bx+s*1.4,by-s*0.35); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(bx-s*1.0,by); ctx.lineTo(bx-s*2.0,by+s*0.6); ctx.lineTo(bx-s*1.7,by-s*0.1); ctx.closePath(); ctx.fill(); ctx.fillStyle=_kmCss(_KM_GOLD); ctx.beginPath(); ctx.arc(bx+s*1.2,by-s*0.62,s*0.08,0,6.2832); ctx.fill(); });
+    ctx.beginPath(); ctx.moveTo(bx-s*1.0,by); ctx.lineTo(bx-s*2.0,by+s*0.6); ctx.lineTo(bx-s*1.7,by-s*0.1); ctx.closePath(); ctx.fill(); ctx.fillStyle=_kmCss(GOLD); ctx.beginPath(); ctx.arc(bx+s*1.2,by-s*0.62,s*0.08,0,6.2832); ctx.fill(); });
   ops.sort((a,b)=>a[0]-b[0]); for(const [t,f] of ops){ if(t>reveal+1e-9 && t>0) break; f(); }
 }
 
