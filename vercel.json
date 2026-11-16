@@ -4,6 +4,10 @@
     { "path": "/api/keep-alive", "schedule": "0 3 * * *" },
     { "path": "/api/google-voided", "schedule": "20 3 * * *" }
   ],
+  "redirects": [
+    { "source": "/k/1", "destination": "/play?piece=promenade&artist=pollock&v=1&src=book", "permanent": false },
+    { "source": "/k/2", "destination": "/play?src=book", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/play", "has": [{ "type": "query", "key": "piece" }, { "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|Applebot|SkypeUriPreview|Googlebot|bingbot).*" }], "destination": "/api/og" },
     { "source": "/", "has": [{ "type": "query", "key": "paid" }], "destination": "/play.html" },
