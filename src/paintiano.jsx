@@ -4350,31 +4350,40 @@ function matissePhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, forcedNe
   _setCurE(0.5);
 }
 
-// ── Matisse (slot 6): the nested-frame grid — kept from the first Matisse. The
-// canvas is partitioned by the song; every cell is a set of concentric paper
-// frames in successive voice colours with one cut-out figure in its centre.
-function matissePhaseFrames(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length;
+// ── Matisse (slot 7): the frames — the canvas of the piece in its tones. The page is cut by the music into papers, one
+// for every stretch of chords, as many as the piece has (a loud, dense piece more and smaller ones), and they fill in as
+// it plays. Each paper is his gouache in the colour of its chord, cut by hand and pinned on the white wall; in it,
+// smaller papers, two or three deep, in the colours of the chords that follow; in the middle one figure cut out in white
+// or black: a dove if the chord sounds high, a fish if low, a seaweed if it is held, a coral if the line leaps, his leaf
+// otherwise; an accent is a yellow burst.
+function matissePhaseFrames(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
   const {rects,MAX_RECTS,paintCount}=_partitionCanvas(chords,lim,ss,2400,0.34);
-  ctx.fillStyle='#16120a'; ctx.fillRect(0,0,CW,CH);
-  rects.forEach((rect,pIdx)=>{
-    if(pIdx>=paintCount) return;
-    const bx=rect.x*CW,by=rect.y*CH,BW=rect.w*CW,BH=rect.h*CH;
-    const _mci=Math.min(cn-1,Math.floor(pIdx*(cn/Math.max(1,MAX_RECTS)))); _setCurE(chords[_mci] && chords[_mci]._E);
-    const rnd=_seedRnd(pIdx+2500,ss,0,0);
-    const layers=Math.min(4,2+Math.floor(Math.min(BW,BH)/60));
-    let ix=bx,iy=by,iw=BW,ih=BH;
-    for(let l=0;l<layers;l++){
-      const c=_rectChordColor(chords,(pIdx+l)%MAX_RECTS,MAX_RECTS,gc); const f=(l%2===0)?1.0:0.7;
-      ctx.fillStyle=`rgb(${Math.min(255,Math.round(c[0]*f))},${Math.min(255,Math.round(c[1]*f))},${Math.min(255,Math.round(c[2]*f))})`;
-      if(l===0) ctx.fillRect(ix,iy,iw,ih); else _matCut(ctx, [[ix,iy],[ix+iw,iy],[ix+iw,iy+ih],[ix,iy+ih]], Math.min(iw,ih)*0.03, rnd);
-      const insx=iw*(0.12+rnd()*0.05), insy=ih*(0.12+rnd()*0.05); ix+=insx; iy+=insy; iw-=2*insx; ih-=2*insy;
-      if(iw<6||ih<6) break; }
-    if(Math.min(BW,BH)<10) return;
-    const fig = rnd()<0.6 ? [244,241,232] : _rectChordColor(chords,(pIdx+5)%MAX_RECTS,MAX_RECTS,gc);
-    const kind=['algue','leaf','heart','star','coral'][(rnd()*5)|0];
-    _matPlace(ctx, kind, ix+iw/2, iy+ih/2, Math.min(iw,ih)*0.42, (rnd()-.5)*0.9, isBW?[240,240,236]:fig, ss, 3000+pIdx);
-  });
+  const A=_kd2Analyze(chords,gc,mode), st=_mtStats(chords,gc,isBW,0,cn), isAcc=_mtAccOf(A);
+  const wall=isBW?[240,238,232]:[245,241,232]; _mtWall(ctx,0,0,CW,CH,wall,ss);
+  const pig=(k)=>_mtPigAt(chords,Math.floor(Math.min(MAX_RECTS-1,k)*(cn/Math.max(1,MAX_RECTS))),gc,isBW);
+  // the accents: the loudest chords of the piece, about one paper in eight
+  const cand=[]; for(let k=0;k<MAX_RECTS;k++){ const e=A.ev[Math.min(cn-1,Math.floor(k*(cn/Math.max(1,MAX_RECTS))))]; if(e && isAcc(e)) cand.push([k,e.v]); }
+  const accSet=new Set(cand.sort((x,y)=>y[1]-x[1]||((x[0]*7919)%97)-((y[0]*7919)%97)).slice(0,Math.max(1,Math.round(MAX_RECTS*0.11))).map(c=>c[0]));
+  let prevK=null;
+  rects.forEach((rect,pIdx)=>{ if(pIdx>=paintCount) return;
+    const gp=D*0.0028, bx=rect.x*CW+gp, by=rect.y*CH+gp, BW=rect.w*CW-2*gp, BH=rect.h*CH-2*gp; if(BW<2||BH<2) return;
+    const a=Math.min(cn-1,Math.floor(pIdx*(cn/Math.max(1,MAX_RECTS)))), b=Math.max(a+1,Math.min(cn,Math.floor((pIdx+1)*(cn/Math.max(1,MAX_RECTS)))));
+    _setCurE(chords[a] && chords[a]._E);
+    const r=_mtR(2500+pIdx,ss), m=Math.min(BW,BH), j=Math.min(D*0.012,m*0.035);
+    const layers=Math.min(4,2+Math.floor(m/60)); let ix=bx,iy=by,iw=BW,ih=BH, prev=null, col=null;
+    for(let l=0;l<layers;l++){ col=pig(pIdx+l);
+      if(prev && (_mtSame(col,prev) || Math.abs(_mtLum(col)-_mtLum(prev))<0.06 && Math.abs(((_mtHue(col)-_mtHue(prev))%360+540)%360-180)<30)) col=_mtOther(st,[prev,_MT_WHITE,wall],isBW);   // each frame stands off the one it lies in
+      _mtPaper(ctx,[_mtSheet(ix,iy,iw,ih,r,l?j*0.8:j)],col,D,m>D*0.12?r:null,{shadow:l?0.003:0.005,strokes:3}); prev=col;
+      const sx=iw*(0.12+r()*0.05), sy=ih*(0.12+r()*0.05); if(iw-2*sx<6||ih-2*sy<6) break; ix+=sx; iy+=sy; iw-=2*sx; ih-=2*sy; }
+    if(m<12) return;
+    const h=_mtHearSpan(A,a,b); const e0=A.ev[a]; const acc=prevK!=='star' && accSet.has(pIdx);
+    const kind=acc?'star':_mtKindOf(h,r,prevK?[prevK]:null); prevK=kind; const pose=_mtPose(kind,h,r);
+    const lum=_mtLum(col); const fig= acc ? (isBW?[236,234,226]:(Math.abs(((_mtHue(col)-48)%360+540)%360-180)<35&&lum>0.5?_MT_WHITE:_mtPastel(_MT_PIG[0])))
+      : (lum<0.52 ? (isBW?[244,242,236]:_MT_WHITE) : (isBW?[34,32,36]:(r()<0.75?_MT_BLACK:_mtDeep(st,isBW))));
+    const s=Math.min(iw,ih)*(kind==='star'?0.46:kind==='bird'||kind==='fish'?0.44:0.4);
+    _mtPaper(ctx,_mtShapePolys(kind,ix+iw/2,iy+ih/2,s,pose.rot,3000+pIdx*7+ss,pose.fx),fig,D,null,{shadow:0.003}); });
+  try{ globalThis.__MT_LISTEN={v:'frames',cells:Math.min(paintCount,rects.length)}; }catch(_){}
   _setCurE(0.5);
 }
 
