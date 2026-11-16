@@ -5650,6 +5650,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // ?postermaker=<secret> — internal production tool (alternate enabler;
       // the primary switch is 7 quick taps on the Paintiano wordmark).
       if(_u.get('postermaker')==='raffel2026'){ try{ localStorage.setItem('paintiano_postermaker','1'); }catch(_){} }
+      // ?src=book without a piece (the book's /k/2): the first screen as on a new phone — no "where you were" and no kept
+      // surprise on the home card (a built-in piece, a sample picture, a mood); your own drafts (Mic, Compose, My Music) stay
+      if(_u.get('src')==='book' && !_qp){
+        try{ localStorage.removeItem('paintiano_resume'); }catch(_){}
+        const _bi=(o)=> !!(o && o.r && ['midi','img','mood'].indexOf(o.r.s)>=0);
+        try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art')||'null'); if(_bi(o)) localStorage.removeItem('paintiano_home_art'); }catch(_){}
+        try{ const b=JSON.parse(localStorage.getItem('paintiano_home_art_by')||'null'); if(b && typeof b==='object'){ let ch=false; Object.keys(b).forEach(k=>{ if(_bi(b[k])){ delete b[k]; ch=true; } }); if(ch) localStorage.setItem('paintiano_home_art_by', JSON.stringify(b)); } }catch(_){}
+      }
     }catch(_){}
     qrPieceRef.current=_qidx;
     // the Studio takes the scan wherever it is the view (a phone, an upright touchscreen, a narrow window), unless a Pro chose the Atelier
