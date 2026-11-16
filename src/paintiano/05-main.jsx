@@ -5650,6 +5650,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // ?postermaker=<secret> — internal production tool (alternate enabler;
       // the primary switch is 7 quick taps on the Paintiano wordmark).
       if(_u.get('postermaker')==='raffel2026'){ try{ localStorage.setItem('paintiano_postermaker','1'); }catch(_){} }
+      // ?src=book without a piece (the book's /k/2): the first screen as on a new phone — no "where you were" and no kept
+      // surprise on the home card (a built-in piece, a sample picture, a mood); your own drafts (Mic, Compose, My Music) stay
+      if(_u.get('src')==='book' && !_qp){
+        try{ localStorage.removeItem('paintiano_resume'); }catch(_){}
+        const _bi=(o)=> !!(o && o.r && ['midi','img','mood'].indexOf(o.r.s)>=0);
+        try{ const o=JSON.parse(localStorage.getItem('paintiano_home_art')||'null'); if(_bi(o)) localStorage.removeItem('paintiano_home_art'); }catch(_){}
+        try{ const b=JSON.parse(localStorage.getItem('paintiano_home_art_by')||'null'); if(b && typeof b==='object'){ let ch=false; Object.keys(b).forEach(k=>{ if(_bi(b[k])){ delete b[k]; ch=true; } }); if(ch) localStorage.setItem('paintiano_home_art_by', JSON.stringify(b)); } }catch(_){}
+      }
     }catch(_){}
     qrPieceRef.current=_qidx;
     // the Studio takes the scan wherever it is the view (a phone, an upright touchscreen, a narrow window), unless a Pro chose the Atelier
@@ -17474,7 +17482,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the phone itself may start it afresh, and it opened on another painting. Leaving the app, the painting on screen is kept:
   // the piece (built-in, or one of My Music), its look and the spot in it, For You or the Studio. A fresh start within 30
   // minutes opens on it again, paused at that spot. Your own songs and pictures in the Studio come back on the home card as before
-  // (their drafts); a link (a poster, Battle, a shared painting) always opens what it points to
+  // (their drafts); a link (a poster, Battle, a shared painting, the book's /k/2) always opens what it points to
   const feedTakeRef = useRef(null); feedTakeRef.current = _feedTake;
   const resumeSaveRef = useRef(null), resumeGoRef = useRef(null);
   resumeSaveRef.current = ()=>{ try{
@@ -17503,7 +17511,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     document.addEventListener('visibilitychange', save); window.addEventListener('pagehide', save);
     let R=null, tm=null, k=0; try{ R=JSON.parse(localStorage.getItem('paintiano_resume')||'null'); }catch(_){}
     try{ const q=window.location.search||'', h=window.location.hash||'';
-      if(R && R.t && Date.now()-R.t < 30*60000 && R.piece!=null && !/[?&](piece|artist|join|from)=/.test(q) && !/battle_link=|tickets=/.test(h)){
+      if(R && R.t && Date.now()-R.t < 30*60000 && R.piece!=null && !/[?&](piece|artist|join|from|src)=/.test(q) && !/battle_link=|tickets=/.test(h)){
         const tryGo=()=>{ tm=null; let done=false; try{ done = !resumeGoRef.current || resumeGoRef.current(R)!==false; }catch(_){ done=true; } if(!done && ++k<20) tm=setTimeout(tryGo, 300); };   // once the start is on screen
         tm=setTimeout(tryGo, 400); } }catch(_){}
     return ()=>{ clearTimeout(tm); document.removeEventListener('visibilitychange', save); window.removeEventListener('pagehide', save); };
