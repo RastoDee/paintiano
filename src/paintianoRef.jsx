@@ -42217,7 +42217,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     { const H=stLookHistRef.current, k=_stHistKey();
       if(H.key!==k){ H.key=k; H.st=[]; H.fw=[]; }
       if(H.fw && H.fw.length && !_stHoldOk(H.fw[H.fw.length-1])) H.fw=[];
-      if(_back0 && H.fw && H.fw.length && _stUpWorks() && (disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
+      if(_back0 && H.fw && H.fw.length && _stUpWorks() && (disp>0||playing||holdPaused||composeMode||_stPosterOn) && !anim && !working && !demoReelOn && !recording && !micActive){
         nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
         _stAnyApply(H.fw.pop()); H.st.push(_back0); if(H.st.length>20) H.st.shift();
         setStFavPend(false); if(!q){ _stBuzz(12); if(viewMode!=='image') _stSlide(); _stFlashNow(); }
@@ -42254,7 +42254,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
           }
         }
-      } else if((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive){
+      } else if((disp>0||playing||holdPaused||composeMode||_stPosterOn) && !anim && !working && !demoReelOn && !recording && !micActive){
         stUpPalRef.current = Date.now();
         // ↑ in the Studio = someone else from your set — unless you chose (gold): a chosen painter or Fusion stays, ↑ does nothing (← its variants);
         // with the Ensemble drawing, the gold (pinned) painters stay and ↑ draws new guests
@@ -42436,7 +42436,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[composeMode, studioFs]);
   const _stVariant = (back, q)=>{
-    if(!((disp>0||playing||holdPaused||composeMode) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
+    if(!((disp>0||playing||holdPaused||composeMode||_stPosterOn) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
     let ok=false; try{ ok = back ? _variantBack() : _variantNext(true); }catch(_){} if(!ok) return false;
     setStFavPend(false); if(!q){ _stBuzz(10); _stFlashNow(); }
     return true;
@@ -44046,7 +44046,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             /* it only shows the painting: every touch goes through to the canvas under it (a tap plays, a swipe changes the look, a hold carries it to Battle) */
             return (<div ref={stPosterEl} data-k="stPoster" aria-hidden="true" style={{position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:(stChg || stShare || stripOpen) ? 10004 : 100000,borderRadius:16,overflow:'hidden',pointerEvents:'none',background:'#05050c'}}>
               <img alt="" src={stPoster.img} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
-              <span style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',width:76,height:76,borderRadius:'50%',border:'1px solid rgba(255,255,255,.3)',background:'rgba(10,8,18,.62)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',boxShadow:'0 4px 24px rgba(0,0,0,.4)',display:'flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box'}}><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" style={{marginLeft:4}} aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></div>); })()}
+              {(stChg || stShare || stripOpen) ? null : (<span className="pf-st-paused" style={{position:'absolute',left:(window.innerWidth/2 - r.left)+'px',top:(window.innerHeight/2 - r.top)+'px'}}><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}</div>); })()}   {/* ▶ exactly where the paused Studio has it (the middle of the screen), and the same one */}
           {_stGuideOk && !btlDrag && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
             const box={position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:100000,borderRadius:16,overflow:'hidden',fontFamily:"'Outfit',system-ui,sans-serif",color:'#f2eee8',textAlign:'center'};
             const skip=(<button type="button" data-k="obSkip" onClick={()=>_stGuideEnd(false)} style={{position:'absolute',right:6,top:6,padding:'8px 10px',border:0,background:'none',color:'#d9d5cc',fontFamily:'inherit',fontSize:12,textShadow:'0 1px 6px #000',cursor:'pointer',pointerEvents:'auto'}}>{_stT('obSkip')}</button>);
