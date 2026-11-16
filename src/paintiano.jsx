@@ -9832,7 +9832,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  0 = Classic Klimt — Ornament tile grid (body) vs Pattern Frieze (vertical
   //      columns of stacked chord patterns), seed-driven internal pick. Both
   //      read as "gold ornament" identity so they share one Vary slot.
-  //  1 = Spiral Field — 30-60 scattered Klimt curls with chord jewels.
+  //  1 = The golden vine — the piece as one gold vine curling at every passage (enamel inlays, eyes).
   //  2 = Mosaic Field — chord-tile cluster patches on gold ground.
   //  3 = Danaë (golden shower, dramatic figurative, only non-gold ground).
   //  4 = The Kiss — the golden mantle (rectangles and rosettes) over a flower meadow.
@@ -9841,7 +9841,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  Free (cap=2) sees Ornament/Frieze + Spiral Field — gold tile grid vs
   //  abstract spiral field is the strongest decorative contrast.
   {
-    // VARIANT: 0 What he heard (_kmListen, generative) · 1 Ornament grid · 2 Spiral Field · 3 Danaë · 4 The Kiss · 5 Tree of Life · 6 Farm Garden (the Mosaic Field and the Birch Forest retired). Free: 0 and 1.
+    // VARIANT: 0 What he heard (_kmListen, generative) · 1 Ornament grid · 2 The golden vine (Nov 2026, was the Spiral Field) · 3 Danaë · 4 The Kiss · 5 Tree of Life · 6 Farm Garden (the Mosaic Field and the Birch Forest retired). Free: 0 and 1.
     const _pn=_capN(7); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_gpick===0){ _kmListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===2){ klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -10288,60 +10288,83 @@ function klimtPhaseGarden(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.restore();
 }
 
-// ── Klimt J: Spiral Field — Klimt's signature curls distributed across canvas.
-// 30-60 chord-coloured spirals (Tree of Life motif extracted, no central trunk).
-// Each spiral has a chord jewel at centre with inner highlight.
+// ── Klimt J: The golden vine — the piece as one gold vine curling into a spiral at every passage (the Stoclet frieze's
+// curls, without its tree). On his gold leaf (bronze for a minor, slow piece; the frieze's cream for an even, quiet one):
+//   the curls     one per passage, laid out from the middle by the golden angle, the first at the heart, the last at the
+//                 edge; as big as the passage is loud, as many turns as it has notes, turning the way its melody goes
+//   the band      a gold band with a black edge and a thin light line, tapering into the curl; the vine runs on from
+//                 curl to curl in the piece's order
+//   the inlays    every chord of the passage an enamel set into the band, from the outer end inwards in time, in the
+//                 chord's colour; the shape by the passage's character (even → tesserae, singing → rings, leaping →
+//                 small curls, running → dots, hammering → lozenges); a loud chord a larger one
+//   the eye       the Egyptian eye of the frieze at the heart of each curl, its iris the passage's loudest chord
+//   the ground    between the curls his small black and gold triangles, a few flowers in a major piece
+// It grows with the piece: the leaf first, then curl after curl, the band winding in as its passage sounds.
 function klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-  const rnd = _seedRnd(91, ss, 0, 17);
-
-  // Per-song layout.
-  const spiralCountFull = 30 + Math.floor(rnd()*30);      // 30-60 spirals
-
-  // Gold ground.
-  if(isBW){ ctx.fillStyle='#3a3833'; ctx.fillRect(0,0,CW,CH); }
-  else _klimtGround(ctx,CW,CH);
-
-  // Gold flecks.
-  for(let i=0;i<60;i++){
-    const r2 = _seedRnd(i+39200, ss, 0, 0);
-    ctx.fillStyle = isBW
-      ? (r2()>0.5 ? 'rgba(220,216,210,0.10)' : 'rgba(80,80,80,0.10)')
-      : (r2()>0.5 ? 'rgba(255,240,180,0.10)' : 'rgba(120,86,20,0.10)');
-    ctx.beginPath(); ctx.arc(r2()*CW, r2()*CH, 4+r2()*16, 0, Math.PI*2); ctx.fill();
-  }
-
-  // Spirals appear progressively.
-  const visSpirals = Math.max(2, Math.ceil(spiralCountFull * reveal));
-  for(let i=0;i<visSpirals;i++){
-    const cx = rnd()*CW;
-    const cy = rnd()*CH;
-    const size = 14 + rnd()*46;
-    const dir = rnd()<0.5 ? 1 : -1;
-    const turns = 2 + rnd()*1.2;   // turns of the spiral
-    const {rgb} = _picChord(chords, _ornIdx(chords, i, spiralCountFull, cn)%cn, gc, isBW);
-
-    // Spiral line (slightly darkened chord)
-    ctx.strokeStyle = `rgba(${Math.round(rgb[0]*0.7+40)},${Math.round(rgb[1]*0.6+30)},${Math.round(rgb[2]*0.4+10)},0.85)`;
-    ctx.lineWidth = 2 + rnd()*1.5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    const a0 = rnd()*Math.PI*2; const NS = Math.round(turns*56);
-    for(let q=0;q<=NS;q++){ const t=q/NS; const r=t*size; const sa=a0+dir*t*turns*6.2832; const sx=cx+Math.cos(sa)*r, sy=cy+Math.sin(sa)*r; q?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy); }
-    ctx.stroke();
-
-    // Jewel at centre — full chord colour
-    ctx.fillStyle = `rgb(${rgb[0]|0},${rgb[1]|0},${rgb[2]|0})`;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 3+rnd()*4, 0, Math.PI*2);
-    ctx.fill();
-    // Inner highlight
-    ctx.fillStyle = `rgb(${Math.min(255,rgb[0]+80)|0},${Math.min(255,rgb[1]+80)|0},${Math.min(255,rgb[2]+80)|0})`;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 1.5+rnd()*1.5, 0, Math.PI*2);
-    ctx.fill();
-  }
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)), reveal=Math.max(0,Math.min(1,N/cn)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,major}=X; const dens=A.ch?A.ch.density:0.3;
+  const GOLD=isBW?[150,146,136]:_KM_GOLD, DG=isBW?[110,106,98]:_KM_DGOLD, BLK=_KM_BLK, WHT=_KM_WHT;
+  const jw=(i)=>_kmMix(_kmJewel(_picChord(chords,Math.max(0,Math.min(cn-1,i)),gc,isBW).rgb,isBW),GOLD,0.1);
+  const rr=(k)=>{ const f=_seedRnd(k,ss,0,0); f(); return f; };
+  const ground = (!major && pace<0.62) ? 'bronze' : (regular>0.72 && loud<0.6 && pace<0.7) ? 'cream' : 'gold';
+  // ── the gold leaf
+  { const base = ground==='bronze' ? (isBW?[64,60,54]:[94,70,30]) : ground==='cream' ? (isBW?[222,218,208]:[236,220,176]) : (isBW?[150,146,136]:[190,146,52]);
+    const hi = isBW?[210,206,196]:(ground==='bronze'?[150,112,46]:ground==='cream'?[250,242,214]:[236,196,92]), lo = isBW?[90,86,80]:(ground==='bronze'?[52,36,14]:ground==='cream'?[214,192,140]:[150,108,30]);
+    ctx.fillStyle=_kmCss(_kmMix(base,BLK,0.16)); ctx.fillRect(0,0,CW,CH);
+    const nx=Math.round(CW/(D*0.034)), ny=Math.round(CH/(D*0.034)); const sw=CW/nx, sh=CH/ny;
+    for(let i=0;i<nx;i++) for(let j=0;j<ny;j++){ const r=rr(53000+i*131+j); const k=r(); ctx.fillStyle=_kmCss(_kmMix(_kmMix(base,hi,k*0.8),lo,r()*0.35)); ctx.fillRect(i*sw+0.4,j*sh+0.4,sw-0.4,sh-0.4); if(r()<0.16){ ctx.fillStyle=_kmCss(WHT,0.07+0.08*r()); ctx.fillRect(i*sw+sw*0.22,j*sh+sh*0.22,sw*0.56,sh*0.56); } } }
+  // ── the passages
+  const nB=Math.max(6,Math.min(18,Math.round(6+9*dens+4*pace), A.phrases.length)); const G=_kd2Phrases(A,nB); const n=G.length;
+  const kindOf=(q)=>{ let jump=0,m=0; for(let k=q.a+1;k<q.b;k++){ const e0=A.ev[k-1],e1=A.ev[k]; if(e0&&e1){ jump+=Math.abs(e1.top-e0.top); m++; } } jump=m?jump/m:0;
+    const sc={ tess:0.5*(q.rep||0)+0.5*regular+(jump<2.5?0.25:0), curl:Math.min(1,jump/5)+0.15*leaps, dots:0.75*pace*(q.v>0.5?1:0.6), loz:0.6*q.vmax*loud+(major?0:0.3), ring:0.45+(major?0.2:0)+0.3*(1-q.v) };
+    let best='ring'; for(const k in sc) if(sc[k]>sc[best]) best=k; return best; };
+  const sp=Math.sqrt(CW*CH/n); const a0=rr(53900)()*6.2832;
+  // laid out like a frieze read in time: row by row, the direction turning at every row, so the vine runs from each curl to its neighbour
+  const cols=Math.max(2,Math.round(Math.sqrt(n*CW/CH))), rows=Math.ceil(n/cols); const cw=CW/cols, chh=CH/rows; const rj=rr(53910);
+  const P=G.map((q,i)=>{ const row=Math.floor(i/cols), k=i%cols; const inRow=Math.min(cols, n-row*cols); const kk=row%2 ? inRow-1-k : k; const ww=CW/inRow;   // a shorter last row spreads across
+    return [ww*(kk+0.5)+(rj()-0.5)*cw*0.22, chh*(row+0.5)+(rj()-0.5)*chh*0.2]; });
+  const room=P.map((p,i)=>{ let m=1e9; P.forEach((o,j)=>{ if(j!==i) m=Math.min(m,Math.hypot(o[0]-p[0],o[1]-p[1])); }); return m; });
+  const eyes=new Set(G.map((q,i)=>[q.vmax||0,i]).sort((a,b)=>b[0]-a[0]).slice(0,Math.max(1,Math.round(n*0.3))).map(v=>v[1]));
+  const C=G.map((q,i)=>{ const x=P[i][0], y=P[i][1];
+    let first=null,last=null,top=null,ti=q.a; for(let k=q.a;k<q.b;k++){ const e=A.ev[k]; if(!e) continue; if(first==null) first=e.top; last=e.top; if(top==null||e.v>top){ top=e.v; ti=k; } }
+    const R=Math.min(room[i]*0.5,cw*0.47,chh*0.47)*(0.8+0.2*(q.vmax||0.6)); const turns=1.35+1.7*Math.min(1,(q.b-q.a)/36); const dir=((last||0)-(first||0))>=0?1:-1;
+    return {q,i,x,y,R,turns,dir,kind:kindOf(q),ti,w0:R*(0.2+0.14*(q.v||0.5)),eye:eyes.has(i)}; });
+  C.forEach((c,i)=>{ const p=C[i-1]; c.aEnd = p ? Math.atan2(p.y-c.y,p.x-c.x) : 1.5708; });
+  const pt=(c,t)=>{ const r=c.R*(0.07+0.93*Math.pow(t,0.9)); const a=c.aEnd-c.dir*(1-t)*c.turns*6.2832; return [c.x+Math.cos(a)*r, c.y+Math.sin(a)*r]; };
+  const wid=(c,t)=>c.w0*(0.16+0.84*t);
+  const band=(c,tA,tB)=>{ const M=Math.max(24,Math.round(110*c.turns*(tB-tA))); const L=[],Rr=[]; for(let k=0;k<=M;k++){ const t=tA+(tB-tA)*k/M; const a=pt(c,Math.max(0,t-0.004)), b=pt(c,Math.min(1,t+0.004)); let dx=b[0]-a[0], dy=b[1]-a[1]; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl; const m=pt(c,t), w=wid(c,t)/2; L.push([m[0]-dy*w,m[1]+dx*w]); Rr.push([m[0]+dy*w,m[1]-dx*w]); }
+    ctx.beginPath(); ctx.moveTo(L[0][0],L[0][1]); for(const q of L) ctx.lineTo(q[0],q[1]); for(let k=Rr.length-1;k>=0;k--) ctx.lineTo(Rr[k][0],Rr[k][1]); ctx.closePath(); };
+  const bandCol = ground==='bronze' ? (isBW?[176,172,162]:[222,176,72]) : ground==='cream' ? (isBW?[150,146,136]:[196,150,52]) : (isBW?[196,192,182]:[238,198,96]);
+  const prog=(c)=>Math.max(0,Math.min(1,(reveal-c.q.t0)/Math.max(1e-4,c.q.t1-c.q.t0)));
+  // ── the vine between the curls, in the piece's order: from the outer end of each curl to the outer end of the one before
+  C.forEach((c,i)=>{ const p=C[i-1]; if(!p || prog(c)<=0) return; const e1=pt(c,1), e0=pt(p,1); const d=Math.hypot(e1[0]-e0[0],e1[1]-e0[1]);
+    const t1=pt(c,0.985), t0=pt(p,0.985); const k1=[e1[0]+(e1[0]-t1[0])/Math.hypot(e1[0]-t1[0],e1[1]-t1[1]||1)*d*0.45, e1[1]+(e1[1]-t1[1])/Math.hypot(e1[0]-t1[0],e1[1]-t1[1]||1)*d*0.45];
+    const k0=[e0[0]+(e0[0]-t0[0])/Math.hypot(e0[0]-t0[0],e0[1]-t0[1]||1)*d*0.45, e0[1]+(e0[1]-t0[1])/Math.hypot(e0[0]-t0[0],e0[1]-t0[1]||1)*d*0.45];
+    const w=Math.min(c.w0,p.w0)*0.42; ctx.lineCap='round';
+    ctx.strokeStyle=_kmCss(BLK,0.9); ctx.lineWidth=w+Math.max(2,D*0.006); ctx.beginPath(); ctx.moveTo(e1[0],e1[1]); ctx.bezierCurveTo(k1[0],k1[1],k0[0],k0[1],e0[0],e0[1]); ctx.stroke();
+    ctx.strokeStyle=_kmCss(bandCol); ctx.lineWidth=w; ctx.stroke(); ctx.strokeStyle=_kmCss(WHT,0.45); ctx.lineWidth=Math.max(1,D*0.0016); ctx.stroke(); });
+  // ── the ground between: his small black and gold triangles, flowers in a major piece (only where no curl lies)
+  { const r=rr(53950); const nT=Math.round(40+60*dens); const free=(x,y)=>C.every(c=>Math.hypot(x-c.x,y-c.y)>c.R*1.08);
+    for(let k=0;k<nT;k++){ const x=r()*CW, y=r()*CH, s=D*(0.008+0.008*r()), t=r(); if(!free(x,y) || t>reveal+0.05) continue;
+      if(major && r()<0.35){ const col=jw(Math.floor(t*cn)); for(let f=0;f<5;f++){ const a=f*1.2566+r()*0.3; ctx.fillStyle=_kmCss(col); ctx.beginPath(); ctx.arc(x+Math.cos(a)*s*0.7,y+Math.sin(a)*s*0.7,s*0.45,0,6.2832); ctx.fill(); } ctx.fillStyle=_kmCss(GOLD); ctx.beginPath(); ctx.arc(x,y,s*0.35,0,6.2832); ctx.fill(); }
+      else { ctx.fillStyle=_kmCss(r()<0.6?BLK:GOLD,0.85); ctx.beginPath(); const a=r()*6.2832; for(let v=0;v<3;v++){ const b=a+v*2.0944; v?ctx.lineTo(x+Math.cos(b)*s,y+Math.sin(b)*s):ctx.moveTo(x+Math.cos(b)*s,y+Math.sin(b)*s); } ctx.closePath(); ctx.fill(); } } }
+  // ── the curls: the band winding in as its passage sounds, its inlays, the eye at the heart
+  C.forEach((c)=>{ const pr=prog(c); if(pr<=0) return; const q=c.q; const tIn=1-0.97*pr;
+    band(c,tIn,1); ctx.fillStyle=_kmCss(bandCol); ctx.fill(); ctx.strokeStyle=_kmCss(BLK,0.9); ctx.lineWidth=Math.max(1.2,D*0.0036); ctx.lineJoin='round'; ctx.stroke();
+    { const M=Math.max(24,Math.round(110*c.turns*(1-tIn))); ctx.strokeStyle=_kmCss(WHT,0.42); ctx.lineWidth=Math.max(1,D*0.0016); ctx.beginPath(); for(let k=0;k<=M;k++){ const p=pt(c,tIn+(1-tIn)*k/M); k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); } ctx.stroke(); }
+    const span=q.b-q.a, step=Math.max(1,Math.ceil(span/70));
+    for(let j=q.a;j<q.b && j<N;j+=step){ const e=A.ev[j]; const t=1-((j-q.a)+0.5)/span*0.93; if(t<tIn) continue; const m=pt(c,t), w=wid(c,t); const a=pt(c,Math.min(1,t+0.004)); const ang=Math.atan2(a[1]-m[1],a[0]-m[0]);
+      const s=w*0.62*(0.75+0.45*((e&&e.v)||0.5)); const col=jw(j); const rc=rr(54000+j); const kk=rc();
+      ctx.save(); ctx.translate(m[0],m[1]); ctx.rotate(ang);
+      if(c.kind==='tess'){ ctx.fillStyle=_kmCss(kk<0.2?BLK:kk<0.32?WHT:col); ctx.fillRect(-s/2,-s/2,s,s); ctx.strokeStyle=_kmCss(BLK,0.7); ctx.lineWidth=Math.max(0.6,s*0.08); ctx.strokeRect(-s/2,-s/2,s,s); }
+      else if(c.kind==='dots'){ ctx.fillStyle=_kmCss(col); ctx.beginPath(); ctx.arc(0,0,s*0.42,0,6.2832); ctx.fill(); ctx.fillStyle=_kmCss(BLK); ctx.beginPath(); ctx.arc(0,0,s*0.16,0,6.2832); ctx.fill(); }
+      else if(c.kind==='loz'){ ctx.fillStyle=_kmCss(col); ctx.beginPath(); ctx.moveTo(-s*0.6,0); ctx.lineTo(0,-s*0.38); ctx.lineTo(s*0.6,0); ctx.lineTo(0,s*0.38); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_kmCss(BLK,0.75); ctx.lineWidth=Math.max(0.6,s*0.08); ctx.stroke(); }
+      else if(c.kind==='curl'){ ctx.fillStyle=_kmCss(col); ctx.beginPath(); ctx.arc(0,0,s*0.46,0,6.2832); ctx.fill(); _kmCurl(ctx,0,0,s*0.4,1.8,c.dir,BLK,Math.max(0.7,s*0.09)); }
+      else { ctx.fillStyle=_kmCss(WHT); ctx.beginPath(); ctx.arc(0,0,s*0.46,0,6.2832); ctx.fill(); ctx.fillStyle=_kmCss(col); ctx.beginPath(); ctx.arc(0,0,s*0.32,0,6.2832); ctx.fill(); ctx.strokeStyle=_kmCss(BLK,0.8); ctx.lineWidth=Math.max(0.6,s*0.08); ctx.beginPath(); ctx.arc(0,0,s*0.46,0,6.2832); ctx.stroke(); }
+      ctx.restore(); }
+    if(pr>=0.98 && !c.eye){ const rd=c.R*(0.13+0.06*(q.vmax||0.6)); const cols=[GOLD,jw(c.ti),WHT,jw(Math.min(q.b-1,c.ti+1)),BLK]; cols.forEach((cc,k)=>{ ctx.fillStyle=_kmCss(cc); ctx.beginPath(); ctx.arc(c.x,c.y,rd*(1-k*0.19),0,6.2832); ctx.fill(); }); ctx.strokeStyle=_kmCss(BLK,0.85); ctx.lineWidth=Math.max(1,D*0.0024); ctx.beginPath(); ctx.arc(c.x,c.y,rd,0,6.2832); ctx.stroke(); }
+    if(pr>=0.98 && c.eye){ const w=c.R*(0.2+0.1*(q.vmax||0.6)); _kmEye(ctx,c.x,c.y,w,c.aEnd+1.5708,WHT,jw(c.ti)); ctx.strokeStyle=_kmCss(GOLD); ctx.lineWidth=Math.max(1,D*0.0024); ctx.beginPath(); ctx.ellipse(c.x,c.y,w*1.18,w*0.82,c.aEnd+1.5708,0,6.2832); ctx.stroke(); } });
+  try{ globalThis.__KM_VINE={ground,n}; }catch(_){}
 }
 
 // ── Klimt K: Mosaic Field — irregular chord-tile patches with gold borders.
