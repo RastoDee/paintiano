@@ -7487,9 +7487,10 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  Free (cap=2) sees Ornament/Frieze + Spiral Field — gold tile grid vs
   //  abstract spiral field is the strongest decorative contrast.
   {
-    // VARIANT: 0 What he heard (_kmListen, generative) · 1 Ornament grid · 2 The golden vine (Nov 2026, was the Spiral Field) · 3 Danaë · 4 The Kiss · 5 Tree of Life · 6 Farm Garden (the Mosaic Field and the Birch Forest retired). Free: 0 and 1.
+    // VARIANT: 0 What he heard (_kmListen, generative) · 1 The ornament dress (Nov 2026, was the Ornament grid; the grid code below stays, unused) · 2 The golden vine (Nov 2026, was the Spiral Field) · 3 Danaë · 4 The Kiss · 5 Tree of Life · 6 Farm Garden (Nov 2026: the bed a carpet of blooms, painted sunflowers; the Mosaic Field and the Birch Forest retired). Free: 0 and 1.
     const _pn=_capN(7); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_gpick===0){ _kmListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_gpick===1){ klimtPhasePatchwork(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===2){ klimtPhaseSpiralField(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===3){ klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===4){ klimtPhaseMeadow(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -7906,32 +7907,102 @@ function _klxSetup(chords,gc,mode){ const isBW=mode==='bw', cn=chords.length; co
     css:(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`,
     lum:(c)=>c[0]*0.299+c[1]*0.587+c[2]*0.114,
     raw:(t)=>{ const c=_picChord(chords,clamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb; if(isBW){ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [l,l,l]; } return c; }}; }
-// 6 · Farm Garden with Sunflowers (1907) — flowers packed to the edges over dark foliage, opening all over the beds, each a ring of petals in its moment's colour around a dark eye; three sunflowers rise out of the upper third one after another in the second half of the piece
+// ── Klimt L: Farm Garden with Sunflowers (1907) — his square garden: a flat bed of flowers packed to the edges, laid with
+// small dabs like a mosaic; no sky, no path. The piece plants it:
+//   the bed       the greens laid in dabs, deeper and bluer for a minor or slow piece, lighter for a major, quick one
+//   the flowers   every chord a flower, as high in the bed as its notes are high, scattered by the golden ratio through
+//                 time; its kind by the note's length (a short one a cluster of dots, a middle one a daisy, a long one a
+//                 round bloom), as large as it is loud; in the chord's colour, softened as he softens them in the garden
+//   the sunflowers the loudest passages, their heads as large as the passage is loud
+// It grows with the piece: the bed first, then flower after flower in time, the sunflowers at their passages.
 function klimtPhaseGarden(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const S=_klxSetup(chords,gc,mode), ss=sessionSeed|0, D=Math.min(CW,CH); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const {mix,css,lum,clamp}=S;
-  const r=_seedRnd(99800,ss,0,0); r();
-  ctx.save(); ctx.fillStyle=css(S.isBW?[60,60,60]:[44,70,40]); ctx.fillRect(0,0,CW,CH);
-  ctx.lineCap='butt';
-  // foliage: dark-to-light green leaf strokes, gathered into a few tone × width bundles so thousands of strokes cost a handful of draws
-  const bund=[]; for(let b=0;b<8;b++) bund.push([]);
-  for(let i=0;i<Math.round(CW*CH/260);i++){ const x=r()*CW, y=r()*CH, a=r()*3.14, tone=r(), wide=r()<0.5?0:1; bund[Math.min(3,(tone*4)|0)*2+wide].push(x,y,a); }
-  bund.forEach((L,b)=>{ if(!L.length) return; const tone=((b>>1)+0.5)/4; ctx.strokeStyle=css(S.isBW?[90,90,90]:mix([40,74,40],[110,140,70],tone),0.8); ctx.lineWidth=(b&1)?4.2:2.8; ctx.beginPath();
-    for(let q=0;q<L.length;q+=3){ const x=L[q], y=L[q+1], a=L[q+2]; ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(a)*D*0.03,y+Math.sin(a)*D*0.03); } ctx.stroke(); });
-  const step=D*0.06; const fl=[];
-  for(let y=step*0.5;y<CH+step;y+=step*0.82) for(let x=step*0.5*(Math.round(y/step)%2);x<CW+step;x+=step){ fl.push({x:x+(r()-.5)*step*0.5,y:y+(r()-.5)*step*0.4,s:step*(0.32+r()*0.22),np:5+((r()*4)|0),rot:r()*6.28}); }
-  const suns=[]; for(let k=0;k<3;k++) suns.push({x:CW*(0.2+0.3*k+(r()-.5)*0.08), y:CH*(0.12+r()*0.12), s:D*(0.08+r()*0.04)});
-  const nF=fl.length;
-  // the garden comes into flower everywhere at once: a golden-ratio scatter over the beds
-  const fOrd=fl.map((_,i)=>i).sort((a,b)=>((a*0.6180339887)%1)-((b*0.6180339887)%1));
-  for(let k=0;k<nF;k++){ const t=k/nF; if(t>=reveal) break; const f=fl[fOrd[k]]; const c0=S.raw(t);
-    const c=S.isBW?c0:(()=>{ const g=lum(c0); const q=c0.map(v=>clamp(g+(v-g)*1.5,0,255)); const m=Math.max(q[0],q[1],q[2])||1; return q.map(v=>clamp(v*Math.min(1.3,240/m),0,255)); })();
-    ctx.fillStyle=css(c); ctx.beginPath(); for(let k=0;k<f.np;k++){ const a=f.rot+k/f.np*6.2832, ex=f.x+Math.cos(a)*f.s*0.55, ey=f.y+Math.sin(a)*f.s*0.55; ctx.moveTo(ex+Math.cos(a)*f.s*0.42,ey+Math.sin(a)*f.s*0.42); ctx.ellipse(ex,ey,f.s*0.42,f.s*0.26,a,0,6.2832); } ctx.fill();
-    ctx.fillStyle=css(mix(c,[30,24,20],0.7)); ctx.beginPath(); ctx.arc(f.x,f.y,f.s*0.26,0,6.2832); ctx.fill(); }
-  suns.forEach((sf,k)=>{ if(reveal<=0.45+0.15*k) return; const {x,y,s}=sf;
-    ctx.fillStyle=css(S.isBW?[200,200,200]:[236,186,40]); ctx.beginPath(); for(let q=0;q<22;q++){ const a=q/22*6.2832, ex=x+Math.cos(a)*s*0.95, ey=y+Math.sin(a)*s*0.95; ctx.moveTo(ex+Math.cos(a)*s*0.42,ey+Math.sin(a)*s*0.42); ctx.ellipse(ex,ey,s*0.42,s*0.12,a,0,6.2832); } ctx.fill();
-    ctx.fillStyle=css(S.isBW?[70,70,70]:[74,46,24]); ctx.beginPath(); ctx.arc(x,y,s*0.62,0,6.2832); ctx.fill();
-    ctx.fillStyle=css(S.isBW?[40,40,40]:[40,26,16]); ctx.beginPath(); for(let q=0;q<40;q++){ const a=q*2.4, rr=Math.sqrt(q/40)*s*0.58; const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr; ctx.moveTo(px+s*0.035,py); ctx.arc(px,py,s*0.035,0,6.2832); } ctx.fill(); });
-  ctx.restore();
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,major}=X; const dens=A.ch?A.ch.density:0.3;
+  const rr=(k)=>{ const f=_seedRnd(k,ss,0,0); f(); return f; }; const r=rr(56000);
+  const bright=Math.max(0,Math.min(1,(major?0.55:0.2)+0.35*pace));
+  const g0=isBW?[54,54,54]:_kmMix([22,42,34],[40,66,40],bright), g1=isBW?[96,96,96]:_kmMix([40,72,64],[78,108,56],bright), g2=isBW?[150,150,150]:_kmMix([86,120,104],[140,160,86],bright);
+  ctx.fillStyle=_kmCss(g0); ctx.fillRect(0,0,CW,CH);
+  // the bed: dabs in three greens, a few blue-greens and ochres among them
+  { const nD=Math.round(CW*CH/(D*D)*2600); const L=[[],[],[],[]]; for(let i=0;i<nD;i++){ const t=r(); L[t<0.45?0:t<0.8?1:t<0.95?2:3].push(r()*CW,r()*CH,r()); }
+    const cols=[g1,g2,_kmMix(g1,isBW?[120,120,120]:[60,96,120],0.5),_kmMix(g2,isBW?[180,180,180]:[176,150,80],0.5)];
+    L.forEach((P,k)=>{ ctx.fillStyle=_kmCss(cols[k],0.8); ctx.beginPath(); for(let q=0;q<P.length;q+=3){ const s=D*(0.004+0.006*P[q+2]); ctx.moveTo(P[q]+s,P[q+1]); ctx.ellipse(P[q],P[q+1],s,s*0.7,P[q+2]*3,0,6.2832); } ctx.fill(); }); }
+  const soft0=(c,k)=>{ if(isBW) return c; const g=(c[0]+c[1]+c[2])/3; const q=c.map(v=>g+(v-g)*0.62); return _kmMix(_kmMix(q,g1,k),[236,230,214],0.12); };
+  { const nB=Math.round(CW*CH/(D*D)*1500); const r2=rr(56050); const L=[];
+    for(let i=0;i<nB;i++){ const x=r2()*CW, y=r2()*CH; const t=Math.max(0,Math.min(0.999,(x/CW)*0.7+(y/CH)*0.3+(r2()-0.5)*0.12)); const ci=Math.floor(t*cn); const k=r2();
+      const c = k<0.12 ? (isBW?[220,220,220]:[232,226,208]) : k<0.2 ? (isBW?[200,200,200]:[222,196,96]) : soft0(_kmJewel(_picChord(chords,ci,gc,isBW).rgb,isBW),0.35);
+      L.push([x,y,D*(0.004+0.005*r2()),c]); }
+    for(const [x,y,s,c] of L){ ctx.fillStyle=_kmCss(c,0.92); ctx.beginPath(); for(let k=0;k<5;k++){ const a=k*1.2566; ctx.moveTo(x+Math.cos(a)*s+s*0.55,y+Math.sin(a)*s); ctx.arc(x+Math.cos(a)*s,y+Math.sin(a)*s,s*0.55,0,6.2832); } ctx.fill(); } }
+  const soft=(c)=>{ if(isBW) return c; const g=(c[0]+c[1]+c[2])/3; const q=c.map(v=>g+(v-g)*0.7); return _kmMix(q,[236,230,214],0.2); };
+  // the sunflowers: the loudest passages, upper half, left to right in time
+  const ord=A.phrases.map((q,i)=>[q.vmax||0,i]).sort((a,b)=>b[0]-a[0]); const nS=Math.max(1,Math.min(3,Math.round(0.6+2*(X.loud||0.5)))); const S=ord.slice(0,nS).map(v=>A.phrases[v[1]]).sort((a,b)=>a.t0-b.t0);
+  const suns=S.map((q,k)=>({q,x:CW*((k+0.5)/S.length)*0.9+CW*0.05+(r()-0.5)*CW*0.06, y:CH*(0.14+0.16*r()), s:D*(0.055+0.05*(q.vmax||0.6))}));
+  // the flowers
+  const step=Math.max(1,Math.ceil(cn/900)); const nF=Math.ceil(cn/step);
+  for(let f=0;f<nF;f++){ const i=f*step; if(i>=N) break; const e=A.ev[i]; if(!e) continue; const rf=rr(56100+i);
+    const x=((f*0.6180339887+rf()*0.12)%1)*CW, reg=A.reg?A.reg(e.top):0.5; const y=Math.max(0,Math.min(CH,CH*(0.96-0.9*reg)+(rf()-0.5)*CH*0.16));
+    if(suns.some(sf=>Math.hypot(x-sf.x,y-sf.y)<sf.s*1.3)) continue;
+    const c=soft(_kmJewel(_picChord(chords,i,gc,isBW).rgb,isBW)); const s=D*(0.011+0.02*(e.v||0.5))*(1.15-0.4*dens); const dur=e.dur||0.5;
+    if(dur<0.3){ ctx.fillStyle=_kmCss(c); ctx.beginPath(); for(let k=0;k<5;k++){ const a=rf()*6.2832, d=rf()*s*0.9; ctx.moveTo(x+Math.cos(a)*d+s*0.28,y+Math.sin(a)*d); ctx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,s*0.28,0,6.2832); } ctx.fill(); }
+    else if(dur<1){ const np=5+((rf()*3)|0), rot=rf()*6.2832; ctx.fillStyle=_kmCss(c); ctx.beginPath(); for(let k=0;k<np;k++){ const a=rot+k/np*6.2832; const ex=x+Math.cos(a)*s*0.55, ey=y+Math.sin(a)*s*0.55; ctx.moveTo(ex+Math.cos(a)*s*0.42,ey+Math.sin(a)*s*0.42); ctx.ellipse(ex,ey,s*0.42,s*0.24,a,0,6.2832); } ctx.fill();
+      ctx.fillStyle=_kmCss(isBW?[40,40,40]:[214,170,62]); ctx.beginPath(); ctx.arc(x,y,s*0.22,0,6.2832); ctx.fill(); }
+    else { const rot=rf()*6.2832; ctx.fillStyle=_kmCss(_kmMix(c,[255,255,255],0.15)); ctx.beginPath(); for(let k=0;k<8;k++){ const a=rot+k*0.7854, px=x+Math.cos(a)*s*0.58, py=y+Math.sin(a)*s*0.58; ctx.moveTo(px+s*0.36,py); ctx.arc(px,py,s*0.36,0,6.2832); } ctx.fill();   // a long note: a full round bloom
+      ctx.fillStyle=_kmCss(_kmMix(c,[40,30,30],0.3)); ctx.beginPath(); ctx.arc(x,y,s*0.42,0,6.2832); ctx.fill(); ctx.fillStyle=_kmCss(isBW?[220,220,220]:[236,206,110]); ctx.beginPath(); ctx.arc(x,y,s*0.16,0,6.2832); ctx.fill(); } }
+  suns.forEach((sf,si)=>{ if(N<sf.q.t1*cn) return; const {x,y,s}=sf; const rs=rr(56500+si);
+    const leaf=isBW?[70,70,70]:[34,70,40]; for(const sd of [-1,1]){ ctx.fillStyle=_kmCss(_kmMix(leaf,[60,100,50],rs()*0.5)); ctx.beginPath(); ctx.ellipse(x+sd*s*1.05,y+s*1.25,s*0.62,s*0.26,sd*0.5,0,6.2832); ctx.fill(); }
+    const ochres=isBW?[[200,200,200],[170,170,170],[140,140,140]]:[[214,160,46],[196,132,34],[232,190,80]];
+    for(let q=0;q<64;q++){ const a=q/64*6.2832+rs()*0.08, rd=s*(0.72+0.34*rs()); const ex=x+Math.cos(a)*rd, ey=y+Math.sin(a)*rd*0.88; ctx.fillStyle=_kmCss(ochres[q%3],0.95); ctx.beginPath(); ctx.ellipse(ex,ey,s*0.24,s*0.08,a,0,6.2832); ctx.fill(); }
+    ctx.fillStyle=_kmCss(isBW?[70,70,70]:[86,56,26]); ctx.beginPath(); ctx.ellipse(x,y,s*0.64,s*0.58,0,0,6.2832); ctx.fill();
+    for(let q=0;q<120;q++){ const a=q*2.39996, rd=Math.sqrt(q/120)*s*0.6; const px=x+Math.cos(a)*rd, py=y+Math.sin(a)*rd*0.9; ctx.fillStyle=_kmCss(q%5===0?(isBW?[110,110,110]:[140,96,40]):(isBW?[40,40,40]:[44,28,14])); ctx.beginPath(); ctx.arc(px,py,s*0.032,0,6.2832); ctx.fill(); } });
+  try{ globalThis.__KM_GARDEN={bright,nS}; }catch(_){}
+}
+
+// ── Klimt I: The ornament dress — the piece as the patterned gown of his golden portraits (Adele Bloch-Bauer, the
+// Expectation): a patchwork of ornament panels on the black of the seams, one panel per passage, laid in the piece's
+// order by the golden cut, each as large as its passage is long.
+//   the panels    their pattern by the passage's character — even → a chequer of tesserae, singing → his circles in
+//                 squares, leaping → gold curls on black, running → rows of dots, hammering → the Egyptian eyes; every
+//                 piece of the pattern one of the passage's chords in time, mostly gold, black and white, the enamel
+//                 in the chords' colours
+//   the rosettes  the loudest passages carry a great rosette in the middle of their panel
+// It grows with the piece: panel after panel, each filling in as its passage sounds.
+function klimtPhasePatchwork(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)), reveal=Math.max(0,Math.min(1,N/cn)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,major}=X; const dens=A.ch?A.ch.density:0.3;
+  const GOLD=isBW?[150,146,136]:_KM_GOLD, DG=isBW?[110,106,98]:_KM_DGOLD, BLK=_KM_BLK, WHT=_KM_WHT, CREAM=isBW?[228,224,214]:[238,226,190];
+  const jw=(i)=>_kmMix(_kmJewel(_picChord(chords,Math.max(0,Math.min(cn-1,i)),gc,isBW).rgb,isBW),GOLD,0.1);
+  const rr=(k)=>{ const f=_seedRnd(k,ss,0,0); f(); return f; };
+  ctx.fillStyle=_kmCss(BLK); ctx.fillRect(0,0,CW,CH);
+  const nB=Math.max(8,Math.min(30,Math.round(10+14*dens+6*pace), A.phrases.length)); const G=_kd2Phrases(A,nB); const n=G.length;
+  const kindOf=(q)=>{ let jump=0,m=0; for(let k=q.a+1;k<q.b;k++){ const e0=A.ev[k-1],e1=A.ev[k]; if(e0&&e1){ jump+=Math.abs(e1.top-e0.top); m++; } } jump=m?jump/m:0;
+    const sc={ tess:0.5*(q.rep||0)+0.5*regular+(jump<2.5?0.25:0), curl:Math.min(1,jump/5)+0.15*leaps, dots:0.75*pace*(q.v>0.5?1:0.6), loz:0.6*q.vmax*loud+(major?0:0.3), ring:0.45+(major?0.2:0)+0.3*(1-q.v) };
+    return sc; };
+  // every panel takes the ornament its passage asks for most, but never the same as the panel before, and none takes over the dress
+  const kinds={}; { const cnt={tess:0,curl:0,dots:0,loz:0,ring:0}, cap=Math.ceil(n/5)+1; let prev=null; G.forEach((q,i)=>{ const sc=kindOf(q); const ks=Object.keys(sc).sort((a,b)=>sc[b]-sc[a]); const k=ks.find(k=>k!==prev && cnt[k]<cap) || ks.find(k=>k!==prev) || ks[0]; cnt[k]++; kinds[i]=k; prev=k; }); }
+  // the golden cut: the passages split where their time is nearest the golden section, the longer side cut, turn by turn
+  const panels=[]; const cut=(L,x,y,w,h)=>{ if(L.length===1){ panels.push({q:L[0],x,y,w,h}); return; } const tot=L.reduce((s,q)=>s+Math.max(1,q.b-q.a),0); let acc=0,k=0,best=1,bd=1e9;
+    for(k=0;k<L.length-1;k++){ acc+=Math.max(1,L[k].b-L[k].a); const d=Math.abs(acc/tot-0.618); if(d<bd){ bd=d; best=k+1; } }
+    const f=L.slice(0,best).reduce((s,q)=>s+Math.max(1,q.b-q.a),0)/tot; if(w>=h){ cut(L.slice(0,best),x,y,w*f,h); cut(L.slice(best),x+w*f,y,w*(1-f),h); } else { cut(L.slice(0,best),x,y,w,h*f); cut(L.slice(best),x,y+h*f,w,h*(1-f)); } };
+  cut(G,0,0,CW,CH);
+  const order=G.map((q,i)=>[q.vmax||0,i]).sort((a,b)=>b[0]-a[0]); const ros=new Set(order.slice(0,Math.max(1,Math.round(n*0.15))).map(v=>v[1]));
+  const gap=Math.max(1.5,D*0.007);
+  panels.forEach((P,pi)=>{ const q=P.q, gi=G.indexOf(q); const pr=Math.max(0,Math.min(1,(reveal-q.t0)/Math.max(1e-4,q.t1-q.t0))); if(pr<=0) return;
+    const x=P.x+gap/2, y=P.y+gap/2, w=P.w-gap, h=P.h-gap; if(w<3||h<3) return; const kind=kinds[gi]; const span=Math.max(1,q.b-q.a); const r=rr(55000+gi*31);
+    const bg = kind==='curl' ? BLK : kind==='loz' ? CREAM : kind==='ring' ? _kmMix(GOLD,DG,0.35) : kind==='dots' ? GOLD : _kmMix(GOLD,WHT,0.12);
+    ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); ctx.fillStyle=_kmCss(bg); ctx.fillRect(x,y,w,h);
+    const cell = (kind==='tess'||kind==='dots' ? D*0.026 : D*0.058)*(1.15-0.45*dens)*(0.8+0.5*(q.vmax||0.6)); const nx=Math.max(1,Math.round(w/cell)), ny=Math.max(1,Math.round(h/cell)); const cw=w/nx, ch=h/ny; const tot=nx*ny; const shown=Math.ceil(tot*pr);
+    for(let k=0;k<shown;k++){ const ix=k%nx, iy=Math.floor(k/nx); const cx=x+cw*(ix+0.5), cy=y+ch*(iy+0.5); const j=Math.min(cn-1,q.a+Math.floor(k/tot*span)); const col=jw(j); const kk=r(); const s=Math.min(cw,ch);
+      if(kind==='tess'){ const box=((ix*2+iy)%5===0), enam=!box && ((ix+iy*3)%7===0); const gt=_kmMix(GOLD,kk<0.33?DG:kk<0.66?WHT:GOLD,0.22);
+        ctx.fillStyle=_kmCss(gt); ctx.fillRect(cx-cw/2+0.5,cy-ch/2+0.5,cw-1,ch-1);
+        if(box){ ctx.fillStyle=_kmCss(BLK); ctx.fillRect(cx-cw*0.4,cy-ch*0.4,cw*0.8,ch*0.8); ctx.fillStyle=_kmCss(WHT); ctx.fillRect(cx-cw*0.18,cy-ch*0.18,cw*0.36,ch*0.36); }
+        else if(enam){ ctx.fillStyle=_kmCss(col); ctx.fillRect(cx-cw*0.34,cy-ch*0.34,cw*0.68,ch*0.68); } }
+      else if(kind==='ring'){ ctx.strokeStyle=_kmCss(_kmMix(GOLD,WHT,0.25)); ctx.lineWidth=Math.max(0.8,s*0.05); ctx.strokeRect(cx-s*0.44,cy-s*0.44,s*0.88,s*0.88); ctx.fillStyle=_kmCss(BLK); ctx.beginPath(); ctx.arc(cx,cy,s*0.36,0,6.2832); ctx.fill(); ctx.fillStyle=_kmCss(kk<0.5?col:GOLD); ctx.beginPath(); ctx.arc(cx,cy,s*0.27,0,6.2832); ctx.fill(); ctx.fillStyle=_kmCss(kk<0.5?WHT:col); ctx.beginPath(); ctx.arc(cx,cy,s*0.11,0,6.2832); ctx.fill(); }
+      else if(kind==='curl'){ const ox=(iy%2)*cw*0.5; if(ox && ix===nx-1) continue; _kmCurl(ctx,cx+ox,cy,s*(0.36+0.1*((e=>e?e.v||0.5:0.5)(A.ev[j]))),2.3,(iy%2)?1:-1,GOLD,Math.max(1,s*0.075),col); }
+      else if(kind==='dots'){ const ox=(iy%2)*cw*0.5; ctx.fillStyle=_kmCss(kk<0.4?BLK:kk<0.62?WHT:col); ctx.beginPath(); ctx.arc(cx+ox-(ox&&ix===nx-1?cw:0),cy,s*0.36,0,6.2832); ctx.fill(); if(kk>=0.62){ ctx.fillStyle=_kmCss(GOLD); ctx.beginPath(); ctx.arc(cx+ox-(ox&&ix===nx-1?cw:0),cy,s*0.12,0,6.2832); ctx.fill(); } }
+      else { if((ix+iy)%2===0) _kmEye(ctx,cx,cy,s*0.4,0,WHT,col); else { ctx.fillStyle=_kmCss(kk<0.5?BLK:GOLD); ctx.beginPath(); ctx.moveTo(cx,cy-s*0.3); ctx.lineTo(cx+s*0.26,cy+s*0.22); ctx.lineTo(cx-s*0.26,cy+s*0.22); ctx.closePath(); ctx.fill(); } } }
+    if(ros.has(gi) && pr>=0.98){ const R=Math.min(w,h)*0.36; const cols=[GOLD,BLK,jw(q.a+Math.floor(span*0.3)),WHT,jw(q.a+Math.floor(span*0.6)),GOLD,BLK,jw(Math.min(cn-1,q.b-1))]; cols.forEach((cc,k)=>{ ctx.fillStyle=_kmCss(cc); ctx.beginPath(); ctx.arc(x+w/2,y+h/2,R*(1-k*0.115),0,6.2832); ctx.fill(); }); }
+    ctx.restore();
+    ctx.strokeStyle=_kmCss(_kmMix(GOLD,WHT,0.2),0.9); ctx.lineWidth=Math.max(1,D*0.0022); ctx.strokeRect(x+D*0.004,y+D*0.004,w-D*0.008,h-D*0.008); });
+  try{ globalThis.__KM_PATCH={n}; }catch(_){}
 }
 
 // ── Klimt J: The golden vine — the piece as one gold vine curling into a spiral at every passage (the Stoclet frieze's
