@@ -310,12 +310,15 @@ function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
     } else {
       R=r; G=g; B=b;
     }
-    ctx.fillStyle=_rgbaStr(R,G,B,a*.18);
-    ctx.fillRect(bx-2,y-2,BW+4,bh+4);
-    ctx.fillStyle=_rgbaStr(R,G,B,a);
-    ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);
+    // No black grout (Nov 2026): the tiles lie edge to edge, so a dense or long piece is no longer a black net. The joint adapts
+    // to the tile: narrow tiles have none, larger ones a thin one in a darker shade of their own colour — the mosaic stays a mosaic
+    // and a chord's voices stay readable. Whole pixels, and one pixel over to the right, so no hairline of the dark canvas shows.
+    const y0=Math.round(by+i*bh), y1=Math.round(by+(i+1)*bh), h=y1-y0;
+    const jx=BW<14?0:BW<28?0.5:1, jy=h<10?0:h<20?0.5:1;
+    if(jx||jy){ ctx.fillStyle=_rgbaStr(Math.round(R*0.5),Math.round(G*0.5),Math.round(B*0.5),a); ctx.fillRect(bx,y0,BW+1,h);
+      ctx.fillStyle=_rgbaStr(R,G,B,a); ctx.fillRect(bx+jx,y0+jy,BW-jx,h-jy); }
+    else { ctx.fillStyle=_rgbaStr(R,G,B,a); ctx.fillRect(bx,y0,BW+1,h); }
   }
-  if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}
 }
 
 // Notes mode: instead of colour blocks, write each note's NAME (with octave,
