@@ -2664,12 +2664,15 @@ function drawBlockMosaic(ctx,bx,by,notes,gc,BW,BH){
     } else {
       R=r; G=g; B=b;
     }
-    ctx.fillStyle=_rgbaStr(R,G,B,a*.18);
-    ctx.fillRect(bx-2,y-2,BW+4,bh+4);
-    ctx.fillStyle=_rgbaStr(R,G,B,a);
-    ctx.fillRect(bx+.5,y+.5,BW-1,bh-1);
+    // No black grout (Nov 2026): the tiles lie edge to edge, so a dense or long piece is no longer a black net. The joint adapts
+    // to the tile: narrow tiles have none, larger ones a thin one in a darker shade of their own colour — the mosaic stays a mosaic
+    // and a chord's voices stay readable. Whole pixels, and one pixel over to the right, so no hairline of the dark canvas shows.
+    const y0=Math.round(by+i*bh), y1=Math.round(by+(i+1)*bh), h=y1-y0;
+    const jx=BW<14?0:BW<28?0.5:1, jy=h<10?0:h<20?0.5:1;
+    if(jx||jy){ ctx.fillStyle=_rgbaStr(Math.round(R*0.5),Math.round(G*0.5),Math.round(B*0.5),a); ctx.fillRect(bx,y0,BW+1,h);
+      ctx.fillStyle=_rgbaStr(R,G,B,a); ctx.fillRect(bx+jx,y0+jy,BW-jx,h-jy); }
+    else { ctx.fillStyle=_rgbaStr(R,G,B,a); ctx.fillRect(bx,y0,BW+1,h); }
   }
-  if(n>1){ctx.fillStyle='rgba(4,4,10,0.7)';for(let i=1;i<n;i++)ctx.fillRect(bx+.5,by+i*bh-.5,BW-1,1);}
 }
 
 // Notes mode: instead of colour blocks, write each note's NAME (with octave,
@@ -42641,10 +42644,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[_stPosterOk, playing, stGuide, stPosterKey]);
   const _stPosterOn = !!(stPoster && _stPosterOk && stPoster.key===stPosterKey);
-  const stPosterEl = useRef(null);   // the painting moves and shrinks when the looks open (and back): the still follows it frame by frame
-  useEffect(()=>{ if(!_stPosterOn) return; let raf=0; const t0=Date.now();
-    const fit=()=>{ try{ const el=stPosterEl.current, w=canvasWrapRef.current, r=w && w.getBoundingClientRect(); if(el && r && r.width>=40){ el.style.left=r.left+'px'; el.style.top=r.top+'px'; el.style.width=r.width+'px'; el.style.height=r.height+'px'; } }catch(_){} if(Date.now()-t0<600) raf=requestAnimationFrame(fit); };
-    raf=requestAnimationFrame(fit); return ()=>cancelAnimationFrame(raf); },[_stPosterOn, stripOpen, !!stChg, !!stShare]);
   // Battle's Súťaž (or Battle's web page with …&join=1): the carry is shown once, without words — a finger rests on the painting,
   // a small card of it flies onto the Battle tab and the tab lights up; twice, then it is gone (any touch ends it). Reduced motion: the line.
   const _btlShowCarry = ()=>{ try{
@@ -44042,11 +44041,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               <div className="pf-st-tabs2 st" style={{zIndex:1,transition:'opacity .3s ease',...(btlAlone ? {opacity:0,pointerEvents:'none'} : {})}}><button type="button" onClick={()=>{ setBtlTab(null); if(!studioHome) _stForYou(); }}>{_stT('sup')}</button><button type="button" disabled={studioHome && !(feedAt>=0 && feedCards[feedAt]) && !liveHomeOn} onClick={()=>{ setBtlTab(null); if(studioHome){ if(feedAt>=0 && feedCards[feedAt]) _feedTake(); else _stFromLive(); } }}>{_stT('studio')}</button><button type="button" className="on pf-btl-tab" aria-current="page" tabIndex={-1}>Battle</button></div>
             </div>
           </div>)}
-          {_stPosterOn && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
-            /* it only shows the painting: every touch goes through to the canvas under it (a tap plays, a swipe changes the look, a hold carries it to Battle) */
-            return (<div ref={stPosterEl} data-k="stPoster" aria-hidden="true" style={{position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:(stChg || stShare || stripOpen) ? 10004 : 100000,borderRadius:16,overflow:'hidden',pointerEvents:'none',background:'#05050c'}}>
-              <img alt="" src={stPoster.img} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
-              {(stChg || stShare || stripOpen) ? null : (<span className="pf-st-paused" style={{position:'absolute',left:(window.innerWidth/2 - r.left)+'px',top:(window.innerHeight/2 - r.top)+'px'}}><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}</div>); })()}   {/* ▶ exactly where the paused Studio has it (the middle of the screen), and the same one */}
           {_stGuideOk && !btlDrag && (()=>{ let r=null; try{ r=canvasWrapRef.current && canvasWrapRef.current.getBoundingClientRect(); }catch(_){ r=null; } if(!r || r.width<40) return null;
             const box={position:'fixed',left:r.left,top:r.top,width:r.width,height:r.height,zIndex:100000,borderRadius:16,overflow:'hidden',fontFamily:"'Outfit',system-ui,sans-serif",color:'#f2eee8',textAlign:'center'};
             const skip=(<button type="button" data-k="obSkip" onClick={()=>_stGuideEnd(false)} style={{position:'absolute',right:6,top:6,padding:'8px 10px',border:0,background:'none',color:'#d9d5cc',fontFamily:'inherit',fontSize:12,textShadow:'0 1px 6px #000',cursor:'pointer',pointerEvents:'auto'}}>{_stT('obSkip')}</button>);
@@ -47275,6 +47269,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         <canvas ref={canvasRef} width={CW*_ssF} height={CH*_ssF} role="img" aria-label={chords.length?`music painting, ${chords.length} ${chords.length===1?'chord':'chords'}`:'music painting'} style={{display:'block',position:'relative',zIndex:1,opacity:(viewMode==='image'&&originalImgUrl)?((playing||anim||holdPaused)?0.70:0):1,mixBlendMode:viewMode==='image'&&originalImgUrl?'screen':'normal',transition:'opacity 0.25s ease',...((composeMode||micPainting||(atLiveMax && micActive))?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:atLiveMax ? `min(calc(100vw - 32px), ${CW}px)` : `min(100%, ${CW}px)`,maxHeight:atLiveMax ? (atLiveMax-2)+'px' : 'calc(100dvh - 210px)'}:(viewMode==='image'&&originalImgUrl)?{width:'100%',height:'auto',maxWidth:`min(100%, 560px)`,aspectRatio:(moodFromImg&&mfiImgAspect)?mfiImgAspect:undefined}:(basicMode&&!isDesktop)?{width:'auto',height:'auto',aspectRatio:CW+' / '+CH,maxWidth:`min(100%, ${CW}px)`,maxHeight:'calc(100dvh - 250px)',marginLeft:'auto',marginRight:'auto'}:{width:'100%',height:'auto',maxWidth:`min(100%, ${CW}px)`}),...(immersive?{width:'100%',height:'auto',maxWidth:'none',maxHeight:'none',aspectRatio:undefined,borderRadius:0,outline:'none',boxShadow:'none'}:{}),...(_stEmpty?{opacity:0}:{})}}/>
         <canvas ref={visualizerRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:2,mixBlendMode:'screen'}}/>
         <canvas ref={highlightCanvasRef} width={CW} height={CH} aria-hidden="true" style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:3,mixBlendMode:'screen'}}/>
+        {_stPosterOn && stPoster ? <img alt="" aria-hidden="true" data-k="stPoster" src={stPoster.img} draggable={false} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:4,pointerEvents:'none',borderRadius:'inherit'}}/> : null}   {/* a link's finished painting before play: it lies in the canvas's own box, so the Studio's tabs, buttons and ▶ stay over it and nothing jumps */}
         {/* Lite's opening Mosaic: every note that sounds has its own colour — the line, and the twelve colours in fifths with the notes sounding now lit */}
         {mosaicIntroShow && _miKind && (()=>{
           const _cur = chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))];
