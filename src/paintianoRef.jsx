@@ -9841,7 +9841,7 @@ function drawGoldOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  Free (cap=2) sees Ornament/Frieze + Spiral Field — gold tile grid vs
   //  abstract spiral field is the strongest decorative contrast.
   {
-    // VARIANT: 0 What he heard (_kmListen, generative) · 1 The ornament dress (Nov 2026, was the Ornament grid; the grid code below stays, unused) · 2 The golden vine (Nov 2026, was the Spiral Field) · 3 Danaë · 4 The Kiss · 5 Tree of Life · 6 Farm Garden (Nov 2026: the bed a carpet of blooms, painted sunflowers; the Mosaic Field and the Birch Forest retired). Free: 0 and 1.
+    // VARIANT: 0 What he heard (_kmListen, generative) · 1 The ornament dress (Nov 2026, was the Ornament grid; the grid code below stays, unused) · 2 The golden vine (Nov 2026, was the Spiral Field) · 3 The golden rain (Nov 2026: Danaë without her figure) · 4 The Kiss · 5 Tree of Life · 6 Farm Garden (Nov 2026: the bed a carpet of blooms, painted sunflowers; the Mosaic Field and the Birch Forest retired). Free: 0 and 1.
     const _pn=_capN(7); const _gpick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_gpick===0){ _kmListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_gpick===1){ klimtPhasePatchwork(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -10198,57 +10198,53 @@ function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // faces at top: man behind (dark hair), woman tilted forward with flowers in
 // hair. Falling chord-coloured petals at the bottom. Reveal scales detail count.
 
-// ── Klimt H: Danaë (1907-08) — golden shower. Rich maroon radial ground +
-// curled female nude silhouette (right side) + diagonal cascade of golden
-// coins/discs interspersed with chord-coloured ornaments. Klimt's most
-// dramatic figurative work; the only non-gold-ground variant.
+// ── Klimt H: The golden rain (Danaë, 1907-08, without her figure) — what is his in it, not a body drawn: the violet veil with
+// its gold rings, the shower of gold falling through it, his black rectangles in the stream, her copper hair as a mass of
+// curls in the corner, and the gold gathering in her lap. The piece makes the rain:
+//   the veil     deeper for a minor or slow piece, warmer for a major, quick one; a gold ring for every passage, as large as
+//                the passage is loud
+//   the shower   every chord a coin, falling in time from the top down the picture, the stream bending with the melody and
+//                widening as it falls; as large as it is loud; mostly gold, the chord's colour among it, a drop for a short
+//                note, his black rectangles at the loudest accents
+//   the heap     every passage a great coin laid on the heap at the foot, as large as the passage is loud — the heap grows
+//                with the piece
+//   the hair     copper curls in the upper corner, as full as the piece is busy
 function klimtPhaseDanae(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-
-  // Rich maroon-red radial ground (or dark grey in B/W).
-  const grad = ctx.createRadialGradient(CW*0.7, CH*0.5, 50, CW*0.7, CH*0.5, Math.max(CW,CH)*0.9);
-  if(isBW){
-    grad.addColorStop(0, '#5a5856');
-    grad.addColorStop(0.5, '#3a3836');
-    grad.addColorStop(1, '#1a1816');
-  } else {
-    grad.addColorStop(0, '#8a3020');
-    grad.addColorStop(0.5, '#5a1a14');
-    grad.addColorStop(1, '#2a0810');
-  }
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,CW,CH);
-
-  // Danaë herself: the sleeper curled on the red, seen only as the soft mass of her body, the auburn hair
-  // over her face (no features — Klimt's figure is carried by the ornament), the purple veil with its gold
-  // rings over her hips, and the shower of gold falling into the curl: a coin for every chord, in its colour.
-  const _nr=_seedRnd(31200,ss,0,0); _nr();
-  const cx=CW*0.54, cy=CH*0.55, R=Math.min(CW,CH)*0.42;
-  const flesh=isBW?[214,208,198]:[236,204,184], shade=isBW?[160,154,146]:[206,150,134], hair=isBW?[80,74,70]:[150,58,34];
-  const body=()=>{ ctx.beginPath(); ctx.moveTo(cx-R*0.95,cy+R*0.1); ctx.bezierCurveTo(cx-R*1.05,cy-R*0.7, cx-R*0.3,cy-R*1.1, cx+R*0.35,cy-R*0.95); ctx.bezierCurveTo(cx+R*1.0,cy-R*0.8, cx+R*1.15,cy+R*0.1, cx+R*0.85,cy+R*0.55); ctx.bezierCurveTo(cx+R*0.6,cy+R*0.95, cx-R*0.1,cy+R*1.05, cx-R*0.55,cy+R*0.8); ctx.bezierCurveTo(cx-R*0.85,cy+R*0.62, cx-R*0.95,cy+R*0.35, cx-R*0.95,cy+R*0.1); ctx.closePath(); };
-  // the body, modelled softly: a warm gradient, the fold of the knee as a second rounded lobe
-  { const g=ctx.createRadialGradient(cx-R*0.2,cy-R*0.2,R*0.1,cx,cy,R*1.2); g.addColorStop(0,`rgb(${flesh[0]},${flesh[1]},${flesh[2]})`); g.addColorStop(1,`rgb(${shade[0]},${shade[1]},${shade[2]})`); body(); ctx.fillStyle=g; ctx.fill();
-    // the thigh drawn up over the body: its own rounded mass with a shadow under it, and the arm folded over the breast
-    ctx.fillStyle=`rgba(${shade[0]},${shade[1]},${shade[2]},0.7)`; ctx.beginPath(); ctx.ellipse(cx+R*0.25,cy+R*0.3,R*0.62,R*0.4,-0.55,0,6.2832); ctx.fill();
-    ctx.fillStyle=`rgba(${flesh[0]},${flesh[1]},${flesh[2]},0.95)`; ctx.beginPath(); ctx.ellipse(cx+R*0.2,cy+R*0.18,R*0.55,R*0.32,-0.55,0,6.2832); ctx.fill();
-    ctx.fillStyle=`rgba(${shade[0]},${shade[1]},${shade[2]},0.5)`; ctx.beginPath(); ctx.ellipse(cx-R*0.35,cy-R*0.25,R*0.42,R*0.16,0.7,0,6.2832); ctx.fill();
-    ctx.fillStyle=`rgba(${flesh[0]},${flesh[1]},${flesh[2]},0.95)`; ctx.beginPath(); ctx.ellipse(cx-R*0.3,cy-R*0.32,R*0.4,R*0.13,0.7,0,6.2832); ctx.fill(); }
-  // the hair: an auburn cloud over where the face would be, its locks curling
-  { ctx.fillStyle=`rgb(${hair[0]},${hair[1]},${hair[2]})`; ctx.beginPath(); ctx.moveTo(cx-R*1.05,cy+R*0.05); ctx.bezierCurveTo(cx-R*1.3,cy-R*0.8, cx-R*0.7,cy-R*1.35, cx+R*0.2,cy-R*1.05); ctx.bezierCurveTo(cx+R*0.05,cy-R*0.7, cx-R*0.2,cy-R*0.45, cx-R*0.4,cy-R*0.2); ctx.bezierCurveTo(cx-R*0.6,cy+R*0.05, cx-R*0.9,cy+R*0.15, cx-R*1.05,cy+R*0.05); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=isBW?'rgba(40,38,36,0.6)':'rgba(96,30,16,0.6)'; ctx.lineWidth=Math.max(1,R*0.012); for(let k=0;k<7;k++){ const u=k/6; ctx.beginPath(); ctx.moveTo(cx-R*(0.95-0.5*u),cy-R*(0.15+0.6*u)); ctx.bezierCurveTo(cx-R*(0.7-0.4*u),cy-R*(0.5+0.4*u), cx-R*(0.5-0.3*u),cy-R*(0.9+0.1*u), cx-R*(0.3-0.4*u),cy-R*(1.0-0.1*u)); ctx.stroke(); } }
-  // the veil: translucent purple over the hips, its gold rings and black dots
-  { ctx.save(); body(); ctx.clip(); ctx.beginPath(); ctx.moveTo(cx-R*0.6,cy+R*1.2); ctx.bezierCurveTo(cx-R*0.1,cy+R*0.35, cx+R*0.7,cy+R*0.0, cx+R*1.3,cy+R*0.3); ctx.lineTo(cx+R*1.3,cy+R*1.3); ctx.closePath(); ctx.fillStyle=isBW?'rgba(70,66,74,0.7)':'rgba(90,48,130,0.7)'; ctx.fill();
-    const vr=_seedRnd(31300,ss,0,0); vr(); for(let k=0;k<34;k++){ const x=cx-R*0.5+vr()*R*1.7, y=cy+R*0.3+vr()*R*0.8; const rr=R*(0.03+0.05*vr()); ctx.strokeStyle=isBW?'rgba(220,216,208,0.8)':'rgba(236,204,98,0.85)'; ctx.lineWidth=Math.max(1,rr*0.3); ctx.beginPath(); ctx.arc(x,y,rr,0,6.2832); ctx.stroke(); if(vr()<0.5){ ctx.fillStyle='rgba(20,12,16,0.8)'; ctx.beginPath(); ctx.arc(x,y,rr*0.35,0,6.2832); ctx.fill(); } }
-    ctx.restore(); }
-  // the shower of gold: a stream from the upper left falling into the curl — a coin per chord, in time
-  { const n=Math.min(cn,Math.round(90+220*(()=>{ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } })())); const m=Math.ceil(n*reveal); for(let i=0;i<m;i++){ const rnd=_seedRnd(i+31000,ss,0,0); rnd(); const t=i/n; const x=CW*(0.1+0.42*t)+(rnd()-.5)*CW*0.2*(0.3+t), y=CH*(0.0+0.62*t)+(rnd()-.5)*CH*0.06; const r=Math.min(CW,CH)*(0.006+0.016*rnd()); const k=rnd();
-      const {rgb}=_picChord(chords,Math.min(cn-1,Math.floor(t*cn)),gc,isBW);
-      if(k<0.55){ ctx.fillStyle=isBW?'#c8c4b8':'#e8c862'; ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); ctx.strokeStyle=isBW?'rgba(40,40,40,0.6)':'rgba(80,55,15,0.6)'; ctx.lineWidth=1; ctx.stroke(); }
-      else if(k<0.8){ ctx.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.85)`; ctx.beginPath(); ctx.arc(x,y,r*0.8,0,6.2832); ctx.fill(); ctx.strokeStyle=isBW?'#d0ccc0':'#e8c862'; ctx.lineWidth=1; ctx.stroke(); }
-      else { ctx.fillStyle=isBW?'rgba(220,218,210,0.8)':'rgba(244,224,128,0.8)'; ctx.beginPath(); ctx.moveTo(x,y-r*1.6); ctx.quadraticCurveTo(x+r,y,x,y+r); ctx.quadraticCurveTo(x-r,y,x,y-r*1.6); ctx.fill(); } } }
-  // the gold ornament of the red ground: a few curls at the edges
-  for(let i=0;i<5;i++){ const a=0.6+i*1.5, rr=CW*0.44; const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr*0.9; ctx.strokeStyle=isBW?'rgba(210,206,196,0.6)':'rgba(232,200,98,0.6)'; ctx.lineWidth=1.6; ctx.beginPath(); for(let q=0;q<=120;q++){ const t=q/120; const aa=t*2.6*6.2832, r2=12*(1-t*0.95); const px=x+Math.cos(aa)*r2, py=y+Math.sin(aa)*r2; q?ctx.lineTo(px,py):ctx.moveTo(px,py); } ctx.stroke(); }
+  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)), reveal=Math.max(0,Math.min(1,N/cn)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,major}=X; const dens=A.ch?A.ch.density:0.3;
+  const rr=(k)=>{ const f=_seedRnd(k,ss,0,0); f(); return f; };
+  const GOLD=isBW?[200,196,186]:[226,184,74], LG=isBW?[240,238,232]:[252,232,160], DG=isBW?[120,116,108]:[150,108,30], BLK=_KM_BLK;
+  const G=_kd2Phrases(A,Math.max(6,Math.min(18,Math.round(6+10*dens)))); const n=G.length;
+  const open=Math.max(0,Math.min(1,(major?0.55:0.25)+0.35*pace));
+  const coin=(x,y,rd,a)=>{ const g=ctx.createRadialGradient(x-rd*0.35,y-rd*0.35,rd*0.08,x,y,rd); g.addColorStop(0,_kmCss(LG,a)); g.addColorStop(0.6,_kmCss(GOLD,a)); g.addColorStop(1,_kmCss(DG,a)); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,rd,0,6.2832); ctx.fill(); ctx.strokeStyle=_kmCss(DG,0.8*a); ctx.lineWidth=Math.max(0.6,rd*0.1); ctx.stroke(); };
+  // the veil
+  { const g=ctx.createRadialGradient(CW*0.5,CH*0.45,D*0.05,CW*0.5,CH*0.45,Math.max(CW,CH)*0.8); g.addColorStop(0,isBW?'#46444a':_kmCss(_kmMix([70,36,92],[96,44,84],open))); g.addColorStop(1,isBW?'#141216':'#12081a'); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+    const r=rr(57000); for(let i=0;i<320;i++){ ctx.fillStyle=_kmCss(r()<0.7?GOLD:BLK,0.05+0.08*r()); ctx.beginPath(); ctx.arc(r()*CW,r()*CH,D*(0.002+0.004*r()),0,6.2832); ctx.fill(); }
+    G.forEach((q,i)=>{ if(reveal<q.t0) return; const rv=rr(57100+i); const k0=1+((rv()*3)|0); for(let k=0;k<k0;k++){ const x=rv()*CW, y=rv()*CH*0.86; const rd=D*(0.014+0.03*(q.vmax||0.5))*(k?0.6:1); const col=_kmJewel(_picChord(chords,Math.min(cn-1,q.a+k),gc,isBW).rgb,isBW);
+      ctx.strokeStyle=_kmCss(GOLD,0.9); ctx.lineWidth=Math.max(1,rd*0.2); ctx.beginPath(); ctx.arc(x,y,rd,0,6.2832); ctx.stroke(); ctx.strokeStyle=_kmCss(GOLD,0.5); ctx.lineWidth=Math.max(0.6,rd*0.08); ctx.beginPath(); ctx.arc(x,y,rd*0.68,0,6.2832); ctx.stroke();
+      ctx.fillStyle=_kmCss(col,0.85); ctx.beginPath(); ctx.arc(x,y,rd*0.4,0,6.2832); ctx.fill(); ctx.fillStyle=_kmCss(BLK); ctx.beginPath(); ctx.arc(x,y,rd*0.14,0,6.2832); ctx.fill(); } }); }
+  // the hair: copper curls in the upper left corner
+  { const hair=isBW?[96,90,86]:[176,74,38], hair2=isBW?[60,56,52]:[112,40,20], hair3=isBW?[150,146,140]:[230,136,76]; const hx=-D*0.02, hy=-D*0.02, hr=D*(0.26+0.08*dens);
+    const g=ctx.createRadialGradient(hx,hy,hr*0.2,hx,hy,hr*1.1); g.addColorStop(0,_kmCss(hair)); g.addColorStop(0.85,_kmCss(hair,0.9)); g.addColorStop(1,_kmCss(hair,0)); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(hx,hy,hr*1.1,0,6.2832); ctx.fill();
+    const nc=Math.round(40+14*n*(0.4+dens)); for(let i=0;i<nc;i++){ const r=rr(57200+i); const a=r()*1.5708, d=Math.sqrt(r())*hr; _kmCurl(ctx,hx+Math.cos(a)*d,hy+Math.sin(a)*d,D*(0.012+0.022*r()),2.3,r()<0.5?1:-1,r()<0.5?hair2:hair3,Math.max(1,D*0.0028)); } }
+  // the heap at the foot: a great coin for every passage that has sounded, laid row on row
+  const heapTop={y:CH};
+  { const hx=CW*0.56, base=CH*0.985; const items=[]; let row=0, inRow=0, perRow=Math.max(4,Math.round(n*0.42)); const R0=D*0.058;
+    G.forEach((q,i)=>{ if(reveal<q.t1-1e-6) return; const rd=R0*(0.7+0.6*(q.vmax||0.5)); const w=perRow-row; if(inRow>=w){ row++; inRow=0; } const ww=Math.max(1,perRow-row); const x=hx+((inRow+0.5)/ww-0.5)*ww*R0*1.7+(rr(57400+i)()-0.5)*R0*0.4; const y=base-R0*0.6-row*R0*1.05; items.push([x,y,rd,i]); inRow++; });
+    if(items.length){ const g=ctx.createRadialGradient(hx,base,D*0.02,hx,base,D*0.5); g.addColorStop(0,_kmCss(GOLD,0.35)); g.addColorStop(1,_kmCss(GOLD,0)); ctx.fillStyle=g; ctx.fillRect(0,CH*0.5,CW,CH*0.5); }
+    items.forEach(([x,y,rd,i])=>{ coin(x,y,rd,1); const col=_kmJewel(_picChord(chords,Math.min(cn-1,G[i].a),gc,isBW).rgb,isBW); ctx.strokeStyle=_kmCss(col,0.9); ctx.lineWidth=Math.max(1,rd*0.12); ctx.beginPath(); ctx.arc(x,y,rd*0.62,0,6.2832); ctx.stroke(); heapTop.y=Math.min(heapTop.y,y-rd); }); }
+  // the shower: from the top, bending with the melody, widening as it falls, into the heap
+  { const step=Math.max(1,Math.ceil(cn/520)); const top=new Set(A.ev.map((e,i)=>[e?e.v||0:0,i]).filter(v=>v[1]%step===0).sort((a,b)=>b[0]-a[0]).slice(0,Math.max(2,Math.round(4+6*dens))).map(v=>v[1]));
+    const glow=ctx.createLinearGradient(CW*0.3,0,CW*0.75,0); glow.addColorStop(0,_kmCss(GOLD,0)); glow.addColorStop(0.5,_kmCss(GOLD,0.08+0.06*open)); glow.addColorStop(1,_kmCss(GOLD,0)); ctx.fillStyle=glow; ctx.fillRect(0,0,CW,CH);
+    for(let i=0;i<N;i+=step){ const e=A.ev[i]; if(!e) continue; const u=i/cn; const r=rr(57300+i); const reg=A.reg?A.reg(e.top):0.5;
+      const sway=Math.sin(u*Math.PI*2.2+ss*0.001)*CW*0.06; const cxu=CW*(0.42+0.14*u)+sway; const spread=CW*(0.05+0.32*u*u+0.06*u);
+      const x=cxu+(reg-0.5)*2*spread+(r()-0.5)*spread*0.5, y=CH*(0.02+0.9*u)+(r()-0.5)*CH*0.05; if(y>heapTop.y+D*0.02 && heapTop.y<CH) continue;
+      const rd=D*(0.006+0.017*(e.v||0.5))*(1.1-0.4*dens); const k=r(); const dur=e.dur||0.5;
+      if(top.has(i)){ ctx.fillStyle=_kmCss(BLK); ctx.save(); ctx.translate(x,y); ctx.rotate(-0.2+0.4*r()); ctx.fillRect(-rd*0.55,-rd*1.6,rd*1.1,rd*3.2); ctx.restore(); }
+      else if(dur<0.25 && k<0.5){ ctx.fillStyle=_kmCss(LG,0.9); ctx.beginPath(); ctx.moveTo(x,y-rd*1.8); ctx.quadraticCurveTo(x+rd,y,x,y+rd); ctx.quadraticCurveTo(x-rd,y,x,y-rd*1.8); ctx.fill(); }
+      else if(k<0.72) coin(x,y,rd,1);
+      else { const col=_kmJewel(_picChord(chords,i,gc,isBW).rgb,isBW); ctx.fillStyle=_kmCss(col,0.95); ctx.beginPath(); ctx.arc(x,y,rd*0.85,0,6.2832); ctx.fill(); ctx.strokeStyle=_kmCss(GOLD); ctx.lineWidth=Math.max(0.8,rd*0.2); ctx.stroke(); } } }
+  try{ globalThis.__KM_DANAE={open,n}; }catch(_){}
 }
 
 
