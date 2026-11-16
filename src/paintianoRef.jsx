@@ -4904,22 +4904,48 @@ function matissePhaseNice(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   }
 }
 
-// ── Matisse F (slot 5): La Gerbe (1953) — a sheaf of fronds fanning upward from
-// a low anchor across calm cream; every frond a flat colour, scissor-cut.
+// ── Matisse F (slot 5): La Gerbe (1953) — the sheaf: his long cut leaves of painted paper, round lobes in pairs along
+// both sides, gathered at one point and fanning out all round it into an oval on the white wall, overlapping where their
+// stems meet. A leaf for every passage:
+//   where        in time round the sheaf, from the lower left over the top to the lower right
+//   how long     the higher the passage sounds, the further its leaf reaches
+//   how broad    as the passage is loud; a held, singing passage has more and rounder lobes
+//   the colour   the passage's own, snapped to his gouache papers, never the same as the leaf before
+// It grows with the piece: leaf after leaf as the passages sound.
+function _mtShGerbe(rnd,lobes,fat){ const P=[], N=22;
+  const T=_mtSpine(0,0,(rnd()-.5)*0.1,0.4,(rnd()-.5)*0.2,6); P.push(_mtFinger(T,0.03,0.2));                 // the stem, to where they all meet
+  const e=T[6], w=0.15*fat; const S=_mtSpine(e[0],e[1],e[2],1.6,(rnd()-.5)*0.45,N); P.push(_mtFinger(S,w,null));   // the leaf, a round tip
+  P.push(_mtOval(e[0]+Math.cos(e[2])*w*0.5,e[1]+Math.sin(e[2])*w*0.5,w*0.62,w*0.62,14));                   // its foot rounded off
+  for(let k=0;k<lobes;k++){ const u=0.08+0.74*(k+0.5)/lobes; const s=S[Math.round(u*N)];
+    for(const sd of [-1,1]){ const a=s[2]+sd*(0.8+0.25*rnd()); const len=(0.44-0.26*u)*(0.85+0.3*rnd())*fat;
+      P.push(_mtFinger(_mtSpine(s[0],s[1],a,len,-sd*(0.35+0.3*rnd()),7),(0.16-0.06*u)*fat*(0.9+0.2*rnd()),0.08)); } }
+  return P; }
 function matissePhaseLaGerbe(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
-  const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null; const density=_ch?_ch.density:0.4;
-  ctx.fillStyle=isBW?'#e2dccc':'#ebdcb8'; ctx.fillRect(0,0,CW,CH);
-  const r0=_seedRnd(46001, ss, 0, 0); r0();
-  const ax=CW*(0.5+(r0()-.5)*0.12), ay=CH*(0.9+(r0()-.5)*0.06);
-  const n=Math.round((9+density*5)*_dW(density)), list=[];
-  for(let i=0;i<n;i++){ const r=_seedRnd(i+46010, ss, 0, 0); r();
-    const a=-1.5708+((i/(n-1))-0.5)*2.7+(r()-.5)*0.12, L=Math.max(CW,CH)*((i%2)?0.42:0.64)*(0.85+r()*0.3);
-    const x=ax+Math.cos(a)*L*0.5, y=ay+Math.sin(a)*L*0.5;
-    list.push({kind:'gerbe', x, y, size:L*0.42, rot:a+1.5708, col:_matFlat(chords, Math.floor((i+0.5)*cn/n), gc, isBW), id:i, t:i/n}); }
-  // a few seeds at the foot of the sheaf
-  for(let i=0;i<4;i++){ const r=_seedRnd(i+46090, ss, 0, 0); r(); list.push({kind:'disc', x:ax+(r()-.5)*D*0.3, y:ay+(r()-.3)*D*0.08, size:D*(0.012+r()*0.012), rot:0, col:_matFlat(chords, Math.floor(r()*cn), gc, isBW), id:200+i, t:0.6+r()*0.4}); }
-  _matDraw(ctx, list, reveal, ss);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_mtStats(chords,gc,isBW,0,cn); const dens=A.ch?A.ch.density:0.3;
+  const wall=isBW?[240,238,232]:[245,241,232]; const O=_mtOps();
+  O.at(0,()=>_mtWall(ctx,0,0,CW,CH,wall,ss));
+  const nL=Math.max(12,Math.min(18,Math.round(10+7*dens+3*X.pace))); let G=_kd2Phrases(A,nL);
+  if(G.length<12) G=G.flatMap(q=>{ const m=Math.floor((q.a+q.b)/2), tm=(q.t0+q.t1)/2; return m>q.a&&m<q.b ? [{...q,b:m,t1:tm},{...q,a:m,t0:tm}] : [q]; });   // a calm piece: a leaf for each half of a passage
+  const n=G.length;
+  const cx=CW*0.5, cy=CH*0.53, tall=Math.max(1,CH/CW); let prev=null, prev2=null;
+  G.forEach((q,i)=>{ const h=_mtHearSpan(A,q.a,q.b); const r=_mtR(46100+i,ss);
+    const u=(i+0.5)/n; const phi=Math.PI*0.62+Math.PI*1.76*u+(r()-.5)*(5/n);             // round the sheaf, lower left over the top
+    const up=Math.pow(Math.sin(phi),2);                                                    // reach further up and down on a tall canvas
+    const reach=D*(0.3+0.13*h.reg)*(1+0.3*up*(tall-1))*(0.9+0.2*r());
+    const fat=0.8+0.3*Math.min(1,h.vmax||0.6)*(0.8+0.4*r());
+    const lobes=h.dur>1.3?5:h.dur>0.8?4:3;
+    const fx=cx+Math.cos(phi)*D*0.012, fy=cy+Math.sin(phi)*D*0.012;
+    let col=_mtPigAt(chords,Math.floor((q.a+q.b)/2),gc,isBW); if(_mtSame(col,_MT_WHITE)||_mtSame(col,wall)) col=_mtOther(st,[prev||[0,0,0],_MT_WHITE],isBW);
+    const hd=(p,q)=>Math.abs(((_mtHue(p)-_mtHue(q))%360+540)%360-180);
+    const near=(p)=>(prev && hd(p,prev)<70) || (prev2 && hd(p,prev2)<30);
+    if(!isBW && prev && near(col)){ const ok=st.concat(_MT_PIG.map(_mtPastel)).find(p=>!_mtSame(p,_MT_WHITE)&&!_mtSame(p,_MT_BLACK)&&!near(p)); if(ok) col=ok; }   // beside the leaves before, another colour of the piece
+    else if(_mtSame(col,prev)) col=_mtOther(st,[prev,_MT_WHITE],isBW);
+    prev2=prev; prev=col;
+    const polys=_mtXf(_mtShGerbe(_mtR(46200+i*7+ss,7),lobes,fat),fx,fy,reach/2,phi,1);
+    O.at(q.t0, ()=>_mtPaper(ctx,polys,col,D,_mtR(46300+i,ss))); });
+  O.run(reveal);
+  try{ globalThis.__MT_LISTEN={v:'gerbe',leaves:n}; }catch(_){}
   _setCurE(0.5);
 }
 
