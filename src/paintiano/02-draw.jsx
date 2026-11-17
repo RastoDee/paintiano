@@ -1290,7 +1290,7 @@ function drawRothkoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const ss=sessionSeed|0;
   // ── VARIANT: 0 No. 61 (Rust and Blue) · 1 Orange and Yellow · 2 White Center ·
   // 3 Four Darks in Red · 4 Black on Maroon (Seagram) · 5 Multiform No. 9 · 6 What he heard (generative) ·
-  // 7 Chapel. Shown as 0 What he heard · 1 No. 61 · 2 Orange and Yellow · 3 White Center · 4 Four Darks · 5 Seagram · 6 Multiform · 7 Chapel. Free: 0 and 1.
+  // 7 Black on Grey (1969–70; the Chapel became the Listens). Shown as 0 What he heard (the Chapel, with Feldman's music) · 1 No. 61 · 2 Orange and Yellow · 3 White Center · 4 Four Darks · 5 Seagram · 6 Multiform · 7 Black on Grey. Free: 0 and 1.
   const _pn=_capN(8); const pick=[6,0,1,2,3,4,5,7][((phaseIndex|0)%_pn+_pn)%_pn];
   _rk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode);
 }
@@ -1368,10 +1368,58 @@ function _rk2Stack(list,S,CW,CH,ss,G,keys,o){ o=o||{}; const D=Math.min(CW,CH); 
   for(let i=0;i<n;i++){ const h=H*ws[i]/T; const r=_rkR(62100+i,ss); r(); const x=mx+(r()-.5)*CW*0.01;
     _rk2Field(list,S,x,y,CW-2*mx,h,G[i],keys[i],{D,ss,feather:o.feather?D*o.feather:undefined,K:o.K,core:o.core,streaks:o.streaks,pull:o.pulls?o.pulls[i]:undefined}); rects.push({x,y,w:CW-2*mx,h}); y+=h+gap; }
   return rects; }
+// ═══════════════════════════════════════════════════════════════════════════
+// ROTHKO LISTENS — the Chapel (1964–67) and the music written for it: Morton
+// Feldman's Rothko Chapel (1971), sounds set far apart in long silences, for the
+// dark canvases of the chapel. Here the piece paints one of them, edge to edge:
+// a field of the piece's colour deepened to his maroon and plum, veil over veil so
+// it glows from inside and its edges burn; and in it the black form, laid by the
+// piece itself: every passage lays one veil over it, a loud passage a dark one so
+// the form deepens, a quiet one a veil of the field's colour so it breathes; a band
+// of light stays round it. Veil by veil as the piece plays.
+// ═══════════════════════════════════════════════════════════════════════════
+function _rkChapel(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_rk2Setup(chords,gc,mode), cn=S.cn, bw=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn, list=[];
+  const deep=_rkMix(S.avg(0,1),_pieceCols(chords,gc,bw,1)[0],0.5), ground=bw?[30,30,30]:_rkMix(_rkTone(deep,0.12,bw),[70,16,30],0.3); _rkGround(ctx,CW,CH,ground,ss);
+  const field=bw?[70,70,70]:_rkMix(_bhxPigment(deep,0.42,0.66,0.2,0.3,0,0.5,null),[112,28,50],0.25), whole=S.span(0,1);   // deep, but his pigment, never mud
+  const mx=CW*0.06, my=CH*0.05, fw=CW-2*mx, fh=CH-2*my;
+  list.push({id:list.length,t:0,x:mx,y:my,w:fw,h:fh,col:field,a:0.9,feather:D*0.012,k:0.6,ss});   // the field laid in
+  _rk2Field(list,S,mx,my,fw,fh,whole,0.22+0.06*S.energy,{D,ss,feather:D*0.03,K:10,core:1,streaks:3,pull:[field,0.8],haloK:0.14,alpha:0.6});
+  // the black form: upper and central, as large as the piece is wide in its dynamics, as high as its register
+  const w=fw*(0.56+0.2*S.dyn), h=fh*(0.48+0.18*S.dyn), x=CW/2-w/2, y=my+(fh-h)*(0.22+0.4*(1-S.regAll));
+  const glow=bw?[110,110,110]:_rk2Pig(field,0.34,S), blk=bw?[16,16,16]:_rkMix([14,9,12],field,0.15);
+  list.push({id:list.length,t:0.04,x,y,w,h,col:_rkMix(field,blk,0.45),a:0.7,feather:D*0.008,k:0.9,ss});
+  const G=S.groups(_rkClamp(Math.round(S.A.phrases.length/2),8,18)); const vs=G.map(g=>g.v).sort((a,b)=>a-b), vMid=vs[vs.length>>1]||0.5;
+  G.forEach((g,i)=>{ const r=_rkR(64900+i,ss); r(); const loud=g.v>=vMid, e=D*0.006*(0.5+r());
+    list.push({id:list.length,t:g.t0+0.001,x:x+(r()-0.5)*e,y:y+(r()-0.5)*e,w:w,h:h,col:loud?blk:_rkMix(field,_rkTone(S.avg(g.t0,g.t1),0.26,bw),0.4),a:loud?0.16+0.2*g.vmax:0.1,feather:D*0.008,k:0.95,ss}); });
+  list.push({id:list.length,t:0.996,x:x-D*0.022,y:y-D*0.022,w:w+D*0.044,h:h+D*0.044,col:glow,a:0.3,feather:D*0.025,k:0.3,ss});   // the band of light round it, last
+  list.push({id:list.length,t:0.998,x,y,w,h,col:blk,a:0.4,feather:D*0.006,k:1,ss});
+  try{ globalThis.__RK_LISTEN={v:'chapel',passages:G.length}; }catch(_){}
+  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
+}
+// ── Rothko 7: Untitled (Black on Grey), 1969–70, his last series — two fields meet at a
+// horizon inside a white margin: the dark above (the piece's colour gone nearly black,
+// as the high voice), the grey below (its colour faded to a cool grey, as the low voice),
+// the horizon where the piece's register settles; both scumbled, as he brushed them.
+function _rkBlackGrey(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_rk2Setup(chords,gc,mode), cn=S.cn, bw=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn, list=[], A=S.A;
+  ctx.fillStyle=bw?'rgb(238,238,236)':'rgb(238,236,230)'; ctx.fillRect(0,0,CW,CH);
+  const m=CW*0.07, hy=CH*_rkClamp(0.42+0.22*(1-S.regAll),0.38,0.66);
+  const hi=A.phrases.filter(p=>A.reg(p.top)>=S.regAll), lo=A.phrases.filter(p=>A.reg(p.top)<S.regAll);
+  const spanOf=(P)=>P.length?{t0:P[0].t0,t1:P[P.length-1].t1,t:(P[0].t0+P[P.length-1].t1)/2,dur:P.reduce((s,p)=>s+p.n,0)/cn,reg:A.reg(P.reduce((s,p)=>s+p.top,0)/P.length),v:P.reduce((s,p)=>s+p.v,0)/P.length,vmax:Math.max(...P.map(p=>p.vmax)),n:P.reduce((s,p)=>s+p.n,0)}:S.span(0,1);
+  const gT=spanOf(hi.length?hi:A.phrases), gB=spanOf(lo.length?lo:A.phrases);
+  const dark=bw?[24,24,24]:_rkTone(S.avg(0,1),0.04,bw), grey=bw?[150,150,150]:_rkMix(_rkTone(S.avg(0,1),0.5,bw),[146,148,152],0.86);
+  list.push({id:list.length,t:gT.t0,x:m,y:m,w:CW-2*m,h:hy-m,col:dark,a:0.95,feather:D*0.002,k:1,ss}); list.push({id:list.length,t:gB.t0,x:m,y:hy,w:CW-2*m,h:CH-m-hy,col:grey,a:0.95,feather:D*0.002,k:1,ss});
+  _rk2Field(list,S,m,m,CW-2*m,hy-m,gT,0.05,{D,ss,feather:D*0.004,K:9,core:0,streaks:4,pull:[dark,0.85],halo:false});
+  _rk2Field(list,S,m,hy,CW-2*m,CH-m-hy,gB,0.5,{D,ss,feather:D*0.004,K:9,core:0,streaks:4,pull:[grey,0.9],halo:false});
+  _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
+}
 // ── VARIANT: 0 No. 61 (Rust and Blue) 1953 · 1 Orange and Yellow 1956 · 2 White Center 1950 ·
 // 3 Four Darks in Red 1958 · 4 Black on Maroon (Seagram) 1959 · 5 Multiform No. 9 1948 ·
 // 6 What he heard (generative; No. 10 retired, approved) · 7 Chapel 1964–67. Free: 0 and 1 — the deep classic stack against the luminous one.
 function _rk2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
+  if(pick===6) return _rkChapel(ctx,CW,CH,chords,lim,gc,ss,mode);      // What he heard: the Chapel and Feldman's music for it (the first Listens, case 6 below, retired, code kept)
+  if(pick===7) return _rkBlackGrey(ctx,CW,CH,chords,lim,gc,ss,mode);   // Black on Grey, his last series (the Chapel, case 7 below, now the Listens; code kept)
   const S=_rk2Setup(chords,gc,mode), cn=S.cn, A=S.A, bw=S.isBW; const reveal=Math.max(1,Math.min(cn,lim))/cn; const D=Math.min(CW,CH); const list=[]; const nP=A.phrases.length;
   switch(pick){
     case 1: { // Orange and Yellow — two fields of light; the seam sits where the music peaks
@@ -17546,14 +17594,14 @@ const ARTIST_VARIANTS = {
     {ground:'#2c4628',mark:{dot:.5,petal:.3,disc:.2},size:[.02,.06],layout:{field:1},density:1},   // Farm Garden: a carpet of blooms, sunflowers
   ],
   rothko: [   // slot order = solo variants: No. 61, Orange and Yellow, White Center, Four Darks in Red, Seagram, Multiform, No. 10, Chapel
-    {mark:{field:1},size:[.3,.6],edge:.9,alpha:.8,layout:{stack:1},density:.5},   // What he heard
+    {ground:'#2a1c22',mark:{field:.65,rect:.35},size:[.3,.6],edge:.6,alpha:.85,layout:{stack:.5,grid:.5},density:.3,tone:'dark'},   // What he heard: the Chapel, one dark field and the black form the piece lays in it
     {mark:{field:1},size:[.3,.6],edge:.9,alpha:.75,layout:{stack:1},density:.5},
     {ground:'#e8d8a8',mark:{field:1},size:[.35,.6],edge:.6,alpha:.7,layout:{stack:1},density:.4,tone:'pastel'},
     {ground:'#d8b8b8',mark:{field:1},size:[.25,.5],edge:.6,alpha:.75,layout:{stack:1},density:.45,tone:'pastel'},
     {ground:'#6a1418',mark:{field:1},size:[.2,.45],edge:.8,alpha:.8,layout:{stack:1},density:.5,tone:'dark'},
     {ground:'#4a1a1a',mark:{nest:1},size:[.3,.6],edge:.5,alpha:.7,layout:{grid:1},density:.3,tone:'dark'},
     {ground:'#e4c89a',mark:{field:1},size:[.15,.35],edge:.3,alpha:.6,layout:{scatter:1},density:.5},
-    {ground:'#1a1418',mark:{field:1},size:[.4,.7],edge:.7,alpha:.5,layout:{stack:1},density:.3,tone:'dark'},
+    {ground:'#eeece6',mark:{field:1},size:[.4,.7],edge:.2,alpha:.85,layout:{stack:1},density:.25,tone:'dark'},   // Black on Grey: the dark above, the grey below, a white margin
   ],
   bulge: [   // slot order = solo phases: What he heard, Folklore, Vonal, Vega, Supernovae, Hexagon cubes, Zebra, Vonal tunnel
     {mark:{bulge:.5,disc:.25,diamond:.25},size:[.04,.1],layout:{grid:1},density:1,warp:.6},   // What he heard
