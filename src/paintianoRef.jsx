@@ -7457,7 +7457,7 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
   //  0 = Folklore planétaire — his plastic alphabet in order: rows of units, his permutation of value along each row.
   //  1 = Vonal — his line series: nests of square lines that read as a pyramid seen from above, one per part of the piece.
-  //  2 = Vega — colour deformed checkerboard with central bulge.
+  //  2 = Vega — a checkerboard swollen by a lit sphere, its colours running down the board in time.
   //  3 = Supernovae — squares turning to lozenges and discs along a wave.
   //  4 = Hexagon cubes — isometric tumbling block (3D).
   //  5 = Zebra — pale and dark stripes bent by a sphere pressing through.
@@ -7661,24 +7661,34 @@ function vasarelyPhaseCells(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 
 
-// ── Vasarely D: Vega — colour deformed checkerboard with central bulge. ──
+// ── Vasarely D: Vega — a checkerboard swollen by a sphere pressing through it. The colours run down the board in time:
+// each row the loudest chord of its stretch, in its own colour brought to one value and not pushed, gliding into the
+// next row's; the squares alternate dark and light in that colour, and inside the sphere they take its light from the
+// upper left, so the swelling reads as a body. Square by square as the piece plays.
 function vasarelyPhaseVega(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const sR = _seedRnd(91, ss, 0, 22); sR(); sR();
+  const A=_kd2Analyze(chords,gc,mode);
   ctx.fillStyle=isBW?'#1a1a1a':'#14141e';ctx.fillRect(0,0,CW,CH);
   const cols=Math.max(6,Math.min(28,Math.round(Math.sqrt(cn)*2))),rows=Math.round(cols*CH/CW);
   const total=cols*rows,vis=Math.max(1,Math.ceil(N/cn*total));
   // Per-song bulge centre offset + radius variance.
   const cx=CW*(0.40+sR()*0.20),cy=CH*(0.40+sR()*0.20),bulgeR=Math.min(CW,CH)*(0.40+sR()*0.20);
   const warp=(x,y)=>{const dx=x-cx,dy=y-cy,d=Math.hypot(dx,dy);if(d<bulgeR&&d>0.001){const t=d/bulgeR,mag=1+(1-t*t)*0.7;return[cx+dx*mag,cy+dy*mag];}return[x,y];};
+  const mix=(a,b,t)=>_vsMix(a,b,_vsClamp(t,0,1));
+  const even=(c)=>{ const m=(c[0]+c[1]+c[2])/3, q=c.map(x=>Math.max(0,m+(x-m)*0.9)); const l=q[0]*0.299+q[1]*0.587+q[2]*0.114||1, f=118/l; const o=q.map(x=>x*f); const mx=Math.max(...o); return mx>255?o.map(x=>x*255/mx):o; };
+  const tone=(hue,val)=>{ const dark=mix(hue,[0,0,0],0.86), lite=mix(hue,[255,252,244],0.8); return val<0.5?mix(dark,hue,val/0.5):mix(hue,lite,(val-0.5)/0.5); };
+  const rowHue=[]; for(let r=0;r<rows;r++){ const lo=Math.floor(cn*r/rows), hi=Math.max(lo,Math.ceil(cn*(r+1)/rows)-1); let best=lo,bv=-1; for(let i=lo;i<=Math.min(cn-1,hi);i++){ const e=A.ev[i]; const v=e?e.v:0; if(v>bv){ bv=v; best=i; } } const o=_picChord(chords,best,gc,isBW).rgb; rowHue.push(isBW?o:even(o)); }
+  const hueAt=(u)=>{ const f=_vsClamp(u*rows-0.5,0,rows-1), i=Math.floor(f), j=Math.min(rows-1,i+1); return mix(rowHue[i],rowHue[j],f-i); };
+  const L=[-0.45,-0.55,0.7], Ln=Math.hypot(...L);
   let k=0;
   for(let r=0;r<rows&&k<vis;r++)for(let c=0;c<cols&&k<vis;c++,k++){
-    const {rgb}=_picChord(chords,Math.floor(k*(cn/total)),gc,isBW);
-    const dark=(r+c)%2===0;
-    const cr=dark?rgb:[Math.min(255,rgb[0]+80),Math.min(255,rgb[1]+80),Math.min(255,rgb[2]+80)];
+    const dark=(r+c)%2===0; const hue=hueAt((k+0.5)/total);
     const x0=c/cols*CW,y0=r/rows*CH,x1=(c+1)/cols*CW,y1=(r+1)/rows*CH;
+    const mx=(x0+x1)/2-cx, my=(y0+y1)/2-cy, d=Math.hypot(mx,my)/bulgeR; let val=dark?0.3:0.74;
+    if(d<1){ const nz=Math.sqrt(1-d*d), nx=mx/bulgeR, ny=my/bulgeR; const lam=Math.max(0,(nx*L[0]+ny*L[1]+nz*L[2])/Ln); val=val*(0.55+0.65*lam); }   // the sphere's own light
     const p0=warp(x0,y0),p1=warp(x1,y0),p2=warp(x1,y1),p3=warp(x0,y1);
-    ctx.fillStyle=`rgb(${cr[0]},${cr[1]},${cr[2]})`;
+    ctx.fillStyle=_vsCss(tone(hue,val));
     ctx.beginPath();ctx.moveTo(p0[0],p0[1]);ctx.lineTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.lineTo(p3[0],p3[1]);ctx.closePath();ctx.fill();
   }
 }
