@@ -5553,6 +5553,19 @@ function _pol2Relief(ctx,sk,col,alpha,D){ const sc=(k)=>({pts:sk.pts.map(p=>[p[0
 function _pol2Hand(ctx,x,y,s,ang,col,alpha){ ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.fillStyle=_polCss(col,alpha); ctx.beginPath(); ctx.ellipse(0,0,s*0.42,s*0.5,0,0,6.2832); ctx.fill();
   const F=[[-0.62,-0.1,0.55,0.9],[-0.28,-0.6,0.8,-0.15],[0,-0.68,0.9,0],[0.27,-0.62,0.82,0.14],[0.5,-0.45,0.68,0.3]];
   for(const [fx,fy,fl,fa] of F){ ctx.save(); ctx.translate(fx*s,fy*s); ctx.rotate(fa); ctx.beginPath(); ctx.ellipse(0,-fl*s*0.45,s*0.11,fl*s*0.5,0,0,6.2832); ctx.fill(); ctx.restore(); } ctx.restore(); }
+// ── Pollock 5: Convergence (1952) — the whole sheet crossed by a web of thick enamel skeins in the piece's colours, as heavy
+// as the passages are loud, the black web through them on the melody, white thrown last; no pools, every colour a line
+function _polConverge(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const bw=mode==='bw'; _polGround(ctx,CW,CH,bw?[232,230,224]:[236,232,222]);
+  _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.spans(_polClamp(Math.round(S.cn/14),30,60)); const n=G.length;
+    G.forEach((g,i)=>{ const r=_polR(96000+i,ss); r();
+      const col=bw?S.silver:S.pal[i%3], a0=r()*6.2832, l0=D*(1.4+1.6*Math.min(1.5,g.dur*n)), xa=CW*r(), ya=CH*r();
+      list.push({id:id++,t:g.t,layer:0,x:xa,y:ya,ang:a0,len:l0,col,alpha:0.95,o:{speed:1+S.tempo*0.5,w:0.015+0.012*g.vmax,loopy:0.6,wob:1.0,guide:_pol2Guide(S,g,xa,ya,a0,l0,D*0.4,8,false),follow:0.2}});
+      const ang=r()*6.2832, len=D*(1.6+2*Math.min(1.5,g.dur*n)), x0=CW*r(), y0=CH*r();
+      list.push({id:id++,t:g.t,layer:1,x:x0,y:y0,ang,len,col:S.ink,alpha:0.95,o:{speed:1.1+S.tempo*0.5,w:0.013,loopy:0.5,wob:0.8,guide:_pol2Guide(S,g,x0,y0,ang,len,D*0.4,8,false),follow:0.22}});
+      if(r()<0.4||g.vmax>=S.A.vHi*0.95){ const x1=CW*r(), y1=CH*r(); list.push({id:id++,t:g.t1,layer:2,x:x1,y:y1,ang:r()*6.2832,len:D*1.1,col:S.white,alpha:0.95,o:{speed:1.4,w:0.011,loopy:0.3,wob:1.2}}); } });
+    return list; });
+}
 // ── the _pol2 variants: 1 Autumn Rhythm 1950 · 2 Lavender Mist 1950 · 3 Blue Poles 1952 · 4 Convergence 1952 ·
 // 5 Number 14 (black pouring) 1951. Slots 0 and 6 (the dense and sparse drip web) and 7 (White Light) keep their own engines.
 function _pol2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
@@ -5583,7 +5596,8 @@ function _pol2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
           list.push({id:id++,t:0.9+k/np*0.1,layer:3,x:CW*x+Math.sin(lean)*CH*0.55,y:-CH*0.03,ang:1.5708-lean,len:CH*1.25,col:blue,alpha:0.97,o:{speed:1.0,w:0.014+0.01*e.v,loopy:0,wob:0.1,straight:true,noBounce:true,endPool:false}}); });
         return list; });
       break; }
-    case 4: { // Convergence — colour masses first, one for every phrase's climax, then the black web on the melody, white splashes last
+    case 4: _polConverge(ctx,CW,CH,chords,lim,gc,ss,mode); break;   // Convergence as an all-over web of colour skeins (the poured masses below retired, code kept)
+    case 14: { // (retired, code kept) Convergence — colour masses first, one for every phrase's climax, then the black web on the melody, white splashes last
       _polGround(ctx,CW,CH,bw?[232,230,224]:[236,232,222]);
       _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.spans(_polClamp(Math.round(S.cn/30),14,30)); const n=G.length;
         G.forEach((g,i)=>{ const r=_polR(96000+i,ss); r(); const col=bw?S.silver:_polMix(S.pal[i%3],[255,255,255],0.1); const x=CW*(0.1+0.8*r()), y=CH*(0.1+0.8*(0.5*r()+0.5*(1-g.reg))); const R=D*(0.035+0.09*g.vmax);
@@ -5608,7 +5622,57 @@ function _pol2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// POLLOCK LISTENS — not one of the paintings above: the canvas on the floor and
+// POLLOCK LISTENS — his Mural (1943), painted for Peggy Guggenheim's hall, the
+// picture he said was "a stampede": a frieze of black figures, upright and
+// curving, swept along in one rhythm over swathes of colour, with white thrown
+// through it. He painted to jazz, records playing for days. Here the piece is
+// that stampede, read like a score in three friezes, left to right, one under the
+// next: every beat a black figure rising through the frieze, swaying as the melody
+// moves, as heavy as it is loud, a long or accented one curled into a loop; every
+// passage a swathe of its colour behind the figures; the accents thrown in white.
+// Figure by figure as the piece plays.
+// ═══════════════════════════════════════════════════════════════════════════
+function _pkRibbon(ctx,pts,w,col,a){ const n=pts.length; if(n<2) return; const L=[],R=[];
+  for(let k=0;k<n;k++){ const p=pts[Math.max(0,k-1)], q=pts[Math.min(n-1,k+1)], dx=q[0]-p[0], dy=q[1]-p[1], d=Math.hypot(dx,dy)||1, u=k/(n-1), ww=w*(0.35+0.65*Math.sin(Math.PI*Math.min(1,0.08+u*0.92)))*(pts[k][2]||1);
+    L.push([pts[k][0]-dy/d*ww/2,pts[k][1]+dx/d*ww/2]); R.push([pts[k][0]+dy/d*ww/2,pts[k][1]-dx/d*ww/2]); }
+  ctx.fillStyle=`rgba(${col[0]|0},${col[1]|0},${col[2]|0},${a})`; ctx.beginPath(); L.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); for(let k=n-1;k>=0;k--) ctx.lineTo(R[k][0],R[k][1]); ctx.closePath(); ctx.fill(); }
+function _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const bw=mode==='bw', A=_kd2Analyze(chords,gc,mode), cn=A.cn, D=Math.min(CW,CH), played=Math.max(1,Math.min(cn,lim));
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+  ctx.fillStyle=bw?'rgb(226,224,218)':'rgb(226,210,172)'; ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  const paint=(c,l)=>bw?(()=>{ const g=255*l; return [g,g,g]; })():_bhxPigment(c,0.45,0.78,0,1,0.04,0.5,l);
+  const BLK=bw?[20,20,20]:[24,20,20], WHT=bw?[244,244,240]:[244,238,222];
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  const tops=A.ev.filter(Boolean).map(e=>e.top).sort((a,b)=>a-b), tLo=tops[Math.floor(tops.length*0.05)]||48, tHi=tops[Math.floor(tops.length*0.95)]||84;
+  const ds=A.ev.filter(Boolean).map(e=>e.dur).sort((a,b)=>a-b), dMed=ds[ds.length>>1]||1;
+  const R=3, rh=CH/R, pos=(u)=>{ const f=clamp(u,0,0.9999)*R, row=Math.floor(f); return [CW*(0.02+0.96*(f-row)), row]; };
+  const items=[]; let id=0; const put=(i,fn)=>items.push({i,id:id++,fn});
+  // the swathes: a passage a few broad strokes of its colour behind the figures, upright and slanting as his were
+  const P=_kd2Phrases(A,Math.round(clamp(9+A.phrases.length*0.4,12,30)));
+  P.forEach((p,k)=>{ const r=_seedRnd(93100+k,ss,0,0); r(); const [x0,row]=pos(p.t0), [x1,row1]=pos(Math.max(p.t0,p.t1-0.001)), xa=x0, xb=row1===row?x1:CW*0.98, y0=row*rh;
+    const n=2+Math.floor(r()*3), base=A.pcCol(p.pc,60);
+    for(let j=0;j<n;j++){ const x=xa+(xb-xa)*(j+0.5)/n+(r()-0.5)*CW*0.03, w=Math.max(D*0.04,(xb-xa)/n*(0.9+0.5*r())), col=r()<0.12?WHT:paint(r()<0.7?base:A.pcCol(p.pc2!=null?p.pc2:p.pc,60),0.42+0.3*r()), lean=(r()-0.5)*0.5, pts=[];
+      for(let s=0;s<=8;s++){ const u=s/8; pts.push([x+lean*rh*(u-0.5)+Math.sin(u*3+k)*w*0.15, y0+rh*(0.04+0.92*u),1]); }
+      put(p.a,()=>_pkRibbon(ctx,pts,w,col,0.78)); } });
+  // the figures: a beat each, rising through the frieze, swaying with the melody
+  const nF=Math.round(clamp(cn/3,36,110)); let prevM=0.5;
+  for(let k=0;k<nF;k++){ const i=Math.min(cn-1,Math.floor((k+0.5)*cn/nF)), e=A.ev[i]; if(!e) continue; const r=_seedRnd(93300+k,ss,0,0); r();
+    const f=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1), m=clamp((e.top-tLo)/Math.max(1,tHi-tLo),0,1), [x,row]=pos(i/cn), y0=row*rh, y1=y0+rh;
+    let lo=0,nn=0; for(let q=Math.max(0,i-4);q<=Math.min(cn-1,i+4);q++){ const o=A.ev[q]; if(!o||q===i) continue; nn++; if(o.v<e.v) lo++; } const acc=nn&&lo/nn>0.85;
+    const sway=(m-prevM)*rh*0.9+(r()-0.5)*rh*0.12, bend=(k%2?1:-1)*rh*(0.08+0.12*r()); prevM=m; const w=D*(0.007+0.017*f), pts=[];
+    const ya=y1-rh*(0.04+0.1*r()), yb=y0+rh*(0.03+0.12*(1-m)+0.06*r());
+    for(let s=0;s<=16;s++){ const u=s/16; pts.push([x+sway*u+bend*Math.sin(Math.PI*u)+Math.sin(u*9+k)*w*0.6, ya+(yb-ya)*u, 0.8+0.4*Math.sin(u*5+k)]); }
+    put(i,()=>_pkRibbon(ctx,pts,w,BLK,0.9));
+    if(acc||e.dur>dMed*1.8){ const cx=x+sway*0.5+bend*0.6, cy=y0+rh*(0.3+0.4*r()), rx=rh*(0.06+0.06*f), ry=rh*(0.16+0.12*r()), rot=(r()-0.5)*0.6, lp=[];
+      for(let s=0;s<=24;s++){ const a=s/24*6.2832+r()*0.05; lp.push([cx+Math.cos(a)*rx*Math.cos(rot)-Math.sin(a)*ry*Math.sin(rot), cy+Math.cos(a)*rx*Math.sin(rot)+Math.sin(a)*ry*Math.cos(rot), 1]); }
+      put(i,()=>_pkRibbon(ctx,lp,w*0.8,BLK,0.88)); }
+    if(acc){ const wp=[]; const a0=-1.2+r()*2.4, L=rh*(0.15+0.2*r()); for(let s=0;s<=8;s++){ const u=s/8; wp.push([x+Math.cos(a0)*L*(u-0.5)*0.4+(r()-0.5)*2, y0+rh*0.5+Math.sin(a0)*L*(u-0.5), 1]); } put(i,()=>_pkRibbon(ctx,wp,w*0.9,WHT,0.92)); } }
+  items.sort((a,b)=>a.i-b.i||a.id-b.id); for(const it of items){ if(it.i>=played) break; it.fn(); }
+  try{ globalThis.__PK_LISTEN={v:'mural',figures:nF,passages:P.length}; }catch(_){}
+  _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// (retired, code kept) POLLOCK LISTENS, the first — not one of the paintings above: the canvas on the floor and
 // the painter walking round it with the piece. Every passage is a place on the
 // edge where he stands — he walks round the canvas as the piece goes — and a
 // pour from there into the canvas, the hand drawn by the melody.
@@ -5621,6 +5685,7 @@ function _pol2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
 //                    it is quick; a pool at every long note; the spatter as dense as the piece
 // ═══════════════════════════════════════════════════════════════════════════
 function _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  return _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode);   // What he heard is his Mural now; the walk round the canvas below retired (code kept)
   const bw=mode==='bw'; const A0=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A0); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A0.ch?A0.ch.register:0.5, dens=A0.ch?A0.ch.density:0.3;
   const black = !major && loud>0.6, white = loud<0.5 && reg>0.55 && !black;
   try{ globalThis.__PK_LISTEN={black,white,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
@@ -19870,12 +19935,12 @@ const ARTIST_VARIANTS = {
     {ground:'#2e2a4a',mark:{panel:.5,mtleaf:.25,mtburst:.25},size:[.04,.12],layout:{grid:1},density:1},   // the frames: the tone mosaic in cut gouache papers
   ],
   pollock: [   // slot order = solo variants: Classic drip, Autumn Rhythm, Lavender Mist, Blue Poles, Convergence, Number 14 black, Sparse, White Light
-    {mark:{drip:.8,splat:.2},size:[.03,.12],layout:{flow:1},density:.6},   // What he heard
+    {ground:'#e2d2ac',mark:{vband:.4,arc:.35,drip:.25},size:[.03,.12],layout:{stack:.6,grid:.4},density:.6},   // What he heard: his Mural, black figures rising through friezes over swathes of colour
     {mark:{drip:.75,splat:.25},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.6,layers:2},
     {ground:'#e2d6ba',mark:{drip:.8,splat:.2},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.7,layers:2},
     {ground:'#ded0c4',mark:{drip:.7,splat:.3},size:[.004,.02],alpha:.7,layout:{scatter:.6,flow:.4},density:.7,layers:2,tone:'pastel'},
     {ground:'#e2d6ba',mark:{drip:.7,vband:.15,splat:.15},size:[.006,.04],layout:{flow:.7,scatter:.3},density:.6,layers:2},
-    {ground:'#ece8de',mark:{drip:.5,pour:.5},size:[.01,.08],layout:{flow:.6,scatter:.4},density:.6,layers:2},
+    {ground:'#ece8de',mark:{drip:.85,splat:.15},size:[.008,.04],layout:{flow:.7,scatter:.3},density:.8,layers:2},   // Convergence: an all-over web of thick colour skeins, black through them, white last
     {ground:'#d6c6a6',mark:{drip:1},size:[.012,.05],alpha:.9,layout:{flow:1},density:.3,layers:1,tone:'dark'},
     {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
   ],
