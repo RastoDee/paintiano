@@ -16997,7 +16997,7 @@ const ARTIST_VARIANTS = {
   bauhaus: [
     {ground:'#f2eee4',mark:{disc:.34,tri:.33,panel:.33},size:[.08,.4],layout:{scatter:1},density:.3,tone:'primary'},   // What it heard
     {ground:'#f2eee4',mark:{disc:.34,tri:.33,panel:.33},size:[.1,.2],layout:{grid:1},density:.9,tone:'primary'},   // Vorkurs forms
-    {ground:'#f4f2ec',mark:{bar:.7,panel:.3},size:[.02,.08],layout:{stack:1},density:.7},   // Fugue (Josef Albers, glass)
+    {ground:'#161516',mark:{bar:.7,panel:.3},size:[.02,.08],layout:{stack:1},density:.7},   // Fugue (Josef Albers, glass: one flashed colour, black, milk)
     {ground:'#ece6d6',mark:{bar:.4,disc:.3,panel:.3},size:[.1,.4],layout:{stack:1},density:.3,tone:'primary'},   // Bayer poster
     {mark:{arch:.6,panel:.4},size:[.15,.45],layout:{stack:1},density:.3},
     {mark:{nest:1},size:[.2,.45],layout:{scatter:1},density:.1},   // Homage to the Square (Josef Albers)
@@ -18564,39 +18564,80 @@ function bauhausPhaseConstruction(ctx,CW,CH,chords,lim,gc,ss,mode){
 }
 
 // ── Phase 2: Albers, Fugue (Fuge, 1925) — one of the glass pictures Josef Albers made at the Bauhaus and named after the
-// musical form: milk glass under a thin flashed layer, cut away with the sandblaster through stencils, so that narrow
-// rectangles stand in rows, in the purest white and the deepest black with a few in colour, repeating and shifting like
-// the voices of a fugue. Here the rows are the voices of the piece — its notes sorted by pitch, the highest voice at the
-// top — read like a score, system under system; every note a bar as wide as it lasts, white in
-// a black row and black in a white one, the strongest few in the colour of their chord (held to the depth of flashed
-// glass), the quietest in grey. Bar by bar as the piece plays.
+// musical form: black glass under a thin flashed layer, cut away with the sandblaster through stencils, so that bars and
+// blocks of milk white and of the one flashed colour stand in rows, repeating and shifting like the voices of a fugue.
+// One colour for the whole pane, as his glass had: the hue the piece itself sounds in most, taken to the nearest of the
+// twelve on Itten's Bauhaus wheel. The pane, framed in black, is read like a score, system under system, each system two
+// rows: the melody on a row of the colour, every other voice on a black row below it. The notes fall on a coarse grid of
+// beats, a short note a bar, a held one a block: on the black row milk; on the colour row black where the melody climbs
+// and milk where it falls, pale where it is soft; the piece's own longest notes, and the bass where the harmony turns
+// and stays, blocks of the deeper flash. Where the piece is too
+// dense for glass, its weakest stretches fall silent, so its strong ones stand as combs with black air between them, as
+// on his pane. A loud system is flashed deeper, a quiet one paler. Bar by bar as the piece plays.
 function bauhausPhaseFuge(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  const isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
   const hsl=(c)=>{ const R=c[0]/255,G=c[1]/255,B=c[2]/255, mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2, d=mx-mn; let h=0,s2=0; if(d>1e-6){ s2=d/(1-Math.abs(2*l-1)); h=mx===R?((G-B)/d)%6:mx===G?(B-R)/d+2:(R-G)/d+4; h*=60; if(h<0) h+=360; } return [h,s2,l]; };
   const rgbH=(h,s2,l)=>{ const C=(1-Math.abs(2*l-1))*s2, X2=C*(1-Math.abs((h/60)%2-1)), m=l-C/2; const [a,b,c]=h<60?[C,X2,0]:h<120?[X2,C,0]:h<180?[0,C,X2]:h<240?[0,X2,C]:h<300?[X2,0,C]:[C,0,X2]; return [(a+m)*255,(b+m)*255,(c+m)*255]; };
-  const glass=(c)=>{ if(isBW){ const v=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [v*0.6+50,v*0.6+50,v*0.6+50]; } const [h,s2]=hsl(c); return rgbH(h,_bhxClamp(s2*0.6,0.4,0.6),(h>=40&&h<75)?0.54:0.44); };
-  const MILK=[244,242,236], BLACK=[22,21,24], GREY=[150,150,150];
-  // the notes: each with its time, length, pitch, loudness and chord
-  const N=[]; let T=0; const tAt=new Array(cn+1);
-  for(let i=0;i<cn;i++){ tAt[i]=T; const c=chords[i], ns=(c&&(c.n||c.notes))||[], d=Math.max(0.25,Math.min(8,(c&&c.durQ)||1)); for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, v=nt.v!==undefined?nt.v:80; N.push({i,t:T,d,m,v}); } T+=d; }
-  tAt[cn]=T; if(!N.length||T<=0){ ctx.fillStyle=_bhxCss(MILK); ctx.fillRect(0,0,CW,CH); return; }
-  const ps=N.map(n=>n.m).sort((a,b)=>a-b), vs=N.map(n=>n.v).sort((a,b)=>a-b), q=(arr,f)=>arr[Math.min(arr.length-1,Math.floor(arr.length*f))];
-  const poly=N.length/cn, V=Math.round(_bhxClamp(1.5+poly*0.9,2,5)), cuts=[]; for(let k=1;k<V;k++) cuts.push(q(ps,k/V));
-  const vLo=q(vs,0.2), vMax=vs[vs.length-1]||127; const hot=new Set(N.map((n,k)=>[n.v,k]).sort((a,b)=>(b[0]-a[0])||(a[1]-b[1])).slice(0,Math.max(1,Math.round(N.length*0.08))).map(x=>x[1]));   // only the strongest notes in colour, as his few coloured panes
-  const land=CW>CH*1.1, S=Math.round(_bhxClamp(cn/(land?160:95),land?1:2,land?3:6));   // systems, as a score is laid out
-  const m=D*0.06, gapS=D*0.03, x0=m, x1=CW-m, y0=m, y1=CH-m, sysH=(y1-y0-gapS*(S-1))/S, rowH=sysH/V, sysT=T/S, W=x1-x0;
-  ctx.fillStyle=_bhxCss(MILK); ctx.fillRect(0,0,CW,CH);
-  // the rows: black and colour in turn, the flashed layers over the milk glass
+  const MILK=[242,236,224], BLACK=[22,21,22];
+  ctx.fillStyle=_bhxCss(BLACK); ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  // the time line: real time where the piece has it, else its beats; every note with its own length
+  const ms=chords.every(c=>c&&typeof c.startMs==='number'), N=[], byI=[], tAt=new Array(cn+1);
+  for(let i=0;i<cn;i++){ const c=chords[i], q=Math.max(0.25,Math.min(8,(c&&c.durQ)||1)); tAt[i]=ms?c.startMs-chords[0].startMs:(i?tAt[i-1]+Math.max(0.25,Math.min(8,(chords[i-1]&&chords[i-1].durQ)||1)):0);
+    const span=ms?(i+1<cn?Math.max(1,chords[i+1].startMs-c.startMs):q*500):q, g=[];
+    for(const nt of ((c&&(c.n||c.notes))||[])){ const m=nt.m!==undefined?nt.m:nt, v=nt.v!==undefined?nt.v:80, d=ms&&nt.durMs?Math.max(span*0.5,nt.durMs):span, n={i,t:tAt[i],d,m,v}; N.push(n); g.push(n); } byI.push(g); }
+  const last=chords[cn-1], T=tAt[cn]=ms?tAt[cn-1]+Math.max(1,...byI[cn-1].map(n=>n.d),1):tAt[cn-1]+Math.max(0.25,Math.min(8,(last&&last.durQ)||1));
+  if(!N.length||T<=0) return;
   const iAt=(t)=>{ let lo=0,hi=cn; while(lo<hi){ const md=(lo+hi)>>1; if(tAt[md+1]<=t) lo=md+1; else hi=md; } return Math.min(cn-1,lo); };
-  const flash=[]; for(let s=0;s<S;s++){ const I=[]; for(let k=0;k<6;k++) I.push(iAt(sysT*(s+(k+0.5)/6))); const c=_mixIdx(chords,I,gc,isBW,mode); if(isBW){ flash.push([205,205,205]); continue; } const [h,s2]=hsl(c); flash.push(rgbH(h,_bhxClamp(s2*0.55,0.3,0.5),(h>=40&&h<75)?0.66:0.6)); }   // each system's light rows the flashed glass of its passage's colour
-  for(let s=0;s<S;s++){ const sy=y0+s*(sysH+gapS); for(let v=0;v<V;v++){ ctx.fillStyle=_bhxCss(v%2===0?BLACK:flash[s]); ctx.fillRect(x0,sy+v*rowH,W,rowH); } ctx.strokeStyle=_bhxCss(BLACK); ctx.lineWidth=Math.max(1,D*0.0025); ctx.strokeRect(x0,sy,W,sysH); }
-  const gap=Math.max(1,W/sysT*0.08);
-  N.forEach((n,k)=>{ if(n.i>=played) return; let v=0; while(v<cuts.length&&n.m>=cuts[v]) v++; const row=V-1-v;   // the highest voice on top
-    const s=Math.min(S-1,Math.floor(n.t/sysT)), sy=y0+s*(sysH+gapS), ry=sy+row*rowH, onBlack=row%2===0;
-    const bx=x0+(n.t-s*sysT)/sysT*W, bw=Math.max(1,Math.min(x1-bx,n.d/sysT*W-gap)); const bh=rowH*0.6;   // every bar of a row the same height, as the stencil cut it
-    let col=onBlack?MILK:BLACK; if(hot.has(k)) col=glass(_picChord(chords,n.i,gc,isBW).rgb); else if(n.v<=vLo&&n.v<vMax) col=GREY;
-    ctx.fillStyle=_bhxCss(col); ctx.fillRect(bx,ry+(rowH-bh)/2,bw,bh); });
-  try{ globalThis.__ST_LISTEN={v:'fuge',voices:V,systems:S}; }catch(_){}
+  // the pane: framed in black, rows of one proportion whatever the screen, never more systems than the piece fills
+  const A=Math.sqrt(CW*CH), edge=A*0.032, innerH=CH-2*edge, S=Math.round(_bhxClamp(Math.min(innerH/(2*A*0.125),Math.max(2,cn/40)),2,6));
+  const rowH=innerH/(2*S), sysT=T/S, padX=edge+A*0.022, W=CW-2*padX, nSlot=Math.max(16,Math.round(W/(A*0.0155))), sW=W/nSlot, slotT=sysT/nSlot;
+  // the one flashed colour: the hue the piece sounds in most (weighted by how long and how loud), on Itten's wheel
+  let hue=0, sat=0.6; if(!isBW){ const wb=new Array(12).fill(0), hb=[]; for(let i=0;i<cn;i++){ const [h,s2]=hsl(_picChord(chords,i,gc,isBW).rgb); let vv=0; for(const n of byI[i]) vv+=n.v; const w=Math.max(0.25,Math.min(8,(chords[i]&&chords[i].durQ)||1))*(vv||1); if(s2>=0.15){ const b=Math.floor(((h+15)%360)/30); hb.push([h,w]); wb[b]+=w; } }
+    let bb=0; for(let b=1;b<12;b++) if(wb[b]>wb[bb]) bb=b; let sx=0,sy=0; for(const [h,w] of hb){ if(Math.floor(((h+15)%360)/30)!==bb) continue; sx+=Math.cos(h*Math.PI/180)*w; sy+=Math.sin(h*Math.PI/180)*w; }
+    const hp=((Math.atan2(sy,sx)*180/Math.PI)+360)%360; let k=0, dk=999; for(let j=0;j<12;j++){ const dd=Math.min(Math.abs(_BH_ITTEN_H[j]-hp),360-Math.abs(_BH_ITTEN_H[j]-hp)); if(dd<dk){ dk=dd; k=j; } }
+    const [ih,is]=hsl(_BH_ITTEN[k]); hue=ih; sat=_bhxClamp(is*0.72,0.36,0.7); }
+  // light hues (yellow, light green) held a little darker, so the milk still reads on them as it does on blue or violet
+  const lum=(c)=>(0.2126*c[0]+0.7152*c[1]+0.0722*c[2])/255, tint=(l)=>{ if(isBW) return [255*l,255*l,255*l]; const h2=hue>=35&&hue<=75&&l<0.56?hue-(0.56-l)*80:hue; let c=rgbH(h2,sat,l); const yMax=l>=0.64&&l<0.75?0.72:1; while(lum(c)>yMax&&l>0.3){ l-=0.01; c=rgbH(h2,sat,l); } return c; };   // yellow deepens to amber, as glass does, not to olive
+  // a loud system flashed deeper, a quiet one paler: three strengths of the one colour
+  const sysL=[]; for(let s=0;s<S;s++){ let t=0,c=0; for(const n of N){ if(n.t>=s*sysT&&n.t<(s+1)*sysT){ t+=n.v; c++; } } sysL.push(c?t/c:0); }
+  const mu=sysL.reduce((p,x)=>p+x,0)/S, sd=Math.sqrt(sysL.reduce((p,x)=>p+(x-mu)*(x-mu),0)/S);
+  const sysTone=sysL.map(L=>sd<2?1:(L-mu)/sd>0.6?2:(L-mu)/sd<-0.6?0:1), LIG=[0.66,0.58,0.5];
+  for(let s=0;s<S;s++){ if(played<=iAt(s*sysT)) break; ctx.fillStyle=_bhxCss(tint(LIG[sysTone[s]])); ctx.fillRect(edge,edge+2*s*rowH,CW-2*edge,rowH+0.5); }
+  // the melody: the highest note of each chord; every other note to the black row
+  const tops=[], lows=[]; for(let i=0;i<cn;i++){ let top=null, low=null; for(const n of byI[i]){ if(!top||n.m>top.m) top=n; if(!low||n.m<low.m) low=n; } tops.push(top); lows.push(low); }
+  const vq=(arr,f)=>{ const a=arr.slice().sort((x,y)=>x-y); return a.length?a[Math.min(a.length-1,Math.floor(a.length*f))]:0; };
+  const melV=tops.filter(Boolean).map(n=>n.v), othV=N.filter(n=>n!==tops[n.i]).map(n=>n.v), softM=vq(melV,0.05), softO=vq(othV,0.05);
+  const allV=N.map(n=>n.v), vLo=vq(allV,0.05), vHi=vq(allV,0.95), vN=(v)=>_bhxClamp((v-vLo)/Math.max(1,vHi-vLo),0,1);
+  // the melody's way over the last few notes: falling stretches cut to milk, climbing and resting ones stay black;
+  // its turns (where it changes way) and the bass's changes of harmony weigh more than passing notes
+  const trend=new Array(cn).fill(0), turn=new Array(cn).fill(0); { const W8=[]; let pm=null, pd=0; for(let i=0;i<cn;i++){ const t=tops[i]; if(!t) continue; if(W8.length>=3){ const mean=W8.reduce((p,x)=>p+x,0)/W8.length; trend[i]=t.m<mean-1?-1:t.m>mean+1?1:0; } W8.push(t.m); if(W8.length>4) W8.shift();
+    if(pm!=null){ const d=Math.sign(t.m-pm); if(d&&pd&&d!==pd) turn[i]=1; if(d) pd=d; } pm=t.m; } }
+  const bassCh=new Array(cn).fill(0); { let pb=null; for(let i=0;i<cn;i++){ const b=lows[i]; if(!b||b===tops[i]) continue; if(pb==null||Math.abs(b.m-pb)>=2) bassCh[i]=1; pb=b.m; } }
+  // each row on the grid of beats: one event a cell, the strongest note there (laid out for the whole piece, so the
+  // pane stays still while it plays)
+  const rows=new Map();
+  for(let i=0;i<cn;i++){ for(const n of byI[i]){ const mel=n===tops[i], s=Math.min(S-1,Math.floor(n.t/sysT)), k0=Math.min(nSlot-1,Math.floor((n.t-s*sysT)/slotT)), len=Math.max(1,Math.round(n.d/slotT)), r=s*2+(mel?0:1);
+    if(!rows.has(r)) rows.set(r,new Map()); const R=rows.get(r), prev=R.get(k0);
+    const sal=vN(n.v)+(len>=2?0.35:0)+(mel?turn[i]*0.3:bassCh[i]*0.3);
+    const dS=n.d/slotT, bc=!mel&&!!bassCh[i]&&n===lows[i];
+    if(!prev||sal>prev.sal) R.set(k0,{i,k0,len:Math.max(len,prev?prev.len:0),d:Math.max(dS,prev?prev.d:0),bc:bc||!!(prev&&prev.bc),v:n.v,sal,down:mel&&trend[i]<0}); else { prev.d=Math.max(prev.d,dS); prev.bc=prev.bc||bc; } } }
+  // the deeper flash: each piece's own longest notes (long for this piece, whatever its pace), and on the black rows
+  // the bass where the harmony turns and stays; a few in a row, never a crowd
+  const longM=vq(N.filter(n=>n===tops[n.i]).map(n=>n.d),0.88)/slotT, longO=vq(N.filter(n=>n!==tops[n.i]).map(n=>n.d),0.88)/slotT;
+  for(const [r,R] of rows){ const mel=r%2===0, ry=edge+r*rowH, lg=LIG[sysTone[Math.floor(r/2)]]; let ev=[...R.values()].sort((a,b)=>a.k0-b.k0);
+    // glass breathes: where the row is fuller than his pane ever was, its weakest stretches fall silent
+    // (quarter by quarter, so the air is spread along the row and no half of it falls empty)
+    const frac=mel?0.56:0.5, at=new Map(ev.map(o=>[o.k0,o])); for(const o of ev){ let sm=0; for(let d=-2;d<=2;d++){ const q2=at.get(o.k0+d); if(q2) sm+=q2.sal*(d?0.6:1); } o.sm=sm; }
+    const keep=new Set(); for(let qt=0;qt<4;qt++){ const a0=Math.round(qt*nSlot/4), a1=Math.round((qt+1)*nSlot/4), part=ev.filter(o=>o.k0>=a0&&o.k0<a1), cap=Math.round((a1-a0)*frac);
+      for(const o of part.slice().sort((a,b)=>b.sm-a.sm).slice(0,cap)) keep.add(o); }
+    ev=ev.filter(o=>keep.has(o));
+    for(let e=0;e<ev.length;e++) ev[e].run=Math.min(ev[e].k0+ev[e].len,e+1<ev.length?ev[e+1].k0:nSlot)-ev[e].k0;
+    { const cand=ev.filter(o=>(o.d>=(mel?longM:longO)||(o.bc&&o.d>=1))&&Math.min(o.k0+Math.max(o.len,2),nSlot)-o.k0>=2&&(ev[ev.indexOf(o)+1]?ev[ev.indexOf(o)+1].k0-o.k0>=2:true)).sort((a,b)=>b.d-a.d); for(const o of cand.slice(0,3)){ o.deep=true; o.run=Math.max(o.run,Math.min(3,(ev[ev.indexOf(o)+1]?ev[ev.indexOf(o)+1].k0:nSlot)-o.k0)); } }
+    for(let e=0;e<ev.length;e++){ const o=ev[e]; if(o.i>=played) continue; const run=o.run, held=run>=1.6, soft=o.v<=(mel?softM:softO);
+      const w=held||o.deep?Math.min(run,3.4)*sW-sW*0.5:sW*0.5, ins=rowH*(mel?0.06:0.11);
+      const col=o.deep?tint(lg-(mel?0.2:0.1)):!mel?MILK:soft&&!held?tint(Math.min(0.9,lg+0.22)):o.down?MILK:BLACK;
+      ctx.fillStyle=_bhxCss(col); ctx.fillRect(padX+o.k0*sW,ry+ins,w,rowH-2*ins); } }
+  try{ globalThis.__ST_LISTEN={v:'fuge',systems:S,slots:nSlot,hue:Math.round(hue)}; }catch(_){}
 }
 // ── Phase 2: Abstract cubist face ─────────────────────────────────────────
 function bauhausPhaseFace(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
