@@ -11803,9 +11803,10 @@ function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   //  apart so the two-variant preview actually shows different paintings
   //  (A vs B alone read as the same dense composition).
   {
-    // VARIANT: 0 What he heard (_mrListen, generative) · 1 Constellations · 2 Bright sparse · 3 Blue triptych · 4 Biomorphic · 5 Peinture 1933 · 6 Femme et oiseaux. Free: 0 and 1.
+    // VARIANT: 0 What he heard (_mrListen: the Constellations as he painted them, to music) · 1 Miró's world (the first Listens without the constellation; the old Constellations retired, code kept) · 2 Bright sparse · 3 Blue triptych · 4 Biomorphic · 5 Peinture 1933 · 6 Femme et oiseaux. Free: 0 and 1.
     const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(pick===0){ _mrListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(pick===1){ _mrListenOld(ctx,CW,CH,chords,lim,gc,ss,mode,true); return; }   // Miró's world (the old Constellations below retired, code kept)
     if(pick===2){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(pick===3){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(pick===4){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -12554,7 +12555,62 @@ function _mrEye(ctx,x,y,r,ring,pupil,ground){ ctx.fillStyle=_mrCss(ground); ctx.
 function _mrDraw(ctx,list,reveal,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_mrClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const rnd=_mrR(f.id*31+41001,ss); rnd(); f.draw(ctx,rnd); } }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MIRÓ LISTENS — the picture the piece composes from everything that is his: the
+// MIRÓ LISTENS — as he listened himself: the Constellations (1940–41), which he
+// painted listening to Bach and Mozart, "the night, music and the stars". On a
+// pale washed ground, rubbed lighter and darker, a whole sky of small signs: the
+// star, the eye, the crescent, the dot, the ring, the hourglass, the lobed body,
+// each outlined in black and flat in his red, yellow, blue, green or black, or
+// left white; and thin black lines joining them into constellations. Here every
+// sign is a chord of the piece, the piece wandering over the sheet so it fills
+// evenly as it plays: an accent a star, a held chord a lobed body as large as it
+// is loud, a high note an eye, a ring or a black wedge, the bass a black dot or a
+// crescent, a full chord an hourglass; the colour the one of his nearest the
+// chord's own; the chords of a passage joined by a line; where two bodies cross,
+// the crossing black. Sign by sign as the piece plays.
+// ═══════════════════════════════════════════════════════════════════════════
+function _mrListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>a==null?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const r=_mrR(47100,ss); r(); const BLK=isBW?[16,16,16]:[20,18,20], WHT=isBW?[244,244,240]:[246,242,230];
+  // the washed ground: the piece's colour, made very pale, rubbed lighter and darker
+  const home=A.pcCol(A.tonic,60), G0=isBW?[226,226,222]:mix(home,[238,230,212],0.84); ctx.fillStyle=css(G0); ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  for(let k=0;k<26;k++){ const x=CW*r(), y=CH*r(), rr=D*(0.15+0.35*r()), c=mix(G0,r()<0.5?[255,252,244]:mix(home,[120,100,80],0.5),0.18+0.12*r()); const g=ctx.createRadialGradient(x,y,0,x,y,rr); g.addColorStop(0,css(c,0.55)); g.addColorStop(1,css(c,0)); ctx.fillStyle=g; ctx.fillRect(x-rr,y-rr,rr*2,rr*2); }
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  const ds=A.ev.filter(Boolean).map(e=>e.dur).sort((a,b)=>a-b), dMed=ds[ds.length>>1]||1;
+  // the sky: the piece wanders over the sheet cell by cell (a path that keeps neighbours together), one sign a cell
+  const nC=Math.round(clamp(9+5*(A.ch?A.ch.density:0.3),9,13)), nR=Math.round(nC*CH/CW), path=_md19Gilbert(nC,nR), N=path.length, cw=CW/nC, ch=CH/nR;
+  const signs=[];
+  for(let k=0;k<N;k++){ const i=Math.min(cn-1,Math.floor((k+0.5)/N*cn)), e=A.ev[i]; if(!e) continue; const [gx,gy]=path[k];
+    const x=(gx+0.5+(r()-0.5)*1.3)*cw, y=(gy+0.5+(r()-0.5)*1.3)*ch, f=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1), held=e.dur>dMed*1.6, high=A.reg(e.top)>0.62, low=A.reg(e.top)<0.36;
+    let lo=0,n=0; for(let j=Math.max(0,i-5);j<=Math.min(cn-1,i+5);j++){ const o=A.ev[j]; if(!o||j===i) continue; n++; if(o.v<e.v) lo++; } const acc=n&&lo/n>0.8;
+    const kind=acc?'star':held?'body':e.nn>=4?(r()<0.5?'glass':'body'):high?(r()<0.3?'eye':r()<0.6?'ring':'tri'):low?(r()<0.5?'dot':'moon'):(r()<0.35?'ring':r()<0.5?'eye':r()<0.7?'body':'dot');
+    const pc=_mrPrim(_picChord(chords,i,gc,isBW).rgb,isBW), u=r(), fill=kind==='dot'?BLK:kind==='star'?BLK:(u<0.22?WHT:u<0.32?BLK:pc);
+    const vary=0.65+0.9*Math.pow(r(),2), s=Math.min(cw,ch)*vary*(kind==='body'?0.5+0.55*f:kind==='star'?0.34+0.24*f:0.2+0.26*f);
+    signs.push({i,x,y,s,kind,fill,rot:r()*6.28,seed:r()}); }
+  // the lines of the constellations: the chords of a passage joined, as they sound
+  const lw=Math.max(1.2,D*0.0028); ctx.strokeStyle=css(BLK); ctx.lineWidth=lw; ctx.lineCap='round';
+  for(const p of A.phrases){ const sg=signs.filter(q=>q.i>=p.a&&q.i<p.b&&q.i<played); for(let k=1;k<sg.length;k++){ ctx.beginPath(); ctx.moveTo(sg[k-1].x,sg[k-1].y); ctx.lineTo(sg[k].x,sg[k].y); ctx.stroke(); } }
+  // the signs
+  for(const q of signs){ if(q.i>=played) continue; const {x,y,s}=q; ctx.save(); ctx.translate(x,y); ctx.rotate(q.kind==='body'||q.kind==='glass'?q.rot:0); ctx.lineWidth=lw*1.6; ctx.strokeStyle=css(BLK); ctx.fillStyle=css(q.fill);
+    if(q.kind==='star'){ ctx.lineWidth=lw*1.8; ctx.beginPath(); for(let k=0;k<4;k++){ const a=k*Math.PI/4+q.rot*0.2; ctx.moveTo(-Math.cos(a)*s,-Math.sin(a)*s); ctx.lineTo(Math.cos(a)*s,Math.sin(a)*s); } ctx.stroke(); }
+    else if(q.kind==='dot'){ ctx.beginPath(); ctx.arc(0,0,s*0.45,0,6.2832); ctx.fill(); }
+    else if(q.kind==='ring'){ ctx.beginPath(); ctx.arc(0,0,s*0.6,0,6.2832); ctx.fill(); ctx.stroke(); ctx.fillStyle=css(q.fill===WHT?BLK:WHT); ctx.beginPath(); ctx.arc(0,0,s*0.25,0,6.2832); ctx.fill(); }
+    else if(q.kind==='eye'){ ctx.beginPath(); ctx.ellipse(0,0,s*0.75,s*0.42,0,0,6.2832); ctx.fillStyle=css(WHT); ctx.fill(); ctx.stroke(); ctx.fillStyle=css(q.fill===WHT?BLK:q.fill); ctx.beginPath(); ctx.arc(0,0,s*0.3,0,6.2832); ctx.fill(); ctx.fillStyle=css(BLK); ctx.beginPath(); ctx.arc(0,0,s*0.12,0,6.2832); ctx.fill(); }
+    else if(q.kind==='moon'){ ctx.beginPath(); ctx.arc(0,0,s*0.6,0.4,0.4+Math.PI*1.35); ctx.arc(s*0.28,-s*0.12,s*0.42,0.4+Math.PI*1.35,0.4,true); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else if(q.kind==='tri'){ ctx.fillStyle=css(BLK); ctx.beginPath(); ctx.moveTo(0,-s*0.55); ctx.lineTo(s*0.5,s*0.4); ctx.lineTo(-s*0.5,s*0.4); ctx.closePath(); ctx.fill(); }
+    else if(q.kind==='glass'){ ctx.beginPath(); ctx.moveTo(-s*0.6,-s*0.6); ctx.lineTo(s*0.6,-s*0.6); ctx.lineTo(-s*0.6,s*0.6); ctx.lineTo(s*0.6,s*0.6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else { const rr=_mrR(47200+q.i,ss); rr(); _mrTrace(ctx,_mrBody(rr,0,0,s*0.6,1.15,0.8,0,false)); ctx.fill(); ctx.stroke(); }
+    ctx.restore(); }
+  // where two bodies or rings cross, the crossing turns black, as on his sheets
+  { const shape=(q)=>{ ctx.save(); ctx.translate(q.x,q.y); ctx.rotate(q.kind==='body'?q.rot:0); if(q.kind==='body'){ const rr=_mrR(47200+q.i,ss); rr(); _mrTrace(ctx,_mrBody(rr,0,0,q.s*0.6,1.15,0.8,0,false)); } else { ctx.beginPath(); ctx.arc(0,0,q.s*0.6,0,6.2832); } ctx.restore(); };
+    const big=signs.filter(q=>(q.kind==='body'||q.kind==='ring')&&q.i<played); ctx.fillStyle=css(BLK);
+    for(let a=0;a<big.length;a++) for(let b=a+1;b<big.length;b++){ const p=big[a], q=big[b]; if(Math.hypot(p.x-q.x,p.y-q.y)>(p.s+q.s)*0.62) continue; ctx.save(); shape(p); ctx.clip(); shape(q); ctx.fill(); ctx.restore(); } }
+  try{ globalThis.__MR_LISTEN={v:'constellation',signs:signs.length}; }catch(_){}
+  _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// MIRÓ'S WORLD (variant 1; until 17 Nov 2026 his Listens, then with world=true everything but the constellation, which
+// is his Listens now) — the picture the piece composes from everything that is his: the
 // lobed body, the thick black line, the star, the eye, the crescent, the ladder,
 // the constellation, the flat primaries, the big colour field. A ground, a way
 // of composing, and over it every element from what he hears.
@@ -12571,7 +12627,7 @@ function _mrDraw(ctx,list,reveal,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); 
 //   the signs        a star per accent · a dot per note · the crescent on minor · the sun on a loud major piece · the
 //                    ladder when the piece climbs · a thin drifting line per passage
 // ═══════════════════════════════════════════════════════════════════════════
-function _mrListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+function _mrListenOld(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,world){
   const ss=sessionSeed|0, S=_mrSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(S.cn,lim))/S.cn, cn=S.cn;
   const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
   let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:cn}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
@@ -12579,7 +12635,7 @@ function _mrListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ground = (regular>0.85 && pace>0.8) ? 'night' : (pace<0.45) ? 'blue' : (!major) ? 'warm' : 'cream';
   const GRD = ground==='night' ? (S.isBW?[30,30,32]:[26,24,40]) : ground==='blue' ? (S.isBW?[70,70,74]:[31,58,138]) : ground==='warm' ? (S.isBW?[150,146,138]:[156,116,76]) : (S.isBW?[238,236,232]:[242,236,222]);
   const dark = ground==='night' || ground==='blue'; const INK = dark ? (S.isBW?[240,240,236]:[244,238,220]) : BLK;
-  const comp = (dens>0.3 && pace>0.75 && regular>0.6) ? 'constellation' : (loud>0.62 && poly<2.2 && pace<0.8) ? 'giant' : (regular>0.78 && poly>=2) ? 'frieze' : (reg>0.6) ? 'stalks' : 'scatter';
+  const comp = (!world && dens>0.3 && pace>0.75 && regular>0.6) ? 'constellation' : (loud>0.62 && poly<2.2 && pace<0.8) ? 'giant' : (regular>0.78 && poly>=2) ? 'frieze' : (reg>0.6) ? 'stalks' : 'scatter';
   const kind = pace<0.45 ? 'woman' : (reg>0.55 && pace>0.6) ? 'bird' : (leaps>0.55) ? 'dog' : 'personage';
   const nf = comp==='giant' ? 1 : comp==='frieze' ? Math.max(3,Math.min(4,Math.round(poly)+1)) : comp==='constellation' ? 0 : Math.max(1,Math.min(4,Math.round(poly)+(dens>0.6?2:dens>0.4?1:0)));   // a dense piece: more personages
   const el = { stars:true, crescent: !major, sun: major && loud>0.6, ladder: trend>0.55, lines: true, eyes: tens>0.2 || !major, fields: loud>0.55 };
