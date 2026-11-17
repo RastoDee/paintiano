@@ -12568,7 +12568,92 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // computeSongCharacter, deterministic from sessionSeed + phaseIndex so the
 // same song + style + variant always recalls the identical painting.
 // ═══════════════════════════════════════════════════════════════════════════
-// MITCHELL LISTENS — the picture the piece composes from everything that is
+// MITCHELL LISTENS — her Grande Vallée (1983–84): the valley she never saw, only
+// heard of from her friend the composer Gisèle Barreau, who said Mitchell painted
+// "works that can be heard". She painted at night with the records loud, and saw
+// sounds in colour. In the series one broad movement carries the canvas like a
+// dance: the valley's colour swept round in large circles of loaded strokes,
+// broad thinned patches of other colours like sky or water, grasses of short
+// upright strokes, her white laid over, the thinned paint running down. Here the
+// piece is that dance: it crosses the sheet as it plays, a passage a mass; its
+// melody lays it in the passage's colour, each chord a loaded stroke as long as it
+// lasts and as heavy as it is loud, high notes high in the mass and light with her
+// white, low ones low and deep, a full chord two or three strokes side by side,
+// their slant turning as the passage dances; where the bass moves it drags thinned
+// paint in its own colour through the mass; an accent a stroke of her white, the
+// strongest a dark one; the thinned paint runs where the piece is loud.
+// Stroke by stroke as the piece plays.
+// ═══════════════════════════════════════════════════════════════════════════
+// a loaded brush along a centre line: the paint body where the brush is full, its
+// bristles streaking through it in three tones and running on, broken, past it as
+// the brush goes dry; thinned, a translucent scumble
+function _jmBrush(ctx,pts,w,col,al,dry,r,thin){
+  const n=pts.length; if(n<2) return; const nx=[],ny=[],wob=[];
+  for(let k=0;k<n;k++){ const a=pts[Math.max(0,k-1)], b=pts[Math.min(n-1,k+1)], dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1; nx.push(-dy/L); ny.push(dx/L); wob.push(0.88+0.24*r()); }
+  const ub=1-dry*0.6, wid=(u,k)=>w*(0.62+0.38*Math.min(1,u*6))*(1-dry*0.35*u)*wob[k], css=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${Math.max(0,Math.min(1,a)).toFixed(3)})`;
+  const kb=Math.max(1,Math.round(ub*(n-1)));
+  ctx.fillStyle=css(col,al*(thin?0.4:0.92)); ctx.beginPath();
+  for(let k=0;k<=kb;k++){ const h=wid(k/(n-1),k)/2, x=pts[k][0]+nx[k]*h, y=pts[k][1]+ny[k]*h; k?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  for(let k=kb;k>=0;k--){ const h=wid(k/(n-1),k)/2*(k===kb?0.6:1); ctx.lineTo(pts[k][0]-nx[k]*h,pts[k][1]-ny[k]*h); }
+  ctx.closePath(); ctx.fill();
+  const nb=Math.max(6,Math.min(18,Math.round(w/1.3))), tones=[col.map(v=>v*0.82),col.map(v=>v*0.93),col.map(v=>v+(255-v)*0.2)], paths=[[],[],[]];
+  for(let b=0;b<nb;b++){ const o=(b+0.5)/nb-0.5+(r()-0.5)*0.1, u0=r()*0.12, u1=thin?ub*(0.7+0.3*r()):Math.min(1,ub+(1-ub)*(0.2+1.1*r())*(r()<0.7?1:0.4)); paths[Math.floor(r()*3)].push([o,u0,u1]); }
+  ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=Math.max(0.6,w/nb*1.05);
+  for(let t=0;t<3;t++){ if(!paths[t].length) continue; ctx.strokeStyle=css(tones[t],al*(thin?0.3:0.5)); ctx.beginPath();
+    for(const [o,u0,u1] of paths[t]){ let first=true;
+      for(let k=0;k<n;k++){ const u=k/(n-1); if(u<u0||u>u1) continue; const h=wid(u,k)*o*(u>ub?1-0.45*(u-ub)/Math.max(0.01,1-ub):1), x=pts[k][0]+nx[k]*h, y=pts[k][1]+ny[k]*h; if(first){ ctx.moveTo(x,y); first=false; } else ctx.lineTo(x,y); } }
+    ctx.stroke(); }
+}
+// her oils: each hue at the value its pigment has (cadmium yellow light, viridian and ultramarine deep), a higher note mixed with
+// white (lighter, and less intense), a lower one deeper
+const _JM_OIL_H=[0,22,42,52,80,140,195,222,248,280,338,360], _JM_OIL_L=[0.42,0.5,0.56,0.6,0.44,0.33,0.37,0.35,0.3,0.36,0.42,0.42];
+function _jmOil(c,v,isBW){ const R=c[0]/255,G=c[1]/255,B=c[2]/255, mx=Math.max(R,G,B), mn=Math.min(R,G,B), d=mx-mn; let h=0; if(d>1e-6){ h=mx===R?((G-B)/d)%6:mx===G?(B-R)/d+2:(R-G)/d+4; h*=60; if(h<0) h+=360; }
+  let k=0; while(k<_JM_OIL_H.length-2&&h>_JM_OIL_H[k+1]) k++; const t=(h-_JM_OIL_H[k])/Math.max(1,_JM_OIL_H[k+1]-_JM_OIL_H[k]), Lh=_JM_OIL_L[k]+(_JM_OIL_L[k+1]-_JM_OIL_L[k])*t;
+  const L=Math.max(0.14,Math.min(0.82,Lh+(v-0.5)*0.4)), sat=d<0.08?0.06:0.7*(1-Math.max(0,L-Lh)*1.4);
+  if(isBW){ const g=255*L; return [g,g,g]; } return _bhxPigment(c,sat,sat,0,1,0.05,0.75,L); }
+function _jmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), played=Math.max(1,Math.min(cn,lim));
+  const A=_kd2Analyze(chords,gc,mode), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>a==null?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const GROUND=isBW?[246,246,243]:[247,244,236]; ctx.fillStyle=css(GROUND); ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  // oil paint, not light: the piece's colours held to what her pigments give (cobalt, cadmium, viridian, lavender), at the value asked
+  const paint=(c,v)=>_jmOil(c,v,isBW);
+  const WHITE=isBW?[250,250,248]:[250,247,238];
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  const ds=A.ev.filter(Boolean).map(e=>e.dur).sort((a,b)=>a-b), dMed=ds[ds.length>>1]||1;
+  const tops=A.ev.filter(Boolean).map(e=>e.top).sort((a,b)=>a-b), tLo=tops[Math.floor(tops.length*0.05)]||48, tHi=tops[Math.floor(tops.length*0.95)]||84;
+  // the dance: one broad movement over the sheet, cell by cell so neighbours stay together; a passage a mass of one colour along it
+  const P=_kd2Phrases(A,Math.round(clamp(4+A.phrases.length*0.2,5,9))), nC=3, nR=Math.max(3,Math.round(nC*CH/CW)), path=_md19Gilbert(nC,nR), N=path.length;
+  const rL=_seedRnd(7301,ss,0,0); rL(); const way=path.map(([gx,gy])=>[(gx+0.5+(rL()-0.5)*0.55)*CW/nC,(gy+0.5+(rL()-0.5)*0.55)*CH/nR]);
+  const at=(u)=>{ const f=clamp(u,0,0.9999)*(N-1), k=Math.floor(f), t=f-k, a=way[k], b=way[Math.min(N-1,k+1)]; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]; };
+  const vm=P.map(p=>p.vmax).sort((a,b)=>a-b), Rb=Math.sqrt(CW*CH/Math.max(1,P.length));
+  const masses=P.map((p,k)=>{ const r=_seedRnd(7310+k,ss,0,0); r(); const [cx,cy]=at((p.a+p.b)/2/cn), rk=vm.indexOf(p.vmax)/Math.max(1,vm.length-1);
+    const e0=A.ev[p.a]||{top:60}, e1=A.ev[Math.max(p.a,p.b-1)]||{top:60}; return {p,cx,cy,R:Rb*(0.55+0.3*rk),th0:r()*6.2832,rot:e1.top>=e0.top?-1:1,turns:0.7+0.5*r(),col:A.pcCol(p.pc,60)}; });
+  const massOf=new Int16Array(cn); masses.forEach((m,k)=>{ for(let i=m.p.a;i<m.p.b&&i<cn;i++) massOf[i]=k; });
+  const stride=Math.max(1,Math.ceil(cn/700)), wk=Math.sqrt(stride);
+  let lastBass=-1, lastPatch=-99;
+  for(let i=0;i<played;i++){ const e=A.ev[i]; if(!e) continue; const M=masses[massOf[i]], p=M.p, r=_seedRnd(7400+i,ss,0,0); r();
+    const f=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1), hu=clamp((e.top-tLo)/Math.max(1,tHi-tLo),0,1), ccol=_picChord(chords,i,gc,isBW).rgb;
+    let lo=0,nn=0; for(let q=Math.max(0,i-5);q<=Math.min(cn-1,i+5);q++){ const o=A.ev[q]; if(!o||q===i) continue; nn++; if(o.v<e.v) lo++; } const acc=nn&&lo/nn>0.85;
+    const j=(i-p.a)/Math.max(1,p.b-p.a), th=M.th0+M.rot*6.2832*M.turns*j+(r()-0.5)*0.9;
+    // where the bass moves: a long drag of thinned paint in its own colour through the mass, like sky or water; loud, it runs
+    const bpc=((e.bass%12)+12)%12; if((bpc!==lastBass&&i-lastPatch>=5)||i===p.a){ lastBass=bpc; lastPatch=i;
+      const px=M.cx+(r()+r()-1)*M.R*0.8, py=M.cy+(r()+r()-1)*M.R*0.6, col=paint(A.pcCol(bpc,60),0.25+0.3*r()), a0=-Math.PI/2+(r()-0.5)*1.3, w=D*(0.03+0.025*r())*wk, L=D*(0.16+0.14*r()), bend=(r()-0.5)*0.7;
+      const pts=[]; let x=px-Math.cos(a0)*L/2, y=py-Math.sin(a0)*L/2, ang=a0-bend/2; for(let k=0;k<=12;k++){ pts.push([x,y]); ang+=bend/12; x+=Math.cos(ang)*L/12; y+=Math.sin(ang)*L/12; }
+      _jmBrush(ctx,pts,w,col,0.8+0.2*f,0.5,r,true);
+      if(f>0.45&&r()<0.55){ const lowP=pts.reduce((a,b)=>b[1]>a[1]?b:a), x0=lowP[0]+(r()-0.5)*w*0.5, y0=lowP[1], len=D*(0.05+0.18*r()*f); ctx.strokeStyle=css(col,0.7); ctx.lineWidth=Math.max(1,D*(0.0025+0.002*r())); ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.quadraticCurveTo(x0+(r()-0.5)*D*0.01,y0+len*0.6,x0+(r()-0.5)*D*0.012,y0+len); ctx.stroke(); ctx.fillStyle=css(col,0.8); ctx.beginPath(); ctx.arc(x0,y0+len,ctx.lineWidth*0.9,0,6.2832); ctx.fill(); } }
+    // the melody: loaded strokes in the mass's colour, mostly upright and slanting, the slant turning as the passage dances,
+    // high notes high in the mass and light, low ones low and deep, as heavy as they are loud, as long as they last; a full chord two or three side by side
+    if(i%stride===0||acc){ const g1=r()+r()+r()-1.5, x=M.cx+g1*M.R*0.75, y=M.cy+M.R*(0.9-1.8*hu)*0.85+(r()-0.5)*M.R*0.55;
+      const lean=Math.sin(M.th0+M.rot*6.2832*M.turns*j)*0.75, a=-Math.PI/2+lean+(r()-0.5)*0.7+(r()<0.15?(r()-0.5)*2.4:0), L=D*(0.07+0.07*clamp(e.dur/dMed,0.4,2.5))*(0.75+0.5*r())*(r()<0.12?2:1)*Math.min(1.5,wk), bend=(r()-0.5)*1.2+(r()<0.18?M.rot*1.8:0), w=D*(0.016+0.038*Math.pow(f,1.6))*(0.8+0.4*r())*Math.min(1.5,wk);
+      const own=r()<0.16, wht=!acc&&r()<0.08, col=acc?(f>0.92?paint(M.col,0):WHITE):wht?WHITE:paint(own?ccol:M.col,0.15+0.75*hu+(r()-0.5)*0.15), nS=acc?1:e.nn>=4&&r()<0.5?3:e.nn>=3&&r()<0.5?2:1;
+      for(let s2=0;s2<nS;s2++){ const off=(s2-(nS-1)/2)*w*0.9, K=12, pts=[]; let px=x-Math.cos(a)*L/2-Math.sin(a)*off, py=y-Math.sin(a)*L/2+Math.cos(a)*off, ang=a-bend/2;
+        for(let k=0;k<=K;k++){ pts.push([px,py]); ang+=bend/K; px+=Math.cos(ang)*L/K; py+=Math.sin(ang)*L/K; }
+        _jmBrush(ctx,pts,(acc?w*1.3:w)*(s2?0.8:1),col,0.96,acc?0.3:0.25+0.55*(1-f),r,false); } } }
+  try{ globalThis.__JM_LISTEN={v:'valley',masses:masses.length,stride}; }catch(_){}
+  _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// (retired, code kept) MITCHELL LISTENS, the first — the picture the piece composes from everything that is
 // hers: the loaded impasto stroke, the knot, the burst, the long horizontal
 // field stroke, the stem, the seam between panels, the dark mass, her white, the
 // bare canvas, the drip. The piece decides the canvas and what hangs on it.
@@ -12583,7 +12668,7 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 //   the signs        a drip under the lowest strokes, as many as the piece is loud · white strokes through the climax ·
 //                    the bare canvas left where the piece is silent
 // ═══════════════════════════════════════════════════════════════════════════
-function _jmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+function _jmListenOld(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=Math.max(0,Math.min(1,Math.max(1,Math.min(cn,lim))/cn));
   const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3; _mitchDens=dens;
   let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
@@ -12625,7 +12710,7 @@ function drawMitchellOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   //  D = Dark Central Mass (60s "violent" period — dense central blob).
   //  E = Sunflower (Van Gogh hommage 1990-91, vertical stems + flower heads).
   //  F = Late Sparse White (1992 — white ground, 2-3 concentrated zones).
-  // VARIANT: 0 What she heard (_jmListen, generative) · 1 Gestural Garden · 2 Color Bursts · 3 Diptych · 4 Dark Central Mass · 5 Sunflower · 6 Late White. Free: 0 and 1.
+  // VARIANT: 0 What she heard (_jmListen: her Grande Vallée, the valley she only heard of; the first, a chooser of her strokes, retired as _jmListenOld, code kept) · 1 Gestural Garden · 2 Color Bursts · 3 Diptych · 4 Dark Central Mass · 5 Sunflower · 6 Late White. Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _jmListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   const pick=pick0-1;
