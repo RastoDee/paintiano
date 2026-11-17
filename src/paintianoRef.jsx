@@ -8985,9 +8985,62 @@ function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
   for(const l of out) if(l.tip&&played>=l.b){ if(l===band){ const bw=D*0.032; ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=bw+lw*2; ctx.beginPath(); ctx.moveTo(l.P[0],l.P[1]); ctx.lineTo(l.tip[0],l.tip[1]); ctx.stroke(); ctx.strokeStyle=_lcCss(tone(colOf(l),0.5,true)); ctx.lineWidth=bw; } else { ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; } ctx.beginPath(); ctx.moveTo(l.P[0],l.P[1]); ctx.lineTo(l.tip[0],l.tip[1]); ctx.stroke(); }   // the line carried out to the point
   try{ globalThis.__LC_LISTEN={v:'perfect',lines:on.length,out:out.length}; }catch(_){} _setCurE(0.5);
 }
+// ── Lichtenstein: Mirrors (1969–72) — his most abstract series: an oval or round mirror on the wall with a thin edge, and
+// inside only the printed suggestion of glass — the face cut into upright zones by long curving lines: zones of deep flat
+// colour (black, navy, bottle green, maroon), zones of Ben-Day dots swelling from fine to coarse, zones of close
+// hatching, white zones of light, a thin streak of yellow. Here each mirror is a part of the piece (one, or two or three
+// hung on the wall for a fuller piece), read left to right; each zone a stretch of it: deep flat colour where it is loud,
+// dots where it is moderate (swelling as it grows), hatching where it leaps, white where it is quiet; a streak of his
+// yellow at its climax; the zones leaning the way the tune goes. The deep colours are the part's own hues darkened, the
+// dots in his inks. Zone by zone as the part plays.
+function lichtensteinMirrors(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode), dens=A.ch?A.ch.density:0.4; const lw=Math.max(1.5,D*0.006); const I=_LC_INK;
+  const hsl=(c)=>{ const R=c[0]/255,G=c[1]/255,B=c[2]/255, mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2, d=mx-mn; let h=0,s2=0; if(d>1e-6){ s2=d/(1-Math.abs(2*l-1)); h=mx===R?((G-B)/d)%6:mx===G?(B-R)/d+2:(R-G)/d+4; h*=60; if(h<0) h+=360; } return [h,s2,l]; };
+  const rgbH=(h,s2,l)=>{ const C=(1-Math.abs(2*l-1))*s2, X2=C*(1-Math.abs((h/60)%2-1)), m=l-C/2; const [a,b,c]=h<60?[C,X2,0]:h<120?[X2,C,0]:h<180?[0,C,X2]:h<240?[0,X2,C]:h<300?[X2,0,C]:[C,0,X2]; return [(a+m)*255,(b+m)*255,(c+m)*255]; };
+  const deep=(c)=>{ if(isBW) return [30,30,30]; const [h,s2]=hsl(c); return rgbH(h,_lcClamp(s2*0.7,0.35,0.6),(h>=40&&h<75)?0.32:0.2); };   // his deep mirror colours: the hue darkened
+  ctx.fillStyle=_lcCss([232,231,227]); ctx.fillRect(0,0,CW,CH);
+  const nM=1+(dens>0.33?1:0)+(dens>0.62?1:0), G=_kd2Phrases(A,nM).slice(0,nM), n=G.length, land=CW>CH*1.1;
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vq=(f)=>vs.length?vs[Math.min(vs.length-1,Math.floor(vs.length*f))]:0.5;
+  const M=G.map((q,k)=>{ let cx,cy,rx,ry; if(n===1){ cx=CW/2; cy=CH/2; rx=Math.min(CW*0.4,CH*0.3); ry=Math.min(CH*0.43,rx*1.5); }
+      else if(land){ const w=CW/n; cx=w*(k+0.5); cy=CH/2; rx=Math.min(w*0.42,CH*0.4); ry=k===0?Math.min(CH*0.44,rx*1.4):rx; }
+      else { const h=CH/n; cy=h*(k+0.5); cx=CW/2; ry=Math.min(h*0.43,CW*0.46); rx=k===0?Math.min(CW*0.36,ry*0.72):Math.min(CW*0.42,ry); }   // the first an oval, the others round, as he hung them
+    return {q,cx,cy,rx,ry,k}; });
+  for(const m of M){ const {q,cx,cy,rx,ry}=m; const a=q.a, b=Math.max(q.a+2,q.b); if(played<=a) continue; const r=_lcR(84000+a,ss); r();
+    const hp=_mtHearSpan(A,a,b), lean=_lcClamp(hp.dir,-1.5,1.5)*0.12;
+    const Z=Math.round(_lcClamp(3+(b-a)/60,3,5)); const wts=[]; for(let z=0;z<Z;z++) wts.push(0.6+0.9*r()); const wsum=wts.reduce((p,x)=>p+x,0); const bnd=[-1.3]; let acc=0; for(let z=0;z<Z-1;z++){ acc+=wts[z]; bnd.push(-1+2*acc/wsum); } bnd.push(1.3);   // a few broad zones, of unequal width
+    const oval=()=>{ ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,6.2832); };
+    ctx.save(); ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(cx+D*0.01,cy+D*0.014,rx,ry,0,0,6.2832); ctx.fill(); ctx.restore();
+    ctx.save(); oval(); ctx.fillStyle=_lcCss(I.W); ctx.fill(); ctx.clip();
+    // a boundary: a long line bowing across the mirror, leaning the way the tune goes
+    const bow=[]; for(let z=0;z<=Z;z++) bow.push((r()-.5)*0.35);
+    const bx=(z,y)=>{ const t=(y-cy)/ry; return cx+rx*(bnd[z]+lean*t+bow[z]*(1-t*t)); };
+    const zone=(z)=>{ ctx.beginPath(); const N=30; for(let i=0;i<=N;i++){ const y=cy-ry*1.05+2.1*ry*i/N; i?ctx.lineTo(bx(z,y),y):ctx.moveTo(bx(z,y),y); } for(let i=N;i>=0;i--){ const y=cy-ry*1.05+2.1*ry*i/N; ctx.lineTo(bx(z+1,y),y); } ctx.closePath(); };
+    let climax=0, cv=-1; const Zs=[];
+    for(let z=0;z<Z;z++){ const za=Math.floor(a+(b-a)*z/Z), zb=Math.max(za+1,Math.floor(a+(b-a)*(z+1)/Z)); const h=_mtHearSpan(A,za,zb); if(h.vmax>cv){ cv=h.vmax; climax=z; }
+      const col=_picChord(chords,Math.min(cn-1,Math.floor((za+zb)/2)),gc,isBW).rgb; Zs.push({za,zb,h,col,cresc:h.dir>=0}); }
+    // the kinds by rank within the mirror: the loudest zones deep flat colour, the quietest white, the widest-leaping one hatched, the rest dots
+    const byV=Zs.map((x,i)=>i).sort((p,q2)=>Zs[q2].h.v-Zs[p].h.v); const nFlat=Math.max(1,Math.round(Z*0.34)), nWhite=Z>=4?1:0;
+    Zs.forEach(x=>x.kind='dots'); byV.slice(0,nFlat).forEach(i=>Zs[i].kind='flat'); byV.slice(Z-nWhite).forEach(i=>{ if(Zs[i].kind==='dots') Zs[i].kind='white'; });
+    let li=-1; Zs.forEach((x,i)=>{ if(x.kind==='dots'&&x.h.leap>7.5&&(li<0||x.h.leap>Zs[li].h.leap)) li=i; }); if(li>=0) Zs[li].kind='hatch';
+    Zs.forEach((Zn,z)=>{ if(played<=Zn.za) return; zone(z); ctx.save(); ctx.clip(); const x0=Math.min(bx(z,cy-ry),bx(z,cy+ry),bx(z,cy))-rx*0.2, x1=Math.max(bx(z+1,cy-ry),bx(z+1,cy+ry),bx(z+1,cy))+rx*0.2, w=x1-x0;
+      if(Zn.kind==='flat'){ ctx.fillStyle=_lcCss(deep(Zn.col)); ctx.fillRect(x0,cy-ry,w,2*ry); }
+      else if(Zn.kind==='hatch'){ ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=Math.max(1.5,D*0.006); const st=D*0.016; for(let s=-2*ry;s<w+2*ry;s+=st){ ctx.beginPath(); ctx.moveTo(x0+s,cy-ry); ctx.lineTo(x0+s-ry*0.9,cy+ry); ctx.stroke(); } }
+      else if(Zn.kind==='dots'){ const pc=_lcInk(Zn.col,isBW), k=_lcMain(pc), ink=(!k||k==='W'||k==='Y')?I.K:I[k==='C'?'B':k]; _lcBenday(ctx,x0,cy-ry,w,2*ry,Math.max(5,D*0.02),ink,(x,y)=>{ const u=_lcClamp((x-x0)/w,0,1); return 0.18+0.72*(Zn.cresc?u:1-u); }); }
+      ctx.restore(); });
+    // the boundaries drawn as fine lines, and a streak of his yellow at the climax
+    ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*0.6; for(let z=1;z<Z;z++){ if(played<=Zs[z].za) break; ctx.beginPath(); for(let i=0;i<=30;i++){ const y=cy-ry*1.05+2.1*ry*i/30; i?ctx.lineTo(bx(z,y),y):ctx.moveTo(bx(z,y),y); } ctx.stroke(); }
+    if(played>=Zs[climax].zb||played>=b){ const zc=climax+0.5, wv=0.035+0.03*r(); ctx.beginPath(); const N=30, X=(t,y)=>{ const tt=(y-cy)/ry, base=bx(Math.floor(zc),y)+(bx(Math.floor(zc)+1,y)-bx(Math.floor(zc),y))*0.5; return base+rx*(t*wv*(1-0.6*tt*tt)); };
+      for(let i=0;i<=N;i++){ const y=cy-ry*0.9+1.5*ry*i/N; i?ctx.lineTo(X(-1,y),y):ctx.moveTo(X(-1,y),y); } for(let i=N;i>=0;i--){ const y=cy-ry*0.9+1.5*ry*i/N; ctx.lineTo(X(1,y),y); } ctx.closePath(); ctx.fillStyle=_lcCss(isBW?I.W:I.Y); ctx.fill(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*0.6; ctx.stroke(); }
+    ctx.restore();
+    // the edge: a thin rim and a sliver of bevel on one side
+    ctx.save(); oval(); ctx.clip(); ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,6.2832); ctx.ellipse(cx+rx*0.03,cy-ry*0.02,rx*0.975,ry*0.985,0,0,6.2832,true); ctx.fillStyle=_lcCss([60,60,64]); ctx.fill('evenodd'); ctx.restore();
+    ctx.strokeStyle=_lcCss([70,70,74]); ctx.lineWidth=lw; oval(); ctx.stroke(); }
+  try{ globalThis.__LC_LISTEN={v:'mirrors',n:M.length}; }catch(_){} _setCurE(0.5);
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // LICHTENSTEIN — Ben-Day dots, fat black contours, poster-flat colour.
-// Phases: 0 mosaic (a page of comic panels) · 1 Perfect and Imperfect Paintings · 2 Entablatures
+// Phases: 0 mosaic (a page of comic panels) · 1 Perfect and Imperfect Paintings · 2 Mirrors
 // · 3 brushstrokes · 4 Modern Painting with Clef · 5 Landscape. Song character: density → raster tightness, energy → contour
 // weight and shape sizes.
 function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
@@ -9005,7 +9058,7 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   _lcStepPx=Math.max(5,Math.round(S*0.014));   // the size of his screen on this canvas: fine enough for the eye to mix the two inks
   const _pc=(i)=>_lcInk(_picChord(chords,Math.min(cn-1,Math.max(0,i)),gc,mode==='bw').rgb,mode==='bw'), NEWC=true;
   const fillC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i)):css(flat(c)); }, dotC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i).dot):css(flat(c)); };   // the piece's colours, printed in his inks
-  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 Perfect and Imperfect Paintings (replaces the ray burst) · 3 Entablatures (replaces the close-up curves) · 4 Brushstrokes (the passages as strokes in the series' language) · 5 Modern Painting with Clef (replaces the mirrors) · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
+  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 Perfect and Imperfect Paintings (replaces the ray burst) · 3 Mirrors (replaces the Entablatures, which replaced the close-up curves) · 4 Brushstrokes (the passages as strokes in the series' language) · 5 Modern Painting with Clef (replaces the mirrors) · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _lcListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   const pick=pick0-1;
@@ -9013,7 +9066,7 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   if(pick===0){ lichtensteinPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===5){ lichtensteinLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Sunrise (a near copy of his 1965 picture) retired, code kept
   if(pick===1){ lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Perfect and Imperfect Paintings (replaces the ray burst)
-  if(pick===2){ lichtensteinEntablature(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Entablatures (replaces the close-up curves)
+  if(pick===2){ lichtensteinMirrors(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Mirrors (the Entablatures retired, code kept)
   if(pick===3){ lichtensteinBrushstrokes(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Brushstrokes, the tune as the stroke
   if(pick===4){ lichtensteinModernClef(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Modern Painting with Clef (replaces the mirrors)
 }
@@ -19416,7 +19469,7 @@ const ARTIST_VARIANTS = {
     {ground:'#faf8f0',mark:{benday:.35,lcboom:.25,lcbrush:.2,panel:.2},size:[.1,.3],layout:{grid:.5,scatter:.5},density:.3,outline:1},   // What he heard
     {ground:'#faf8f0',mark:{panel:.4,benday:.3,lcboom:.2,speech:.1},size:[.06,.14],layout:{grid:1},density:.6,outline:1},   // Mosaic: comic panels
     {ground:'#faf8f0',mark:{panel:.5,benday:.3,stripes:.2},size:[.1,.3],layout:{grid:1},density:.3,outline:1},   // Perfect and Imperfect Paintings
-    {ground:'#faf8f0',mark:{benday:.5,panel:.5},size:[.06,.14],layout:{stack:1},density:.5,outline:1},   // Entablatures: friezes of ornament
+    {ground:'#e8e7e3',mark:{lcmirror:.6,benday:.4},size:[.2,.45],layout:{stack:1},density:.15,outline:1},   // Mirrors: zones of dots, flat colour and light
     {ground:'#faf8f0',mark:{lcbrush:.8,benday:.2},size:[.12,.3],layout:{flow:1},density:.3,outline:1},   // Brushstrokes
     {ground:'#faf8f0',mark:{panel:.5,benday:.3,lcboom:.2},size:[.1,.3],layout:{grid:1},density:.3,outline:1},   // Modern Painting with Clef: Deco panels
     {ground:'#faf8f0',mark:{lcridge:.65,benday:.35},size:[.1,.3],layout:{stack:1},density:.25,outline:1},   // Landscape
