@@ -5701,8 +5701,10 @@ function stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode){
 // a chain down the whole canvas and off its edges, and where two rings cross their bands weave, one over at the first crossing and under at the
 // next, a pinstripe of the dark ground between every band. Each band is a passage of the piece, as wide as the passage is long,
 // in its colour; the passages are dealt round the links in turn, so the whole chain grows at once, each link from its inner
-// band outward, each band laid as three arcs that appear whole, the first as its passage sounds, the others later in the piece, in no
-// set order: arcs pop up all over the chain and close into rings; the louder
+// band outward, each band laid as five arcs that appear whole, in the colour of the chord sounding as they appear, turning to the band's
+// colour as they come home; the first as its passage sounds, the others later in the piece; every arc
+// pops up somewhere at random on the canvas, its own size and turn, and from the middle of the piece on the arcs fly home
+// one by one, settling into the chain, so the chaos of the start is the interlace at the end; the louder
 // links the larger; the links sway with their register. Arcs everywhere at first; the chain at the end. ──
 function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, S=_stxSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn;
@@ -5716,21 +5718,27 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const vm=Math.max(...parts.map(p=>p.h.vmax||0.6)); parts.forEach(p=>{ p.R=R*(0.92+0.08*(p.h.vmax||0.6)/vm); });   // the louder part, the larger link
   const total=2*R+step*(parts.length-1); let along=(span-total)/2+R;
   const rings=[]; parts.forEach((p,k)=>{ if(k) along+=step; const across=side/2+(p.h.reg-0.5)*side*0.1+(k%2?1:-1)*side*0.05;
-    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; const o=[0,1,2]; for(let i=2;i>0;i--){ const j=Math.floor(br()*(i+1)); const t=o[i]; o[i]=o[j]; o[j]=t; } b.ord=o; rr+=w; return b; });
+    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; const o=[0,1,2,3,4]; for(let i=4;i>0;i--){ const j=Math.floor(br()*(i+1)); const t=o[i]; o[i]=o[j]; o[j]=t; } b.ord=o; rr+=w; return b; });
     rings.push({cx,cy,R:Rk,r0:rk,bands}); });
   const gap=Math.max(1.2,D*0.0045);
-  const drawRing=(ring)=>{ for(const b of ring.bands){ if(b.q.t0>reveal) break; const np=3, dt=Math.max(0.004,b.q.t1-b.q.t0), ccw=b.dir<0, sw=6.2832/np;
-      const spr=Math.max(dt/np,Math.min(0.11,(0.995-b.q.t0)/np));
-      for(let s=0;s<np;s++){ if(b.q.t0+spr*s>reveal) break; const j=b.ord[s], a0=b.a0+(ccw?-1:1)*j*sw, a1=a0+(ccw?-sw:sw);
-        ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.arc(ring.cx,ring.cy,b.a,a1,a0,!ccw); ctx.closePath(); ctx.fillStyle=_stxCss(b.col); ctx.fill();
-        ctx.strokeStyle=_stxCss(canvas); ctx.lineWidth=gap; ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.a,a0,a1,ccw); ctx.stroke(); ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.stroke(); } } };
+  const smooth=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x);
+  const drawRing=(ring,home)=>{ for(const b of ring.bands){ if(b.q.t0>reveal) break; const np=5, dt=Math.max(0.004,b.q.t1-b.q.t0), ccw=b.dir<0, sw=6.2832/np;
+      const spr=Math.max(dt/np,Math.min(0.055,(0.995-b.q.t0)/np));
+      for(let s=0;s<np;s++){ const ta=b.q.t0+spr*s; if(ta>reveal) break; const j=b.ord[s]; const pr=_seedRnd(4500+b.q.a*3+s,ss,0,0); pr();
+        const T=Math.max(ta,0.5+0.3*pr()), L=Math.max(0.0001,Math.min(0.18,1-T)), k=reveal>=1?1:smooth((reveal-T)/L);
+        if(home && k<0.999) continue;
+        const ccx=pr()*CW, ccy=pr()*CH, crm=D*(0.12+0.26*pr()), cw=crm*0.24, crot=(pr()-.5)*6.2832, csw=sw*(0.7+0.9*pr());
+        const fm=(b.a+b.b)/2, fw=b.b-b.a; const cx=ccx+(ring.cx-ccx)*k, cy=ccy+(ring.cy-ccy)*k, rm=crm+(fm-crm)*k, w=cw+(fw-cw)*k, swk=csw+(sw-csw)*k;
+        const a0=b.a0+(ccw?-1:1)*j*sw+crot*(1-k), a1=a0+(ccw?-swk:swk), ra=Math.max(0.5,rm-w/2), rb=rm+w/2;
+        ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a1,ccw); ctx.arc(cx,cy,ra,a1,a0,!ccw); ctx.closePath(); const cc=k>=1?b.col:(()=>{ const c0=S.col(Math.min(0.999,ta)); return [0,1,2].map(i=>c0[i]+(b.col[i]-c0[i])*k); })(); ctx.fillStyle=_stxCss(cc); ctx.fill();
+        ctx.strokeStyle=_stxCss(canvas); ctx.lineWidth=gap; ctx.beginPath(); ctx.arc(cx,cy,ra,a0,a1,ccw); ctx.stroke(); ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a1,ccw); ctx.stroke(); } } };
   rings.forEach(drawRing);
   // the weave: where ring k and ring k+1 cross, ring k goes back over at one crossing — the other crossing stays under
   for(let k=0;k+1<rings.length;k++){ const p=rings[k], q=rings[k+1]; const dx=q.cx-p.cx, dy=q.cy-p.cy, d=Math.hypot(dx,dy)||1; if(d>=p.R+q.R) continue;
     const mx=(p.cx+q.cx)/2, my=(p.cy+q.cy)/2, hlen=0, ux=-dy/d, uy=dx/d; const side=((k+(X.trend>=0.5?0:1))%2)?1:-1;
     ctx.save(); ctx.beginPath(); ctx.arc(q.cx,q.cy,q.R+gap,0,6.2832); ctx.arc(q.cx,q.cy,q.r0-gap,6.2832,0,true); ctx.clip();   // only where the other ring lies on it…
     const L2=D*4; ctx.beginPath(); ctx.moveTo(mx-dx/d*L2,my-dy/d*L2); ctx.lineTo(mx+dx/d*L2,my+dy/d*L2); ctx.lineTo(mx+dx/d*L2+ux*side*L2,my+dy/d*L2+uy*side*L2); ctx.lineTo(mx-dx/d*L2+ux*side*L2,my-dy/d*L2+uy*side*L2); ctx.closePath(); ctx.clip();   // …and on one side only
-    drawRing(p); ctx.restore(); }
+    drawRing(p,true); ctx.restore(); }
   try{ globalThis.__ST_LISTEN={v:'interlace',rings:rings.length,bands:G.length}; }catch(_){} _setCurE(0.5);
 }
 
