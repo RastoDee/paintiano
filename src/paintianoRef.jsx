@@ -12584,10 +12584,28 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // strongest a dark one; the thinned paint runs where the piece is loud.
 // Stroke by stroke as the piece plays.
 // ═══════════════════════════════════════════════════════════════════════════
-// a loaded brush along a centre line: the paint body where the brush is full, its
+// her loaded brush as the variants always had it: a broad ribbon of oil, thick where the brush lands and thinning as it runs dry,
+// a darker relief under one edge (the impasto catching the light), a lit ridge along it, the hairs of the brush streaking through;
+// thinned, a translucent scumble without relief
+function _jmBrush(ctx,pts,w,col,al,dry,r,thin){
+  const n=pts.length; if(n<2) return; const nx=[],ny=[],ws=[];
+  for(let k=0;k<n;k++){ const a=pts[Math.max(0,k-1)], b=pts[Math.min(n-1,k+1)], dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1; nx.push(-dy/L); ny.push(dx/L); ws.push(0.82+r()*0.36); }
+  for(let it=0;it<2;it++){ const q=ws.slice(); for(let k=0;k<n;k++) ws[k]=(q[Math.max(0,k-1)]+q[k]+q[Math.min(n-1,k+1)])/3; }   // the swell of the brush, not a jitter
+  for(let k=0;k<n;k++) ws[k]*=w*(1-dry*k/(n-1));
+  const ribbon=(ox,oy,sc)=>{ ctx.beginPath(); for(let k=0;k<n;k++){ const h=ws[k]*sc/2, x=pts[k][0]+ox-nx[k]*h, y=pts[k][1]+oy-ny[k]*h; k?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+    for(let k=n-1;k>=0;k--){ const h=ws[k]*sc/2; ctx.lineTo(pts[k][0]+ox+nx[k]*h,pts[k][1]+oy+ny[k]*h); } ctx.closePath(); ctx.fill(); };
+  const c=col.map(v=>v|0), px=nx[0], py=ny[0];
+  if(!thin){ ctx.fillStyle=`rgba(${c[0]*0.55|0},${c[1]*0.55|0},${c[2]*0.6|0},${(0.34*al).toFixed(3)})`; ribbon(px*w*0.14+w*0.06, py*w*0.14+w*0.08, 1.0); }
+  ctx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${(thin?0.42*al:0.96*al).toFixed(3)})`; ribbon(0,0,1.0);
+  if(!thin){ ctx.fillStyle=`rgba(${Math.min(255,c[0]+70)},${Math.min(255,c[1]+70)},${Math.min(255,c[2]+70)},0.35)`; ribbon(-px*w*0.16, -py*w*0.16, 0.42); }
+  ctx.lineCap='round'; ctx.lineWidth=Math.max(1,w*0.07);
+  for(let h=-1;h<=1;h+=2){ ctx.beginPath(); ctx.strokeStyle=h<0?`rgba(0,0,0,${thin?0.08:0.16})`:`rgba(255,255,255,${thin?0.12:0.22})`;
+    for(let k=0;k<n;k++){ const o=ws[k]*0.24*h, x=pts[k][0]+nx[k]*o, y=pts[k][1]+ny[k]*o; k?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.stroke(); }
+}
+// (retired, code kept: its edges came out faceted and its dry end a comb) a loaded brush along a centre line: the paint body where the brush is full, its
 // bristles streaking through it in three tones and running on, broken, past it as
 // the brush goes dry; thinned, a translucent scumble
-function _jmBrush(ctx,pts,w,col,al,dry,r,thin){
+function _jmBrushBristle(ctx,pts,w,col,al,dry,r,thin){
   const n=pts.length; if(n<2) return; const nx=[],ny=[],wob=[];
   for(let k=0;k<n;k++){ const a=pts[Math.max(0,k-1)], b=pts[Math.min(n-1,k+1)], dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1; nx.push(-dy/L); ny.push(dx/L); wob.push(0.88+0.24*r()); }
   const ub=1-dry*0.6, wid=(u,k)=>w*(0.62+0.38*Math.min(1,u*6))*(1-dry*0.35*u)*wob[k], css=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${Math.max(0,Math.min(1,a)).toFixed(3)})`;
@@ -12772,12 +12790,13 @@ function _mitchGround(ctx, CW, CH, chords, hex, hexBW, isBW){
   ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,0,CW,CH);
 }
 function _mitchMix(a,b,t){ return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
-// a knot's palette: the chords of one passage, plus white and one dark
+// a knot's palette, in her oils (_jmOil): the passage's colour light and deep, two more of its colours, plus white and one dark
 function _mitchPal(chords, gc, isBW, i0, span){
-  const cn=chords.length, pal=[];
-  for(let k=0;k<4;k++){ const {rgb}=_picChord(chords, (i0+Math.floor(k*span/4))%cn, gc, isBW); pal.push(rgb); }
-  pal.push([246,243,234]);                                          // her white
-  pal.push(_mitchMix(pal[0],[20,16,24],0.6));                       // one dark
+  const cn=chords.length, c=(k)=>_picChord(chords, (i0+Math.floor(k*span/4))%cn, gc, isBW).rgb, A=c(0);
+  // her oils: the passage's colour at the value its pigment has, lighter with white and deeper, a second and a third colour of the passage beside it
+  const pal=[_jmOil(A,0.42,isBW), _jmOil(A,0.68,isBW), _jmOil(c(2),0.5,isBW), _jmOil(c(1),0.3,isBW)];
+  pal.push(isBW?[248,248,246]:[249,246,237]);                     // her white
+  pal.push(_mitchMix(_jmOil(A,0.15,isBW),[20,16,24],0.4));          // one dark
   return pal;
 }
 // list the strokes of one knot (nothing drawn yet)
@@ -12862,26 +12881,30 @@ function mitchellPhaseDiptych(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   }
   // bridging strokes across the seam
   for(let i=0;i<4+Math.round(drive*3);i++){ const r=_seedRnd(i+9920, ss, 0, 0); r(); const y=CH*(0.2+r()*0.6), L=D*(0.12+r()*0.1);
-    const {rgb}=_picChord(chords,(i*7)%cn,gc,isBW); list.push({x0:CW/2-L/2, y0:y+(r()-.5)*D*0.05, x1:CW/2+L/2, y1:y+(r()-.5)*D*0.05, col:rgb, w:D*(0.014+r()*0.012), id:9930+i, t:0.5+i*0.05}); }
+    const {rgb}=_picChord(chords,(i*7)%cn,gc,isBW); list.push({x0:CW/2-L/2, y0:y+(r()-.5)*D*0.05, x1:CW/2+L/2, y1:y+(r()-.5)*D*0.05, col:_jmOil(rgb,0.45,isBW), w:D*(0.014+r()*0.012), id:9930+i, t:0.5+i*0.05}); }
   _mitchDraw(ctx, list, reveal, ss);
   if(reveal>0.5) _mitchDrips(ctx, D, list, 4, ss, 9940);
 }
 
-// ── Mitchell D: Dark Central Mass — the 60s: one dense dark knot, light jabs at its edge, drips below ──
+// ── Mitchell D: Dark Central Mass — the 60s (Calvi, the Girolata triptych): not a ball but one heavy uneven mass, three tangles
+// of dark strokes run together, heavier at its top, a little off centre, light jabs through it and at its edge, drips below ──
 function mitchellPhaseDarkMass(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
   const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
   _mitchGround(ctx,CW,CH,chords,'#e4ddcc','#d8d2c4',isBW);
-  const drive=_mitchChar(chords), list=[];
+  const drive=_mitchChar(chords), list=[], mr=_seedRnd(9945, ss, 0, 0); mr();
   const pal=_mitchPal(chords,gc,isBW,0,cn).map((c,i)=> i<4 ? _mitchMix(c,[18,14,22],0.55) : c);
-  _mitchKnot(list, D, CW*0.5, CH*0.47, D*0.3, 80+Math.round(drive*30), pal, ss, 9950, {spread:1.6, radial:0.2, tight:0.85});
+  const ox=CW*(0.44+mr()*0.12), oy=CH*(0.38+mr()*0.08);
+  for(let k=0;k<3;k++){ const cx=ox+(k-1)*D*(0.15+mr()*0.06), cy=oy+(mr()-0.5)*D*0.14+(k===1?-D*0.04:D*0.03), R=D*(0.16+mr()*0.08);
+    _mitchKnot(list, D, cx, cy, R, Math.round((34+drive*14)*(k===1?1.3:1)), pal, ss, 9952+k*2, {spread:1.6, radial:0.15, tight:0.9, squash:0.8}); }
   const lp=_mitchPal(chords,gc,isBW,Math.floor(cn/2),Math.ceil(cn/2)).map((c)=>_mitchMix(c,[250,246,236],0.35));
-  _mitchKnot(list, D, CW*0.5, CH*0.47, D*0.36, 18+Math.round(drive*8), lp, ss, 9951, {spread:2.0, radial:0.6, tight:1.0});
+  _mitchKnot(list, D, ox, oy, D*0.36, 18+Math.round(drive*8), lp, ss, 9951, {spread:2.0, radial:0.5, tight:1.0, squash:0.75});
   _mitchDraw(ctx, list, reveal, ss);
-  if(reveal>0.5) _mitchDrips(ctx, D, list, 6, ss, 9960);
+  if(reveal>0.5) _mitchDrips(ctx, D, list, 7, ss, 9960);
 }
 
-// ── Mitchell E: Sunflowers (the Van Gogh homage, 1990–91): warm knots held up on columns of green strokes, long drips ──
+// ── Mitchell E: Sunflowers (1990–91, her homage to Van Gogh): heavy warm masses high on the canvas, and out of each its dark (the
+// piece's deep blues, violets and greens) hanging down in long loaded strokes, uneven, some short, some long, runs beneath ──
 function mitchellPhaseSunflower(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
   const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
@@ -12889,18 +12912,17 @@ function mitchellPhaseSunflower(ctx, CW, CH, chords, lim, gc, sessionSeed, mode)
   const drive=_mitchChar(chords), K=2+Math.round(drive*2), list=[];
   const sr=_seedRnd(9971, ss, 0, 0); sr();
   for(let k=0;k<K;k++){
-    const cx=CW*((k+0.5)/K+(sr()-.5)*0.14), cy=CH*(0.2+sr()*0.2), R=D*(0.12+sr()*0.07);
-    const warm=_mitchPal(chords,gc,isBW,Math.floor(k*cn/K),Math.ceil(cn/K)).map((c,i)=> i<4 ? _mitchMix(c,[238,186,38],isBW?0:0.55) : c);
-    _mitchKnot(list, D, cx, cy, R, 36+Math.round(drive*16), warm, ss, 9980+k, {radial:0.5, spread:2.4, len:0.9});
-    // the column of stems
-    const stems=4+Math.round(sr()*3);
-    for(let s2=0;s2<stems;s2++){ const r=_seedRnd(k*20+s2+9995, ss, 0, 0); r();
-      const x=cx+(r()-.5)*R*1.2, y0=cy+R*(0.3+r()*0.5), y1=Math.min(CH*0.97, y0+CH*(0.2+r()*0.3));
-      const {rgb}=_picChord(chords,(k*11+s2*3)%cn,gc,isBW); const green=isBW?rgb:_mitchMix(rgb,[72,128,58],0.6);
-      list.push({x0:x, y0:y0, x1:x+(r()-.5)*D*0.03, y1:y1, col:green, w:D*(0.012+r()*0.012), id:10000+k*20+s2, t:0.3+r()*0.6}); }
+    const cx=CW*((k+0.5)/K+(sr()-.5)*0.14), cy=CH*(0.22+sr()*0.2), R=D*(0.14+sr()*0.07);
+    const warm=_mitchPal(chords,gc,isBW,Math.floor(k*cn/K),Math.ceil(cn/K)).map((c,i)=> i<4 ? _mitchMix(c,[226,170,40],isBW?0:0.5) : c);
+    _mitchKnot(list, D, cx, cy, R, 44+Math.round(drive*18), warm, ss, 9980+k, {radial:0.35, spread:2.0, len:1.0, tight:0.9});
+    const hang=3+Math.round(sr()*4);
+    for(let s2=0;s2<hang;s2++){ const r=_seedRnd(k*20+s2+9995, ss, 0, 0); r();
+      const x=cx+(r()-.5)*R*1.5, y0=cy+R*(-0.1+r()*0.6), y1=Math.min(CH*0.95, y0+CH*(0.06+Math.pow(r(),1.5)*0.3));
+      const {rgb}=_picChord(chords,(k*11+s2*3)%cn,gc,isBW), col=r()<0.4?_jmOil(_mitchMix(rgb,[60,120,60],0.5),0.3,isBW):_jmOil(rgb,0.18+r()*0.15,isBW);
+      list.push({x0:x, y0:y0, x1:x+(r()-.5)*D*0.06, y1:y1, col, w:D*(0.012+r()*0.014), id:10000+k*20+s2, t:0.3+r()*0.6}); }
   }
   _mitchDraw(ctx, list, reveal, ss);
-  if(reveal>0.4) _mitchDrips(ctx, D, list, 3+K, ss, 10040);
+  if(reveal>0.4) _mitchDrips(ctx, D, list, 4+K, ss, 10040);
 }
 
 // ── Mitchell F: Late White (1992): white canvas, two or three small knots, a trailing drip under each ──
