@@ -8750,9 +8750,46 @@ function lichtensteinPhaseSunrise(ctx,CW,CH,chords,lim,gc,ss,mode){
   ctx.restore();
 }
 
+// ── Lichtenstein: Entablatures (1971–76) — his friezes from the cornices of old bank and court buildings: horizontal
+// bands stacked like mouldings, each one ornament repeated across — dentils, scallops, discs, a band of Ben-Day dots,
+// diagonal hatching, a stepped profile — between black rules. Here the facade is the piece read top to bottom: a band for
+// every passage, as tall as the passage is long; its ornament is how the passage moves — dentils when it keeps an even
+// beat (one block for every two notes), scallops when it sings, discs when it is accented, hatching when it leaps, dots
+// when it is quiet, steps when it climbs or falls; the ornament as big as the passage is loud. The band's ground is the
+// passage's colour printed in his inks, the ornament flat in black, white or one of his inks. Band by band as it plays,
+// each ornament drawn across from left to right in its passage's time.
+function lichtensteinEntablature(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode), dens=A.ch?A.ch.density:0.4; const lw=Math.max(2,D*0.007);
+  const K=_lcEntry({g:'K',solid:true}), Wt=_lcEntry({g:'W',solid:true});
+  ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(0,0,CW,CH);
+  const nB=Math.round(_lcClamp(8+10*dens,8,18)); const G=_kd2Phrases(A,nB);
+  const top=D*0.03, bot=CH-D*0.03, avail=bot-top, minH=avail/(G.length*2.4); const tot=G.reduce((s,q)=>s+Math.max(1,q.b-q.a),0)||1;
+  let hs=G.map(q=>Math.max(minH,avail*Math.max(1,q.b-q.a)/tot)); const k0=avail/hs.reduce((s,x)=>s+x,0); hs=hs.map(x=>x*k0);
+  const vm=Math.max(0.05,...G.map(q=>q.vmax||0.5));
+  let y=top, prev=['',''];
+  G.forEach((q,k)=>{ const h=hs[k], a=q.a, b=Math.max(q.a+1,q.b); const y0=y; y+=h; if(played<a) return;
+    const hp=_mtHearSpan(A,a,b), loud=(q.vmax||0.5)/vm, prog=_lcClamp((played-a)/(b-a),0,1);
+    const want=[]; if(hp.v<0.32) want.push('dots'); if(hp.leap>6.5) want.push('hatch'); if(hp.n&&hp.acc/hp.n>0.5) want.push('discs'); if(hp.dur>1.4) want.push('scallop'); if(Math.abs(hp.dir)>1.2) want.push('steps');
+    want.push('dentil','scallop','discs','dots','steps','hatch'); const kind=want.find(x=>!prev.includes(x)); prev=[kind,prev[0]];   // never the same ornament as in the two bands above
+    const gr=_lcInk(_picChord(chords,Math.min(cn-1,Math.floor((a+b)/2)),gc,isBW).rgb,isBW), fl=_lcFlatOn(_lcInk(_picChord(chords,Math.min(cn-1,b-1),gc,isBW).rgb,isBW),gr,isBW);
+    const orn=(k%3===0)?K:(k%3===1)?fl:Wt;   // the ornament: black, his ink or white, in turn down the facade
+    ctx.save(); ctx.beginPath(); ctx.rect(0,y0,CW*prog,h); ctx.clip();
+    if(kind==='dots'){ ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(0,y0,CW,h); _lcBenday(ctx,0,y0,CW,h,Math.max(4,D*0.022),gr.ink&&!gr.ink.solid?gr:fl,()=>0.55+0.35*loud); }
+    else { ctx.fillStyle=_lcCss(gr); ctx.fillRect(0,y0,CW,h); }
+    const pad=h*(0.16-0.08*loud), iy=y0+pad, ih=h-2*pad; ctx.fillStyle=_lcCss(orn===Wt&&!gr.ink.solid?Wt:orn); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*0.7;
+    if(kind==='dentil'){ const n=Math.round(_lcClamp((hp.n||8)/2,6,32)), u=CW/n, w=u*(0.45+0.2*loud); for(let i=0;i<n;i++){ ctx.fillRect(i*u+(u-w)/2,iy+ih*0.18,w,ih*0.82); ctx.strokeRect(i*u+(u-w)/2,iy+ih*0.18,w,ih*0.82); } ctx.fillRect(0,iy,CW,ih*0.1); }
+    else if(kind==='scallop'){ const n=Math.round(_lcClamp((hp.n||8)/3,4,16)), u=CW/n, r=Math.min(u*0.5,ih*0.9)*(0.8+0.2*loud); for(let i=0;i<n;i++){ ctx.beginPath(); ctx.arc(i*u+u/2,iy,r,0,Math.PI); ctx.closePath(); ctx.fill(); ctx.stroke(); } }
+    else if(kind==='discs'){ const n=Math.round(_lcClamp((hp.n||8)/3,4,18)), u=CW/n, r=Math.min(u,ih)*0.42*(0.75+0.25*loud); for(let i=0;i<n;i++){ const cx=i*u+u/2, cy=iy+ih/2; ctx.beginPath(); ctx.arc(cx,cy,r,0,6.2832); ctx.fill(); ctx.stroke(); ctx.save(); ctx.fillStyle=_lcCss(gr.ink&&gr.ink.solid?gr:_LC_WHT); ctx.beginPath(); ctx.arc(cx,cy,r*0.42,0,6.2832); ctx.fill(); ctx.stroke(); ctx.restore(); } }
+    else if(kind==='hatch'){ const st=Math.max(lw*3,D*0.03)*(1.3-0.4*loud); ctx.lineWidth=st*0.3; ctx.strokeStyle=_lcCss(orn===Wt?K:orn); for(let x=-ih*1.2;x<CW+ih;x+=st){ ctx.beginPath(); ctx.moveTo(x,iy+ih); ctx.lineTo(x+ih,iy); ctx.stroke(); } }
+    else if(kind==='steps'){ const n=3, up=hp.dir>0; for(let j=0;j<n;j++){ const sh=ih/n, ins=(up?j:n-1-j)*CW*0.0; ctx.fillStyle=_lcCss(j%2?(orn===Wt?K:orn):Wt); ctx.fillRect(ins,iy+j*sh,CW-2*ins,sh*(0.55+0.3*(up?(j+1)/n:(n-j)/n))); ctx.strokeRect(ins,iy+j*sh,CW-2*ins,sh*(0.55+0.3*(up?(j+1)/n:(n-j)/n))); } }
+    ctx.restore();
+    ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.2; ctx.beginPath(); ctx.moveTo(0,y0); ctx.lineTo(CW*prog,y0); ctx.moveTo(0,y0+h); ctx.lineTo(CW*prog,y0+h); ctx.stroke(); });
+  try{ globalThis.__LC_LISTEN={v:'entablature',bands:G.length}; }catch(_){} _setCurE(0.5);
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // LICHTENSTEIN — Ben-Day dots, fat black contours, poster-flat colour.
-// Phases: 0 mosaic (a page of comic panels) · 1 burst · 2 close-up curves
+// Phases: 0 mosaic (a page of comic panels) · 1 burst · 2 Entablatures
 // · 3 brushstrokes · 4 mirrors · 5 Sunrise. Song character: density → raster tightness, energy → contour
 // weight and shape sizes.
 function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
@@ -8770,7 +8807,7 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   _lcStepPx=Math.max(5,Math.round(S*0.014));   // the size of his screen on this canvas: fine enough for the eye to mix the two inks
   const _pc=(i)=>_lcInk(_picChord(chords,Math.min(cn-1,Math.max(0,i)),gc,mode==='bw').rgb,mode==='bw'), NEWC=true;
   const fillC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i)):css(flat(c)); }, dotC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i).dot):css(flat(c)); };   // the piece's colours, printed in his inks
-  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 burst · 3 close-up curves · 4 brushstrokes · 5 mirrors · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
+  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 burst · 3 Entablatures (replaces the close-up curves) · 4 brushstrokes · 5 mirrors · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _lcListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   const pick=pick0-1;
@@ -8798,22 +8835,7 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
     ctx.fillStyle=fillC(0); ctx.beginPath(); ctx.arc(cx,cy,S*0.07*(0.75+0.5*dnaE),0,7); ctx.fill(); ctx.stroke();
     return;
   }
-  if(pick===2){ // close-up curves
-    _bendayField(ctx,0,0,CW,CH,dotC(2),dotR*0.95,dotStep*0.9,0.4);
-    const bands=7, per=Math.ceil(cn/bands);
-    for(let b=0;b<bands;b++){
-      const i=Math.min(cn-1,b*per); if(i>=N && b>0) break;
-      const m=meta(i);
-      ctx.fillStyle=fillC(i); ctx.strokeStyle=INK; ctx.lineWidth=LW*1.2;
-      ctx.beginPath();
-      const y0=CH*0.12+b*CH*0.12;
-      ctx.moveTo(-20,y0);
-      for(let x=0;x<=CW;x+=CW/8){ ctx.quadraticCurveTo(x+CW/16, y0+(((x/(CW/8))|0)%2?-1:1)*(S*0.04+m.dur*S*0.06), x+CW/8, y0); }
-      ctx.lineTo(CW+20,y0+CH*0.13); ctx.lineTo(-20,y0+CH*0.13); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-    }
-    return;
-  }
+  if(pick===2){ lichtensteinEntablature(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Entablatures (replaces the close-up curves)
   if(pick===3){ // brushstrokes
     _bendayField(ctx,0,0,CW,CH,dotC(3),dotR,dotStep,0.42);
     const rows=6, per=Math.ceil(cn/rows);
