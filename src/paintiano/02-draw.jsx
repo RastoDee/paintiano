@@ -5062,15 +5062,14 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const rnd = _seedRnd(53, ss, 0, 0);
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
   //  0 = Folklore planétaire — the plastic unit: colour cells with a contrasting form.
-  //  1 = Vonal — sphere with radiating rays (1968, centrifugal motion).
+  //  1 = Vonal — his line series: nests of square lines that read as a pyramid seen from above, one per part of the piece.
   //  2 = Vega — colour deformed checkerboard with central bulge.
   //  3 = Supernovae — squares turning to lozenges and discs along a wave.
   //  4 = Hexagon cubes — isometric tumbling block (3D).
   //  5 = Zebra — pale and dark stripes bent by a sphere pressing through.
   //  6 = Vonal tunnel — nested frames toward a lit focus.
   //  (the earlier sphere/cube body below, Banya and Cells are no longer reached)
-  //  Free (cap=2) sees Sphere/Cube + Vonal — grid-warp vs ray-radiate is the
-  //  strongest op-art contrast Vasarely\'s catalogue offers.
+  //  Free (cap=2) sees What he heard + Folklore.
   {
     // VARIANT: 0 What he heard (_vsListen, generative) · 1 Folklore · 2 Vonal · 3 Vega · 4 Supernovae · 5 Hexagon cubes · 6 Zebra · 7 Vonal tunnel. Free: 0 and 1.
     const _pn=_capN(8); const _vpick0=((phaseIndex|0)%_pn+_pn)%_pn;
@@ -5323,59 +5322,51 @@ function vasarelyPhaseHex(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
 // ── Vasarely F: Colour interval grid — flat grid of graded colour squares. ──
 
-// ── Vasarely G: Vonal — sphere with radiating rays (1968 series). Central
-// chord-gradient sphere + 48 chord-coloured wedge rays radiating outward,
-// alternating bright/dark. Strong centrifugal motion. Reveal scales ray
-// visibility (sphere shows throughout).
-function vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  const reveal = Math.max(0, Math.min(1, N/cn));
-  const sR = _seedRnd(91, ss, 0, 21); sR(); sR();
-
-  // Dark ground.
-  ctx.fillStyle = isBW ? '#0e0e0e' : '#0a0a14';
-  ctx.fillRect(0,0,CW,CH);
-
-  // Per-song variance: centre offset, R, ray count, bright pattern.
-  const cx = CW * (0.40 + sR()*0.20);
-  const cy = CH * (0.40 + sR()*0.20);
-  const R = Math.min(CW,CH) * (0.25 + sR()*0.15);
-  const _vd=(()=>{ try{ return computeSongCharacter(chords).density; }catch(_){ return 0.4; } })();
-  const rays = Math.round((32 + Math.floor(sR()*32))*_dW(_vd));   // 32-64, more for a dense piece
-  const brightOffset = Math.floor(sR()*7);                // shifts which rays are bright
-  const visRays = Math.max(8, Math.ceil(rays*reveal));
-  for(let i=0;i<visRays;i++){
-    const ang = (i/rays)*Math.PI*2;
-    const {rgb} = _picChord(chords, (i*2)%cn, gc, isBW);
-    // Irregular bright/dim pattern — based on (i + brightOffset) % 3.
-    const isBright = ((i + brightOffset) % 3) !== 0;
-    const mul = isBright ? 1 : 0.55;
-    ctx.fillStyle = `rgb(${Math.min(255,rgb[0]*mul)|0},${Math.min(255,rgb[1]*mul)|0},${Math.min(255,rgb[2]*mul)|0})`;
-    ctx.beginPath();
-    const inner = R;
-    const outer = Math.hypot(CW,CH);
-    const halfAng = Math.PI/rays;
-    ctx.moveTo(cx + Math.cos(ang-halfAng)*inner, cy + Math.sin(ang-halfAng)*inner);
-    ctx.lineTo(cx + Math.cos(ang-halfAng)*outer, cy + Math.sin(ang-halfAng)*outer);
-    ctx.lineTo(cx + Math.cos(ang+halfAng)*outer, cy + Math.sin(ang+halfAng)*outer);
-    ctx.lineTo(cx + Math.cos(ang+halfAng)*inner, cy + Math.sin(ang+halfAng)*inner);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // Central sphere with chord gradient.
-  const gc1 = _picChord(chords, 0, gc, isBW).rgb;
-  const gc2 = _picChord(chords, Math.floor(cn/2)%cn, gc, isBW).rgb;
-  const grad = ctx.createRadialGradient(cx - R*0.3, cy - R*0.3, R*0.1, cx, cy, R);
-  grad.addColorStop(0, `rgb(${Math.min(255,gc1[0]+80)|0},${Math.min(255,gc1[1]+80)|0},${Math.min(255,gc1[2]+80)|0})`);
-  grad.addColorStop(1, `rgb(${gc2[0]|0},${gc2[1]|0},${gc2[2]|0})`);
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle = isBW ? '#0e0e0e' : '#0a0a14';
-  ctx.lineWidth = 4;
-  ctx.stroke();
+// ── Vasarely 2 · Vonal — his line series (1968–75): a field of squares, each a nest of square lines, that reads as a
+// pyramid seen from above: the four faces in four values, lit from the upper left, and the hips glowing where the faces
+// meet. Here one pyramid for each part of the piece, stacked down the canvas in time, each as long as its part; its apex
+// leans to the part's register; its colours are the part's chords as they come, ring after ring from the rim to the apex,
+// and the light along its hips is as bright as the part is loud. It rises ring by ring while its part sounds.
+function vasarelyPhaseVonal(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_vsSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, played=Math.max(1,Math.min(cn,lim));
+  const A=_kd2Analyze(chords,gc,mode); const soft=_stxSoft(chords,gc,isBW);
+  const ground=isBW?[12,12,12]:[11,10,17]; ctx.fillStyle=_vsCss(ground); ctx.fillRect(0,0,CW,CH);
+  const land=CW>CH*1.1;
+  let C=Math.round(13+6*S.density); if(C%2===0) C++;                                        // cells across: as fine as the piece is dense, odd so an apex has its cell
+  const cs=(land?CH:CW)/C, nL=Math.max(C,Math.round((land?CW:CH)/cs));                       // cells along (time)
+  const minL=Math.max(3,Math.round(C*0.55));
+  const nb=Math.max(1,Math.min(Math.floor(nL/minL),Math.round(nL/C*(0.75+0.7*S.density))));
+  const G=_kd2Phrases(A,nb).slice(0,nb); const tot=G.reduce((s,q)=>s+Math.max(1,q.b-q.a),0)||1;
+  const Ls=G.map(q=>Math.max(minL,Math.round(nL*Math.max(1,q.b-q.a)/tot)));
+  for(let guard=0;guard<200;guard++){ const sum=Ls.reduce((s,x)=>s+x,0); if(sum===nL) break;
+    if(sum<nL){ let k=0; for(let i=1;i<Ls.length;i++) if((G[i].b-G[i].a)/Ls[i]>(G[k].b-G[k].a)/Ls[k]) k=i; Ls[k]++; }
+    else { let k=-1; for(let i=0;i<Ls.length;i++) if(Ls[i]>minL && (k<0 || Ls[i]>Ls[k])) k=i; if(k<0) break; Ls[k]--; } }
+  const vm=Math.max(0.05,...G.map(q=>q.vmax||0.5));
+  const cwx=land?CW/nL:CW/C, cwy=land?CH/C:CH/nL, gap=Math.max(1,Math.min(cwx,cwy)*0.06);
+  const FACE={n:1.0,w:0.8,e:0.58,s:0.44};                                                   // the light from the upper left
+  const mix=(a,b,t)=>_vsMix(a,b,_vsClamp(t,0,1));
+  const even=(c)=>{ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114||1, k=118/l; const o=c.map(x=>x*k); const mx=Math.max(...o); return mx>255?o.map(x=>x*255/mx):o; };   // every hue at one value, so the light does the modelling
+  const tone=(hue,val)=>{ const dark=mix(hue,[0,0,0],0.88), lite=mix(hue,[255,252,244],0.78); return val<0.5?mix(dark,hue,val/0.5):mix(hue,lite,(val-0.5)/0.5); };
+  let s0=0;
+  G.forEach((q,k)=>{ const L=Ls[k]; const a=q.a, b=Math.max(q.a+1,q.b); const h=_mtHearSpan(A,a,b); const loud=(q.vmax||0.5)/vm;
+    const ac=C/2, al=s0+L/2;                                                                   // the apex in the middle of the part
+    const nLev=Math.max(2,Math.floor(Math.min(C,L)/2)+1), levCol=[];
+    for(let l=0;l<nLev;l++){ const i0=a+(b-a)*l/nLev, i1=a+(b-a)*(l+1)/nLev; let R=0,Gg=0,B=0,c=0; for(let s=0;s<6;s++){ const t=(i0+(i1-i0)*(s+0.5)/6)/cn; const o=soft(t); R+=o[0]; Gg+=o[1]; B+=o[2]; c++; } levCol.push([R/c,Gg/c,B/c]); }
+    const lc=levCol.map((c,l)=>{ const p=levCol[Math.max(0,l-1)], n=levCol[Math.min(nLev-1,l+1)]; const o=[0,1,2].map(i=>(p[i]+2*c[i]+n[i])/4); return isBW?o:even(o); });   // one level runs into the next, as his gradations do
+    for(let j=0;j<L;j++) for(let i=0;i<C;i++){ const X=i+0.5, Y=s0+j+0.5;
+      const u=X<ac?X/ac:(C-X)/(C-ac), v=Y<al?(Y-s0)/(al-s0):(s0+L-Y)/(s0+L-al); const hh=Math.min(u,v);
+      const lev=Math.min(nLev-1,Math.floor(hh*nLev)); if(played < a+(b-a)*lev/nLev) continue;       // not yet sounded
+      let face; if(u<v) face=land?(X<ac?'n':'s'):(X<ac?'w':'e'); else face=land?(Y<al?'w':'e'):(Y<al?'n':'s');
+      const du=Math.abs(u-v)*Math.min(ac,C-ac,al-s0,s0+L-al); const glow=Math.exp(-(du/1.1)*(du/1.1))*(0.4+0.6*loud);
+      const hue=lc[lev]; const base=FACE[face]*(0.3+0.7*hh);
+      const px=land?(s0+j)*cwx:i*cwx, py=land?i*cwy:(s0+j)*cwy, w=cwx, hgt=cwy;
+      const m=Math.max(3,Math.min(7,Math.round(Math.min(w,hgt)/7)));
+      const lw=Math.max(0.6,Math.min(w,hgt)*0.035), line=_vsCss(mix(hue,ground,0.82));
+      for(let r=0;r<m;r++){ const f=r/(m-1); const ix=gap/2+(w/2-gap/2)*0.9*r/m, iy=gap/2+(hgt/2-gap/2)*0.9*r/m;
+        const val=base*(0.8+0.2*f)+glow*(f-0.25)*0.7;                                           // each cell a little nest of lines, lit from within on the hips
+        ctx.fillStyle=_vsCss(tone(hue,val)); ctx.fillRect(px+ix,py+iy,w-2*ix,hgt-2*iy); if(r){ ctx.strokeStyle=line; ctx.lineWidth=lw; ctx.strokeRect(px+ix,py+iy,w-2*ix,hgt-2*iy); } } }
+    s0+=L; });
+  try{ globalThis.__ST_LISTEN={v:'vonal',C,nL,parts:G.length}; }catch(_){}
 }
 
 // ── Vasarely H: Banya — diagonal split cells (1964 · Yapocsa series).
@@ -16720,7 +16711,7 @@ const ARTIST_VARIANTS = {
     {ground:'#e4c89a',mark:{field:1},size:[.15,.35],edge:.3,alpha:.6,layout:{scatter:1},density:.5},
     {ground:'#1a1418',mark:{field:1},size:[.4,.7],edge:.7,alpha:.5,layout:{stack:1},density:.3,tone:'dark'},
   ],
-  bulge: [   // slot order = solo phases: Folklore, Vonal sphere, Vega, Supernovae, Kezdi cubes, Zebra, Vonal tunnel
+  bulge: [   // slot order = solo phases: Folklore, Vonal, Vega, Supernovae, Kezdi cubes, Zebra, Vonal tunnel
     {mark:{bulge:.5,disc:.25,diamond:.25},size:[.04,.1],layout:{grid:1},density:1,warp:.6},   // What he heard
     {ground:'#141418',mark:{rect:.5,disc:.5},size:[.03,.06],layout:{grid:1},density:1},
     {ground:'#3a3a2a',mark:{vstripes:1},size:[.02,.05],layout:{stack:1},density:.8},
