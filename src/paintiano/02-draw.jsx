@@ -3482,38 +3482,66 @@ function picassoGuitar(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PICASSO — STILL LIFE WITH GUITAR (painted synthetic cubism, the twenties): the wall in upright bands (one dotted, one
-// striped, one black), the table tipped up toward us under its striped cloth, and on it the guitar — its body two flat
+// black, one striped), the table tipped up toward us under its striped cloth, and on it the guitar — its body two flat
 // halves, light and shadow, a black outline round all of it — with a mandolin when the piece has more voices, and a dish
 // with a fruit at every accent. The piece's colours, quietened into his.
+// It is painted as the piece plays: each band with its passage, as wide as the passage is long, brushed down the wall,
+// its dots and stripes coming as the notes do; then the table and its leg drawn, the cloth striped stroke by stroke,
+// the dish; the guitar drawn through the loudest passage (once the table stands), outline, halves, neck, a fret at a time, the hole, a string per voice; the
+// mandolin in the next passage; a fruit at every accent.
 // ═══════════════════════════════════════════════════════════════════════════
 function _pxShape(ctx,P,fill,ink,lw){ _pxPoly(ctx,P); ctx.fillStyle=_pxCss(fill); ctx.fill(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.lineJoin='round'; ctx.stroke(); }
 function _pxBody(cx,cy,w,h,pear){ const P=[]; const N=48; for(let k=0;k<N;k++){ const t=k/N*6.2832; const y=Math.sin(t); const waist= pear ? (0.55+0.45*(y+1)/2) : (1-0.28*Math.exp(-Math.pow(y+0.15,2)/0.06)); const xs= pear ? Math.cos(t)*(0.45+0.55*(y+1)/2) : Math.cos(t)*waist*(y<0?0.82:1); P.push([cx+xs*w/2, cy+y*h/2]); } return P; }
 function picassoStillLife(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
   const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const isAcc=_mtAccOf(A); const ink=[22,20,20], lw=Math.max(2.5,D*0.009), white=[240,234,220];
-  const quiet=(c)=>isBW?_pxGrey(c):_pxMix(c,[176,156,126],0.45); const G=_kd2Phrases(A,7); const col=(i)=>{ const q=G[Math.min(G.length-1,i)]||{a:0,b:1}; return quiet(_pxCol(chords,Math.floor((q.a+q.b)/2),gc,isBW)); };
-  const Ops=_mtOps(); const tilt=(X.trend-0.5)*0.25; let ci=0; G.forEach((q,i)=>{ if(q.vmax>G[ci].vmax) ci=i; });
-  // the wall: upright bands, a passage each
-  const nb=4; let x=0; for(let k=0;k<nb;k++){ const w=CW*(k===nb-1?1:(0.18+0.12*((k*0.618+ss*0.001)%1))); const x0=x, x1=k===nb-1?CW:Math.min(CW,x+w); x=x1; const q=G[k]||G[0]; const c=k===2?[34,30,30]:col(k);
-    Ops.at(0, ()=>{ ctx.fillStyle=_pxCss(c); ctx.fillRect(x0,0,x1-x0,CH); if(k===1){ ctx.fillStyle=_pxCss(_pxMix(c,white,0.55)); const st=D*0.045; for(let yy=st/2;yy<CH;yy+=st) for(let xx=x0+st/2+((yy/st|0)%2)*st/2;xx<x1;xx+=st){ ctx.beginPath(); ctx.arc(xx,yy,st*0.13,0,6.28); ctx.fill(); } } if(k===3){ ctx.fillStyle=_pxCss(_pxMix(c,ink,0.25)); const st=D*0.05; for(let xx=x0;xx<x1;xx+=st*2) ctx.fillRect(xx,0,st,CH); } ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(x1,0); ctx.lineTo(x1,CH); ctx.stroke(); }); }
-  // the table tipped up, its cloth hanging in stripes, one curved leg
+  const tone=(c)=>isBW?_pxGrey(c):_pxMix(c,[176,156,126],0.45);   // the piece's colours, quietened into his (as before)
+  const G=_kd2Phrases(A,7); const n=G.length; const col=(i)=>{ const q=G[Math.min(n-1,i)]||{a:0,b:1}; return tone(_pxCol(chords,Math.floor((q.a+q.b)/2),gc,isBW)); };
+  const prog=(q,min)=>Math.max(0,Math.min(1,(reveal-q.t0)/Math.max(min||1e-6,q.t1-q.t0))); const Q=(i)=>G[Math.min(n-1,i)];
+  const tilt=(X.trend-0.5)*0.25; let ci=0; G.forEach((q,i)=>{ if(q.vmax>G[ci].vmax) ci=i; });
+  const ground=_pxMix(col(0),[236,228,212],0.72); ctx.fillStyle=_pxCss(ground); ctx.fillRect(0,0,CW,CH);
+  // the wall: upright bands, a passage each, as wide as it is long, brushed down the wall as it plays
+  const nb=Math.min(4,n), tot=G.slice(0,nb).reduce((s,q)=>s+q.n,0)||1; let x=0;
+  for(let k=0;k<nb;k++){ const q=G[k]; const w=k===nb-1?CW-x:CW*Math.max(0.14,Math.min(0.42,q.n/tot)); const x0=x, x1=Math.min(CW,x+w); x=x1; if(q.t0>reveal) continue;
+    const f=prog(q,0.04), c=k===2?[34,30,30]:col(k), hgt=CH*Math.min(1,f*1.6);
+    ctx.fillStyle=_pxCss(c); ctx.fillRect(x0,0,x1-x0,hgt);
+    if(k===1){ ctx.fillStyle=_pxCss(_pxMix(c,white,0.55)); const st=D*0.045; for(let yy=st/2;yy<hgt;yy+=st) for(let xx=x0+st/2+((yy/st|0)%2)*st/2;xx<x1;xx+=st){ ctx.beginPath(); ctx.arc(xx,yy,st*0.13,0,6.28); ctx.fill(); } }
+    if(k===3){ ctx.fillStyle=_pxCss(_pxMix(c,ink,0.25)); const st=D*0.05, ns=Math.ceil((x1-x0)/(st*2)), shown=Math.ceil(ns*f); for(let j=0;j<shown;j++) ctx.fillRect(x0+j*st*2,0,st,hgt); }
+    if(k<nb-1){ ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; _pxDraw(ctx,[[x1,0],[x1,CH]],f*1.4); } }
+  // the table tipped up, its leg, its cloth striped stroke by stroke
   const ty=CH*0.5, tw=CW*0.86, tx=CW*0.07; const top=[[tx+CW*0.05,ty-CH*0.06+tilt*CH*0.1],[tx+tw,ty-CH*0.1-tilt*CH*0.1],[tx+tw-CW*0.02,ty+CH*0.16],[tx,ty+CH*0.2]];
-  Ops.at(0, ()=>{ ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*1.6; ctx.beginPath(); ctx.moveTo(CW*0.5,ty+CH*0.3); ctx.bezierCurveTo(CW*0.42,CH*0.8,CW*0.62,CH*0.85,CW*0.5,CH); ctx.stroke();
-    _pxShape(ctx,top,col(4),ink,lw); const cloth=[[tx,ty+CH*0.2],[tx+tw-CW*0.02,ty+CH*0.16],[tx+tw-CW*0.06,ty+CH*0.36],[tx+tw*0.55,ty+CH*0.32],[tx+tw*0.3,ty+CH*0.4],[tx+CW*0.02,ty+CH*0.34]];
-    ctx.save(); _pxPoly(ctx,cloth); ctx.fillStyle=_pxCss(white); ctx.fill(); ctx.clip(); ctx.strokeStyle=_pxCss(col(5)); ctx.lineWidth=D*0.022; for(let xx=0;xx<CW*1.5;xx+=D*0.05){ ctx.beginPath(); ctx.moveTo(xx,ty); ctx.lineTo(xx-CH*0.2,ty+CH*0.45); ctx.stroke(); } ctx.restore(); _pxPoly(ctx,cloth); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.stroke(); });
-  // the guitar: two halves of flat colour, the black line, the hole, the neck, the strings
+  const cloth=[[tx,ty+CH*0.2],[tx+tw-CW*0.02,ty+CH*0.16],[tx+tw-CW*0.06,ty+CH*0.36],[tx+tw*0.55,ty+CH*0.32],[tx+tw*0.3,ty+CH*0.4],[tx+CW*0.02,ty+CH*0.34]];
+  const qt=Q(Math.min(2,n-1)); if(qt.t0<=reveal){ const f=prog(qt,0.06);
+    ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*1.6; ctx.lineCap='round'; const leg=[]; _matBez([CW*0.5,ty+CH*0.3],[CW*0.42,CH*0.8],[CW*0.62,CH*0.85],[CW*0.5,CH],16,leg); _pxDraw(ctx,[[CW*0.5,ty+CH*0.3]].concat(leg),(f-0.4)*2.5);
+    if(f>0.25){ ctx.save(); ctx.globalAlpha=Math.min(1,(f-0.25)*4); _pxPoly(ctx,top); ctx.fillStyle=_pxCss(col(4)); ctx.fill(); ctx.restore(); }
+    ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.lineJoin='round'; _pxDraw(ctx,top.concat([top[0]]),f*2); }
+  const qc=Q(Math.min(3,n-1)); if(qc.t0<=reveal){ const f=prog(qc,0.06); ctx.save(); _pxPoly(ctx,cloth); ctx.fillStyle=_pxCss(white); ctx.fill(); ctx.clip(); ctx.strokeStyle=_pxCss(col(5)); ctx.lineWidth=D*0.022;
+    const sts=[]; for(let xx=0;xx<CW*1.5;xx+=D*0.05) sts.push(xx); const shown=Math.ceil(sts.length*f); for(let j=0;j<shown;j++){ ctx.beginPath(); ctx.moveTo(sts[j],ty); ctx.lineTo(sts[j]-CH*0.2,ty+CH*0.45); ctx.stroke(); } ctx.restore();
+    ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; _pxDraw(ctx,cloth.concat([cloth[0]]),f*2.5); }
+  // the guitar, drawn through the loudest passage: the paper behind it, the halves, the neck, a fret at a time, the hole, the strings
   const gx=CW*(0.42+tilt*0.3), gy=ty-CH*0.02, gw=D*0.36, gh=CH*0.32, gcol=col(ci), gdark=_pxMix(gcol,ink,0.45), ns=Math.max(4,Math.min(6,Math.round(X.poly)+3));
-  const guitar=()=>{ const pl=[[gx-gw*0.32,gy-gh*1.0],[gx+gw*0.18,gy-gh*1.05],[gx+gw*0.26,gy+gh*0.55],[gx-gw*0.24,gy+gh*0.6]]; _pxShape(ctx,pl,white,ink,lw*0.8);
-    const sh=gh*0.07; for(const [side,dy,c] of [[-1,-sh,gcol],[1,sh,gdark]]){ const body=_pxBody(gx+side*gw*0.02,gy+dy,gw,gh,false); ctx.save(); ctx.beginPath(); ctx.rect(side<0?gx-gw:gx,gy-gh*2,gw,gh*4); ctx.clip(); _pxPoly(ctx,body); ctx.fillStyle=_pxCss(c); ctx.fill(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.stroke(); ctx.restore(); }
-    ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(gx,gy-gh*0.6); ctx.lineTo(gx,gy+gh*0.6); ctx.stroke();
-    const nk=[[gx-gw*0.07,gy-gh*0.45],[gx+gw*0.07,gy-gh*0.45],[gx+gw*0.06,gy-gh*1.25],[gx-gw*0.06,gy-gh*1.25]]; _pxShape(ctx,nk,_pxMix(gcol,white,0.3),ink,lw*0.8); ctx.lineWidth=lw*0.5; for(let k=1;k<7;k++){ const yy=gy-gh*0.45-gh*0.8*k/7; ctx.beginPath(); ctx.moveTo(gx-gw*0.065,yy); ctx.lineTo(gx+gw*0.065,yy); ctx.stroke(); }
-    ctx.fillStyle=_pxCss(ink); ctx.beginPath(); ctx.arc(gx,gy-gh*0.02,gw*0.12,0,6.28); ctx.fill(); ctx.strokeStyle=_pxCss(white); ctx.lineWidth=Math.max(1,lw*0.35); for(let k=0;k<ns;k++){ const sx=gx-gw*0.045+gw*0.09*k/(ns-1); ctx.beginPath(); ctx.moveTo(sx,gy-gh*1.22); ctx.lineTo(sx,gy+gh*0.3); ctx.stroke(); } ctx.fillStyle=_pxCss(ink); ctx.fillRect(gx-gw*0.12,gy+gh*0.28,gw*0.24,gh*0.05); };
-  const mand=()=>{ const mx=gx+gw*0.55, my=gy+gh*0.08, mc=col((ci+3)%7); const body=_pxBody(mx,my,gw*0.6,gh*0.7,true); ctx.save(); _pxPoly(ctx,body); ctx.fillStyle=_pxCss(mc); ctx.fill(); ctx.clip(); ctx.fillStyle=_pxCss(_pxMix(mc,white,0.45)); ctx.fillRect(mx-gw,my-gh,gw,gh*2); ctx.restore(); _pxPoly(ctx,body); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.stroke(); ctx.fillStyle=_pxCss(ink); ctx.beginPath(); ctx.arc(mx,my+gh*0.08,gw*0.06,0,6.28); ctx.fill(); };
-  // the dish and its fruit
-  const dx=CW*(0.78-tilt*0.2), dy=ty+CH*0.08; const dish=()=>{ const P=[]; for(let k=0;k<=20;k++){ const a=Math.PI*k/20; P.push([dx+Math.cos(a)*D*0.13,dy+Math.sin(a)*D*0.05]); } _pxShape(ctx,P,white,ink,lw); };
-  Ops.at(G[ci]?G[ci].t0:0.2, guitar); if(X.poly>=2.2) Ops.at(G[(ci+1)%G.length]?G[(ci+1)%G.length].t0:0.4, mand); Ops.at(0.3, dish);
-  const fr=_kd2Events(A,40).filter(isAcc).slice(0,5); (fr.length?fr:_kd2Events(A,3)).forEach((e,i)=>{ const fx=dx+(i-2)*D*0.045, fy=dy-D*0.03-(i%2)*D*0.02; Ops.at(Math.max(0.31,e.i/cn), ()=>{ ctx.fillStyle=_pxCss(quiet(_pxCol(chords,e.i,gc,isBW))); ctx.beginPath(); ctx.arc(fx,fy,D*0.03,0,6.28); ctx.fill(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*0.8; ctx.stroke(); }); });
-  Ops.run(reveal); _pxCanvas(ctx,CW,CH,ss,0.035); try{ globalThis.__PC_LISTEN={v:'still2',mand:X.poly>=2.2}; }catch(_){} _setCurE(0.5);
+  const gq=G[ci]; var gt0=Math.max(gq.t0,qt.t0+0.02); if(gt0<=reveal){ const f=Math.max(0,Math.min(1,(reveal-gt0)/Math.max(0.22,gq.t1-gq.t0)));
+    const pl=[[gx-gw*0.32,gy-gh*1.0],[gx+gw*0.18,gy-gh*1.05],[gx+gw*0.26,gy+gh*0.55],[gx-gw*0.24,gy+gh*0.6]];
+    ctx.save(); ctx.globalAlpha=Math.min(1,f*5); _pxPoly(ctx,pl); ctx.fillStyle=_pxCss(white); ctx.fill(); ctx.restore(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*0.8; _pxDraw(ctx,pl.concat([pl[0]]),f*5);
+    const sh=gh*0.07; [[-1,-sh,gcol,0.1],[1,sh,gdark,0.22]].forEach(([side,dy,c,t0])=>{ const ff=(f-t0)*4; if(ff<=0) return; const body=_pxBody(gx+side*gw*0.02,gy+dy,gw,gh,false);
+      ctx.save(); ctx.beginPath(); ctx.rect(side<0?gx-gw:gx,gy-gh*2,gw,gh*4); ctx.clip(); if(ff>0.5){ ctx.save(); ctx.globalAlpha=Math.min(1,(ff-0.5)*2); _pxPoly(ctx,body); ctx.fillStyle=_pxCss(c); ctx.fill(); ctx.restore(); }
+      ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; _pxDraw(ctx,body.concat([body[0]]),ff); ctx.restore(); });
+    ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; _pxDraw(ctx,[[gx,gy-gh*0.6],[gx,gy+gh*0.6]],(f-0.45)*6);
+    if(f>0.5){ const nk=[[gx-gw*0.07,gy-gh*0.45],[gx+gw*0.07,gy-gh*0.45],[gx+gw*0.06,gy-gh*1.25],[gx-gw*0.06,gy-gh*1.25]]; ctx.save(); ctx.globalAlpha=Math.min(1,(f-0.5)*8); _pxShape(ctx,nk,_pxMix(gcol,white,0.3),ink,lw*0.8); ctx.restore();
+      ctx.lineWidth=lw*0.5; for(let k=1;k<7;k++){ if(f<0.55+k*0.025) break; const yy=gy-gh*0.45-gh*0.8*k/7; ctx.beginPath(); ctx.moveTo(gx-gw*0.065,yy); ctx.lineTo(gx+gw*0.065,yy); ctx.stroke(); } }
+    if(f>0.72){ ctx.fillStyle=_pxCss(ink); ctx.beginPath(); ctx.arc(gx,gy-gh*0.02,gw*0.12*Math.min(1,(f-0.72)*8),0,6.28); ctx.fill(); }
+    ctx.strokeStyle=_pxCss(white); ctx.lineWidth=Math.max(1,lw*0.35); for(let k=0;k<ns;k++){ const sx=gx-gw*0.045+gw*0.09*k/(ns-1); _pxDraw(ctx,[[sx,gy-gh*1.22],[sx,gy+gh*0.3]],(f-0.78-k*0.03)*8); }
+    if(f>0.95){ ctx.fillStyle=_pxCss(ink); ctx.fillRect(gx-gw*0.12,gy+gh*0.28,gw*0.24,gh*0.05); } }
+  // the mandolin, in the passage after it, when the piece has more voices
+  if(X.poly>=2.2){ const mq=G[(ci+1)%n], mt0=Math.max(mq.t0,gt0+0.08); if(mt0<=reveal){ const f=Math.max(0,Math.min(1,(reveal-mt0)/Math.max(0.15,mq.t1-mq.t0))); const mx=gx+gw*0.55, my=gy+gh*0.08, mc=col((ci+3)%7); const body=_pxBody(mx,my,gw*0.6,gh*0.7,true);
+    if(f>0.35){ ctx.save(); ctx.globalAlpha=Math.min(1,(f-0.35)*3); _pxPoly(ctx,body); ctx.fillStyle=_pxCss(mc); ctx.fill(); ctx.clip(); ctx.fillStyle=_pxCss(_pxMix(mc,white,0.45)); ctx.fillRect(mx-gw,my-gh,gw,gh*2); ctx.restore(); }
+    ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; _pxDraw(ctx,body.concat([body[0]]),f*1.6); if(f>0.8){ ctx.fillStyle=_pxCss(ink); ctx.beginPath(); ctx.arc(mx,my+gh*0.08,gw*0.06,0,6.28); ctx.fill(); } } }
+  // the dish, and a fruit at every accent
+  const dx=CW*(0.78-tilt*0.2), dy=ty+CH*0.08; const dq=Q(Math.min(4,n-1)); if(dq.t0<=reveal){ const f=prog(dq,0.05); const P=[]; for(let k=0;k<=20;k++){ const a=Math.PI*k/20; P.push([dx+Math.cos(a)*D*0.13,dy+Math.sin(a)*D*0.05]); }
+    if(f>0.5){ ctx.save(); ctx.globalAlpha=Math.min(1,(f-0.5)*4); _pxPoly(ctx,P); ctx.fillStyle=_pxCss(white); ctx.fill(); ctx.restore(); } ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; _pxDraw(ctx,P.concat([P[0]]),f*2); }
+  const fr=_kd2Events(A,40).filter(isAcc).slice(0,5); (fr.length?fr:_kd2Events(A,3)).forEach((e,i)=>{ const t=Math.max(dq.t0+0.6*Math.max(0.05,dq.t1-dq.t0),e.i/cn); if(t>reveal) return; const fx=dx+(i-2)*D*0.045, fy=dy-D*0.03-(i%2)*D*0.02, gr=Math.min(1,(reveal-t)*cn/6+0.35);
+    ctx.fillStyle=_pxCss(tone(_pxCol(chords,e.i,gc,isBW))); ctx.beginPath(); ctx.arc(fx,fy,D*0.03*gr,0,6.28); ctx.fill(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*0.8; ctx.stroke(); });
+  _pxCanvas(ctx,CW,CH,ss,0.035); try{ globalThis.__PC_LISTEN={v:'still3',mand:X.poly>=2.2}; }catch(_){} _setCurE(0.5);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
