@@ -5935,6 +5935,117 @@ function picassoListen2(ctx,CW,CH,chords,lim,gc,ss,mode){ const A=_kd2Analyze(ch
   if(p==='blue') picassoBlue(ctx,CW,CH,chords,lim,gc,ss,mode); else if(p==='analytic') picassoAnalytic(ctx,CW,CH,chords,lim,gc,ss,mode); else if(p==='guitar') picassoGuitar(ctx,CW,CH,chords,lim,gc,ss,mode); else picassoStillLife(ctx,CW,CH,chords,lim,gc,ss,mode);
   try{ globalThis.__PC_LISTEN=Object.assign({},globalThis.__PC_LISTEN||{},{listen:p}); }catch(_){} }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO LISTENS — the piece as a cubist picture of its own: not one of his paintings, his way of seeing.
+//   the period    the palette: a slow minor piece the blue period, a slow major one the rose, a dense even one analytic
+//                 cubism, otherwise the bright planes of synthetic cubism. The period never replaces the piece's colours:
+//                 every hue is the chord's own, the period only quietens it (blue and rose pull it at most half way to
+//                 their hue), the more the slower the piece; and the loudest passages keep their full colour
+//   the form      one cubist form round his guitar, narrow at the top and broad at the foot: the passages lay their
+//                 planes in it from its heart outward, each on the golden angle from the one before (the later, the
+//                 further out), higher passages higher; the loudest passage lays the largest plane, in its full colour;
+//                 the sections of the piece lay the large quiet planes of the space round the form
+//   the planes    a passage is a plane with its facets: upright, leaning as its melody goes, as large as it is loud,
+//                 longer the longer it holds, a smaller facet in its shade beside it and, for a singing passage, a curved
+//                 one; lit on one side and shadowed on the other (strongly in analytic, flat in synthetic, where an even
+//                 passage is patterned with dots or stripes)
+//   the motifs    in his black line: the guitar in the middle of the body, split and shifted, its strings for the voices;
+//                 then one for a passage that has a character: a running one a stave with
+//                 its own notes; a leaping one the glass; an even one a pasted paper, newsprint or false wood
+//   the accents   small black planes at the passage's edge, and the scaffolding of long lines through the loud ones
+// It draws itself: the lines run out as their passages play, the motifs are drawn stroke by stroke, the bars at their
+// accents; nothing appears all at once.
+// ═══════════════════════════════════════════════════════════════════════════
+function _pxHsl(c){ const r=c[0]/255,g=c[1]/255,b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2, d=mx-mn; let h=0,s=0;
+  if(d>1e-6){ s=d/(1-Math.abs(2*l-1)); h= mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; h*=60; if(h<0) h+=360; } return [h,Math.min(1,s),l]; }
+function _pxRgbH(h,s,l){ const C=(1-Math.abs(2*l-1))*s, X=C*(1-Math.abs((h/60)%2-1)), m=l-C/2; let r=0,g=0,b=0;
+  if(h<60){ r=C; g=X; } else if(h<120){ r=X; g=C; } else if(h<180){ g=C; b=X; } else if(h<240){ g=X; b=C; } else if(h<300){ r=X; b=C; } else { r=C; b=X; } return [(r+m)*255,(g+m)*255,(b+m)*255]; }
+// a line drawn as far as it has got: a polyline up to a fraction of its length
+function _pxDraw(ctx,P,f){ if(f<=0||P.length<2) return; let L=0; for(let i=1;i<P.length;i++) L+=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]); let w=L*Math.min(1,f);
+  ctx.beginPath(); ctx.moveTo(P[0][0],P[0][1]); for(let i=1;i<P.length;i++){ const d=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]); if(w>=d){ ctx.lineTo(P[i][0],P[i][1]); w-=d; } else { const u=d?w/d:0; ctx.lineTo(P[i-1][0]+(P[i][0]-P[i-1][0])*u,P[i-1][1]+(P[i][1]-P[i-1][1])*u); break; } } ctx.stroke(); }
+const _pxArcP=(cx,cy,rx,ry,a0,a1,n)=>{ const P=[]; for(let k=0;k<=n;k++){ const a=a0+(a1-a0)*k/n; P.push([cx+Math.cos(a)*rx,cy+Math.sin(a)*ry]); } return P; };
+function picassoListen3(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), dens=A.ch?A.ch.density:0.3, isAcc=_mtAccOf(A);
+  let live=false; try{ live=!!globalThis.__PAINT_LIVE; }catch(_){}
+  let per=(!X.major && X.pace<0.5) ? 'blue' : (X.major && X.pace<0.42) ? 'rose' : (dens>0.32 && X.regular>0.6) ? 'analytic' : 'synthetic';
+  if(live && per==='blue') per='analytic';   // played live the blue period never comes (Compose, the Mic)
+  const PP={blue:{h:218,s:0.5,l:0.42,sh:0.36},rose:{h:350,s:0.55,l:0.66,sh:0.28},analytic:{h:null,s:0.3,l:0.5,sh:0.5},synthetic:{h:null,s:0.72,l:0.54,sh:0.14}}[per];
+  const grip= per==='synthetic' ? 0.35+0.2*(1-X.pace) : per==='analytic' ? 0.72 : 0.45+0.4*(1-X.pace);
+  const tone=(c,full)=>{ if(isBW) return _pxGrey(c); if(full) return c; let [h,s,l]=_pxHsl(c); if(PP.h!=null){ const d=((PP.h-h)%360+540)%360-180; h=(h+d*0.5*grip+360)%360; }
+    s=s*(1-grip)+Math.min(s,PP.s)*grip; l=l*(1-0.6*grip)+PP.l*0.6*grip; return _pxRgbH(h,Math.max(0,Math.min(1,s)),Math.max(0.1,Math.min(0.9,l))); };
+  const ink=[24,20,20], lw=Math.max(1.6,D*0.0055), white=[244,238,224];
+  const G=_kd2Phrases(A,Math.max(10,Math.min(18,Math.round(10+8*dens+3*X.pace)))); const n=G.length; const H=G.map(q=>_mtHearSpan(A,q.a,q.b));
+  const byLoud=G.map((q,i)=>i).sort((a,b)=>(H[b].vmax-H[a].vmax)||a-b); const full=new Set(byLoud.slice(0,Math.max(1,Math.round(n*0.15)))); const headI=byLoud[0];
+  const vmed=H.map(h=>h.vmax).sort((a,b)=>a-b)[n>>1]||0.6; const prog=(q,sp)=>Math.max(0,Math.min(1,(reveal-q.t0)/Math.max(1e-6,(q.t1-q.t0)*(sp||1))));
+  const ground=_pxMix(tone(_pxCol(chords,0,gc,isBW)),[238,230,214],per==='blue'?0.35:0.66); ctx.fillStyle=_pxCss(ground); ctx.fillRect(0,0,CW,CH); _pxWash(ctx,CW,CH,ground,ss,8,0.06);
+  // the space: large quiet planes, one per section of the piece, as the sections come
+  const S=Math.max(5,Math.min(8,Math.round(n/2))); for(let k=0;k<S;k++){ const t0=k/S; if(t0>reveal) break; const r=_pxR(71000+k,ss); const c=_pxMix(ground,tone(_pxCol(chords,Math.floor((k+0.5)*cn/S),gc,isBW)),per==='blue'?0.4:0.3);
+    const x=CW*((k+0.5)/S)+(r()-.5)*CW*0.1, w=CW*(0.28+0.2*r()), y0=-CH*0.05+r()*CH*0.3, y1=CH*(0.7+0.35*r()), sk=(r()-.5)*CW*0.25;
+    ctx.save(); ctx.globalAlpha=0.55+0.4*Math.min(1,(reveal-t0)*S*2); _pxPoly(ctx,[[x-w/2+sk,y0],[x+w/2+sk,y0+(r()-.5)*CH*0.1],[x+w/2-sk,y1],[x-w/2-sk,y1-(r()-.5)*CH*0.1]]); ctx.fillStyle=_pxCss(c); ctx.fill(); ctx.restore();
+    ctx.strokeStyle=_pxCss(ink,0.18); ctx.lineWidth=Math.max(0.6,D*0.002); ctx.stroke(); }
+  // the figure: head, shoulders, body widening to the foot
+  const cx=CW*0.5+(X.trend-0.5)*CW*0.06, by0=CH*0.12, by1=CH*0.9; const half=(y)=>CW*(0.16+0.26*(y-by0)/(by1-by0));
+  const bcx=cx, bcy=(by0+by1)/2;
+  const L=G.map((q,i)=>{ const h=H[i], r=_pxR(71100+i,ss); const rad=Math.sqrt((i+0.6)/(n+0.6)), th=i*2.39996+ss*0.0007;
+    let y=bcy+Math.sin(th)*(by1-by0)*0.5*rad+(0.5-h.reg)*CH*0.1; y=Math.max(by0,Math.min(by1,y)); const x=bcx+Math.cos(th)*half(y)*rad;
+    const w=D*(0.12+0.1*Math.min(1,h.vmax||0.6))*(n<12?1.15:1)*(i===headI?1.45:1), hh=w*(1.2+0.5*Math.min(1.6,h.dur));
+    const a=Math.max(-0.5,Math.min(0.5,h.dir*0.22))+(r()-.5)*0.25; const sk=(r()-.5)*0.45, tri=r()<0.25;
+    const ca=Math.cos(a), sa=Math.sin(a), Tq=(P)=>P.map(([u,v])=>[x+u*ca-v*sa,y+u*sa+v*ca]);
+    const Q=Tq(tri?[[-w*0.1+sk*w*0.3,-hh/2],[w/2,hh/2],[-w/2-sk*w*0.3,hh/2]]:[[-w/2+sk*w*0.3,-hh/2],[w/2+sk*w*0.3,-hh/2+sk*hh*0.15],[w/2-sk*w*0.3,hh/2],[-w/2-sk*w*0.3,hh/2]]);
+    const side=r()<0.5?-1:1, fw=w*(0.35+0.25*r()), F=Tq([[side*w/2,-hh*0.3],[side*(w/2+fw),-hh*(0.05+0.2*r())],[side*w/2,hh*(0.2+0.25*r())]]);
+    const C=h.dur>1 ? Tq(_pxArcP(-side*w*0.5,0,w*0.42,hh*0.32,side>0?Math.PI/2:-Math.PI/2,side>0?Math.PI*1.5:Math.PI/2,14)) : null;
+    const col=tone(_pxCol(chords,Math.floor((q.a+q.b)/2),gc,isBW),full.has(i)), col2=tone(_pxCol(chords,q.a+Math.floor((q.b-q.a)*0.25),gc,isBW),full.has(i)), col3=tone(_pxCol(chords,q.a+Math.floor((q.b-q.a)*0.75),gc,isBW),full.has(i));
+    return {x,y,a,w,hh,Q,F,C,q,h,i,r,col,col2,col3}; });
+  // the planes and their facets, lit on one side and shadowed on the other
+  const plane=(P,col,col2,a,x,y,R,r,pat)=>{ ctx.save(); _pxPoly(ctx,P); const nx=Math.cos(a), ny=Math.sin(a); const cut=0.3+0.4*r(), whole=r()<0.35;
+    const gr=ctx.createLinearGradient(x-nx*R,y-ny*R,x+nx*R,y+ny*R); gr.addColorStop(0,_pxCss(_pxMix(col,white,PP.sh*0.7))); gr.addColorStop(cut,_pxCss(col)); if(!whole){ gr.addColorStop(cut+0.0001,_pxCss(_pxMix(col2,ink,PP.sh*0.45))); gr.addColorStop(1,_pxCss(_pxMix(col2,ink,PP.sh*0.85))); } else gr.addColorStop(1,_pxCss(_pxMix(col,ink,PP.sh*0.8)));
+    ctx.globalAlpha=per==='analytic'?0.9:1; ctx.fillStyle=per==='synthetic'&&!whole?_pxCss(col):gr; ctx.fill(); ctx.clip(); ctx.globalAlpha=1;
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const p of P){ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); }
+    if(pat==='dots'){ ctx.fillStyle=_pxCss(_pxMix(col,white,0.55),0.85); const st=D*0.026; for(let yy=y0;yy<y1;yy+=st) for(let xx=x0+((yy/st|0)%2)*st/2;xx<x1;xx+=st){ ctx.beginPath(); ctx.arc(xx,yy,st*0.17,0,6.28); ctx.fill(); } }
+    else if(pat==='stripes'){ ctx.strokeStyle=_pxCss(_pxMix(col,ink,0.3),0.7); ctx.lineWidth=D*0.007; for(let xx=x0-(y1-y0);xx<x1;xx+=D*0.024){ ctx.beginPath(); ctx.moveTo(xx,y1); ctx.lineTo(xx+(y1-y0),y0); ctx.stroke(); } }
+    else if(per!=='synthetic') _pxBrushIn(ctx,x0,y0,x1-x0,y1-y0,col,r,D,6,a+Math.PI/2,0.2);
+    ctx.restore(); ctx.strokeStyle=_pxCss(ink,per==='analytic'?0.45:0.85); ctx.lineWidth=lw*(per==='synthetic'?0.75:0.5); _pxPoly(ctx,P); ctx.stroke(); };
+  L.forEach(l=>{ if(l.q.t0>reveal) return; const f=prog(l.q); const even=l.h.leap<3.5 && l.h.dur<1.2; const pat=per==='synthetic'&&even ? (l.i%2?'stripes':'dots') : null;
+    plane(l.Q,l.col,l.col2,l.a,l.x,l.y,l.w*0.6,l.r,l.i===headI?(pat||'stripes'):pat); if(l.i===headI){ ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*1.5; _pxDraw(ctx,l.Q.concat([l.Q[0]]),f*1.3); }
+    if(f>0.3) plane(l.F,_pxMix(l.col3,ink,0.12),l.col3,l.a+0.8,l.x,l.y,l.w*0.5,l.r,null);
+    if(l.C && f>0.55) plane(l.C,_pxMix(l.col2,white,0.25),l.col2,l.a-0.6,l.x,l.y,l.w*0.5,l.r,null); });
+  // the motifs
+  const kinds={}; const motif=new Array(n).fill(null);
+  byLoud.forEach(i=>{ if(i===headI) return; const h=H[i]; const k= h.leap>6 ? 'glass' : h.dur<0.4 ? 'staff' : (h.leap<3 && X.regular>0.45) ? 'paper' : null; if(!k) return; if((kinds[k]||0)>=1) return; kinds[k]=1; motif[i]=k; });
+  L.forEach(l=>{ if(motif[l.i]!=='paper'||l.q.t0>reveal) return; const r=_pxR(71500+l.i,ss), w=D*0.18, h=D*0.12, a=l.a+(r()-.5)*0.4, px=l.x+l.w*0.3, py=l.y+l.hh*0.2, ca=Math.cos(a), sa=Math.sin(a);
+    const P=[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([u,v])=>[px+u*ca-v*sa,py+u*sa+v*ca]); _pxPaper(ctx,P,(l.i%2)?'news':'wood',null,null,r,D); });
+  // the scaffolding: a long line through every loud passage, running out as it plays
+  L.forEach(l=>{ if(l.q.t0>reveal || (l.h.vmax||0)<vmed) return; const f=prog(l.q), len=D*(0.45+0.45*Math.min(1,l.h.vmax||0.6)), ang=Math.PI/2+l.a*1.6, dx=Math.cos(ang)*len/2, dy=Math.sin(ang)*len/2;
+    ctx.strokeStyle=_pxCss(ink,per==='analytic'?0.5:0.7); ctx.lineWidth=lw*0.5; ctx.lineCap='round'; _pxDraw(ctx,[[l.x,l.y],[l.x+dx,l.y+dy]],f); _pxDraw(ctx,[[l.x,l.y],[l.x-dx,l.y-dy]],f); });
+  // the guitar, held in the middle of the body: it is drawn through the whole piece, a string for every voice
+  { const gq={t0:G[0].t0,t1:1}, f=Math.max(0,Math.min(1,reveal*1.15)), s=D*0.21, mx=cx+CW*0.02, my=CH*0.6, rot=-0.35+(X.trend-0.5)*0.3, ca=Math.cos(rot), sa=Math.sin(rot);
+    const T=(P)=>P.map(([u,v])=>[mx+(u*ca-v*sa)*s,my+(u*sa+v*ca)*s]); const gcol=tone(_pxCol(chords,Math.floor(cn*0.5),gc,isBW),true);
+    ctx.save(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*1.1; ctx.lineCap='round'; ctx.lineJoin='round';
+    const left=T(_pxArcP(0,-0.42,0.52,0.42,-Math.PI/2,-Math.PI*1.32,14).concat(_pxArcP(-0.08,0.02,0.16,0.14,-Math.PI*0.7,Math.PI*0.25,6)).concat(_pxArcP(0,0.45,0.78,0.56,-Math.PI*0.62,-Math.PI*1.5,18)));
+    const right=T(_pxArcP(0.18,-0.32,0.52,0.42,-Math.PI/2,Math.PI*0.35,14).concat(_pxArcP(0.18,0.55,0.78,0.56,-Math.PI*0.4,Math.PI/2,18)));
+    if(f>0.15){ ctx.save(); ctx.globalAlpha=Math.min(0.92,(f-0.15)*3); _pxPoly(ctx,T(_pxArcP(0.18,0.55,0.78,0.56,-Math.PI/2,Math.PI/2,18))); ctx.fillStyle=_pxCss(gcol); ctx.fill(); ctx.restore(); }
+    _pxDraw(ctx,left,f*2.2); _pxDraw(ctx,right,f*2.2-0.4);
+    if(f>0.3){ const [hx,hy2]=T([[0.08,0.02]])[0]; ctx.fillStyle=_pxCss(ink); ctx.beginPath(); ctx.arc(hx,hy2,s*0.19*Math.min(1,(f-0.3)*4),0,6.28); ctx.fill(); }
+    _pxDraw(ctx,T([[-0.03,-0.82],[-0.03,-1.9],[0.19,-1.9],[0.19,-0.82]]),(f-0.25)*2.5);
+    const ns=Math.max(3,Math.min(6,Math.round(X.poly)+2)); ctx.lineWidth=Math.max(0.8,lw*0.38); for(let j=0;j<ns;j++){ const u=0.16*j/(ns-1); _pxDraw(ctx,T([[u,-1.86],[u+(j-(ns-1)/2)*0.03,0.75]]),(f-0.4-j*0.06)*2.5); } ctx.restore(); }
+  L.forEach(l=>{ const k=motif[l.i]; if(!k||k==='paper'||l.q.t0>reveal) return; const f=prog(l.q,0.9), r=_pxR(71700+l.i,ss);
+    const s=D*0.12*(0.85+0.3*Math.min(1,l.h.vmax||0.6)); let mx=l.x, my=Math.max(by0+s,Math.min(CH-s*1.2,l.y)); const gxm=cx+CW*0.02; if(Math.abs(mx-gxm)<D*0.3 && my>CH*0.4) mx=gxm+(mx<gxm?-1:1)*D*0.3; mx=Math.max(s*1.2,Math.min(CW-s*1.2,mx)); const rot=l.a*0.8, ca=Math.cos(rot), sa=Math.sin(rot);   // beside the guitar, never over it
+    const T=(P)=>P.map(([u,v])=>[mx+(u*ca-v*sa)*s,my+(u*sa+v*ca)*s]); ctx.save(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; ctx.lineCap='round'; ctx.lineJoin='round';
+    if(k==='glass'){ const gcol=tone(_pxCol(chords,Math.floor((l.q.a+l.q.b)/2),gc,isBW),true); if(f>0.5){ ctx.save(); ctx.globalAlpha=Math.min(0.85,(f-0.5)*2); _pxPoly(ctx,T([[-0.38,-0.45],[0.38,-0.45],[0.2,-0.04],[0,0.03],[-0.2,-0.04]])); ctx.fillStyle=_pxCss(gcol); ctx.fill(); ctx.restore(); }
+      _pxDraw(ctx,T([[-0.42,-0.7],[-0.38,-0.3],[-0.2,-0.02],[0,0.05],[0.2,-0.02],[0.38,-0.3],[0.42,-0.7]]),f*1.5); _pxDraw(ctx,T(_pxArcP(0,-0.7,0.42,0.12,0,Math.PI*2,24)),f*1.5-0.4);
+      _pxDraw(ctx,T([[0,0.05],[0,0.62]]),(f-0.6)*3); _pxDraw(ctx,T(_pxArcP(0,0.66,0.3,0.07,0,Math.PI*2,20)),(f-0.75)*4); }
+    else if(k==='staff'){ const st=0.11; for(let j=0;j<5;j++) _pxDraw(ctx,T([[-1.1,-0.22+j*st],[1.1,-0.22+j*st]]),f*1.4-j*0.05); ctx.fillStyle=_pxCss(ink);
+      const N=Math.min(9,l.q.b-l.q.a); for(let j=0;j<N;j++){ const ei=l.q.a+Math.floor((l.q.b-l.q.a)*j/N), e=A.ev[ei]; if(!e||ei/cn>reveal) continue; const u=-0.95+1.9*(j+0.5)/N, v=0.22-(((e.top-60)%14+14)%14)*st*0.5; const [px,py]=T([[u,v]])[0]; ctx.beginPath(); ctx.ellipse(px,py,s*0.07,s*0.05,-0.4+rot,0,6.28); ctx.fill(); _pxDraw(ctx,[[px+s*0.065,py],[px+s*0.065,py-s*0.32]],1); } }
+    ctx.restore(); });
+  // the accents: small black planes at the edge of the loud passages' planes
+  let nb=0; const nbMax=Math.min(5,2+Math.round(n/6)); L.filter(l=>(l.h.vmax||0)>=vmed).forEach(l=>{ let last=-1e9; for(let e=l.q.a;e<l.q.b && nb<nbMax;e++){ const ev=A.ev[e]; if(!ev||!isAcc(ev)||e/cn>reveal||e-last<(l.q.b-l.q.a)) continue; last=e; nb++;
+    const r=_pxR(71900+e,ss), side=(e%2)?1:-1, bx=l.x+Math.cos(l.a)*side*l.w*0.5, by=l.y+Math.sin(l.a)*side*l.w*0.5+(r()-.5)*l.hh*0.6, bw=D*(0.03+0.02*ev.v), bh=bw*(1.6+r()), ba=l.a+(r()-.5)*0.3, ca=Math.cos(ba), sa=Math.sin(ba);
+    _pxPoly(ctx,[[-bw/2,-bh/2],[bw/2,-bh/2+bw*(r()-.5)],[bw/2*(0.4+0.6*r()),bh/2],[-bw/2,bh/2*(0.5+0.5*r())]].map(([u,v])=>[bx+u*ca-v*sa,by+u*sa+v*ca])); ctx.fillStyle=_pxCss(ink); ctx.fill(); } });
+  _pxCanvas(ctx,CW,CH,ss,0.035);
+  try{ globalThis.__PC_LISTEN={v:'listen3',per,grip,planes:n,motifs:motif.filter(Boolean)}; }catch(_){} _setCurE(0.5);
+}
+
 function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
@@ -5942,12 +6053,13 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // 3 Three Musicians · 4 Guernica · 5 The Old Guitarist · 6 Les Demoiselles — the
   // paintings on the facet engine below (_pc2Paint). Free: 0 and 1. The Next
   // button cycles phaseIndex; _capN caps it on Free.
-  // VARIANT (chosen by vote): 0 Picasso listens (picassoListen2: the blue period, analytic cubism, the papier collé guitar or
-  // the still life with the guitar, as the piece asks) · 1 Light line · 2 The Old Guitarist · 3 Les Demoiselles · 4 Analytic
+  // VARIANT (chosen by vote): 0 Picasso listens (picassoListen3: the piece's own cubist picture, round his guitar, in the
+  // period its music asks for) · 1 Light line · 2 The Old Guitarist · 3 Les Demoiselles · 4 Analytic
   // cubism · 5 The Guitar (papier collé) · 6 Three Musicians · 7 Still life with guitar. Retired (code kept): the first
-  // Listens, Weeping Woman, the first Guitar, Guernica.
+  // Listens, the second (picassoListen2, which chose among the paintings, with the living blue period picassoBlue),
+  // Weeping Woman, the first Guitar, Guernica.
   const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick===0) return picassoListen2(ctx,CW,CH,chords,lim,gc,ss,mode);
+  if(pick===0) return picassoListen3(ctx,CW,CH,chords,lim,gc,ss,mode);
   if(pick===4) return picassoAnalytic(ctx,CW,CH,chords,lim,gc,ss,mode);
   if(pick===5) return picassoGuitar(ctx,CW,CH,chords,lim,gc,ss,mode);
   if(pick===7) return picassoStillLife(ctx,CW,CH,chords,lim,gc,ss,mode);
