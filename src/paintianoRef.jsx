@@ -8020,45 +8020,77 @@ function stellaPhaseProtractor(ctx,CW,CH,chords,lim,gc,ss,mode){
   if(yB>yT){ const h=yB-yT; for(let i=0;i<vis;i++){ const j=(i%2===0&&i+1<vis)?i+1:(i%2===1?i-1:i); const r0=R*edges[i]+gap, r1=R*edges[i+1]-gap, q0=R*edges[j]+gap, q1=R*edges[j+1]-gap; if(r1<=r0||q1<=q0) continue; ctx.fillStyle=col(G[i].t);
       for(const sgn of [-1,1]){ const x0=cx+sgn*r0, x1=cx+sgn*r1, x2=cx+sgn*q0, x3=cx+sgn*q1; ctx.beginPath(); ctx.moveTo(x0,yT); ctx.lineTo(x1,yT); ctx.lineTo(x3,yT+h*0.5); ctx.lineTo(x1,yB); ctx.lineTo(x0,yB); ctx.lineTo(x2,yT+h*0.5); ctx.closePath(); ctx.fill(); } } }
 }
-// ── Stella: Irregular Polygon (Moultonboro, 1966) — the canvas cut into a few great flat shapes, one
-// for each section of the piece: the cuts run at the angles the melody takes, each shape as large as
-// its section lasts, in its colour, with Stella's thin inner band in the colour of its loudest chord. ──
+// ── Stella: Irregular Polygon (Moultonboro, 1966) — not the frame filled edge to edge but a shaped canvas on the wall: a few
+// great flat shapes joined into one lopsided figure, a light triangle wedged into the corner of a dark square and pushing
+// out past it, a bright border along the triangle's edges, a Z-shaped stripe running alongside it in the square, and in a
+// fuller piece a third shape, a parallelogram, jutting out on the other side. Light against dark, the bands starting and
+// stopping, the figure tilting at the edge of the eye and falling back flat.
+//   the square       the piece's opening, the darker of the two great colours
+//   the triangle     its loudest passage, the lighter; wedged into the upper corner when it sounds high, the lower when
+//                    low, to the right when the piece climbs, to the left when it falls; the louder, the further it pushes
+//   the border       the passage after the climax; the Z stripe the close; the parallelogram the middle (a dense piece)
+//   the colours      the chords' own, as flat house paint, fluorescent when the piece is quick
+// Each shape is laid when its passage sounds. ──
 function stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=Math.max(0,Math.min(1,N/cn));
-  const A=_kd2Analyze(chords,gc,mode); const G=_kd2Phrases(A,Math.max(3,Math.min(Math.round(4+6*A.ch.density),Math.round(A.phrases.length/4)))); const n=G.length;   /* a dense piece is cut into more polygons */
-  const pure=(rgb,k)=>{ const g=(rgb[0]+rgb[1]+rgb[2])/3; return rgb.map(v=>Math.max(0,Math.min(255,(g+(v-g)*1.5)*(k||1)))); };
-  const css=(c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
-  ctx.fillStyle=isBW?'#dcd8ce':'#e6dfd0'; ctx.fillRect(0,0,CW,CH);
-  // split a convex polygon by the line through (px,py) at angle ang
-  const split=(poly,px,py,ang)=>{ const nx=-Math.sin(ang), ny=Math.cos(ang); const L=[],Rr=[]; const m=poly.length; for(let i=0;i<m;i++){ const a=poly[i], b=poly[(i+1)%m]; const da=(a[0]-px)*nx+(a[1]-py)*ny, db=(b[0]-px)*nx+(b[1]-py)*ny; (da>=0?L:Rr).push(a); if((da>=0)!==(db>=0)){ const t=da/(da-db); const ip=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]; L.push(ip); Rr.push(ip); } } return [L,Rr]; };
-  const area=(p)=>{ let s=0; for(let i=0;i<p.length;i++){ const q=p[(i+1)%p.length]; s+=p[i][0]*q[1]-q[0]*p[i][1]; } return Math.abs(s)/2; };
-  // cut the canvas section by section: each cut leaves the section its share of the remaining area
-  let rest=[[0,0],[CW,0],[CW,CH],[0,CH]]; const shapes=[]; let left=1;
-  for(let i=0;i<n-1;i++){ const g=G[i]; const share=(g.n/cn)/left; left-=g.n/cn; const reg=A.reg(g.top); const ang=(i%2?1.5708:0)+(reg-0.5)*1.2+(i%2?0.3:-0.3);
-    // slide the cut along its normal until the piece in front holds the share
-    const nx=-Math.sin(ang), ny=Math.cos(ang); let lo=-1e9,hi=1e9; for(const p of rest){ const d=p[0]*nx+p[1]*ny; lo=Math.min(lo,d); hi=Math.max(hi,d); } const total=area(rest); let a=lo,b=hi,px=0,py=0,best=null;
-    for(let k=0;k<22;k++){ const d=(a+b)/2; px=nx*d; py=ny*d; const [L,Rr]=split(rest,px,py,ang); const fr=area(Rr)/total; best=[L,Rr]; if(fr<share) a=d; else b=d; }
-    const [L,Rr]=best; if(Rr.length>2) shapes.push({poly:Rr,g}); rest=L.length>2?L:rest; }
-  shapes.push({poly:rest,g:G[n-1]});
-  const vis=Math.max(1,Math.ceil(n*reveal)); const D=Math.min(CW,CH);
-  // each plane takes the colour of its section that differs most from the planes already laid — the piece's colours, not one passage's
-  const used=[]; const pickIn=(a,b)=>{ const st=Math.max(1,Math.floor((b-a)/40)); let bc=null,bd=-1; for(let j=a;j<Math.max(a+1,b);j+=st){ const c=pure(_picChord(chords,Math.min(cn-1,j),gc,isBW).rgb); let d=used.length?1e9:0; for(const u of used) d=Math.min(d,Math.hypot(c[0]-u[0],c[1]-u[1],c[2]-u[2])); d+=(Math.max(c[0],c[1],c[2])-Math.min(c[0],c[1],c[2]))*0.3; if(d>bd){ bd=d; bc=c; } } used.push(bc); return bc; };
-  shapes.slice(0,vis).forEach(({poly,g},i)=>{ const c=pickIn(g.a,g.b); let lo=g.a; for(let j=g.a;j<g.b;j++){ const e=A.ev[j]; if(e&&A.ev[lo]&&e.v>A.ev[lo].v) lo=j; } const acc=pure(_picChord(chords,Math.min(cn-1,lo),gc,isBW).rgb,0.85);
-    ctx.fillStyle=css(c); ctx.beginPath(); poly.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill();
-    // the inner band: the shape shrunk toward its centre, drawn as a stroke
-    let cx=0,cy=0; poly.forEach(p=>{cx+=p[0];cy+=p[1];}); cx/=poly.length; cy/=poly.length; const k=1-D*0.07/Math.max(1,Math.sqrt(area(poly)));
-    ctx.strokeStyle=css(acc); ctx.lineWidth=Math.max(2,D*0.022); ctx.lineJoin='miter'; ctx.beginPath(); poly.forEach((p,q)=>{ const x=cx+(p[0]-cx)*k, y=cy+(p[1]-cy)*k; q?ctx.lineTo(x,y):ctx.moveTo(x,y); }); ctx.closePath(); ctx.stroke();
-    ctx.strokeStyle=isBW?'#e8e4da':'#efe9dc'; ctx.lineWidth=Math.max(1.5,D*0.008); ctx.beginPath(); poly.forEach((p,q)=>q?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke(); });
+  const isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim)); const reveal=Math.max(0,Math.min(1,N/cn)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), dens=A.ch?A.ch.density:0.3;
+  const G=_kd2Phrases(A,Math.max(3,Math.min(6,Math.round(3+3*dens)))); const n=G.length; const H=G.map(q=>_mtHearSpan(A,q.a,q.b));
+  let ci=n>1?1:0; H.forEach((h,i)=>{ if(i>0 && (h.vmax||0)>(H[ci].vmax||0)) ci=i; });
+  const fl=!isBW && X.pace>0.6;
+  const paint=(rgb)=>{ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; return [l,l,l]; } let [h,s,l]=_pxHsl(rgb); s=Math.min(1,s*(fl?1.2:1.0)); l=Math.max(0.2,Math.min(0.8,l)); return _pxRgbH(h,s,l); };
+  const colOf=(q)=>paint(_picChord(chords,Math.min(cn-1,Math.floor((q.a+q.b)/2)),gc,isBW).rgb);
+  const lum=(c)=>(0.299*c[0]+0.587*c[1]+0.114*c[2])/255, hue=(c)=>_pxHsl(c)[0], hd=(a,b)=>Math.abs(((hue(a)-hue(b))%360+540)%360-180);
+  const dark=(c,t)=>_pxMix(c,[18,16,22],t), light=(c,t)=>_pxMix(c,[250,248,238],t);
+  let cS=colOf(G[0]), cT=colOf(G[ci]); if(lum(cS)>lum(cT)){ const t=cS; cS=cT; cT=t; }
+  if(lum(cT)-lum(cS)<0.32){ cS=dark(cS,0.4); cT=light(cT,0.3); }
+  let cB=colOf(G[(ci+1)%n]); if(hd(cB,cT)<45 && Math.abs(lum(cB)-lum(cT))<0.2) cB=lum(cT)>0.5?dark(cB,0.45):light(cB,0.45);
+  let cZ=colOf(G[n-1]); if(Math.abs(lum(cZ)-lum(cS))<0.18 && hd(cZ,cS)<50) cZ=lum(cS)<0.4?light(cZ,0.4):dark(cZ,0.4);
+  const mid=Math.floor(n/2), cP=(()=>{ let c=colOf(G[mid]); if(hd(c,cS)<40) c=light(c,0.35); return c; })();
+  const raw=isBW?[232,230,224]:[236,230,216], wall=isBW?[214,212,208]:[222,219,212];
+  // the figure, in a frame of its own: the square from -0.5 to 0.5
+  const top=Math.max(0,Math.min(1,H[ci].reg)), prom=Math.max(0,Math.min(1,((H[ci].vmax||0.6)-H.reduce((s,h)=>s+(h.vmax||0.6),0)/n)*4+0.5));
+  const fx=X.trend>=0.5?1:-1, fy=top>=0.5?1:-1, k=0.8+0.35*prom;
+  const sq=[[-0.5,-0.5],[0.5,-0.5],[0.5,0.5],[-0.5,0.5]];
+  let tri=[[-0.34,-0.84],[0.86,-0.6],[0.26,0.24]].map(([x,y])=>[0.5+(x-0.5)*k,-0.5+(y+0.5)*k]);
+  const par=(n>=4||dens>0.4)?[[-0.7,0.18],[-0.16,0.18],[0.0,0.86],[-0.54,0.86]]:null;
+  // the Z stripe alongside the triangle's left edge, in the square
+  const [t1,,t3]=tri, zw=0.09, xo=(y)=>t1[0]+(y-t1[1])*(t3[0]-t1[0])/(t3[1]-t1[1])-0.17, zT=-0.5+zw*0.5+0.035, zB=Math.min(0.5-zw*0.5-0.035,t3[1]+0.1);
+  const Z=[[-0.5,zT],[xo(zT),zT],[xo(zB),zB],[0.5,zB]];
+  // fit it on the wall
+  const all=sq.concat(tri,par||[]).map(([x,y])=>[x*fx,y*fy]); let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const [x,y] of all){ x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y); }
+  const m=0.06; let sx=CW*(1-2*m)/(x1-x0), sy=CH*(1-2*m)/(y1-y0); sy=Math.min(sy,sx*1.7); sx=Math.min(sx,sy*1.3);
+  const ox=CW/2-(x0+x1)/2*sx, oy=CH/2-(y0+y1)/2*sy; const P=(pts)=>pts.map(([x,y])=>[ox+x*fx*sx,oy+y*fy*sy]);
+  const SQ=P(sq), TR=P(tri), PA=par?P(par):null, ZZ=P(Z), U=D/1000;
+  const path=(pts)=>{ ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); };
+  const tTri=Math.max(G[ci].t0,0.0), tBand=G[ci].t0+(G[ci].t1-G[ci].t0)*0.5, tZ=G[n-1].t0, tP=G[mid].t0;
+  const on=(t)=>t<=reveal+1e-9;
+  ctx.fillStyle=_stxCss(wall); ctx.fillRect(0,0,CW,CH);
+  // the canvas's shadow on the wall, the shapes laid so far as one figure
+  ctx.save(); ctx.beginPath(); for(const [pts,t] of [[SQ,0],[TR,tTri],[PA,tP]]){ if(!pts||!on(t)) continue; pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); }
+  ctx.shadowColor='rgba(0,0,0,0.32)'; ctx.shadowBlur=D*0.03; ctx.shadowOffsetY=D*0.012; ctx.fillStyle=_stxCss(raw); ctx.fill('nonzero'); ctx.restore();
+  ctx.lineJoin='miter'; ctx.miterLimit=20;
+  // the square
+  const edge=(pts)=>{ ctx.strokeStyle='rgba(40,36,32,0.35)'; ctx.lineWidth=Math.max(1,U*2); path(pts); ctx.stroke(); };
+  path(SQ); ctx.fillStyle=_stxCss(cS); ctx.fill(); edge(SQ);
+  // the parallelogram jutting out, under the triangle
+  if(PA && on(tP)){ path(PA); ctx.fillStyle=_stxCss(cP); ctx.fill(); ctx.save(); path(PA); ctx.clip(); ctx.strokeStyle=_stxCss(raw); ctx.lineWidth=U*7; path(PA); ctx.stroke(); ctx.restore(); edge(PA); }
+  // the Z stripe, a pinstripe of raw canvas either side
+  if(on(tZ)){ ctx.save(); path(SQ); ctx.clip(); const zl=zw*Math.min(sx,sy); const line=()=>{ ctx.beginPath(); ZZ.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); };
+    ctx.strokeStyle=_stxCss(raw); ctx.lineWidth=zl+U*9; line(); ctx.stroke(); ctx.strokeStyle=_stxCss(cZ); ctx.lineWidth=zl; line(); ctx.stroke(); ctx.restore(); }
+  // the triangle wedged into the corner, its bright border along every edge
+  if(on(tTri)){ path(TR); ctx.fillStyle=_stxCss(cT); ctx.fill();
+    if(on(tBand)){ ctx.save(); path(TR); ctx.clip(); const bw=D*0.034; ctx.strokeStyle=_stxCss(raw); ctx.lineWidth=2*bw+U*10; path(TR); ctx.stroke(); ctx.strokeStyle=_stxCss(cB); ctx.lineWidth=2*bw; path(TR); ctx.stroke(); ctx.restore(); } edge(TR); }
+  try{ globalThis.__ST_LISTEN={v:'polygon',n,ci,fx,fy,par:!!par}; }catch(_){} _setCurE(0.5);
 }
 
 // ── Stella F: Interlocking arcs — the Protractor interlaces (Firuzabad, 1970): great rings of fluorescent bands linked in
 // a chain down the whole canvas and off its edges, and where two rings cross their bands weave, one over at the first crossing and under at the
 // next, a pinstripe of the dark ground between every band. Each band is a passage of the piece, as wide as the passage is long,
 // in its colour; the passages are dealt round the links in turn, so the whole chain grows at once, each link from its inner
-// band outward, each band laid as five arcs that appear whole, in the colour of the chord sounding as they appear, turning to the band's
+// band outward, each band laid as six arcs that appear whole, all of them within the first three fifths of the piece, in the colour of the chord sounding as they appear, turning to the band's
 // colour as they come home; the first as its passage sounds, the others later in the piece; every arc
-// pops up somewhere at random on the canvas, its own size and turn, and from the middle of the piece on the arcs fly home
-// one by one, settling into the chain, so the chaos of the start is the interlace at the end; the louder
+// pops up somewhere at random on the canvas, its own size and turn, and from three fifths of the piece on the arcs fly home
+// quickly one by one, settling into the chain, so the chaos of the start is the interlace at the end; the louder
 // links the larger; the links sway with their register. Arcs everywhere at first; the chain at the end. ──
 function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, S=_stxSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn;
@@ -8072,21 +8104,21 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const vm=Math.max(...parts.map(p=>p.h.vmax||0.6)); parts.forEach(p=>{ p.R=R*(0.92+0.08*(p.h.vmax||0.6)/vm); });   // the louder part, the larger link
   const total=2*R+step*(parts.length-1); let along=(span-total)/2+R;
   const rings=[]; parts.forEach((p,k)=>{ if(k) along+=step; const across=side/2+(p.h.reg-0.5)*side*0.1+(k%2?1:-1)*side*0.05;
-    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; const o=[0,1,2,3,4]; for(let i=4;i>0;i--){ const j=Math.floor(br()*(i+1)); const t=o[i]; o[i]=o[j]; o[j]=t; } b.ord=o; rr+=w; return b; });
+    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; const o=[0,1,2,3,4,5]; for(let i=5;i>0;i--){ const j=Math.floor(br()*(i+1)); const t=o[i]; o[i]=o[j]; o[j]=t; } b.ord=o; rr+=w; return b; });
     rings.push({cx,cy,R:Rk,r0:rk,bands}); });
   const gap=Math.max(1.2,D*0.0045);
   const smooth=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x);
-  const drawRing=(ring,home)=>{ for(const b of ring.bands){ if(b.q.t0>reveal) break; const np=5, dt=Math.max(0.004,b.q.t1-b.q.t0), ccw=b.dir<0, sw=6.2832/np;
-      const spr=Math.max(dt/np,Math.min(0.055,(0.995-b.q.t0)/np));
-      for(let s=0;s<np;s++){ const ta=b.q.t0+spr*s; if(ta>reveal) break; const j=b.ord[s]; const pr=_seedRnd(4500+b.q.a*3+s,ss,0,0); pr();
-        const T=Math.max(ta,0.5+0.3*pr()), L=Math.max(0.0001,Math.min(0.18,1-T)), k=reveal>=1?1:smooth((reveal-T)/L);
+  const drawRing=(ring,home)=>{ for(const b of ring.bands){ if(b.q.t0*0.6>reveal) break; const np=6, dt=Math.max(0.004,b.q.t1-b.q.t0), ccw=b.dir<0, sw=6.2832/np;
+      const spr=Math.max(dt/np,Math.min(0.06,(0.995-b.q.t0)/np));
+      for(let s=0;s<np;s++){ const ta=(b.q.t0+spr*s)*0.6; if(ta>reveal) break; const j=b.ord[s]; const pr=_seedRnd(4500+b.q.a*3+s,ss,0,0); pr();
+        const T=Math.max(ta+0.04,0.6+0.22*pr()), L=Math.max(0.0001,Math.min(0.1,1-T)), k=reveal>=1?1:smooth((reveal-T)/L);
         if(home && k<0.999) continue;
-        const ccx=pr()*CW, ccy=pr()*CH, crm=D*(0.12+0.26*pr()), cw=crm*0.24, crot=(pr()-.5)*6.2832, csw=sw*(0.7+0.9*pr());
+        const ccx=pr()*CW, ccy=pr()*CH, crm=D*(0.1+0.24*pr()), cw=crm*0.24, crot=(pr()-.5)*6.2832, csw=sw*(0.7+0.9*pr());
         const fm=(b.a+b.b)/2, fw=b.b-b.a; const cx=ccx+(ring.cx-ccx)*k, cy=ccy+(ring.cy-ccy)*k, rm=crm+(fm-crm)*k, w=cw+(fw-cw)*k, swk=csw+(sw-csw)*k;
         const a0=b.a0+(ccw?-1:1)*j*sw+crot*(1-k), a1=a0+(ccw?-swk:swk), ra=Math.max(0.5,rm-w/2), rb=rm+w/2;
         ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a1,ccw); ctx.arc(cx,cy,ra,a1,a0,!ccw); ctx.closePath(); const cc=k>=1?b.col:(()=>{ const c0=S.col(Math.min(0.999,ta)); return [0,1,2].map(i=>c0[i]+(b.col[i]-c0[i])*k); })(); ctx.fillStyle=_stxCss(cc); ctx.fill();
         ctx.strokeStyle=_stxCss(canvas); ctx.lineWidth=gap; ctx.beginPath(); ctx.arc(cx,cy,ra,a0,a1,ccw); ctx.stroke(); ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a1,ccw); ctx.stroke(); } } };
-  rings.forEach(drawRing);
+  rings.forEach(r=>drawRing(r,false));
   // the weave: where ring k and ring k+1 cross, ring k goes back over at one crossing — the other crossing stays under
   for(let k=0;k+1<rings.length;k++){ const p=rings[k], q=rings[k+1]; const dx=q.cx-p.cx, dy=q.cy-p.cy, d=Math.hypot(dx,dy)||1; if(d>=p.R+q.R) continue;
     const mx=(p.cx+q.cx)/2, my=(p.cy+q.cy)/2, hlen=0, ux=-dy/d, uy=dx/d; const side=((k+(X.trend>=0.5?0:1))%2)?1:-1;
