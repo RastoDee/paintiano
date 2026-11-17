@@ -20670,18 +20670,47 @@ const _BH_PRIM=[[214,46,38],[236,190,26],[34,72,150]], _BH_BLK=[24,22,22], _BH_W
 function _bhSnap(rgb,isBW){ const k=_mnvPrim(rgb); if(isBW) return [[80,80,80],[200,200,200],[130,130,130]][k]; return _BH_PRIM[k].slice(); }
 // Kandinsky's questionnaire: the warm, active colour takes the triangle, the cold, deep one the circle, red the square
 function _bhFormOf(rgb){ const k=_mnvPrim(rgb); return k===1?'tri':k===2?'circle':'square'; }
-function _bhForm(ctx,kind,x,y,s,col,rot){ ctx.fillStyle=_bhCss(col); ctx.beginPath(); if(kind==='circle'){ ctx.arc(x,y,s/2,0,6.2832); } else if(kind==='tri'){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot||0); ctx.moveTo(0,-s*0.58); ctx.lineTo(s*0.5,s*0.29); ctx.lineTo(-s*0.5,s*0.29); ctx.closePath(); ctx.restore(); } else { ctx.save(); ctx.translate(x,y); ctx.rotate(rot||0); ctx.rect(-s/2,-s/2,s,s); ctx.restore(); } ctx.fill(); }
+// The guest colour: the Bauhaus keeps its red, yellow and blue with black, white and grey; the piece brings one colour
+// of its own from Itten's twelve-hue circle — the hue (other than the three primaries) its chords take most often — and
+// that colour comes with the form the Bauhaus rule gives it (orange the trapezoid, violet the ellipse, green the
+// spherical triangle; a colour between takes the form of the nearer of these), on a few small forms only, as an accent
+// (in the Vorkurs sheet; the Bauhaus Listens stays in the primaries).
+const _BH_ITTEN=[[244,208,40],[240,166,36],[232,118,38],[220,72,40],[200,36,44],[168,40,100],[112,50,132],[72,60,150],[34,72,150],[24,124,128],[52,140,70],[150,186,48]];
+const _BH_ITTEN_H=_BH_ITTEN.map(c=>{ const R=c[0]/255,G=c[1]/255,B=c[2]/255, mx=Math.max(R,G,B), mn=Math.min(R,G,B), d=mx-mn; let h=mx===R?((G-B)/d)%6:mx===G?(B-R)/d+2:(R-G)/d+4; h*=60; return h<0?h+360:h; });
+const _BH_ITTEN_FORM=['tri','tri','trap','square','square','ellipse','ellipse','circle','circle','ctri','ctri','tri'];
+function _bhIttenOf(rgb,isBW){ const R=rgb[0]/255,G=rgb[1]/255,B=rgb[2]/255, mx=Math.max(R,G,B), mn=Math.min(R,G,B), d=mx-mn, sat=mx?d/mx:0;
+  if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; const v=l>150?200:l>90?130:80; return {col:[v,v,v],kind:_BH_ITTEN_FORM[0]}; }
+  if(sat<0.16) return {col:mx>0.55?[150,148,142]:_BH_BLK,kind:'square'};
+  let h=mx===R?((G-B)/d)%6:mx===G?(B-R)/d+2:(R-G)/d+4; h*=60; if(h<0) h+=360; let k=0,bd=1e9; for(let i=0;i<12;i++){ const dd=Math.min(Math.abs(h-_BH_ITTEN_H[i]),360-Math.abs(h-_BH_ITTEN_H[i])); if(dd<bd){ bd=dd; k=i; } }
+  const f6=[0,2,4,6,8,10]; let fk=0,fd=1e9; for(const i of f6){ const dd=Math.min(Math.abs(h-_BH_ITTEN_H[i]),360-Math.abs(h-_BH_ITTEN_H[i])); if(dd<fd){ fd=dd; fk=i; } }
+  return {col:_BH_ITTEN[k].slice(),kind:_BH_ITTEN_FORM[fk],k}; }
+const _bhGuestMemo=new WeakMap();
+function _bhGuest(chords,gc,isBW){ if(isBW||!chords||!chords.length) return null; const hit=_bhGuestMemo.get(chords); if(hit!==undefined) return hit; const cn=chords.length, cnt=new Array(12).fill(0);
+  for(let i=0;i<cn;i++){ const o=_bhIttenOf(_picChord(chords,i,gc,false).rgb,false); if(o.k!=null) cnt[o.k]++; } let k=-1; for(let i=0;i<12;i++){ if(i===0||i===4||i===8) continue; if(k<0||cnt[i]>cnt[k]) k=i; }
+  const g=(k>=0&&cnt[k]>=cn*0.05)?{k,col:_BH_ITTEN[k],kind:_bhIttenOf(_BH_ITTEN[k],false).kind,keep:Math.min(1,0.22/(cnt[k]/cn))}:null; _bhGuestMemo.set(chords,g); return g; }
+// a chord's colour and form: the guest's when the chord is in the guest hue (on a few of them only), else the primaries
+function _bhCK(rgb,isBW,GU,ci){ if(true&&GU){ const o=_bhIttenOf(rgb,isBW); if(o.k===GU.k&&((ci*2654435761)>>>0)%1000<GU.keep*1000) return {col:GU.col.slice(),kind:GU.kind,guest:true}; } return {col:_bhSnap(rgb,isBW),kind:_bhFormOf(rgb)}; }
+// the outline of a form (for filling or drawing)
+function _bhFormPath(ctx,kind,x,y,s,rot){ ctx.beginPath(); if(kind==='circle'){ ctx.arc(x,y,s/2,0,6.2832); return; } if(kind==='ellipse'){ ctx.ellipse(x,y,s*0.62,s*0.4,rot||0,0,6.2832); return; }
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot||0);
+  if(kind==='tri'){ ctx.moveTo(0,-s*0.58); ctx.lineTo(s*0.5,s*0.29); ctx.lineTo(-s*0.5,s*0.29); ctx.closePath(); }
+  else if(kind==='trap'){ ctx.moveTo(-s*0.3,-s*0.36); ctx.lineTo(s*0.3,-s*0.36); ctx.lineTo(s*0.55,s*0.36); ctx.lineTo(-s*0.55,s*0.36); ctx.closePath(); }
+  else if(kind==='ctri'){ const P=[[0,-s*0.58],[s*0.5,s*0.29],[-s*0.5,s*0.29]]; ctx.moveTo(...P[0]); for(let i=0;i<3;i++){ const a=P[i], b=P[(i+1)%3], m=[(a[0]+b[0])/2,(a[1]+b[1])/2], l=Math.hypot(m[0],m[1])||1; ctx.quadraticCurveTo(m[0]+m[0]/l*s*0.05,m[1]+m[1]/l*s*0.05,b[0],b[1]); } ctx.closePath(); }
+  else ctx.rect(-s/2,-s/2,s,s);
+  ctx.restore(); }
+function _bhForm(ctx,kind,x,y,s,col,rot){ if(kind==='trap'||kind==='ellipse'||kind==='ctri'){ ctx.fillStyle=_bhCss(col); _bhFormPath(ctx,kind,x,y,s,rot); ctx.fill(); return; } ctx.fillStyle=_bhCss(col); ctx.beginPath(); if(kind==='circle'){ ctx.arc(x,y,s/2,0,6.2832); } else if(kind==='tri'){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot||0); ctx.moveTo(0,-s*0.58); ctx.lineTo(s*0.5,s*0.29); ctx.lineTo(-s*0.5,s*0.29); ctx.closePath(); ctx.restore(); } else { ctx.save(); ctx.translate(x,y); ctx.rotate(rot||0); ctx.rect(-s/2,-s/2,s,s); ctx.restore(); } ctx.fill(); }
 // ── Bauhaus 0 · Vorkurs — the basic forms on the grid: a cell per chord, the form and its primary by the chord's
-// colour (triangle yellow, circle blue, square red), on white or black; the loud chords' forms fill the cell, the
+// colour (triangle yellow, circle blue, square red) — and the piece's one guest colour from Itten's circle with its form
+// on a few small cells — on white or black; the loud chords' forms fill the cell, the
 // quiet ones sit small; a black diagonal half where the line leaps
 function bauhausPhaseForms(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const r=_seedRnd(16500,ss,0,0); r();
+  const isBW=mode==='bw', cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn; const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const r=_seedRnd(16500,ss,0,0); r(); const GU=_bhGuest(chords,gc,isBW);
   const cols=Math.max(3,Math.min(6,Math.round((3+(A.ch?A.ch.density:0.3)*4)*_dW((A.ch?A.ch.density:0.3))))); const cw=CW/cols, rows=Math.max(3,Math.round(CH/cw)), chh=CH/rows, tot=cols*rows;
   ctx.fillStyle=_bhCss(_BH_WHT); ctx.fillRect(0,0,CW,CH); const vis=Math.ceil(tot*reveal);
-  for(let q=0;q<vis;q++){ const i=q%cols, j=Math.floor(q/cols); const ci=Math.min(cn-1,Math.floor(q/tot*cn)); const e=A.ev[ci]; const v=e?e.v:0.5; const rgb=_picChord(chords,ci,gc,isBW).rgb; const col=_bhSnap(rgb,isBW); const kind=_bhFormOf(rgb); const u=r();
+  for(let q=0;q<vis;q++){ const i=q%cols, j=Math.floor(q/cols); const ci=Math.min(cn-1,Math.floor(q/tot*cn)); const e=A.ev[ci]; const v=e?e.v:0.5; const rgb=_picChord(chords,ci,gc,isBW).rgb; const _ck=_bhCK(rgb,isBW,GU,ci); const col=_ck.col; const kind=_ck.kind; const _gst=!!_ck.guest; const u=r();
     const x=i*cw, y=j*chh; const blackCell = u<0.18; if(blackCell){ ctx.fillStyle=_bhCss(_BH_BLK); ctx.fillRect(x,y,cw+0.5,chh+0.5); } else if(u<0.3){ ctx.fillStyle=_bhCss(_BH_GRY); ctx.fillRect(x,y,cw+0.5,chh+0.5); }
     if(X.leaps>0.5 && r()<0.25){ ctx.fillStyle=_bhCss(blackCell?_BH_WHT:_BH_BLK); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+cw,y); ctx.lineTo(x+cw,y+chh); ctx.closePath(); ctx.fill(); }
-    const s=Math.min(cw,chh)*(v>=A.vHi*0.97?0.92:0.45+0.4*v); _bhForm(ctx,kind,x+cw/2,y+chh/2,s,col,kind==='tri'&&r()<0.3?Math.PI:0); }
+    const s=Math.min(cw,chh)*(_gst?Math.min(0.6,0.4+0.3*v):(v>=A.vHi*0.97?0.92:0.45+0.4*v)); _bhForm(ctx,kind,x+cw/2,y+chh/2,s,col,(kind==='tri'||kind==='trap'||kind==='ctri')&&r()<0.3?Math.PI:0); }
   ctx.strokeStyle='rgba(30,28,26,0.18)'; ctx.lineWidth=1; for(let i=1;i<cols;i++){ ctx.beginPath(); ctx.moveTo(i*cw,0); ctx.lineTo(i*cw,CH); ctx.stroke(); } for(let j=1;j<rows;j++){ ctx.beginPath(); ctx.moveTo(0,j*chh); ctx.lineTo(CW,j*chh); ctx.stroke(); }
   _setCurE(0.5);
 }
