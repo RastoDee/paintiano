@@ -12871,7 +12871,46 @@ function _thDab(ctx, x, y, len, th, ang, q, jit){
   ctx.closePath(); ctx.fill();
 }
 // ═══════════════════════════════════════════════════════════════════════════
-// ALMA THOMAS LISTENS — the picture the piece composes from everything that is
+// ALMA THOMAS LISTENS — as she named her pictures after music (Red Rose Sonata,
+// Wind and Crepe Myrtle Concerto, Hydrangeas Spring Song): one colour laid over
+// the canvas in columns of hand-cut dabs, and under it, through the gaps, the
+// other colours of the season. Here the one colour is the colour the piece sounds
+// in most, the colours beneath are its passages', deeper, laid first in upright bands;
+// the columns run left to right as the piece plays, each a stretch of it, every
+// dab a chord: as wide and close as it is loud (a quiet chord a small dab, the
+// colours beneath showing round it), as tall as it is long; an accent a dab in
+// the climax's own colour. Dab by dab as the piece plays.
+// ═══════════════════════════════════════════════════════════════════════════
+function _thListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, isBW=mode==='bw', D=Math.min(CW,CH), played=Math.max(1,Math.min(cn,lim));
+  const A=_kd2Analyze(chords,gc,mode), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>a==null?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const r=_seedRnd(5711,ss,0,0); r(); const paint=(c,l)=>isBW?[255*l,255*l,255*l]:_bhxPigment(c,0.4,0.66,0.25,0.75,0.05,0.4,l);
+  ctx.fillStyle=css(isBW?[240,240,236]:[244,240,230]); ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,pc:A.tonic}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
+  const home=paint(A.pcCol(A.tonic,60),0.58), climax=paint(A.pcCol(c.pc,60),0.66);
+  // beneath: the passages' colours, deeper than the colour above them, in upright bands as the piece goes
+  const P=_kd2Phrases(A,Math.round(clamp(6+A.phrases.length*0.3,6,14)));
+  P.forEach((p,k)=>{ const r=_seedRnd(5720+k,ss,0,0); r(); if(p.a>=played) return; const x0=CW*p.t0, x1=Math.max(x0+CW*0.06,CW*p.t1), col=paint(A.pcCol(p.pc,60),0.3+0.1*r());
+    const jx=()=>(r()-0.5)*CW*0.02; ctx.fillStyle=css(col); ctx.beginPath(); ctx.moveTo(x0+jx(),0); for(let y=0;y<=CH;y+=CH/8) ctx.lineTo(x0+jx(),y); for(let y=CH;y>=0;y-=CH/8) ctx.lineTo(x1+jx(),y); ctx.closePath(); ctx.fill(); });
+  // over it: columns of dabs in the one colour, left to right as the piece plays
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1, ds=A.ev.filter(Boolean).map(e=>e.dur).sort((a,b)=>a-b), dMed=ds[ds.length>>1]||1;
+  const nCol=Math.round(clamp(14+8*(A.ch?A.ch.density:0.3),14,22)), cw=CW/nCol, perCol=Math.ceil(cn/nCol);
+  for(let k=0;k<nCol;k++){ const a=k*perCol, b=Math.min(cn,(k+1)*perCol); if(a>=played) break; const n=b-a; if(n<=0) continue;
+    // the column's dabs: one chord each, stacked top to bottom, as tall as they are long
+    const hs=[]; let tot=0; for(let i=a;i<b;i++){ const e=A.ev[i]; const h=e?clamp(e.dur/dMed,0.5,2.5):1; hs.push(h); tot+=h; }
+    let y=CH*0.015; const scale=CH*0.97/tot, x0=k*cw;
+    for(let j=0;j<n;j++){ const i=a+j, h=hs[j]*scale; if(i>=played) break; const r=_seedRnd(5800+i,ss,0,0); r(); const e=A.ev[i]; const f=e?clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1):0.4;
+      let lo=0,nn=0; if(e) for(let q=Math.max(0,i-5);q<=Math.min(cn-1,i+5);q++){ const o=A.ev[q]; if(!o||q===i) continue; nn++; if(o.v<e.v) lo++; } const acc=nn&&lo/nn>0.85;
+      const fill=0.5+0.42*f, dw=cw*fill*(0.92+0.16*r()), dh=Math.max(2,h*(0.55+0.35*f)), dx=x0+(cw-dw)/2+(r()-0.5)*cw*0.08, dy=y+(h-dh)/2;
+      const col=acc?climax:mix(home,paint(_picChord(chords,i,gc,isBW).rgb,0.5),0.12);
+      // a hand-cut dab: four corners each a little off
+      const j1=()=>(r()-0.5)*cw*0.12; ctx.fillStyle=css(col); ctx.beginPath(); ctx.moveTo(dx+j1(),dy+j1()); ctx.lineTo(dx+dw+j1(),dy+j1()); ctx.lineTo(dx+dw+j1(),dy+dh+j1()); ctx.lineTo(dx+j1(),dy+dh+j1()); ctx.closePath(); ctx.fill();
+      y+=h; } }
+  try{ globalThis.__TH_LISTEN={v:'sonata',cols:nCol}; }catch(_){}
+  _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// (retired, code kept) ALMA THOMAS LISTENS, the first — the picture the piece composes from everything that is
 // hers: the dab, the path it is laid along (rings, rows, columns, the wind's wavy
 // bands), the cream or the night ground, the pure colours, the
 // pale stars, the dark sun. The piece decides the path and what the dabs carry.
@@ -12884,7 +12923,7 @@ function _thDab(ctx, x, y, len, th, ang, q, jit){
 //                    of every passage pale as stars on a dark ground; the climax passage in a second, lifted tone; the
 //                    corners cut as freely as the piece is loud
 // ═══════════════════════════════════════════════════════════════════════════
-function _thListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+function _thListenOld(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, cn=chords.length, isBW=mode==='bw', D=Math.min(CW,CH);
   const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
   let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
@@ -12930,7 +12969,7 @@ function _thListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 }
 function drawThomasOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
-  // VARIANT: 0 What she heard (_thListen, generative) · 1 Resurrection · 2 Concerto · 3 Starry Night · 4 Snoopy · 5 Eclipse · 6 Red Azaleas. Free: 0 and 1.
+  // VARIANT: 0 What she heard (_thListen: her Sonata, one colour over the others; the first, a chooser of her paths, retired as _thListenOld, code kept) · 1 Resurrection · 2 Concerto · 3 Starry Night · 4 Snoopy · 5 Eclipse · 6 Red Azaleas. Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _thListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode); return; }
   const pick=pick0-1;
