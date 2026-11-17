@@ -8403,7 +8403,8 @@ const _frClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const _frMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
 const _frCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
 // wet: a chord colour as thinned acrylic — chroma up, value kept luminous
-function _frWet(rgb){ const g=(rgb[0]+rgb[1]+rgb[2])/3; const mx=Math.max(rgb[0],rgb[1],rgb[2]), mn=Math.min(rgb[0],rgb[1],rgb[2]); if(mx-mn<20) return [120,120,124]; const c=rgb.map(v=>_frClamp(g+(v-g)*1.55,0,255)); const m2=Math.max(c[0],c[1],c[2]); const k=Math.min(1.3,238/Math.max(1,m2)); return c.map(v=>_frClamp(v*k,0,255)); }
+// (retired, code kept: the neon wet colour)
+function _frWetNeon(rgb){ const g=(rgb[0]+rgb[1]+rgb[2])/3; const mx=Math.max(rgb[0],rgb[1],rgb[2]), mn=Math.min(rgb[0],rgb[1],rgb[2]); if(mx-mn<20) return [120,120,124]; const c=rgb.map(v=>_frClamp(g+(v-g)*1.55,0,255)); const m2=Math.max(c[0],c[1],c[2]); const k=Math.min(1.3,238/Math.max(1,m2)); return c.map(v=>_frClamp(v*k,0,255)); }
 function _frHue(c){ const r=c[0]/255,g=c[1]/255,b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(d<1e-6) return 0; let h= mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; h*=60; if(h<0) h+=360; return h; }
 // the piece's palette: up to 4 hues it uses most (weighted by chroma), each as its purest chord colour
 function _frPalette(chords,gc,isBW){
@@ -8415,6 +8416,7 @@ function _frPalette(chords,gc,isBW){
   const cols=picked.map(i=>_frWet(best[i])); while(cols.length<4) cols.push(cols.length?cols[cols.length-1]:[40,80,200]);
   return cols;
 }
+function _frWet(rgb){ return _frWetN(rgb); }   // the variants too: pigment and the stain (Nov 2026)
 // chord colour at a time position 0..1
 function _frChordAt(chords,gc,isBW,t){ const cn=chords.length; const {rgb}=_picChord(chords,_frClamp(Math.floor(t*cn),0,cn-1),gc,isBW); return _frWet(rgb); }
 // outline: amoeba — a circle breathed on by three sine lobes + grain
@@ -8440,7 +8442,8 @@ function _frMakeCell(rnd,c,D){
     for(let k=0;k<n;k++){ const a=dir+(rnd()-.5)*1.3*(rnd()<0.3?3:1); const dd=c.r*0.6+Math.pow(rnd(),0.8)*spread; const rr=D*(0.0012+rnd()*0.0045)*(1-dd/(spread+c.r)*0.5); spat.push([c.x+Math.cos(a)*dd, c.y+Math.sin(a)*dd, rr, a, 1+rnd()*2.2]); } }
   return {pts,inner,drips,spat,col:c.col,alpha:c.alpha,edge:c.edge==null?1:c.edge,bleed:c.bleed||0,r:c.r};
 }
-function _frDrawCell(ctx,cell,D){
+// (retired, code kept: the flat cell)
+function _frDrawCellFlat(ctx,cell,D){
   const col=cell.col, a=cell.alpha; const dark=_frMix(col,[0,0,0],0.28);
   if(cell.bleed>0){ _frTrace(ctx,cell.pts); ctx.strokeStyle=_frCss(col,a*0.16*cell.bleed); ctx.lineWidth=cell.r*0.28; ctx.lineJoin='round'; ctx.stroke(); }
   _frTrace(ctx,cell.pts); ctx.fillStyle=_frCss(col,a); ctx.fill();
@@ -8452,6 +8455,7 @@ function _frDrawCell(ctx,cell,D){
   const tiny=D*0.004;
   for(const s of cell.spat){ ctx.fillStyle=_frCss(col,a*(s[2]>tiny?0.55:0.95)); ctx.beginPath(); ctx.ellipse(s[0],s[1],s[2]*s[4],s[2],s[3],0,6.2832); ctx.fill(); }
 }
+function _frDrawCell(ctx,cell,D){ return _frDrawCellN(ctx,cell,D); }   // the variants too: pigment and the stain (Nov 2026)
 function _frGround(ctx,CW,CH,isBW){ ctx.fillStyle=isBW?'#f4f2ee':'#f8f6f0'; ctx.fillRect(0,0,CW,CH); }
 function _frSetup(chords,gc,mode){ const isBW=mode==='bw'; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   return {cn:chords.length,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.5,tempo:ch?ch.tempo:0.5,register:ch?ch.register:0.5,pal:_frPalette(chords,gc,isBW),col:(t)=>_frChordAt(chords,gc,isBW,t)}; }
@@ -8556,28 +8560,34 @@ function _frListenOld(ctx,CW,CH,chords,lim,gc,ss,mode){
     if(pace>0.6){ const E=_kd2Events(A,Math.round(10+pace*20)); E.forEach(e=>{ const ev=A.ev[Math.min(cn-1,Math.round(e.t*(cn-1)))]; const [x,y]=place(e.t,ev?A.reg(ev.top):0.5,0.04); const col=S.col(e.t); list.push({id:id++,t:e.t,x,y,r:D*0.006,col,alpha:0.7,drip:0,spat:1,spatN:1.4,spatR:1.6,flick:flick+(ra()-.5)*1.2,edge:0,bleed:0}); }); }
     return list; });
 }
-// ── Sam Francis 0: Cellular field (1950s — In Lovely Blueness) — cells gather
-// around a handful of attractors, white breathing through the gaps, drips everywhere.
+// ── Sam Francis 1: Cellular field (the early 1950s — Red and Black, Big Blue) — the
+// piece as his field of cells, edge to edge: one cell for every chord in the order
+// of the music, row under row, pressed one beside the next with white veins left
+// between them, each in its chord's thinned colour, deeper where it is loud; the
+// loud cells drip.
 function francisPhaseField(ctx,CW,CH,chords,lim,gc,ss,mode){
   _frGround(ctx,CW,CH,mode==='bw');
-  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const drive=0.5*S.energy+0.5*S.density; const n=Math.round(70+drive*90); let id=0;
-    const ra=_frR(80900,ss); ra(); const na=6+Math.floor(ra()*5); const att=[]; for(let k=0;k<na;k++){ const u=ra(); att.push([CW*(0.1+ra()*0.8), CH*(0.05+Math.pow(u,1.3)*0.85), D*(0.08+ra()*0.12)]); }
-    for(let i=0;i<n;i++){ const r=_frR(80000+i,ss); r(); const t=i/n; let x,y; if(r()<0.78){ const A=att[Math.floor(r()*na)]; const a=r()*6.2832, dd=Math.pow(r(),0.7)*A[2]; x=A[0]+Math.cos(a)*dd; y=A[1]+Math.sin(a)*dd*0.85; } else { const u=r(); y=CH*(0.02+Math.pow(u,1.35)*0.92); x=CW*(0.03+r()*0.94); }
-      const big=r()<0.15; const rad=D*(big?0.055+r()*0.06:0.02+r()*0.04)*(0.8+drive*0.4);
-      list.push({id:id++,t,x,y,r:rad,sx:0.85+r()*0.5,sy:0.8+r()*0.45,col:S.col(t),alpha:0.5+r()*0.3,drip:0.45,spat:0.5,edge:1,bleed:0.6}); }
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const A=_kd2Analyze(chords,gc,mode), cn=S.cn; let id=0;
+    const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+    const want=Math.round(_frClamp(90+S.density*160,90,260)), stride=Math.max(1,Math.ceil(cn/want)), n=Math.ceil(cn/stride);
+    const cols=Math.max(5,Math.round(Math.sqrt(n*CW/CH))), rows=Math.ceil(n/cols), cw=CW/cols, ch=CH/rows;
+    for(let k=0;k<n;k++){ const i=Math.min(cn-1,k*stride), e=A.ev[i]; const r=_frR(80000+k,ss); r(); const t=i/cn, f=e?_frClamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1):0.4;
+      const cx=k%cols, cy=Math.floor(k/cols), x=(cx+0.5+(r()-0.5)*0.35)*cw, y=(cy+0.5+(r()-0.5)*0.35+0.12*Math.sin(cx*0.9+cy))*ch;
+      list.push({id:id++,t,x,y,r:Math.min(cw,ch)*(0.5+0.12*r()),sx:cw>ch?1.15:0.9,sy:ch>cw?1.15:0.9,col:S.col(t),alpha:0.42+0.4*f,drip:f>0.7?0.6:0,dripLen:0.6,spat:f>0.85?0.5:0,edge:1,bleed:0.3}); }
     return list; });
 }
-// ── Sam Francis 1: Blue Balls (1960–63) — big blue biomorphs floating in white,
-// explosive spatter, drips. The blue baseline bends 25% toward the song's top
-// pitch colour (_songTint, 15%) and each cell takes 30% of its own chord colour.
+// ── Sam Francis 2: Blue Balls (1960–63) — big blue biomorphs floating in white,
+// explosive spatter, drips; the blue bends toward the song's colour, and the small
+// cells thrown off beside them glint in the chords' own colours as his red and
+// yellow did.
 function francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode){
   _frGround(ctx,CW,CH,mode==='bw');
   const _tint = (mode!=='bw' && typeof _songTint === 'function') ? _songTint(chords, gc) : null;
   const base = (typeof _tintBaseline === 'function') ? _tintBaseline([20,50,190], _tint, 0.15) : [20,50,190];
-  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const n=Math.round((12+S.density*14)*_dW(S.density)); let id=0; const b0=S.isBW?[60,60,64]:base;
-    for(let i=0;i<n;i++){ const r=_frR(83000+i,ss); r(); const t=i/n; const x=CW*(0.08+r()*0.84), y=CH*(0.06+r()*0.88); const c=S.col(t); const col=S.isBW?c:_frMix(b0,c,0.3);
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const n=Math.round((12+S.density*14)*_dW(S.density)); let id=0; const b0=S.isBW?[60,60,64]:_frWet(base);
+    for(let i=0;i<n;i++){ const r=_frR(83000+i,ss); r(); const t=i/n; const x=CW*(0.08+r()*0.84), y=CH*(0.06+r()*0.88); const c=S.col(t); const col=S.isBW?c:_frMix(b0,c,0.08);
       const big=r()<0.35; list.push({id:id++,t,x,y,r:D*(big?0.08+r()*0.07:0.035+r()*0.04),sx:0.8+r()*0.5,sy:0.8+r()*0.5,col,alpha:0.6+r()*0.3,drip:0.6,dripLen:1.3,spat:0.95,spatN:1.6,spatR:1.3,edge:1,bleed:0.5});
-      if(r()<0.6){ list.push({id:id++,t:t+0.5/n,x:x+(r()-.5)*D*0.22,y:y+(r()-.5)*D*0.22,r:D*(0.012+r()*0.022),col,alpha:0.6+r()*0.3,drip:0.3,spat:0.6,edge:1}); } }
+      if(r()<0.6){ list.push({id:id++,t:t+0.5/n,x:x+(r()-.5)*D*0.22,y:y+(r()-.5)*D*0.22,r:D*(0.012+r()*0.022),col:r()<0.45?c:col,alpha:0.6+r()*0.3,drip:0.3,spat:0.6,edge:1}); } }
     return list; });
 }
 // ── Sam Francis 2: Edge painting (1960s — Sail, Mako) — colour only at the four
@@ -8590,14 +8600,15 @@ function francisPhaseEdge(ctx,CW,CH,chords,lim,gc,ss,mode){
       list.push({id:id++,t,x,y,r:D*(0.025+r()*0.045),sx:0.85+r()*0.4,sy:0.85+r()*0.4,col:S.col(t),alpha:0.55+r()*0.3,drip:side===0?0.6:0.2,dripLen:1.6,spat:0.55,flick:flick+(r()-.5)*0.8,edge:1}); }
     return list; });
 }
-// ── Sam Francis 3: Big Red (1953) — one massed cluster of cells in the piece's
-// dominant hue, other chords glinting inside it, heavy drips running off below.
+// ── Sam Francis 4: Big Red (1953) — the canvas nearly filled by one mass of cells in
+// the piece's dominant hue, pressed together, deeper where they cross, other chords
+// glinting inside it, only the borders left white, heavy drips running off below.
 function francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,ss,mode){
   _frGround(ctx,CW,CH,mode==='bw');
-  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const cx=CW*0.5, cy=CH*0.42; const n=Math.round((70+S.density*60)*_dW(S.density)); const dom=S.pal[0]; let id=0;
-    for(let i=0;i<n;i++){ const r=_frR(82000+i,ss); r(); const t=i/n; const a=r()*6.2832, dd=Math.pow(r(),0.6); const x=cx+Math.cos(a)*dd*D*0.34, y=cy+Math.sin(a)*dd*D*0.30;
-      const own=r()<0.35; const col=own?S.col(t):_frMix(dom,S.col(t),0.3);
-      list.push({id:id++,t,x,y,r:D*(0.03+r()*0.055),sx:0.85+r()*0.4,sy:0.85+r()*0.4,col,alpha:0.55+r()*0.3,drip:0.5,dripLen:1.8,spat:0.45,spatR:1.4,edge:0.8,bleed:0.5}); }
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const cx=CW*0.5, cy=CH*0.46; const n=Math.round((120+S.density*90)*_dW(S.density)); const dom=S.pal[0]; let id=0;
+    for(let i=0;i<n;i++){ const r=_frR(82000+i,ss); r(); const t=i/n; const a=r()*6.2832, dd=Math.pow(r(),0.55); const x=cx+Math.cos(a)*dd*CW*0.44, y=cy+Math.sin(a)*dd*CH*0.4;
+      const own=r()<0.16; const col=own?S.col(t):_frMix(dom,S.col(t),0.1);
+      list.push({id:id++,t,x,y,r:D*(0.035+r()*0.055),sx:0.85+r()*0.4,sy:0.85+r()*0.4,col,alpha:0.36+r()*0.3,drip:y>cy?0.5:0.15,dripLen:1.8,spat:0.3,spatR:1.4,edge:0.8,bleed:0.5}); }
     return list; });
 }
 // ── Sam Francis 4: Towards Disappearance (1957–58) — a few splashes anchored in
@@ -19821,8 +19832,8 @@ const ARTIST_VARIANTS = {
     {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
   ],
   bloom: [   // slot order = solo phases: What he heard, field, Blue Balls, edge, Big Red, Hanging, Matrix, Mandala
-    {mark:{cell:.8,dot:.2},size:[.03,.14],edge:.3,alpha:.6,layout:{flow:.6,scatter:.4},density:.45},   // What he heard: a cell per passage, placed by the melody
-    {mark:{cell:.7,dot:.3},size:[.05,.16],edge:.3,alpha:.65,layout:{scatter:.7,field:.3},density:.5},
+    {mark:{cell:.9,dot:.1},size:[.03,.1],edge:.3,alpha:.6,layout:{flow:.7,field:.3},density:.7},   // What he heard: In Lovely Blueness, a membrane of cells in the piece's one colour along its course
+    {mark:{cell:.9,dot:.1},size:[.04,.08],edge:.3,alpha:.65,layout:{grid:1},density:.9},   // Cellular field: a cell for every chord, row under row, edge to edge
     {ground:'#f8f8f4',mark:{cell:1},size:[.08,.2],edge:.2,alpha:.7,layout:{scatter:1},density:.3},
     {mark:{cell:.7,vdrip:.3},size:[.05,.18],edge:.3,alpha:.65,layout:{scatter:1},density:.5},
     {ground:'#f8f8f4',mark:{cell:.8,dot:.2},size:[.05,.16],edge:.3,alpha:.65,layout:{field:1},density:.7},
