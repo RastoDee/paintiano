@@ -4360,41 +4360,48 @@ function pc2_guernica(ctx,CW,CH,chords,lim,gc,ss,mode){
   const eye=[]; for(let k=0;k<10;k++){ const a=k/10*6.2832; eye.push([lx+Math.cos(a)*D*0.022, ly+Math.sin(a)*D*0.016]); } list.push({id:id++,t:1,poly:eye,col:[18,16,14],hatch:0,hang:0,ink:0,open:-1});
   _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
-// ── 5 · The Old Guitarist (1903) — the Blue Period: one bent figure in Prussian blue,
-//        head fallen to the left, the guitar across the lap its single warm note. The
-//        quieter the piece, the lower the head; the register sets how deep the blue;
-//        the strings are the voices.
+// ── 5 · The Old Guitarist (1903) — the Blue Period: one bent figure in Prussian blue, the head fallen to the left and
+//        bowed low, the long arms, the brown guitar across the lap its single warm note, its neck down to the left. The
+//        figure is built only of planes, as the rest of the picture: the folded legs, the hunched back, the chest, the
+//        two long arms lit from the left, each cut into its facets, no outline drawn round a limb. The quieter the piece,
+//        the lower the head; the register sets how deep the blue; the piece's trend tips the guitar; the strings are
+//        the voices; drawn plane by plane as the piece plays.
 function pc2_blue(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const A=_kd2Analyze(chords,gc,mode), S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const A=_kd2Analyze(chords,gc,mode), S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW; const X=_hear(chords,A);
   const r=_pcR(97600,ss); r(); const list=[]; const P=_PC_PAL;
   const deep=isBW?[30,32,36]:[18,34,70], pale=isBW?[160,164,170]:[132,168,196];
   const blue=(t,k)=>{ const {rgb}=S.col(t); const base=_pcMix(deep,pale,_pcClamp(A.ch.register*0.5+k,0,1)); return isBW?_pcFlat(rgb,base,0.85,true):_pcMix(base,rgb,0.16); };
   const INK=[8,14,30]; const g=(pts)=>_pgN(pts,CW,CH);
-  // the wall and floor: tall planes of blue, darker low
   const wall=[]; _pcCut([[0,0],[CW,0],[CW,CH],[0,CH]],r,CW*CH/6,0,1.5708,wall);
   wall.forEach(p=>{ const c=_pcCentre(p); list.push(_pgF(list.length,0,p,blue(c[0]/CW*0.2,0.05+(1-c[1]/CH)*0.3),{ink:0.3,inkCol:INK,hatch:0.3,hang:1.4,lw:Math.max(1,D*0.003)})); });
-  const bow=(1-A.ch.energy)*0.08;   // a quiet piece bows the head lower
-  // the figure, one silhouette: head fallen to the left, the hunched back, the crossed legs
-  const SIL=[[0.2,0.3+bow],[0.26,0.17+bow],[0.36,0.14+bow],[0.42,0.24+bow],[0.4,0.34],[0.56,0.3],[0.72,0.36],[0.76,0.58],[0.7,0.74],[0.84,0.84],[0.9,0.96],[0.12,0.96],[0.1,0.86],[0.2,0.76],[0.16,0.6],[0.22,0.42]];
-  const sil=g(SIL); const rr=_pcR(97700,ss); rr();
-  _pcFacets(list,sil,rr,CW*CH/16,1.2,0.1,0.45,(t,p,i)=>({col:blue(t,0.35+(rr()-.5)*0.25),hatch:0.4,hang:1.2+(rr()-.5)*0.6,ink:0.6,inkCol:INK,open:rr()<0.4?Math.floor(rr()*p.length):-1,lw:Math.max(1.2,D*0.004)}),{axis:1});
-  list.push({id:list.length,t:0.46,stroke:sil,w:SIL.map(()=>D*0.008),close:true,col:INK});
-  // the head: bowed, the hair dark, the eye closed; the neck a long thin plane
-  const hc=[0.33,0.24+bow]; list.push(_pgF(list.length,0.5,_pgEll(CW*hc[0],CH*hc[1],D*0.085,D*0.11,-0.7,16),blue(0.5,0.6),{hatch:0.35,hang:1.0,ink:0.9,inkCol:INK,lw:Math.max(1.6,D*0.006)}));
-  list.push(_pgF(list.length,0.51,g([[0.24,0.18+bow],[0.34,0.12+bow],[0.42,0.17+bow],[0.4,0.26+bow],[0.3,0.3+bow]]),blue(0.51,0.1),{hatch:0.6,hang:0.6,ink:0.8,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
-  list.push({id:list.length,t:0.52,line:g([[0.3,0.27+bow],[0.36,0.3+bow]]),col:INK,lw:Math.max(1.2,D*0.004)});
-  // the arms: the left one long, down to the frets; the right one over the body
-  list.push(_pgF(list.length,0.55,g([[0.22,0.42],[0.3,0.4],[0.24,0.66],[0.14,0.7]]),blue(0.55,0.45),{hatch:0.4,hang:1.3,ink:0.8,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
-  list.push(_pgF(list.length,0.56,g([[0.6,0.38],[0.72,0.4],[0.72,0.56],[0.6,0.58]]),blue(0.56,0.45),{hatch:0.4,hang:1.1,ink:0.8,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
-  // the guitar: ochre with the tonic, the one warm thing; its neck down to the left
-  const gcol=isBW?[150,146,138]:_pcMix(P.ochre,A.pcCol(A.tonic,48),0.3), gink=[46,32,18];
-  list.push(_pgF(list.length,0.6,_pgEll(CW*0.52,CH*0.62,CW*0.19,CH*0.12,0.35,18),gcol,{hatch:0.5,hang:0.3,ink:0.9,inkCol:gink,lw:Math.max(1.6,D*0.006)}));
-  list.push(_pgF(list.length,0.6,_pgEll(CW*0.52,CH*0.62,D*0.04,D*0.04,0,12),isBW?[24,24,24]:[36,26,18],{ink:0.5}));
-  list.push(_pgF(list.length,0.62,_pgRot(_pgRect(CW*0.3,CH*0.72,CW*0.045,CH*0.3,0),CW*0.3,CH*0.72,-0.95),gcol,{hatch:0.5,hang:-0.95,ink:0.9,inkCol:gink,lw:Math.max(1.6,D*0.006)}));
-  const ns=Math.max(3,Math.min(6,Math.round(A.ch.density*5+1))); for(let i=0;i<ns;i++){ const o=(i-(ns-1)/2)*D*0.011; list.push({id:list.length,t:0.7+i*0.02,line:[[CW*0.16-o*0.7,CH*0.84+o],[CW*0.66-o*0.7,CH*0.58+o]],col:isBW?[210,210,210]:[226,216,196],lw:Math.max(0.7,D*0.0018)}); }
-  // the hands: on the frets, and strumming
-  list.push(_pgF(list.length,0.85,g([[0.13,0.7],[0.22,0.66],[0.26,0.74],[0.17,0.78]]),blue(0.85,0.75),{ink:0.85,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
-  list.push(_pgF(list.length,0.88,g([[0.56,0.56],[0.66,0.54],[0.68,0.63],[0.58,0.65]]),blue(0.88,0.75),{ink:0.85,inkCol:INK,lw:Math.max(1.4,D*0.005)}));
+  const bow=(1-A.ch.energy)*0.08;
+  // the figure, built of planes: legs, back, chest; the head bowed, its closed eye one short line
+  const rr=_pcR(97700,ss); rr(); const part=(pts,t0,t1,k,minA,axis)=>_pcFacets(list,g(pts),rr,CW*CH*minA,1.2,t0,t1,(t,p,i)=>({col:blue(t,k+(0.5-_pcCentre(p)[0]/CW)*0.3+(rr()-.5)*0.14),hatch:0.4,hang:1.2+(rr()-.5)*0.6,ink:0.55,inkCol:INK,open:rr()<0.45?Math.floor(rr()*p.length):-1,lw:Math.max(1.1,D*0.0038)}),{axis:axis||1});
+  part([[0.2,0.72],[0.72,0.69],[0.86,0.8],[0.92,0.97],[0.12,0.97],[0.1,0.86]],0.08,0.2,0.34,1/30,2);
+  part([[0.12,0.92],[0.3,0.89],[0.36,0.95],[0.13,0.985]],0.2,0.22,0.62,1/60,0);
+  part([[0.41,0.31+bow*0.5],[0.56,0.28],[0.7,0.32],[0.78,0.45],[0.79,0.63],[0.62,0.62],[0.47,0.5]],0.22,0.32,0.22,1/40,1);
+  part([[0.27,0.37],[0.47,0.42],[0.6,0.62],[0.42,0.7],[0.24,0.64]],0.32,0.4,0.4,1/40,1);
+  const hc=[0.335,0.255+bow]; const hd=_pgEll(CW*hc[0],CH*hc[1],D*0.075,D*0.105,-0.75,28).map(([x,y])=>[x/CW,y/CH]); part([[0.28,0.31+bow],[0.4,0.27+bow],[0.47,0.36],[0.42,0.43],[0.3,0.4]],0.43,0.44,0.36,1/90,1); part(hd,0.44,0.45,0.6,1/120,1);
+  list.push({id:list.length,t:0.45,line:[[CW*(hc[0]-0.035),CH*(hc[1]+0.035)],[CW*(hc[0]+0.01),CH*(hc[1]+0.05)]],col:INK,lw:Math.max(1.2,D*0.004)});
+  // the guitar: brown, the tonic only warming it; the body lies across the lap, the neck down to the left
+  const gx=CW*0.55, gy=CH*0.63, gl=CH*0.23, gw=CW*0.32, th=Math.PI-0.62+(X.trend-0.5)*0.3, ux=Math.cos(th), uy=Math.sin(th), nx=-uy, ny=ux;
+  const gcol=isBW?[120,112,100]:_pcMix([150,98,48],A.pcCol(A.tonic,48),0.12), gdark=_pcMix(gcol,[30,20,12],0.4), gink=[40,26,14];
+  const body=_pgRot(_pxBody(gx,gy,gw,gl,false),gx,gy,th+Math.PI/2);
+  list.push(_pgF(list.length,0.6,body,gcol,{hatch:0.5,hang:th,ink:0.9,inkCol:gink,lw:Math.max(1.6,D*0.006)}));
+  const shade=_pxCut(body,gx,gy,th)[1]; if(shade.length>=3) list.push(_pgF(list.length,0.605,shade,gdark,{hatch:0.5,hang:th,ink:0}));
+  const hx=gx+ux*gl*0.12, hy=gy+uy*gl*0.12; list.push(_pgF(list.length,0.61,_pgEll(hx,hy,D*0.038,D*0.038,0,14),isBW?[24,24,24]:[30,20,12],{ink:0.4,inkCol:gink}));
+  const n0=[gx+ux*gl*0.48,gy+uy*gl*0.48], nL=D*0.44, n1=[n0[0]+ux*nL,n0[1]+uy*nL], w0=D*0.026, w1=D*0.02;
+  list.push(_pgF(list.length,0.62,[[n0[0]+nx*w0,n0[1]+ny*w0],[n1[0]+nx*w1,n1[1]+ny*w1],[n1[0]-nx*w1,n1[1]-ny*w1],[n0[0]-nx*w0,n0[1]-ny*w0]],_pcMix(gcol,[60,40,20],0.25),{hatch:0.4,hang:th,ink:0.9,inkCol:gink,lw:Math.max(1.4,D*0.005)}));
+  const h1=[n1[0]+ux*D*0.07,n1[1]+uy*D*0.07]; list.push(_pgF(list.length,0.63,[[n1[0]+nx*w1*1.3,n1[1]+ny*w1*1.3],[h1[0]+nx*w1*1.1,h1[1]+ny*w1*1.1],[h1[0]-nx*w1*1.1,h1[1]-ny*w1*1.1],[n1[0]-nx*w1*1.3,n1[1]-ny*w1*1.3]],gdark,{ink:0.9,inkCol:gink,lw:Math.max(1.4,D*0.005)}));
+  const br=[gx-ux*gl*0.3,gy-uy*gl*0.3]; const ns=Math.max(3,Math.min(6,Math.round(A.ch.density*5+1)));
+  for(let i=0;i<ns;i++){ const o=(i-(ns-1)/2)*D*0.009; list.push({id:list.length,t:0.64+i*0.01,line:[[br[0]+nx*o,br[1]+ny*o],[n1[0]+nx*o*0.7,n1[1]+ny*o*0.7]],col:isBW?[210,210,210]:[226,216,196],lw:Math.max(0.7,D*0.0018)}); }
+  // the long arms, as planes lit from the left, over the guitar where the hands are; the fingers on the frets and the strings
+  const fm=[n0[0]+ux*nL*0.55,n0[1]+uy*nL*0.55]; const gp=(x,y)=>[x/CW,y/CH];
+  part([[0.21,0.35],[0.31,0.37],[0.26,0.5],gp(fm[0]+D*0.035,fm[1]-D*0.03),gp(fm[0],fm[1]+D*0.012),[0.15,0.6],[0.17,0.46]],0.7,0.74,0.62,1/70,1);
+  part([[0.61,0.3],[0.71,0.33],[0.78,0.48],gp(hx+D*0.11,hy+D*0.045),gp(hx+D*0.035,hy+D*0.012),gp(hx+D*0.06,hy-D*0.03),[0.69,0.47]],0.74,0.78,0.46,1/70,1);
+  const fing=(x,y,a,n,len,t)=>{ for(let k=0;k<n;k++){ const aa=a+(k-(n-1)/2)*0.18, l=len*(0.8+0.2*Math.cos(k*1.7)); const P=[[x,y],[x+Math.cos(aa)*l*0.55,y+Math.sin(aa)*l*0.55],[x+Math.cos(aa+0.25)*l,y+Math.sin(aa+0.25)*l]];
+    list.push({id:list.length,t:t+k*0.004,stroke:P,w:[D*0.015,D*0.013,D*0.01],close:false,col:INK}); list.push({id:list.length,t:t+k*0.004+0.001,stroke:P,w:[D*0.009,D*0.008,D*0.006],close:false,col:blue(t,0.85)}); } };
+  fing(fm[0],fm[1],th-Math.PI/2+0.35,4,D*0.055,0.86); fing(hx+D*0.035,hy+D*0.008,th+Math.PI/2-0.3,4,D*0.05,0.89);
   _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
 // the facet engine's draw, plus three records the paintings above use: a plain
