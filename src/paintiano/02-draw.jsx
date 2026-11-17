@@ -5701,8 +5701,8 @@ function stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode){
 // a chain down the whole canvas and off its edges, and where two rings cross their bands weave, one over at the first crossing and under at the
 // next, a pinstripe of the dark ground between every band. Each band is a passage of the piece, as wide as the passage is long,
 // in its colour; the passages are dealt round the links in turn, so the whole chain grows at once, each link from its inner
-// band outward, each band sweeping round from its own angle, the way the melody goes, for a third of the piece, so many arcs
-// grow at once; the louder
+// band outward, each band laid as three arcs that appear whole, the first as its passage sounds, the others later in the piece, in no
+// set order: arcs pop up all over the chain and close into rings; the louder
 // links the larger; the links sway with their register. Arcs everywhere at first; the chain at the end. ──
 function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, S=_stxSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn;
@@ -5716,13 +5716,14 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const vm=Math.max(...parts.map(p=>p.h.vmax||0.6)); parts.forEach(p=>{ p.R=R*(0.92+0.08*(p.h.vmax||0.6)/vm); });   // the louder part, the larger link
   const total=2*R+step*(parts.length-1); let along=(span-total)/2+R;
   const rings=[]; parts.forEach((p,k)=>{ if(k) along+=step; const across=side/2+(p.h.reg-0.5)*side*0.1+(k%2?1:-1)*side*0.05;
-    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; rr+=w; return b; });
+    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; const o=[0,1,2]; for(let i=2;i>0;i--){ const j=Math.floor(br()*(i+1)); const t=o[i]; o[i]=o[j]; o[j]=t; } b.ord=o; rr+=w; return b; });
     rings.push({cx,cy,R:Rk,r0:rk,bands}); });
   const gap=Math.max(1.2,D*0.0045);
-  const drawRing=(ring)=>{ for(const b of ring.bands){ if(b.q.t0>reveal) break; const t1=Math.min(1,b.q.t0+0.38), f=Math.max(0,Math.min(1,(reveal-b.q.t0)/Math.max(0.02,t1-b.q.t0)));   // each band keeps sweeping for a third of the piece: many arcs grow at once
-      const ccw=b.dir<0, sw=6.2832*Math.min(1,f), a0=b.a0, a1=a0+(ccw?-sw:sw);   // a band sweeps round from its own angle, either way, as its passage plays
-      ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.arc(ring.cx,ring.cy,b.a,a1,a0,!ccw); ctx.closePath(); ctx.fillStyle=_stxCss(b.col); ctx.fill();
-      ctx.strokeStyle=_stxCss(canvas); ctx.lineWidth=gap; ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.a,a0,a1,ccw); ctx.stroke(); ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.stroke(); } };
+  const drawRing=(ring)=>{ for(const b of ring.bands){ if(b.q.t0>reveal) break; const np=3, dt=Math.max(0.004,b.q.t1-b.q.t0), ccw=b.dir<0, sw=6.2832/np;
+      const spr=Math.max(dt/np,Math.min(0.11,(0.995-b.q.t0)/np));
+      for(let s=0;s<np;s++){ if(b.q.t0+spr*s>reveal) break; const j=b.ord[s], a0=b.a0+(ccw?-1:1)*j*sw, a1=a0+(ccw?-sw:sw);
+        ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.arc(ring.cx,ring.cy,b.a,a1,a0,!ccw); ctx.closePath(); ctx.fillStyle=_stxCss(b.col); ctx.fill();
+        ctx.strokeStyle=_stxCss(canvas); ctx.lineWidth=gap; ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.a,a0,a1,ccw); ctx.stroke(); ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.stroke(); } } };
   rings.forEach(drawRing);
   // the weave: where ring k and ring k+1 cross, ring k goes back over at one crossing — the other crossing stays under
   for(let k=0;k+1<rings.length;k++){ const p=rings[k], q=rings[k+1]; const dx=q.cx-p.cx, dy=q.cy-p.cy, d=Math.hypot(dx,dy)||1; if(d>=p.R+q.R) continue;
