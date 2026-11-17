@@ -13660,7 +13660,46 @@ function _hokusaiInk(chords, lim, gc){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// KUSAMA LISTENS — the picture the piece composes from everything that is hers:
+// KUSAMA LISTENS — her Infinity Mirrored Room (The Souls of Millions of Light
+// Years Away, 2013): a dark room of mirrors over black water, hung with small
+// lights in many colours, each light repeated in the mirrors and in the water
+// until the room has no end. Here every light is a chord of the piece: hung as
+// high as it sounds, as bright and as large as it is loud, in its own colour;
+// the piece walks into the room as it plays, its first chords near, its last
+// far in the depth, so the room fills with the piece and goes on without end in
+// the mirrors left and right and in the water below. Light by light as it plays.
+// ═══════════════════════════════════════════════════════════════════════════
+function _kuListen(ctx,CW,CH,chords,lim,gc,sessionSeed){
+  const ss=sessionSeed|0, cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  ctx.fillStyle='#050408'; ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  const A=_kd2Analyze(chords,gc,'color'), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), r=_seedRnd(61,ss,0,0); r();
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  // the room: a camera a little above half height, the water at the floor, mirrors at the walls, lights up to the ceiling
+  const cx=CW/2, hz=CH*0.6, fx=CW*0.62, fy=CH*0.62, camH=0.42, W=1;
+  const proj=(x,y,z)=>[cx+x*fx/z, hz-(y-camH)*fy/z];
+  // the lights: the chords, the piece walking into the room
+  const N=Math.min(cn,Math.round(clamp(140+cn*0.12,140,260))), lights=[];
+  for(let k=0;k<N;k++){ const i=Math.min(cn-1,Math.floor(k*cn/N)), e=A.ev[i]; if(!e) continue; const u=i/Math.max(1,cn-1);
+    const z=0.32+1.9*Math.pow(u,0.9)+(r()-0.5)*0.16, x=(r()*2-1)*W*0.94, y=clamp(0.1+1.15*A.reg(e.top)+(r()-0.5)*0.22,0.05,1.3), loud=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1);
+    const c=_kwVivid(_kusChord(chords,i,gc).rgb); lights.push({i,x,y,z,loud,c}); }
+  // the mirrors: each light again beyond the left and right walls, and everything again in the black water
+  const copies=[]; for(const L of lights){ for(const m of [-2,-1,0,1,2]){ const x=m===0?L.x:(m%2?(Math.sign(m)*2*W-L.x):(m*2*W+L.x)), dim=Math.pow(0.55,Math.abs(m)); copies.push({L,x,y:L.y,dim}); copies.push({L,x,y:-L.y,dim:dim*0.42,water:true}); } }
+  copies.sort((a,b)=>b.L.z-a.L.z);
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(const q of copies){ const L=q.L; if(L.i>=played) continue; const [sx,sy]=proj(q.x,q.y,L.z); if(sx<-D*0.1||sx>CW+D*0.1||sy<-D*0.1||sy>CH+D*0.1) continue;
+    const s=D*(0.004+0.01*L.loud*L.loud)/L.z, a=q.dim*(0.55+0.45*L.loud);
+    ctx.fillStyle=`rgba(${L.c[0]|0},${L.c[1]|0},${L.c[2]|0},${(0.08*a).toFixed(3)})`; ctx.beginPath(); ctx.arc(sx,sy,s*(q.water?4.5:4),0,6.2832); ctx.fill();
+    ctx.fillStyle=`rgba(${L.c[0]|0},${L.c[1]|0},${L.c[2]|0},${(0.32*a).toFixed(3)})`; ctx.beginPath(); ctx.arc(sx,sy,s*1.8,0,6.2832); ctx.fill();
+    const w=[(L.c[0]+255*2)/3,(L.c[1]+255*2)/3,(L.c[2]+255*2)/3]; ctx.fillStyle=`rgba(${w[0]|0},${w[1]|0},${w[2]|0},${(0.9*a).toFixed(3)})`; ctx.beginPath(); ctx.arc(sx,sy,s*0.7,0,6.2832); ctx.fill(); }
+  ctx.restore();
+  // the water's edge: a faint line where the room meets its reflection
+  ctx.fillStyle='rgba(255,255,255,0.025)'; ctx.fillRect(0,hz-1,CW,2);
+  try{ globalThis.__KU_LISTEN={v:'room',lights:lights.length}; }catch(_){}
+  _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// KUSAMA'S NET AND PUMPKIN (until 17 Nov 2026 her Listens, a chooser among her motifs; now called with only='net' for
+// variant 3, the infinity net over its ground, and only='pumpkin' for variant 7) — the picture the piece composes from everything that is hers:
 // the polka dot, the dot that grows, the infinity net, the dotted sphere, the
 // pumpkin, the eye with lashes, the tendril, the flat vivid ground. A ground,
 // one obsession, and over it every element from what she hears.
@@ -13673,15 +13712,16 @@ function _hokusaiInk(chords, lim, gc){
 //   the signs        an accent is a big dot in ink · dots grow along the piece when it climbs · a ring of dots round the
 //                    climax · the whole thing dotted, always
 // ═══════════════════════════════════════════════════════════════════════════
-function _kuListen(ctx,CW,CH,chords,lim,gc,sessionSeed){
+function _kuListenOld(ctx,CW,CH,chords,lim,gc,sessionSeed,only){
   const ss=sessionSeed|0, cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn, D=Math.min(CW,CH);
   const A=_kd2Analyze(chords,gc,'color'); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
   let c=A.phrases[0]||{t:0.5,vmax:0.7,t0:0,t1:1}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
   const r0=_seedRnd(61,ss,0,0); r0();
   const chordC=(t)=>_kwVivid(_kusChord(chords,Math.min(cn-1,Math.max(0,(t*cn)|0)),gc).rgb);
   const base=chordC(c.t);
-  const ground = (pace<0.45) ? 'black' : (reg>0.6 && loud<0.55) ? 'white' : 'vivid';
-  const comp = (pace<0.45) ? 'net' : (loud>0.6 && regular>0.7 && major) ? 'pumpkin' : (pace>0.75 && leaps>0.45) ? 'spheres' : (regular>0.85 && pace>0.8) ? 'field' : (!major) ? 'eyes' : 'tendrils';
+  const darkP=only==='pumpkin'&&!major;   // a minor piece: her dark pumpkin, dotted in colour on black
+  const ground = darkP ? 'black' : (pace<0.45) ? 'black' : (reg>0.6 && loud<0.55) ? 'white' : 'vivid';
+  const comp = only ? only : (pace<0.45) ? 'net' : (loud>0.6 && regular>0.7 && major) ? 'pumpkin' : (pace>0.75 && leaps>0.45) ? 'spheres' : (regular>0.85 && pace>0.8) ? 'field' : (!major) ? 'eyes' : 'tendrils';
   try{ globalThis.__KU_LISTEN={ground,comp,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
   const GRD = ground==='black' ? [12,10,14] : ground==='white' ? [248,244,236] : base; const dark=_kwLum(GRD)<110; const INK = dark ? [248,244,236] : [18,14,20];
   const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -13690,9 +13730,9 @@ function _kuListen(ctx,CW,CH,chords,lim,gc,sessionSeed){
   const dot=(x,y,r,col)=>{ ctx.fillStyle=_kwCss(col); ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); };
   const C2=(()=>{ const n=24,out=[]; for(let i=0;i<n;i++){ const cc=cn*i/(n-1); let s=0,k=0; for(let j=Math.max(0,Math.round(cc-cn/n/2));j<=Math.min(cn-1,Math.round(cc+cn/n/2));j++){ const e=A.ev[j]; if(e){ s+=e.top; k++; } } out.push(k?A.reg(s/k):0.5); } return out; })();
   const at=(u)=>{ const i=Math.min(22,Math.floor(u*23)); const f=u*23-i; return C2[i]+(C2[i+1]-C2[i])*f; };
-  if(comp==='pumpkin'){ const cx=CW/2, cy=CH*0.54, R=D*0.42, lobes=Math.max(5,Math.min(7,Math.round(3+poly*1.5))); const body=mix(base,[250,190,30],0.7); const stem=dark?[120,150,90]:[60,90,50];
+  if(comp==='pumpkin'){ const cx=CW/2, cy=CH*0.54, R=D*0.42, lobes=Math.max(5,Math.min(7,Math.round(3+poly*1.5))); const body=darkP?mix(base,[16,16,30],0.8):mix(base,[250,190,30],0.7), pdot=darkP?mix(base,[250,214,60],0.55):[18,14,20]; const stem=dark?[120,150,90]:[60,90,50];
     push(0.02,(ctx,r)=>{ ctx.fillStyle=_kwCss(body); ctx.beginPath(); ctx.ellipse(cx,cy,R*1.05,R*0.82,0,0,6.2832); ctx.fill(); });
-    for(let k=0;k<lobes;k++){ const u=(k+0.5)/lobes; const lx=cx+(u-0.5)*R*1.9; const lw=R*1.9/lobes; const t=k/lobes; push(0.05+t*0.5,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.ellipse(cx,cy,R*1.05,R*0.82,0,0,6.2832); ctx.clip(); ctx.strokeStyle=_kwCss(mix(body,[0,0,0],0.3)); ctx.lineWidth=Math.max(1.5,D*0.005); ctx.beginPath(); ctx.ellipse(lx,cy,lw*0.75,R*0.86,0,0,6.2832); ctx.stroke(); ctx.restore(); }); const n=Math.round((9+dens*6)*_dW(dens)); for(let j=0;j<n;j++){ const v=(j+0.5)/n; const yy=cy+(v-0.5)*R*1.45; const insideV=Math.abs(v-0.5)*2; const half=lw*0.75*Math.sqrt(Math.max(0,1-insideV*insideV)); for(let q2=-1;q2<=1;q2++){ const xx=lx+q2*half*0.55; const insideH=Math.abs(q2)*0.55; const rr=lw*0.24*(1-0.75*insideV*insideV)*(1-0.8*insideH)*(0.85+0.3*at(t)); if(rr<1.2 || Math.hypot((xx-cx)/(R*1.02),(yy-cy)/(R*0.8))>1) continue; push(0.1+t*0.6+v*0.25,(ctx,r)=>dot(xx,yy,rr,[18,14,20])); } } }
+    for(let k=0;k<lobes;k++){ const u=(k+0.5)/lobes; const lx=cx+(u-0.5)*R*1.9; const lw=R*1.9/lobes; const t=k/lobes; push(0.05+t*0.5,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.ellipse(cx,cy,R*1.05,R*0.82,0,0,6.2832); ctx.clip(); ctx.strokeStyle=_kwCss(darkP?mix(body,[255,255,255],0.18):mix(body,[0,0,0],0.3)); ctx.lineWidth=Math.max(1.5,D*0.005); ctx.beginPath(); ctx.ellipse(lx,cy,lw*0.75,R*0.86,0,0,6.2832); ctx.stroke(); ctx.restore(); }); const n=Math.round((9+dens*6)*_dW(dens)); for(let j=0;j<n;j++){ const v=(j+0.5)/n; const yy=cy+(v-0.5)*R*1.45; const insideV=Math.abs(v-0.5)*2; const half=lw*0.75*Math.sqrt(Math.max(0,1-insideV*insideV)); for(let q2=-1;q2<=1;q2++){ const xx=lx+q2*half*0.55; const insideH=Math.abs(q2)*0.55; const rr=lw*0.24*(1-0.75*insideV*insideV)*(1-0.8*insideH)*(0.85+0.3*at(t)); if(rr<1.2 || Math.hypot((xx-cx)/(R*1.02),(yy-cy)/(R*0.8))>1) continue; push(0.1+t*0.6+v*0.25,(ctx,r)=>dot(xx,yy,rr,pdot)); } } }
     push(0.9,(ctx,r)=>{ ctx.fillStyle=_kwCss(stem); ctx.beginPath(); ctx.moveTo(cx-R*0.08,cy-R*0.78); ctx.quadraticCurveTo(cx-R*0.02,cy-R*1.05,cx+R*0.12,cy-R*1.0); ctx.lineTo(cx+R*0.1,cy-R*0.8); ctx.closePath(); ctx.fill(); });
     const n2=Math.round((30+dens*40)*_dW(dens)); for(let i=0;i<n2;i++){ const x=CW*r0(), y=CH*r0(); if(Math.hypot((x-cx)/(R*1.05),(y-cy)/(R*0.82))<1.05) continue; push(0.3+0.6*r0(),(ctx,r)=>dot(x,y,D*(0.006+0.012*r()),INK)); } }
   else if(comp==='spheres'){ const G=_kd2Phrases(A,Math.max(4,Math.min(26,Math.round(4+24*dens)))); const _rs=1.15-0.55*dens; G.forEach((q,k)=>{ const R=D*(0.07+0.12*q.vmax)*_rs; const x=CW*(0.15+0.7*q.t)+(r0()-.5)*CW*0.2, y=CH*(0.15+0.7*(1-A.reg(q.top)))+(r0()-.5)*CH*0.12; const col=chordC(q.t); const dc=dark?INK:[18,14,20]; push(q.t0,(ctx,r)=>{ const g=ctx.createRadialGradient(x-R*0.3,y-R*0.3,R*0.1,x,y,R); g.addColorStop(0,_kwCss(mix(col,[255,255,255],0.3))); g.addColorStop(1,_kwCss(mix(col,[0,0,0],0.45))); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,R,0,6.2832); ctx.fill(); ctx.save(); ctx.beginPath(); ctx.arc(x,y,R,0,6.2832); ctx.clip(); const s=R/(3+((r()*3)|0)); for(let yy=y-R; yy<y+R; yy+=s*0.87){ for(let xx=x-R+((Math.round((yy-y)/s)%2)?s/2:0); xx<x+R; xx+=s){ const dd=Math.hypot(xx-x,yy-y)/R; if(dd>1) continue; dot(xx,yy,s*0.3*Math.sqrt(1-dd*dd*0.6),dc); } } ctx.restore(); }); });
@@ -13722,12 +13762,13 @@ function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex
   //  D = Dotted Spheres (floating dot orbs).
   //  E = Iconic Infinity Dots (saturated ground + black dots + chord accents).
   //  F = Tendril nets (light on colour).
-  // VARIANT: 0 What she heard (_kuListen, generative) · 1 Wall of canvases · 2 Dot field · 3 Infinity Nets · 4 Dotted Spheres · 5 Infinity Dots · 6 Tendril nets. Free: 0 and 1.
-  const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
+  // VARIANT: 0 What she heard (_kuListen: her Infinity Mirrored Room) · 1 Wall of canvases · 2 Dot field · 3 Infinity Net (from the first Listens; the scalloped nets retired, code kept) · 4 Dotted Spheres · 5 Infinity Dots · 6 Tendril nets · 7 Pumpkin (from the first Listens). Free: 0 and 1.
+  const _pn=_capN(8); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _kuListen(ctx,CW,CH,chords,lim,gc,ss); return; }
+  if(pick0===7){ _kuListenOld(ctx,CW,CH,chords,lim,gc,ss,'pumpkin'); return; }   // the pumpkin
   const pick=pick0-1;
   if(pick===1){ kusamaPhaseB(ctx,CW,CH,chords,lim,gc,ss); return; }
-  if(pick===2){ kusamaPhaseNets(ctx,CW,CH,chords,lim,gc,ss); return; }
+  if(pick===2){ _kuListenOld(ctx,CW,CH,chords,lim,gc,ss,'net'); return; }   // the infinity net of the first Listens (the scalloped Infinity Nets retired, code kept)
   if(pick===3){ kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===4){ kusamaPhaseAccum(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===5){ kusamaPhaseTendril(ctx,CW,CH,chords,lim,gc,ss); return; }
@@ -19532,6 +19573,7 @@ const ARTIST_VARIANTS = {
     {ground:'#1a1410',mark:{sphere:1},size:[.08,.25],layout:{scatter:1},density:.3},
     {ground:'#111111',mark:{dot:.7,dotcluster:.3},size:[.1,.3],layout:{scatter:1},density:.25},
     {ground:'#d85a1a',mark:{net:.7,spiral:.3},size:[.05,.1],layout:{scatter:1},density:.3,lines:0},
+    {ground:'#f0c020',mark:{dot:.7,sphere:.3},size:[.01,.06],layout:{scatter:1},density:.6,tone:'pure'},   // Pumpkin
   ],
   miro: [
     {ground:'#f2ece0',mark:{blob:.4,star:.3,dot:.3},size:[.04,.12],layout:{scatter:1},density:.2,outline:.9,tone:'primary'},   // What he heard
@@ -19711,7 +19753,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:7,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:7,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:8,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:7,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const v=V[((ph|0)%n+n)%n]; return Object.assign({}, b, v); }
 // equal partners: 2 → 50/50, 3 → ⅓ each, 5 → 20 % each. The first only sets the ground.
 const _FU_PRIM = [[227,36,43],[29,78,216],[242,199,0],[17,17,17],[250,250,250]];
