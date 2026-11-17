@@ -5733,10 +5733,9 @@ function stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode){
 // a chain down the whole canvas and off its edges, and where two rings cross their bands weave, one over at the first crossing and under at the
 // next, a pinstripe of the dark ground between every band. Each band is a passage of the piece, as wide as the passage is long,
 // in its colour; the passages are dealt round the links in turn, so the whole chain grows at once, each link from its inner
-// band outward, each band laid as six arcs that appear whole, all of them within the first three fifths of the piece, in the colour of the chord sounding as they appear, turning to the band's
+// band outward, each band laid as four arcs that appear whole, at an easy pace through most of the piece, in the colour of the chord sounding as they appear, turning to the band's
 // colour as they come home; the first as its passage sounds, the others later in the piece; every arc
-// pops up somewhere at random on the canvas, its own size and turn, and from three fifths of the piece on the arcs fly home
-// quickly one by one, settling into the chain, so the chaos of the start is the interlace at the end; the louder
+// pops up somewhere at random on the canvas, its own size and turn, and in the last third the arcs fly home one by one, settling into the chain, so the chaos of the start is the interlace at the end; the louder
 // links the larger; the links sway with their register. Arcs everywhere at first; the chain at the end. ──
 function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, S=_stxSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn;
@@ -5750,16 +5749,16 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const vm=Math.max(...parts.map(p=>p.h.vmax||0.6)); parts.forEach(p=>{ p.R=R*(0.92+0.08*(p.h.vmax||0.6)/vm); });   // the louder part, the larger link
   const total=2*R+step*(parts.length-1); let along=(span-total)/2+R;
   const rings=[]; parts.forEach((p,k)=>{ if(k) along+=step; const across=side/2+(p.h.reg-0.5)*side*0.1+(k%2?1:-1)*side*0.05;
-    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; const o=[0,1,2,3,4,5]; for(let i=5;i>0;i--){ const j=Math.floor(br()*(i+1)); const t=o[i]; o[i]=o[j]; o[j]=t; } b.ord=o; rr+=w; return b; });
+    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; const o=[0,1,2,3]; for(let i=3;i>0;i--){ const j=Math.floor(br()*(i+1)); const t=o[i]; o[i]=o[j]; o[j]=t; } b.ord=o; rr+=w; return b; });
     rings.push({cx,cy,R:Rk,r0:rk,bands}); });
   const gap=Math.max(1.2,D*0.0045);
   const smooth=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x);
-  const drawRing=(ring,home)=>{ for(const b of ring.bands){ if(b.q.t0*0.6>reveal) break; const np=6, dt=Math.max(0.004,b.q.t1-b.q.t0), ccw=b.dir<0, sw=6.2832/np;
+  const drawRing=(ring,home)=>{ for(const b of ring.bands){ if(b.q.t0*0.85>reveal) break; const np=4, dt=Math.max(0.004,b.q.t1-b.q.t0), ccw=b.dir<0, sw=6.2832/np;
       const spr=Math.max(dt/np,Math.min(0.06,(0.995-b.q.t0)/np));
-      for(let s=0;s<np;s++){ const ta=(b.q.t0+spr*s)*0.6; if(ta>reveal) break; const j=b.ord[s]; const pr=_seedRnd(4500+b.q.a*3+s,ss,0,0); pr();
-        const T=Math.max(ta+0.04,0.6+0.22*pr()), L=Math.max(0.0001,Math.min(0.1,1-T)), k=reveal>=1?1:smooth((reveal-T)/L);
+      for(let s=0;s<np;s++){ const ta=(b.q.t0+spr*s)*0.85; if(ta>reveal) break; const j=b.ord[s]; const pr=_seedRnd(4500+b.q.a*3+s,ss,0,0); pr();
+        const T=Math.max(ta+0.04,0.7+0.17*pr()), L=Math.max(0.0001,Math.min(0.12,1-T)), k=reveal>=1?1:smooth((reveal-T)/L);
         if(home && k<0.999) continue;
-        const ccx=pr()*CW, ccy=pr()*CH, crm=D*(0.1+0.24*pr()), cw=crm*0.24, crot=(pr()-.5)*6.2832, csw=sw*(0.7+0.9*pr());
+        const ccx=pr()*CW, ccy=pr()*CH, crm=D*(0.12+0.26*pr()), cw=crm*0.24, crot=(pr()-.5)*6.2832, csw=sw*(0.7+0.9*pr());
         const fm=(b.a+b.b)/2, fw=b.b-b.a; const cx=ccx+(ring.cx-ccx)*k, cy=ccy+(ring.cy-ccy)*k, rm=crm+(fm-crm)*k, w=cw+(fw-cw)*k, swk=csw+(sw-csw)*k;
         const a0=b.a0+(ccw?-1:1)*j*sw+crot*(1-k), a1=a0+(ccw?-swk:swk), ra=Math.max(0.5,rm-w/2), rb=rm+w/2;
         ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a1,ccw); ctx.arc(cx,cy,ra,a1,a0,!ccw); ctx.closePath(); const cc=k>=1?b.col:(()=>{ const c0=S.col(Math.min(0.999,ta)); return [0,1,2].map(i=>c0[i]+(b.col[i]-c0[i])*k); })(); ctx.fillStyle=_stxCss(cc); ctx.fill();
