@@ -8914,9 +8914,80 @@ function lichtensteinBrushstrokes(ctx,CW,CH,chords,lim,gc,ss,mode){
     else _lcCombed(ctx,R,S2,0,n,e0,NN,base,streak,lw*1.2); });
   try{ globalThis.__LC_LISTEN={v:'brushstrokes',strokes:S.length,loops:S.filter(s=>s.loopAt).length,falls:S.filter(s=>s.fall).length}; }catch(_){} _setCurE(0.5);
 }
+// ── Lichtenstein: Perfect and Imperfect Paintings (1978–86) — his abstraction: straight lines run across a white canvas
+// and cut it into triangles and polygons, filled with his whole vocabulary — flat colour (in this series not only his
+// primaries but teal, rose, lavender, maroon), fine diagonal stripes, fine Ben-Day dots, a sheen of metallic grey, a
+// little white; a line may be a broad coloured band; in the Imperfect ones a line runs past the edge and the canvas grows
+// a point to carry it. Here every line is a passage of the piece, crossing the canvas where the passage falls in time,
+// slanting as its tune climbs or falls and the more steeply the wider it leaps; each polygon takes the colour of the
+// passage whose line is nearest — flat when it is loud, deep when it is dense, in fine stripes when it leaps, in fine dots
+// or the grey sheen when it is quiet; the climax is a broad band in its own colour, and where the piece breaks out — its
+// climax, its widest leap — the line breaks out of the canvas. Line by line as the piece plays.
+function _lcSplit(poly,px,py,nx,ny){ const A=[],B=[],side=(p)=>(p[0]-px)*nx+(p[1]-py)*ny; for(let i=0;i<poly.length;i++){ const p=poly[i], q=poly[(i+1)%poly.length], sp=side(p), sq=side(q);
+    if(sp>=0) A.push(p); if(sp<=0) B.push(p); if((sp>0&&sq<0)||(sp<0&&sq>0)){ const t=sp/(sp-sq), m=[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t]; A.push(m); B.push(m); } }
+  return [A.length>=3?A:null,B.length>=3?B:null]; }
+function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), dens=A.ch?A.ch.density:0.4; const lw=Math.max(2,D*0.0075);
+  const r0=_lcR(83000,ss); r0();
+  const wall=[236,234,229]; ctx.fillStyle=_lcCss(wall); ctx.fillRect(0,0,CW,CH);
+  const m=D*0.075, x0=m, y0=m, x1=CW-m, y1=CH-m, W=x1-x0, H=y1-y0;
+  const G=_kd2Phrases(A,Math.round(_lcClamp(5+4*dens,5,9))), vm=Math.max(0.05,...G.map(q=>q.vmax||0.5)), lmax=Math.max(1,...G.map(q=>q.b-q.a));
+  const L=G.map((q,k)=>{ const a=q.a, b=Math.max(q.a+1,q.b), hp=_mtHearSpan(A,a,b), t=(a+b)/2/cn; const lp=_lcClamp(hp.leap/9,0,1);
+    const th=-Math.atan(_lcClamp(hp.dir,-2,2)*0.5)+(k%2?1:-1)*(0.35+0.6*lp);   // slanting as the tune goes, crossing its neighbours
+    const px=x0+W*(0.2+0.6*((k*0.618+0.3)%1)), py=y0+H*(0.06+0.88*t);
+    const pc=_lcInk(_picChord(chords,Math.min(cn-1,Math.floor((a+b)/2)),gc,isBW).rgb,isBW);
+    return {q,a,b,hp,loud:(q.vmax||0.5)/vm,lp,th,px,py,nx:-Math.sin(th),ny:Math.cos(th),dx:Math.cos(th),dy:Math.sin(th),pc,k}; });
+  const on=L.filter(l=>played>=l.a);
+  // the breaking out: the climax and the widest leap, when they stand out
+  const out=[]; if(L.length){ let c=L[0], w=L[0]; for(const l of L){ if(l.loud>c.loud) c=l; if(l.hp.leap>w.hp.leap) w=l; } if(c.loud>=0.98) out.push(c); if(w!==c&&w.hp.leap>7) out.push(w); }
+  // the cells: the canvas cut by every line that has sounded
+  let cells=[[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]]; for(const l of on){ const nxt=[]; for(const p of cells){ const [a,b]=_lcSplit(p,l.px,l.py,l.nx,l.ny); if(a) nxt.push(a); if(b) nxt.push(b); } cells=nxt; }
+  const K=_lcEntry({g:'K',solid:true}), Wt=_lcEntry({g:'W',solid:true});
+  const mixc=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], grey=(c)=>{ const v=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [v,v,v]; };
+  // the colours of this series: the passage's hue — held soft (teal, rose, lavender, olive) in the quieter passages, strong (deep blue, red, magenta, yellow) in the loud ones; never neon
+  const hsl=(c)=>{ const r=c[0]/255,g=c[1]/255,b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2, d=mx-mn; let h=0,s2=0; if(d>1e-6){ s2=d/(1-Math.abs(2*l-1)); h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4; h*=60; if(h<0) h+=360; } return [h,s2,l]; };
+  const rgbH=(h,s2,l)=>{ const C=(1-Math.abs(2*l-1))*s2, X2=C*(1-Math.abs((h/60)%2-1)), m2=l-C/2; const [r,g,b]=h<60?[C,X2,0]:h<120?[X2,C,0]:h<180?[0,C,X2]:h<240?[0,X2,C]:h<300?[X2,0,C]:[C,0,X2]; return [(r+m2)*255,(g+m2)*255,(b+m2)*255]; };
+  const tone=(c,L,strong)=>{ if(isBW) return grey(mixc(c,L>0.5?_LC_WHT:[20,20,20],Math.abs(L-0.5))); const [h,s2]=hsl(c); return strong?rgbH(h,_lcClamp(s2,0.6,0.78),L<0.4?0.28:(h>=40&&h<75)?0.5:(h>=75&&h<175)?0.34:0.44):rgbH(h,_lcClamp(s2*0.55,0.14,0.48),L); };   // the loud passages in strong colour, as his deep blues, reds and magentas; the rest held soft
+  const colOf=(l)=>_picChord(chords,Math.min(cn-1,Math.floor((l.a+l.b)/2)),gc,isBW).rgb;
+  const strongL=on.slice().sort((p,q)=>q.loud-p.loud).slice(0,on.length>4?2:1);   // only the loudest passages in strong colour
+  const fillOf=(cell)=>{ let cx=0,cy=0; for(const p of cell){ cx+=p[0]; cy+=p[1]; } cx/=cell.length; cy/=cell.length; let best=null,bd=1e18; for(const l of on){ const d=Math.abs((cx-l.px)*l.nx+(cy-l.py)*l.ny); if(d<bd){ bd=d; best=l; } }
+    if(!best) return {f:_LC_WHT}; const h=_lcR(83100+Math.round(cx/7)*131+Math.round(cy/7)*17,ss); h(); const u=h(), l=best, c=colOf(l), st=strongL.includes(l), soft=st?tone(c,0.48,true):tone(c,0.62+0.12*(1-l.loud)), deep=tone(c,0.26,st);
+    if(u<0.12) return {f:_LC_WHT}; if(u>0.96) return {f:_LC_BLK};
+    if(l.hp.v<0.34) return u<0.55?{dots:deep,on:_LC_WHT}:{metal:1};
+    if(l.lp>0.5&&u<0.7) return {stripes:u<0.4?_LC_BLK:deep,on:u<0.55?_LC_WHT:soft};
+    if(u>0.9) return {dots:deep,on:soft};
+    if(dens>0.55&&u>0.78) return {f:deep};
+    return {f:soft}; };
+  ctx.save(); ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(x0+D*0.012,y0+D*0.012,W,H); ctx.restore();   // the canvas on the wall
+  const paint=(cell,F)=>{ _lcPoly(ctx,cell);
+    if(F.f){ ctx.fillStyle=_lcCss(F.f); ctx.fill(); return; }
+    if(F.metal){ let a=1e9,b=-1e9; for(const p of cell){ a=Math.min(a,p[0]+p[1]*0.4); b=Math.max(b,p[0]+p[1]*0.4); } const gr=ctx.createLinearGradient(a,0,b,0); gr.addColorStop(0,'rgb(150,150,154)'); gr.addColorStop(0.55,'rgb(236,236,238)'); gr.addColorStop(1,'rgb(170,170,174)'); ctx.fillStyle=gr; ctx.fill(); return; }
+    ctx.fillStyle=_lcCss(F.on); ctx.fill(); ctx.save(); _lcPoly(ctx,cell); ctx.clip();
+    if(F.stripes){ ctx.strokeStyle=_lcCss(F.stripes); ctx.lineWidth=D*0.0045; const st=D*0.0125; for(let s2=-H-W;s2<W+H;s2+=st){ ctx.beginPath(); ctx.moveTo(x0+s2,y0); ctx.lineTo(x0+s2+H*0.8,y1); ctx.stroke(); } }
+    else { let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9; for(const p of cell){ bx0=Math.min(bx0,p[0]); by0=Math.min(by0,p[1]); bx1=Math.max(bx1,p[0]); by1=Math.max(by1,p[1]); } _lcBenday(ctx,bx0,by0,bx1-bx0,by1-by0,Math.max(4,D*0.014),F.dots,()=>0.62); }
+    ctx.restore(); };
+  for(const cell of cells) paint(cell,fillOf(cell));
+  // the points where a line breaks out: the canvas grows a point to carry it
+  for(const l of out){ if(!on.includes(l)) continue; const right=l.hp.dir>=0; let t=1e9; const sgn=right?1:-1; const ex=l.dx*sgn, ey=l.dy*sgn;
+    if(ex>1e-6) t=Math.min(t,(x1-l.px)/ex); if(ex<-1e-6) t=Math.min(t,(x0-l.px)/ex); if(ey>1e-6) t=Math.min(t,(y1-l.py)/ey); if(ey<-1e-6) t=Math.min(t,(y0-l.py)/ey);
+    const P=[l.px+ex*t,l.py+ey*t], T=[l.px+ex*(t+m*1.6),l.py+ey*(t+m*1.6)], onV=Math.abs(P[0]-x0)<1||Math.abs(P[0]-x1)<1, wq=D*(0.2+0.1*l.loud), Q=onV?[P[0],_lcClamp(P[1]+(ey>0?-wq:wq),y0,y1)]:[_lcClamp(P[0]+(ex>0?-wq:wq),x0,x1),P[1]];
+    const Tc=[Math.min(Math.max(T[0],D*0.01),CW-D*0.01),Math.min(Math.max(T[1],D*0.01),CH-D*0.01)]; const tri=[P,Tc,Q];
+    let near=cells[0], bd=1e18; for(const c of cells){ let cx=0,cy=0; for(const p of c){ cx+=p[0]; cy+=p[1]; } cx/=c.length; cy/=c.length; const d=Math.hypot(cx-(P[0]+Q[0])/2,cy-(P[1]+Q[1])/2); if(d<bd){ bd=d; near=c; } }
+    paint(tri,fillOf(near)); _lcPoly(ctx,tri); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; ctx.lineJoin='miter'; ctx.stroke(); l.tip=Tc; l.P=P; }
+  // the lines, each drawn across as its passage plays, and the canvas edge
+  ctx.save(); ctx.beginPath(); ctx.rect(x0,y0,W,H); ctx.clip();
+  const band=out[0]||null;
+  for(const l of on){ const g=_lcClamp((played-l.a)/Math.max(1,l.b-l.a),0,1), R=Math.hypot(W,H); const s0=-R, s1=-R+2*R*g, A0=[l.px+l.dx*s0,l.py+l.dy*s0], A1=[l.px+l.dx*s1,l.py+l.dy*s1]; ctx.lineCap='butt';
+    if(l===band){ const bw=D*0.032; ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=bw+lw*2; ctx.beginPath(); ctx.moveTo(...A0); ctx.lineTo(...A1); ctx.stroke(); ctx.strokeStyle=_lcCss(tone(colOf(l),0.5,true)); ctx.lineWidth=bw; ctx.beginPath(); ctx.moveTo(...A0); ctx.lineTo(...A1); ctx.stroke(); continue; }
+    ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(...A0); ctx.lineTo(...A1); ctx.stroke(); }
+  ctx.restore(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*0.6; ctx.strokeRect(x0,y0,W,H);
+  for(const l of out) if(l.tip&&played>=l.b){ if(l===band){ const bw=D*0.032; ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=bw+lw*2; ctx.beginPath(); ctx.moveTo(l.P[0],l.P[1]); ctx.lineTo(l.tip[0],l.tip[1]); ctx.stroke(); ctx.strokeStyle=_lcCss(tone(colOf(l),0.5,true)); ctx.lineWidth=bw; } else { ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; } ctx.beginPath(); ctx.moveTo(l.P[0],l.P[1]); ctx.lineTo(l.tip[0],l.tip[1]); ctx.stroke(); }   // the line carried out to the point
+  try{ globalThis.__LC_LISTEN={v:'perfect',lines:on.length,out:out.length}; }catch(_){} _setCurE(0.5);
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // LICHTENSTEIN — Ben-Day dots, fat black contours, poster-flat colour.
-// Phases: 0 mosaic (a page of comic panels) · 1 burst · 2 Entablatures
+// Phases: 0 mosaic (a page of comic panels) · 1 Perfect and Imperfect Paintings · 2 Entablatures
 // · 3 brushstrokes · 4 Modern Painting with Clef · 5 Landscape. Song character: density → raster tightness, energy → contour
 // weight and shape sizes.
 function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
@@ -8934,34 +9005,14 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   _lcStepPx=Math.max(5,Math.round(S*0.014));   // the size of his screen on this canvas: fine enough for the eye to mix the two inks
   const _pc=(i)=>_lcInk(_picChord(chords,Math.min(cn-1,Math.max(0,i)),gc,mode==='bw').rgb,mode==='bw'), NEWC=true;
   const fillC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i)):css(flat(c)); }, dotC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i).dot):css(flat(c)); };   // the piece's colours, printed in his inks
-  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 burst · 3 Entablatures (replaces the close-up curves) · 4 Brushstrokes (the passages as strokes in the series' language) · 5 Modern Painting with Clef (replaces the mirrors) · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
+  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 Perfect and Imperfect Paintings (replaces the ray burst) · 3 Entablatures (replaces the close-up curves) · 4 Brushstrokes (the passages as strokes in the series' language) · 5 Modern Painting with Clef (replaces the mirrors) · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _lcListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   const pick=pick0-1;
 
   if(pick===0){ lichtensteinPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===5){ lichtensteinLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Sunrise (a near copy of his 1965 picture) retired, code kept
-  if(pick===1){ // burst
-    _bendayField(ctx,0,0,CW,CH,dotC(1),dotR,dotStep,0.45);
-    const cx=CW/2, cy=CH*0.52;
-    // the rays: ~30 for a calm piece, up to ~90 for a torrent of notes, reaching out to the frame; a ray each its own chord's colour
-    const nRay=Math.round(24+66*dnaD), _rstep=Math.max(1,cn/nRay), hw=0.04*Math.sqrt(30/nRay);
-    for(let k=0;k<nRay;k++){ const i=Math.min(cn-1,Math.floor(k*_rstep)); if(i>=N && k>0) break;
-      const m=meta(i); const a=k*GA, len=S*(0.2+0.2*dnaD)+Math.min(1,m.dur)*S*0.26;
-      ctx.fillStyle=fillC(i);
-      ctx.beginPath(); ctx.moveTo(cx,cy);
-      ctx.lineTo(cx+Math.cos(a-hw)*len,cy+Math.sin(a-hw)*len);
-      ctx.lineTo(cx+Math.cos(a+hw)*len,cy+Math.sin(a+hw)*len);
-      ctx.closePath(); ctx.fill();
-    }
-    ctx.fillStyle=PAPER; ctx.strokeStyle=INK; ctx.lineWidth=LW*1.4;
-    ctx.beginPath();
-    for(let k=0;k<20;k++){const a=k/20*Math.PI*2, r=(k%2?S*0.10:S*0.24)*(0.8+0.4*rnd());
-      const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r; k?ctx.lineTo(x,y):ctx.moveTo(x,y);}
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=fillC(0); ctx.beginPath(); ctx.arc(cx,cy,S*0.07*(0.75+0.5*dnaE),0,7); ctx.fill(); ctx.stroke();
-    return;
-  }
+  if(pick===1){ lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Perfect and Imperfect Paintings (replaces the ray burst)
   if(pick===2){ lichtensteinEntablature(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Entablatures (replaces the close-up curves)
   if(pick===3){ lichtensteinBrushstrokes(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Brushstrokes, the tune as the stroke
   if(pick===4){ lichtensteinModernClef(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Modern Painting with Clef (replaces the mirrors)
@@ -19364,7 +19415,7 @@ const ARTIST_VARIANTS = {
   lichtenstein: [
     {ground:'#faf8f0',mark:{benday:.35,lcboom:.25,lcbrush:.2,panel:.2},size:[.1,.3],layout:{grid:.5,scatter:.5},density:.3,outline:1},   // What he heard
     {ground:'#faf8f0',mark:{panel:.4,benday:.3,lcboom:.2,speech:.1},size:[.06,.14],layout:{grid:1},density:.6,outline:1},   // Mosaic: comic panels
-    {ground:'#e8e8f4',mark:{lcboom:.6,benday:.4},size:[.1,.3],layout:{scatter:1},density:.12},   // the burst
+    {ground:'#faf8f0',mark:{panel:.5,benday:.3,stripes:.2},size:[.1,.3],layout:{grid:1},density:.3,outline:1},   // Perfect and Imperfect Paintings
     {ground:'#faf8f0',mark:{benday:.5,panel:.5},size:[.06,.14],layout:{stack:1},density:.5,outline:1},   // Entablatures: friezes of ornament
     {ground:'#faf8f0',mark:{lcbrush:.8,benday:.2},size:[.12,.3],layout:{flow:1},density:.3,outline:1},   // Brushstrokes
     {ground:'#faf8f0',mark:{panel:.5,benday:.3,lcboom:.2},size:[.1,.3],layout:{grid:1},density:.3,outline:1},   // Modern Painting with Clef: Deco panels
