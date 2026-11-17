@@ -8456,17 +8456,75 @@ function _frGround(ctx,CW,CH,isBW){ ctx.fillStyle=isBW?'#f4f2ee':'#f8f6f0'; ctx.
 function _frSetup(chords,gc,mode){ const isBW=mode==='bw'; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   return {cn:chords.length,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.5,tempo:ch?ch.tempo:0.5,register:ch?ch.register:0.5,pal:_frPalette(chords,gc,isBW),col:(t)=>_frChordAt(chords,gc,isBW,t)}; }
 // build: spec(S,D,CW,CH) returns cell specs with t; cells are made & drawn in time order up to the reveal
-function _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,spec){
+function _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,spec,draw){
   const S=_frSetup(chords,gc,mode), D=Math.min(CW,CH), cn=S.cn; const reveal=_frClamp(Math.max(1,Math.min(cn,lim))/cn,0,1);
   const list=spec(S,D,CW,CH); list.sort((a,b)=>(a.t-b.t)||(a.id-b.id));
   const n=Math.ceil(list.length*reveal);
   ctx.save();
-  for(let i=0;i<n;i++){ const c=list[i]; const rnd=_frR(c.id*13+70001,ss); _frDrawCell(ctx,_frMakeCell(rnd,c,D),D); }
+  for(let i=0;i<n;i++){ const c=list[i]; const rnd=_frR(c.id*13+70001,ss); (draw||_frDrawCell)(ctx,_frMakeCell(rnd,c,D),D); }
   ctx.restore();
 }
 
+// thinned acrylic as it lies in the canvas: the piece's colour held to a pigment (cerulean, ultramarine, cadmium red and
+// yellow, his greens), luminous but never neon
+function _frWetN(rgb){ const mx=Math.max(rgb[0],rgb[1],rgb[2]), mn=Math.min(rgb[0],rgb[1],rgb[2]); if(mx-mn<20) return [118,116,120]; return _bhxPigment(rgb,0.72,0.9,0.38,0.6,0,0.6,null); }
+// a stain: the colour soaked into the raw canvas, paler in the middle, its pigment gathered toward the rim; washes laid
+// over one another deepen where they cross (multiply), as thinned paint does
+function _frDrawCellN(ctx,cell,D){
+  const col=cell.col, a=cell.alpha, dark=_frMix(col,[0,0,0],0.38); let cx=0, cy=0; for(const p of cell.pts){ cx+=p[0]; cy+=p[1]; } cx/=cell.pts.length; cy/=cell.pts.length;
+  ctx.save(); ctx.globalCompositeOperation='multiply'; ctx.lineJoin='round';
+  if(cell.bleed>0){ _frTrace(ctx,cell.pts); ctx.strokeStyle=_frCss(col,a*0.12*cell.bleed); ctx.lineWidth=cell.r*0.3; ctx.stroke(); }
+  const g=ctx.createRadialGradient(cx,cy,cell.r*0.08,cx,cy,cell.r*1.2); g.addColorStop(0,_frCss(col,a*0.5)); g.addColorStop(0.65,_frCss(col,a*0.78)); g.addColorStop(1,_frCss(col,a));
+  _frTrace(ctx,cell.pts); ctx.fillStyle=g; ctx.fill();
+  if(cell.inner){ _frTrace(ctx,cell.inner); ctx.fillStyle=_frCss(col,a*0.32); ctx.fill(); }
+  if(cell.edge>0){ _frTrace(ctx,cell.pts); ctx.strokeStyle=_frCss(dark,0.26*cell.edge*Math.min(1,a+0.2)); ctx.lineWidth=Math.max(0.7,cell.r*0.035); ctx.stroke(); }
+  ctx.lineCap='round';
+  for(const d of cell.drips){ const p=d.path; for(let s=0;s<p.length-1;s++){ ctx.strokeStyle=_frCss(col,a*(0.9-0.5*s/p.length)); ctx.lineWidth=p[s][2]; ctx.beginPath(); ctx.moveTo(p[s][0],p[s][1]); ctx.lineTo(p[s+1][0],p[s+1][1]); ctx.stroke(); }
+    ctx.fillStyle=_frCss(col,a*0.7); ctx.beginPath(); ctx.arc(d.end[0],d.end[1],d.end[2],0,6.2832); ctx.fill(); }
+  const tiny=D*0.004;
+  for(const s of cell.spat){ ctx.fillStyle=_frCss(col,a*(s[2]>tiny?0.55:0.95)); ctx.beginPath(); ctx.ellipse(s[0],s[1],s[2]*s[4],s[2],s[3],0,6.2832); ctx.fill(); }
+  ctx.restore();
+}
 // ═══════════════════════════════════════════════════════════════════════════
-// SAM FRANCIS LISTENS — not one of the paintings above: the piece thrown onto
+// SAM FRANCIS LISTENS — In Lovely Blueness (1955–57), the title from Hölderlin's
+// poem: one colour laid on the white as a membrane of thinned cells, one pressed to
+// the next, deeper where the washes cross, the white breaking through where they
+// part, a few cells of other colours glinting in it, the thinned paint running
+// down. Here the one colour is the colour the piece sounds in; the piece crosses
+// the sheet as it plays, a passage a mass of cells, every chord a cell: as large
+// as it is loud, paler when it is high and deeper when low; a chord that leaves
+// the piece's colour far behind glints in its own; the quiet passages leave the
+// white open; the loud cells drip and the accents throw their spatter. Cell by
+// cell as the piece plays.
+// ═══════════════════════════════════════════════════════════════════════════
+function _frListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw'; _frGround(ctx,CW,CH,isBW);
+  const A=_kd2Analyze(chords,gc,mode), cn=A.cn, clamp=_frClamp; if(!cn) return;
+  const home=_frWetN(A.pcCol(A.tonic,60)), hh=_frHue(home);
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  const tops=A.ev.filter(Boolean).map(e=>e.top).sort((a,b)=>a-b), tLo=tops[Math.floor(tops.length*0.05)]||48, tHi=tops[Math.floor(tops.length*0.95)]||84;
+  const P=_kd2Phrases(A,Math.round(clamp(6+A.phrases.length*0.3,8,18))), nC=3, nR=Math.max(3,Math.round(nC*CH/CW)), path=_md19Gilbert(nC,nR), N=path.length;
+  const rL=_frR(81950,ss); rL(); const way=path.map(([gx,gy])=>[(gx+0.5+(rL()-0.5)*0.6)*CW/nC,(gy+0.5+(rL()-0.5)*0.6)*CH/nR]);
+  const at=(u)=>{ const f=clamp(u,0,0.9999)*(N-1), k=Math.floor(f), t=f-k, a=way[k], b=way[Math.min(N-1,k+1)]; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]; };
+  const vm=P.map(p=>p.vmax).sort((a,b)=>a-b), Rb=Math.sqrt(CW*CH/Math.max(1,P.length));
+  const M=P.map((p,k)=>{ const [cx,cy]=at((p.a+p.b)/2/cn), rk=vm.indexOf(p.vmax)/Math.max(1,vm.length-1); return {p,cx,cy,R:Rb*(0.3+0.4*rk),quiet:p.v<0.42,lw:rk}; });
+  const mOf=new Int16Array(cn); M.forEach((m,k)=>{ for(let i=m.p.a;i<m.p.b&&i<cn;i++) mOf[i]=k; });
+  const stride=Math.max(1,Math.ceil(cn/600)), wk=Math.sqrt(stride);
+  try{ globalThis.__BL_LISTEN={v:'blueness',masses:M.length,stride}; }catch(_){}
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0;
+    for(let i=0;i<cn;i+=stride){ const e=A.ev[i]; if(!e) continue; const m=M[mOf[i]], r=_frR(82100+i,ss); r(); const t=i/cn, f=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1), hu=clamp((e.top-tLo)/Math.max(1,tHi-tLo),0,1);
+      let lo=0,nn=0; for(let q=Math.max(0,i-5);q<=Math.min(cn-1,i+5);q++){ const o=A.ev[q]; if(!o||q===i) continue; nn++; if(o.v<e.v) lo++; } const acc=nn&&lo/nn>0.85;
+      const own=_frWetN(_picChord(chords,i,gc,isBW).rgb), dh=Math.abs(_frHue(own)-hh), far=Math.min(dh,360-dh)>70;
+      // the membrane: the piece winds over the sheet and the cells lie along it, pressed together, as wide as its passage is loud, high notes to one side
+      const u=(i+0.5)/cn, [px,py]=at(u), [qx,qy]=at(Math.min(0.9999,u+0.01)), dl=Math.hypot(qx-px,qy-py)||1, nx=-(qy-py)/dl, ny=(qx-px)/dl, half=CW*(0.08+0.2*m.lw);
+      const off=(hu-0.5)*half*1.2+(r()+r()-1)*half, x=px+nx*off+(r()-0.5)*D*0.04, y=py+ny*off+(r()-0.5)*D*0.04;
+      const glint=far&&(acc||r()<0.12), col=glint?own:(isBW?home:_frMix(home,[255,255,255],0.25*hu)).map(v=>v*(1-0.2*(1-hu)));
+      const rad=D*(0.016+0.04*f)*(0.75+0.5*r())*(glint?0.7:1)*wk;
+      list.push({id:id++,t,x,y,r:rad,sx:0.8+r()*0.5,sy:0.75+r()*0.5,col,alpha:(m.quiet?0.3:0.42)+0.3*f,drip:f>0.75&&r()<0.5?0.8:0,dripLen:0.5+0.8*f,spat:acc?0.9:0,spatN:0.8,spatR:1,edge:0.9,bleed:f>0.7?0.6:0}); }
+    return list; }, _frDrawCellN);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// (retired, code kept) SAM FRANCIS LISTENS, the first — not one of the paintings above: the piece thrown onto
 // the white sheet as his wet cells. A cell for every passage — where the melody
 // sits is where it lands (time left to right, register bottom to top), as large
 // as the passage is loud, in its chord's thinned colour — so a quiet, high piece
@@ -8476,7 +8534,7 @@ function _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,spec){
 // piece's direction, thicker when it is quick; the climax is the largest cell,
 // bleeding into the white with its halo.
 // ═══════════════════════════════════════════════════════════════════════════
-function _frListen(ctx,CW,CH,chords,lim,gc,ss,mode){
+function _frListenOld(ctx,CW,CH,chords,lim,gc,ss,mode){
   const isBW=mode==='bw'; _frGround(ctx,CW,CH,isBW);
   const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const dens=A.ch?A.ch.density:0.3; const cn=A.cn;
   let c=A.phrases[0]||{t:0.5,vmax:0.7,a:0,b:cn,top:60}; for(const q of A.phrases) if(q.vmax>c.vmax) c=q;
