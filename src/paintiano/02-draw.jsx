@@ -18593,6 +18593,16 @@ function bauhausPhaseGrid(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // Each reads the piece in time order through `lim`; colours come from the chords.
 const _bhxR=(a,ss)=>_seedRnd(a,ss,0,0);
 const _bhxClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+// a colour of the piece as a painter's pigment, not a screen's light: its hue drawn toward the nearest of the colours a
+// painter's tubes hold (so a cyan becomes a cerulean, a magenta a crimson, a lime an olive yellow), its saturation
+// held to what paint gives, its lightness the one asked for (or kept in paint's range), a breath of warm grey in it;
+// a colour with almost no hue becomes a warm grey
+const _BHX_PIG_H=[0,22,42,52,80,140,195,222,248,280,338];
+function _bhxPigment(c,sMin,sMax,lLo,lHi,grey,pull,lSet){ const R=c[0]/255,G=c[1]/255,B=c[2]/255, mx=Math.max(R,G,B), mn=Math.min(R,G,B), d=mx-mn; let h=0,s=0,l=(mx+mn)/2; if(d>1e-6){ s=d/(1-Math.abs(2*l-1)); h=mx===R?((G-B)/d)%6:mx===G?(B-R)/d+2:(R-G)/d+4; h*=60; if(h<0) h+=360; }
+  let a=_BHX_PIG_H[0], ad=999; for(const q of _BHX_PIG_H){ const dd=Math.min(Math.abs(q-h),360-Math.abs(q-h)); if(dd<ad){ ad=dd; a=q; } } let dh=a-h; if(dh>180) dh-=360; if(dh<-180) dh+=360; h=(h+dh*pull+360)%360;
+  l=lSet!=null?lSet:_bhxClamp(l,lLo,lHi); s=s<0.12?0.05:_bhxClamp(s,sMin,sMax)*(l>0.72?Math.max(0.35,1-(l-0.72)*2.2):1);
+  const C=(1-Math.abs(2*l-1))*s, X=C*(1-Math.abs((h/60)%2-1)), m=l-C/2; const [r1,g1,b1]=h<60?[C,X,0]:h<120?[X,C,0]:h<180?[0,C,X]:h<240?[0,X,C]:h<300?[X,0,C]:[C,0,X];
+  const o=[(r1+m)*255,(g1+m)*255,(b1+m)*255], Wg=[180,172,156]; return o.map((v,i)=>v*(1-grey)+Wg[i]*grey); }
 const _bhxMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
 const _bhxCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
 const _bhxLum=(c)=>c[0]*0.299+c[1]*0.587+c[2]*0.114;
@@ -18657,20 +18667,20 @@ function bauhausPhaseWeave(ctx,CW,CH,chords,lim,gc,ss,mode){
   if(top<CH) _bhxWeave(ctx,0,top,CW,CH-top,CH/30);
   ctx.restore();
 }
-// 5 · Homage to the Square (Josef Albers) — four nested squares sunk toward the bottom edge, the piece moving inward: the outer field is its first quarter, the centre its last. The hues are the quarters' own, pulled toward the piece's mean so they act on each other; the values step evenly so the nesting reads. Each square is spread from the bottom up while its quarter plays; matte knife-spread paint
+// 5 · Homage to the Square (Josef Albers) — in his oils, strong but never neon: four nested squares sunk toward the bottom edge, the piece moving inward: the outer field is its first quarter, the centre its last. The hues are the quarters' own, pulled toward the piece's mean so they act on each other; the values step evenly so the nesting reads. Each square is spread from the bottom up while its quarter plays; matte knife-spread paint
 function bauhausPhaseHomage(ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_bhxSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn;
-  const all=_bhxAvg(S,0,1,32); const q=[0,1,2,3].map(k=>_bhxMix(_bhxAvg(S,k/4,(k+1)/4,16),all,0.35));
+  const all=_bhxAvg(S,0,1,32); const q=[0,1,2,3].map(k=>_bhxMix(_bhxAvg(S,k/4,(k+1)/4,16),all,0.15));
   const lightIn=S.register>0.45;   // a high piece glows at the centre, a low one at the rim
   const L=[0.42,0.62,0.8,0.95];
-  const cols=q.map((c,k)=>{ const target=(lightIn?L[k]:L[3-k])*255; const f=target/Math.max(20,_bhxLum(c)); const d=c.map(v=>_bhxClamp(v*f,0,255)); if(S.isBW){ const l=_bhxLum(d); return [l,l,l]; } return d; });
+  const cols=q.map((c,k)=>{ const target=(lightIn?L[k]:L[3-k])*255; const f=target/Math.max(20,_bhxLum(c)); const d=c.map(v=>_bhxClamp(v*f,0,255)); if(S.isBW){ const l=_bhxLum(d); return [l,l,l]; } return _bhxPigment(c,0.4,0.8,0,1,0.06,0.6,(lightIn?[0.34,0.45,0.55,0.65][k]:[0.34,0.45,0.55,0.65][3-k])); });
   // a dense piece is a wall of Homages — he painted more than a thousand: one for a calm piece, two for a flowing one,
   // a grid of six or fifteen for a torrent of notes, each a stretch of the piece in its own four colours
   { const dn=_pieceDens(chords); const gC=dn<0.5?1:dn<0.75?2:3, gR=dn<0.3?1:dn<0.5?2:dn<0.75?3:5;
     if(gC*gR>1){ ctx.save(); ctx.fillStyle=_bhxCss([236,232,222]); ctx.fillRect(0,0,CW,CH); const nC=gC*gR, gap=Math.min(CW,CH)*0.03, cw=(CW-gap*(gC+1))/gC, ch=(CH-gap*(gR+1))/gR;
       for(let ci=0;ci<nC;ci++){ const t0=ci/nC, t1=(ci+1)/nC; const fC=chords._objFirst?1:_bhxClamp((reveal-t0)*nC,0,1); if(fC<=0) break;
-        const allc=_bhxAvg(S,t0,t1,16); const qq=[0,1,2,3].map(k=>_bhxMix(_bhxAvg(S,t0+(t1-t0)*k/4,t0+(t1-t0)*(k+1)/4,8),allc,0.35));
-        const cc=qq.map((c,k)=>{ const target=(lightIn?L[k]:L[3-k])*255; const f=target/Math.max(20,_bhxLum(c)); const d=c.map(v=>_bhxClamp(v*f,0,255)); if(S.isBW){ const l=_bhxLum(d); return [l,l,l]; } return d; });
+        const allc=_bhxAvg(S,t0,t1,16); const qq=[0,1,2,3].map(k=>_bhxMix(_bhxAvg(S,t0+(t1-t0)*k/4,t0+(t1-t0)*(k+1)/4,8),allc,0.15));
+        const cc=qq.map((c,k)=>{ const target=(lightIn?L[k]:L[3-k])*255; const f=target/Math.max(20,_bhxLum(c)); const d=c.map(v=>_bhxClamp(v*f,0,255)); if(S.isBW){ const l=_bhxLum(d); return [l,l,l]; } return _bhxPigment(c,0.4,0.8,0,1,0.06,0.6,(lightIn?[0.34,0.45,0.55,0.65][k]:[0.34,0.45,0.55,0.65][3-k])); });
         const gx=gap+(ci%gC)*(cw+gap), gy=gap+Math.floor(ci/gC)*(ch+gap); const sd=Math.min(cw,ch), u=sd/10, ox2=gx+(cw-sd)/2, oy2=gy+(ch-sd)/2;
         ctx.fillStyle=_bhxCss(cc[0]); ctx.fillRect(gx,gy,cw,ch);
         for(let k=1;k<4;k++){ const f=_bhxClamp((fC-k/4)*4,0,1); if(f<=0) break; const s2=(10-2*k)*u, x=ox2+k*u, y=oy2+10*u-0.5*k*u-s2; ctx.fillStyle=_bhxCss(cc[k]); ctx.fillRect(x,y+s2*(1-f),s2,s2*f); } }
@@ -18688,13 +18698,13 @@ function bauhausPhaseHomage(ctx,CW,CH,chords,lim,gc,ss,mode){
   for(let i=0;i<n;i++){ const x=r()*CW, y=r()*CH, w=6+r()*22, h=1+r()*1.6; ctx.fillStyle=r()<0.5?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.045)'; ctx.fillRect(x,y,w,h); }
   ctx.restore();
 }
-// 8 · Construction (László Moholy-Nagy, 1923–27) — transparent planes on a pale ground: long bars at an angle, discs, a trapezoid; where they cross, the colours add. A black bar and two hairlines hold the space. Each plane is one phrase of the piece
+// 8 · Construction (László Moholy-Nagy, 1923–27) — in muted pigment, not neon: transparent planes on a pale ground: long bars at an angle, discs, a trapezoid; where they cross, the colours add. A black bar and two hairlines hold the space. Each plane is one phrase of the piece
 function bauhausPhaseConstruction(ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_bhxSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
   ctx.save(); ctx.fillStyle=_bhxCss(S.isBW?[232,230,226]:[234,229,218]); ctx.fillRect(0,0,CW,CH);
   const r0=_bhxR(94000,ss); r0(); const ang=-0.35-r0()*0.5; const cx=CW*(0.45+r0()*0.1), cy=CH*(0.45+r0()*0.1);
   const n=Math.round((7+S.density*5)*_dW(S.density)); const items=[];
-  for(let i=0;i<n;i++){ const r=_bhxR(94100+i,ss); r(); const t=i/n; const c0=_bhxAvg(S,t,Math.min(1,t+1/n),6); const g=_bhxLum(c0); const c=S.isBW?[g,g,g]:c0.map(v=>_bhxClamp(g+(v-g)*1.4,0,255));
+  for(let i=0;i<n;i++){ const r=_bhxR(94100+i,ss); r(); const t=i/n; const c0=_bhxAvg(S,t,Math.min(1,t+1/n),6); const g=_bhxLum(c0); const c=S.isBW?[g,g,g]:_bhxPigment(c0,0.2,0.55,0.36,0.62,0.14,0.5,null);
     const kind=i===0?'disc':(r()<0.55?'bar':(r()<0.5?'trap':'disc'));
     const a=ang+(r()<0.3?1.5708:0)+(r()-.5)*0.25; const px=cx+(r()-.5)*CW*0.55, py=cy+(r()-.5)*CH*0.6;
     items.push({t,kind,c,a,px,py,len:D*(0.5+r()*0.6),wd:D*(0.04+r()*0.1),rad:D*(0.12+r()*0.16)}); }
