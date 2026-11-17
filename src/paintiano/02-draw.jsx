@@ -5043,16 +5043,42 @@ function vasarelyPhaseZebra(ctx,CW,CH,chords,lim,gc,ss,mode){
     for(let k=N;k>=0;k--){ const [px,py]=warp(k/N*CW,(i+1)*h); ctx.lineTo(px,py); }
     ctx.closePath(); ctx.fill(); }
 }
-// ── Vasarely 6 · Vonal tunnel — nested frames shrinking toward an off-centre
-// focus (its height from the register): dark at the rim, light at the focus.
+// ── Vasarely 6 · Vonal tunnel — a corridor in true perspective toward a vanishing point (its height from the register),
+// its walls ruled in his lines: every wall in its own value under one light from the upper left — floor, right wall,
+// left wall, ceiling — sharp where two walls meet, every other line a shade lower, darkening with depth, and at the far
+// end the light. The piece runs into the depth, line by line, each line its moment's chords as they come; the louder the
+// moment, the brighter its walls. The corridor is built from the mouth inward while the piece plays.
 function vasarelyPhaseTunnel(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_vsSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const r=_vsR(71000,ss); r();
-  const n=Math.round((34+S.density*16)*_dW(S.density)), vis=Math.ceil(n*reveal); const fx=CW*(0.35+r()*0.3), fy=CH*(0.35+(0.5-S.register)*0.3+r()*0.2);
-  ctx.fillStyle=S.isBW?'#101010':'#0e0e14'; ctx.fillRect(0,0,CW,CH);
-  for(let i=0;i<vis;i++){ const u=i/n, k=Math.pow(1-u,1.35); const c=S.col(u);
-    const x0=fx-fx*k, y0=fy-fy*k, x1=fx+(CW-fx)*k, y1=fy+(CH-fy)*k;
-    const lit=_vsMix(_vsMix(c,[0,0,0],0.55*(1-u)),[255,250,240],0.75*u*u);
-    ctx.fillStyle=_vsCss(lit); ctx.fillRect(x0,y0,x1-x0,y1-y0); }
+  const S=_vsSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, played=Math.max(1,Math.min(cn,lim)); const r=_vsR(71000,ss); r();
+  const A=_kd2Analyze(chords,gc,mode); const soft=_stxSoft(chords,gc,isBW);
+  const ground=isBW?[12,12,12]:[11,10,17]; ctx.fillStyle=_vsCss(ground); ctx.fillRect(0,0,CW,CH);
+  const n=Math.round((22+S.density*14)*_dW(S.density)), end=0.07, dz=(1/end-1)/n;            // frames in true perspective, as many as the piece is dense
+  const fx=CW*(0.42+r()*0.16), fy=CH*_vsClamp(0.46+(0.5-S.register)*0.22+(r()-.5)*0.06,0.32,0.62);
+  const mix=(a,b,t)=>_vsMix(a,b,_vsClamp(t,0,1));
+  const even=(c)=>{ const g=(c[0]+c[1]+c[2])/3, q=c.map(x=>Math.max(0,g+(x-g)*1.25)); const l=q[0]*0.299+q[1]*0.587+q[2]*0.114||1, k=118/l; const o=q.map(x=>x*k); const mx=Math.max(...o); return mx>255?o.map(x=>x*255/mx):o; };
+  const tone=(hue,val)=>{ const dark=mix(hue,[0,0,0],0.9), lite=mix(hue,[255,252,244],0.74); return val<0.5?mix(dark,hue,val/0.5):mix(hue,lite,(val-0.5)/0.5); };
+  // the lines: each frame's wall ruled into lines of about one width on the canvas, so the near walls carry many and the deep ones one
+  const sc=(z)=>1/(1+z*dz), half=Math.max(fx,CW-fx,fy,CH-fy), lineW=Math.min(CW,CH)*0.02, L=[];
+  for(let k=0;k<n;k++){ const w=half*(sc(k)-sc(k+1)), m=Math.max(1,Math.round(w/lineW)); for(let j=0;j<m;j++) L.push({z0:k+j/m,z1:k+(j+1)/m,k}); }
+  const T=L.length; const raw=[], loud=[];
+  for(let q=0;q<T;q++){ const i0=cn*q/T, i1=cn*(q+1)/T; let R=0,G=0,B=0; for(let s=0;s<4;s++){ const o=soft((i0+(i1-i0)*(s+0.5)/4)/cn); R+=o[0]; G+=o[1]; B+=o[2]; } raw.push([R/4,G/4,B/4]);
+    const h=_mtHearSpan(A,Math.floor(i0),Math.max(Math.floor(i0)+1,Math.ceil(i1))); loud.push(h.vmax||0.5); }
+  const vm=Math.max(0.05,...loud);
+  const hue=raw.map((c,q)=>{ const p=raw[Math.max(0,q-1)], x=raw[Math.min(T-1,q+1)]; const o=[0,1,2].map(i=>(p[i]+2*c[i]+x[i])/4); return isBW?o:even(o); });
+  const fr=(z)=>{ const s=sc(z); return [fx-fx*s, fy-fy*s, fx+(CW-fx)*s, fy+(CH-fy)*s]; };
+  const WALL={floor:1.0,right:0.8,left:0.5,ceil:0.36};                                       // one light from the upper left
+  const poly=(pts,c)=>{ ctx.fillStyle=_vsCss(c); ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill(); };
+  const lw=Math.max(0.6,Math.min(CW,CH)*0.0014);
+  const e=fr(n); ctx.fillStyle=_vsCss(tone(hue[T-1],1.02)); ctx.fillRect(e[0],e[1],e[2]-e[0],e[3]-e[1]);   // the light at the far end
+  for(let q=T-1;q>=0;q--){ if(played < cn*q/T) continue;                                    // not yet sounded
+    const ln=L[q], a=fr(ln.z0), b=fr(ln.z1), d=ln.z0/n; const lift=(0.78+0.3*(loud[q]/vm))*(q%2?0.88:1);
+    const v=(w)=>_vsClamp(WALL[w]*lift*(1-0.72*Math.pow(d,0.8)),0,0.9);
+    poly([[a[0],a[1]],[a[2],a[1]],[b[2],b[1]],[b[0],b[1]]],tone(hue[q],v('ceil')));
+    poly([[a[0],a[3]],[a[2],a[3]],[b[2],b[3]],[b[0],b[3]]],tone(hue[q],v('floor')));
+    poly([[a[0],a[1]],[b[0],b[1]],[b[0],b[3]],[a[0],a[3]]],tone(hue[q],v('left')));
+    poly([[a[2],a[1]],[b[2],b[1]],[b[2],b[3]],[a[2],a[3]]],tone(hue[q],v('right')));
+    if(ln.z1===ln.k+1){ ctx.strokeStyle=_vsCss(mix(hue[q],ground,0.85)); ctx.lineWidth=lw; ctx.strokeRect(b[0],b[1],b[2]-b[0],b[3]-b[1]); } }
+  if(played>=cn){ ctx.strokeStyle=_vsCss(mix(hue[T-1],[255,252,244],0.9)); ctx.lineWidth=lw*1.8; ctx.strokeRect(e[0],e[1],e[2]-e[0],e[3]-e[1]); }   // a sharp edge of light
 }
 
 function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
@@ -5067,7 +5093,7 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   //  3 = Supernovae — squares turning to lozenges and discs along a wave.
   //  4 = Hexagon cubes — isometric tumbling block (3D).
   //  5 = Zebra — pale and dark stripes bent by a sphere pressing through.
-  //  6 = Vonal tunnel — nested frames toward a lit focus.
+  //  6 = Vonal tunnel — a corridor in true perspective ruled in his lines, the light at the far end.
   //  (the earlier sphere/cube body below, Banya and Cells are no longer reached)
   //  Free (cap=2) sees What he heard + Folklore.
   {
