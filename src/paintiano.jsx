@@ -7176,37 +7176,49 @@ function _mondrianBlock(chords,idx,gc,isBW){
   return [Math.round(Math.min(255,pull(R))),Math.round(Math.min(255,pull(G))),Math.round(Math.min(255,pull(B)))];
 }
 
-// ── Mondrian E: Broadway Boogie Woogie — yellow line grid + colour beats. ──
+// ── Mondrian E · Broadway Boogie Woogie (1942–43) — the New York grid: yellow streets of small square cells, irregularly
+// spaced, beaded with red, blue and grey like traffic and lights, and here and there a block of colour between them,
+// most with a smaller square of another colour inside. Here the piece runs along the streets like a boogie-woogie:
+// the level streets read it like a page, left to right and street under street, each cell a beat of its melody; the
+// upright streets carry its bass where they cross each stretch. A beat loud against its neighbours lights its cell in
+// its chord's primary (grey where that would be the yellow of the street), a lighter accent grey; the streets lie as far
+// apart as the stretches they carry are busy; the piece's loudest passages the blocks, each where it falls, in its
+// chord's primary with a square of another colour inside. Cell by cell as the piece plays.
 function mondrianPhaseBroadway(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#ece9e2':'#f0eee4';ctx.fillRect(0,0,CW,CH);
-  const lines=Math.max(4,Math.min(16,Math.round(Math.sqrt(cn))));
-  const reveal=Math.max(0,Math.min(1,N/cn));
-  // Broadway yellow tracks — Mondrian's signature. Tone-adjust so Pastel
-  // softens and Real picks up the opening chord's energy.
-  let lineColRgb = isBW ? [200,196,184] : [240,192,32];
-  if(!isBW){
-    if(typeof _energyTint === 'function'){ const t=_energyTint(lineColRgb[0],lineColRgb[1],lineColRgb[2]); lineColRgb=[t[0],t[1],t[2]]; }
-    if(typeof _pastelTint === 'function'){ const p=_pastelTint(lineColRgb[0],lineColRgb[1],lineColRgb[2]); lineColRgb=[p[0],p[1],p[2]]; }
-  }
-  const lineCol=`rgb(${lineColRgb[0]},${lineColRgb[1]},${lineColRgb[2]})`;
-  ctx.fillStyle=lineCol;
-  const lw=Math.max(3,Math.min(CW,CH)*0.012);
-  // vertical + horizontal yellow tracks
-  const visV=Math.ceil(reveal*lines);
-  for(let i=1;i<=visV;i++){const x=i/(lines+1)*CW;ctx.fillRect(x-lw/2,0,lw,CH);}
-  for(let i=1;i<=visV;i++){const y=i/(lines+1)*CH;ctx.fillRect(0,y-lw/2,CW,lw);}
-  // colour square beats at intersections
-  let k=0;const beats=lines*lines,visBeats=Math.max(1,Math.ceil(reveal*beats));
-  for(let r=1;r<=lines&&k<visBeats;r++)for(let c=1;c<=lines&&k<visBeats;c++,k++){
-    const rnd=_seedRnd(k+5600,ss,0,0);
-    if(rnd()<0.4){
-      const {0:R,1:G,2:B}=_mondrianBlock(chords,Math.floor(k*(cn/beats)),gc,isBW);
-      ctx.fillStyle=`rgb(${R},${G},${B})`;
-      const x=c/(lines+1)*CW,y=r/(lines+1)*CH,bs=lw*2.2;
-      ctx.fillRect(x-bs/2,y-bs/2,bs,bs);
-    }
-  }
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  ctx.fillStyle=isBW?'#ece9e2':'#f2efe6'; ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  const A=_kd2Analyze(chords,gc,mode), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), r=_seedRnd(5600,ss,0,0); r();
+  let Y=isBW?[200,196,184]:[240,196,36];
+  if(!isBW){ if(typeof _energyTint==='function'){ const t=_energyTint(Y[0],Y[1],Y[2]); Y=[t[0],t[1],t[2]]; } if(typeof _pastelTint==='function'){ const p=_pastelTint(Y[0],Y[1],Y[2]); Y=[p[0],p[1],p[2]]; } }
+  const GREY=isBW?[178,178,178]:[198,195,190], prim=(i)=>{ const c=_picChord(chords,clamp(i,0,cn-1),gc,isBW).rgb; const k=_mnvPrim(c); return k===1?GREY:_mdSnap(c,isBW); };
+  const css=(c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+  const dens=A.ch?A.ch.density:0.3, cs=Math.max(4,Math.round(D*0.02)), nX=Math.floor(CW/cs), nY=Math.floor(CH/cs), ox=(CW-nX*cs)/2, oy=(CH-nY*cs)/2;
+  // the level streets: the piece read like a page, each a stretch; as far apart as the stretch they carry is busy
+  const H=Math.round(clamp(9+5*dens,9,14)), busy=[]; for(let h=0;h<H;h++){ const a=Math.floor(h/H*cn), b=Math.floor((h+1)/H*cn); let n=0; for(let i=a;i<b;i++) n+=A.ev[i]?A.ev[i].nn:0; busy.push(n); }
+  const bMax=Math.max(...busy,1), wts=busy.map(b=>0.6+0.8*b/bMax), wSum=wts.reduce((s,w)=>s+w,0); const rowsY=[]; { let acc=0; for(let h=0;h<H;h++){ acc+=wts[h]; rowsY.push(Math.min(nY-2,Math.max(1,Math.round((acc-wts[h]*0.5)/wSum*(nY-2))))); } }
+  // the upright streets: as many, irregular, a breath of the music in where each falls
+  const V=Math.round(clamp(7+4*dens,7,11)), colsX=[]; for(let v=0;v<V;v++){ const ph=A.phrases[Math.floor(v/V*A.phrases.length)]||{top:60}; colsX.push(Math.min(nX-2,Math.max(1,Math.round(((v+0.5)/V+(A.reg(ph.top)-0.5)*0.5/V+(r()-0.5)*0.35/V)*(nX-1))))); }
+  const uniq=(a)=>[...new Set(a)].sort((x,y)=>x-y); const RY=uniq(rowsY), CX=uniq(colsX);
+  // every chord's beat on the page: which street and where along it
+  const tOf=(h,cx)=>clamp((h+cx/nX)/RY.length,0,0.9999), loudAt=(i,top)=>{ const e=A.ev[i]; if(!e) return 0; let lo=0,n=0; for(let k=Math.max(0,i-8);k<=Math.min(cn-1,i+8);k++){ const o=A.ev[k]; if(!o||k===i) continue; n++; const a=top?o.v+o.top*0.002:o.v, b=top?e.v+e.top*0.002:e.v; if(a<b) lo++; else if(a===b) lo+=0.5; } return n?lo/n:0.5; };
+  const cellCol=(i,top)=>{ const s=loudAt(i,top), u=((i*2654435761)>>>0)%100/100; if(s>0.66) return prim(i); if(s>0.48&&u<0.5) return GREY; return null; };
+  const cells=[];
+  // (a chord that spans several cells lights only the first, so the beads stay single squares as on his streets)
+  RY.forEach((gy,h)=>{ let last=-1; for(let cx=0;cx<nX;cx++){ const t=tOf(h,cx), i=Math.floor(t*cn); cells.push({x:cx,y:gy,i,col:i===last?null:cellCol(i,true)}); last=i; } });
+  // an upright street between two level ones carries the bass of the stretch above, from where it crosses to the next upright
+  CX.forEach((gx,k)=>{ const nxt=k+1<CX.length?CX[k+1]:nX; for(let cy=0;cy<nY;cy++){ if(RY.includes(cy)) continue; let hb=0; while(hb<RY.length-1&&RY[hb+1]<cy) hb++; const y0=cy<RY[0]?0:RY[hb], y1=cy<RY[0]?RY[0]:(hb+1<RY.length?RY[hb+1]:nY);
+    const t=clamp(tOf(hb,gx)+(cy-y0)/Math.max(1,y1-y0)*(nxt-gx)/nX/RY.length,0,0.9999), i=Math.floor(t*cn), prev=cells.length?cells[cells.length-1]:null; cells.push({x:gx,y:cy,i,col:prev&&prev.x===gx&&prev.i===i?null:cellCol(i,false)}); } });
+  // the blocks: the loudest passages, each between the streets where it falls, with a square of another colour inside
+  const P=A.phrases.slice().sort((a,b)=>b.vmax-a.vmax).slice(0,Math.round(clamp(3+5*dens,3,8))), blocks=[], usedB=new Set();
+  for(const q of P){ const tt=q.t, h=Math.min(RY.length-1,Math.floor(tt*RY.length)), cx=Math.floor((tt*RY.length-h)*nX); let i0=0; while(i0<CX.length&&CX[i0]<cx) i0++;
+    const xa=i0>0?CX[i0-1]+1:1, xb=i0<CX.length?CX[i0]-1:nX-2, ya=RY[h]+1, yb=h+1<RY.length?RY[h+1]-1:nY-2, key=h+'_'+i0; if(usedB.has(key)||xb-xa<2||yb-ya<2) continue; usedB.add(key);
+    const w=Math.max(3,Math.min(xb-xa+1,Math.round((xb-xa+1)*(0.55+0.4*r())))), hh=Math.max(3,Math.min(yb-ya+1,Math.round((yb-ya+1)*(0.55+0.4*r())))), x0=r()<0.5?xa:xb-w+1, y0=r()<0.5?ya:yb-hh+1;
+    const col=prim(q.a), inner=col===GREY?Y:(r()<0.5?GREY:Y); blocks.push({i:q.a,x:x0,y:y0,w,h:hh,col,inner}); }
+  for(const b of blocks){ if(b.i>=played) continue; ctx.fillStyle=css(b.col); ctx.fillRect(ox+b.x*cs,oy+b.y*cs,b.w*cs,b.h*cs);
+    const s=Math.max(1,Math.round(Math.min(b.w,b.h)*0.45)); ctx.fillStyle=css(b.inner); ctx.fillRect(ox+(b.x+Math.floor((b.w-s)/2))*cs,oy+(b.y+Math.floor((b.h-s)/2))*cs,s*cs,s*cs); }
+  // the streets, cell by cell as the piece reaches them
+  for(const c of cells){ if(c.i>=played) continue; ctx.fillStyle=css(c.col||Y); ctx.fillRect(ox+c.x*cs,oy+c.y*cs,cs+0.5,cs+0.5); }
+  _setCurE(0.5);
 }
 
 // ── Mondrian F · Lozenge (1921–1931) — the square turned on its point and hung on a light wall; inside it, as he always
@@ -19476,7 +19488,7 @@ const ARTIST_VARIANTS = {
     {ground:'#f4f1e8',mark:{rect:.7,gridrect:.3},size:[.04,.12],layout:{grid:1},density:.6,lines:0,tone:'primary'},   // Victory Boogie Woogie
     {ground:'#f6f3ec',mark:{gridrect:1},size:[.15,.5],layout:{grid:1},density:.2,tone:'primary'},   // Composition with Red, Yellow and Blue
     {ground:'#f8f8f4',mark:{gridline:1},size:[.1,.3],layout:{grid:1},density:.2,outline:0,lines:0},
-    {ground:'#f8f8f4',mark:{gridline:.7,rect:.3},size:[.02,.05],layout:{grid:1},density:1,outline:0,lines:0,tone:'gold'},
+    {ground:'#f2efe6',mark:{gridline:.7,rect:.3},size:[.02,.05],layout:{grid:1},density:1,outline:0,lines:0,tone:'gold'},   // Broadway Boogie Woogie
     {ground:'#e6e2da',mark:{gridrect:1},size:[.15,.45],layout:{diagonal:1},density:.2,tone:'primary'},   // Lozenge (his, on a light wall)
     {ground:'#f1eee6',mark:{rect:1},size:[.05,.1],layout:{scatter:1},density:.35,outline:0,lines:0,tone:'primary'},   // Composition in Colour A (1917; the Gray Tree retired)
     {ground:'#e4dfd2',mark:{checker:.7,rect:.3},size:[.06,.08],layout:{grid:1},density:1,tone:'primary'},   // Checkerboard (1919, his light or dark board)
