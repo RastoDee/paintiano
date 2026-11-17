@@ -7838,10 +7838,11 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   // 2 Black Paintings · 3 Hyena Stomp · 4 Irregular Polygon (Moultonboro) · 5 Interlocking arcs ·
   // 6 Notched stripes. Free: 0 and 1.
   {
-    // VARIANT: 0 What he heard (_stListen, generative) · 1 Concentric Squares · 2 Protractor · 3 Black Paintings · 4 Hyena Stomp · 5 Irregular Polygon · 6 Interlocking arcs · 7 Notched stripes. Free: 0 and 1.
+    // VARIANT: 0 What he heard (_stListen, generative) · 1 Concentric Squares as Jasper's Dilemma (stellaPhaseJasper) · 2 Protractor · 3 Black Paintings (stellaPhaseBlackLines) · 4 Hyena Stomp · 5 Irregular Polygon (Moultonboro) · 6 Interlocking arcs (the Protractor interlace) · 7 Notched stripes. Free: 0 and 1.
     const _pn=_capN(8); const _spick0=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_spick0===0){ _stListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     const _spick=_spick0-1;
+    if(_spick===0){ stellaPhaseJasper(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===1){ stellaPhaseProtractor(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===2){ stellaPhaseBlackLines(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===3){ stellaPhaseHyena(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -7897,6 +7898,29 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
 }
 
+// ── Stella B: Concentric Squares as Jasper's Dilemma (1962–63) — two square canvases of concentric bands hung side by side
+// (one above the other on a tall screen), the same bands in both: in one in the piece's colours as the squares have always had
+// them, in the other in greys,
+// the colours' own values. The music shown twice, as colour and as light. A band for every passage, from the outer edge
+// inward as the piece plays, as many as the piece is dense, a pinstripe of bare canvas between the bands. ──
+function stellaPhaseJasper(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const S=_stxSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn;
+  const A=_kd2Analyze(chords,gc,mode);
+  // the colours as the Concentric Squares have always had them: each chord's notes mixed, every other band a shade deeper
+  const chordCol=(i,mul)=>{ const ch=chords[Math.min(cn-1,Math.max(0,i))]; const ns=ch&&(ch.n||ch.notes); if(!ns||!ns.length) return [120,100,140]; let R=0,Gc=0,B=0,c=0;
+    for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, v=nt.v!==undefined?nt.v:80; const [r,g,b]=gc(m,v); R+=r; Gc+=g; B+=b; c++; } const k=mul==null?1:mul; return [Math.min(255,R/c*k),Math.min(255,Gc/c*k),Math.min(255,B/c*k)]; };
+  const raw=_STX_CANVAS, wall=isBW?[214,212,208]:[222,219,212]; ctx.fillStyle=_stxCss(wall); ctx.fillRect(0,0,CW,CH);   // the gallery wall, neutral, so the greys stay grey
+  const land=CW>CH*1.1, gp=D*0.05, s=land?Math.min(CH*0.84,(CW-gp)*0.45):Math.min(CW*0.84,(CH-gp)*0.45);
+  const sq=land?[[CW/2-gp/2-s,(CH-s)/2],[CW/2+gp/2,(CH-s)/2]]:[[(CW-s)/2,CH/2-gp/2-s],[(CW-s)/2,CH/2+gp/2]];
+  const nb=Math.max(5,Math.min(12,Math.round(5+7*S.density))), G=_kd2Phrases(A,nb), n=G.length, bw=s/2/n, pin=Math.max(1.2,bw*0.09);
+  const cols=G.map((q,k)=>chordCol(k,(k&1)?1.0:0.82));
+  const greys=cols.map(c=>{ const l=0.299*c[0]+0.587*c[1]+0.114*c[2]; return [l+4,l+2,l]; });
+  for(const [x,y] of sq){ ctx.save(); ctx.shadowColor='rgba(0,0,0,0.3)'; ctx.shadowBlur=D*0.025; ctx.shadowOffsetY=D*0.01; ctx.fillStyle=_stxCss(raw); ctx.fillRect(x,y,s,s); ctx.restore(); }
+  sq.forEach(([x,y],si)=>{ const C=si===0?cols:greys;
+    for(let k=0;k<n;k++){ if(G[k].t0>reveal+1e-9) break; const o=k*bw+(k?pin/2:0); ctx.fillStyle=_stxCss(C[k]); ctx.fillRect(x+o,y+o,s-2*o,s-2*o);
+      if(k<n-1){ const o2=(k+1)*bw-pin/2; ctx.fillStyle=_stxCss(raw); ctx.fillRect(x+o2,y+o2,s-2*o2,s-2*o2); } } });
+  try{ globalThis.__ST_LISTEN={v:'jasper',n}; }catch(_){} _setCurE(0.5);
+}
 // ── Stella C (a): the Black Paintings (1958–60) — black enamel laid in bands of one width, and between the bands the thin
 // line of bare canvas the brush left, the only drawing in the picture. The pattern is one of his two: a quiet, even piece
 // has The Marriage of Reason and Squalor — two sets of inverted U's side by side, opening downward; a loud or quick one
