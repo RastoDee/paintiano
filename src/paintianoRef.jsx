@@ -8787,10 +8787,55 @@ function lichtensteinEntablature(ctx,CW,CH,chords,lim,gc,ss,mode){
     ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.2; ctx.beginPath(); ctx.moveTo(0,y0); ctx.lineTo(CW*prog,y0); ctx.moveTo(0,y0+h); ctx.lineTo(CW*prog,y0+h); ctx.stroke(); });
   try{ globalThis.__LC_LISTEN={v:'entablature',bands:G.length}; }catch(_){} _setCurE(0.5);
 }
+// ── Lichtenstein: Modern Painting with Clef (1967) — his "Modern" paintings, the Art Deco of the thirties seen through the
+// comic print: the field cut into panels of geometry — fans of concentric arcs, stepped ziggurats, sunbursts, flutings,
+// dots swelling across a panel — between thick black contours, and over it the treble clef. Here the panels are the
+// passages of the piece, laid out as the piece is long (a passage the longer, the larger its panel); each panel's figure
+// is how its passage moves — a fan of arcs when it sings, a ziggurat when it climbs, a sunburst when it is loud and
+// accented, dots swelling when it is quiet, a fluting when it keeps an even beat; the bands and steps as many as its
+// notes ask. Each ground the passage's colour printed in his inks, the figures flat in his inks, black and white. The clef
+// stands at the climax, as big as the climax is loud. Panel by panel as the piece plays; the clef when the climax comes.
+// the treble clef in one line: the spiral round the G line, rising to the loop at the top, the stem down through the
+// spiral to the hook (the ball drawn apart); s is its whole height
+const _LC_CLEF=[[0.08,-0.05],[-0.12,-0.12],[-0.2,0.05],[-0.05,0.22],[0.2,0.15],[0.28,-0.1],[0.12,-0.35],[-0.2,-0.38],[-0.42,-0.12],[-0.4,0.22],[-0.15,0.42],[0.18,0.42],[0.38,0.2],[0.36,-0.25],[0.15,-0.62],[-0.08,-0.95],[-0.1,-1.3],[0.05,-1.55],[0.18,-1.4],[0.12,-1.05],[0.0,-0.7],[0.02,-0.2],[0.06,0.4],[0.08,0.95],[0.02,1.18],[-0.12,1.22],[-0.22,1.12]];
+function _lcClefPath(ctx,cx,cy,s){ const u=s/2.8, P=_LC_CLEF.map(([x,y])=>[cx+x*u,cy+y*u]);
+  ctx.beginPath(); ctx.moveTo(P[0][0],P[0][1]); for(let i=1;i<P.length-1;i++){ const m=[(P[i][0]+P[i+1][0])/2,(P[i][1]+P[i+1][1])/2]; ctx.quadraticCurveTo(P[i][0],P[i][1],m[0],m[1]); } ctx.lineTo(P[P.length-1][0],P[P.length-1][1]); return P; }
+function lichtensteinModernClef(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode), dens=A.ch?A.ch.density:0.4; const lw=Math.max(2.5,D*0.011);
+  const K=_lcEntry({g:'K',solid:true}), Wt=_lcEntry({g:'W',solid:true});
+  ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(0,0,CW,CH);
+  const G=_kd2Phrases(A,Math.round(_lcClamp(4+4*dens,4,8))); const vm=Math.max(0.05,...G.map(q=>q.vmax||0.5));
+  let cl=G[0]; for(const q of G) if((q.vmax||0)>(cl.vmax||0)) cl=q;
+  // the panels: the field split again and again across its longer side, each part as large as its passages are long
+  const blocks=[]; const split=(x,y,w,h,items)=>{ if(items.length===1){ blocks.push({x,y,w,h,q:items[0]}); return; } const tot=items.reduce((s,q)=>s+Math.max(1,q.b-q.a),0); let acc=0,k=0; for(;k<items.length-1;k++){ acc+=Math.max(1,items[k].b-items[k].a); if(acc>=tot/2) break; } k=Math.max(0,Math.min(items.length-2,k)); const f=_lcClamp(acc/tot,0.28,0.72);
+    if(w>=h){ split(x,y,w*f,h,items.slice(0,k+1)); split(x+w*f,y,w*(1-f),h,items.slice(k+1)); } else { split(x,y,w,h*f,items.slice(0,k+1)); split(x,y+h*f,w,h*(1-f),items.slice(k+1)); } };
+  const m=D*0.025; split(m,m,CW-2*m,CH-2*m,G);
+  let prev=['',''];
+  blocks.forEach((B,k)=>{ const q=B.q, a=q.a, b=Math.max(q.a+1,q.b); const hp=_mtHearSpan(A,a,b), loud=(q.vmax||0.5)/vm;
+    const want=[]; if(hp.v<0.32) want.push('dots'); if(hp.dur>1.4) want.push('fan'); if(hp.dir>0.8) want.push('zig'); if(loud>0.85&&hp.n&&hp.acc/hp.n>0.35) want.push('sun'); if(hp.leap<3) want.push('flute');
+    want.push('fan','zig','sun','flute','dots'); B.kind=want.find(x=>!prev.includes(x)); prev=[B.kind,prev[0]];
+    B.gr=_lcInk(_picChord(chords,Math.min(cn-1,Math.floor((a+b)/2)),gc,isBW).rgb,isBW); B.fl=_lcFlatOn(_lcInk(_picChord(chords,Math.min(cn-1,b-1),gc,isBW).rgb,isBW),B.gr,isBW); B.n=Math.round(_lcClamp((hp.n||10)/4,4,13)); B.hp=hp; B.loud=loud; });
+  blocks.forEach(B=>{ const {x,y,w,h,q}=B; if(played<q.a) return; const n=B.n, gr=B.gr, fl=B.fl, alt=[fl,Wt,K];
+    ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); ctx.fillStyle=_lcCss(gr); ctx.fillRect(x,y,w,h); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*0.5;
+    if(B.kind==='fan'){ const left=B.hp.dir>=0, ox=left?x:x+w, oy=y+h, R=Math.hypot(w,h); for(let i=n;i>=1;i--){ ctx.beginPath(); ctx.moveTo(ox,oy); ctx.arc(ox,oy,R*i/n,left?-Math.PI/2:Math.PI,left?0:-Math.PI/2); ctx.closePath(); ctx.fillStyle=_lcCss(i%2?alt[(i>>1)%2]:gr); ctx.fill(); ctx.stroke(); } }
+    else if(B.kind==='zig'){ const st=Math.max(3,Math.min(9,n)), sh=h*0.8/st; for(let i=0;i<st;i++){ const ww=w*(0.92-0.84*i/st); ctx.fillStyle=_lcCss(i%2?Wt:fl); ctx.fillRect(x+(w-ww)/2,y+h-(i+1)*sh,ww,sh); ctx.strokeRect(x+(w-ww)/2,y+h-(i+1)*sh,ww,sh); } }
+    else if(B.kind==='sun'){ const ox=x+w/2, oy=y+h, nr=Math.max(8,n*2); for(let i=0;i<nr;i++){ if(i%2) continue; const a0=Math.PI+i/nr*Math.PI, a1=Math.PI+(i+1)/nr*Math.PI, R=Math.hypot(w,h)*1.2; ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+Math.cos(a0)*R,oy+Math.sin(a0)*R); ctx.lineTo(ox+Math.cos(a1)*R,oy+Math.sin(a1)*R); ctx.closePath(); ctx.fillStyle=_lcCss(fl); ctx.fill(); ctx.stroke(); }
+      ctx.fillStyle=_lcCss(Wt); ctx.beginPath(); ctx.arc(ox,oy,Math.min(w,h)*0.22*(0.8+0.3*B.loud),Math.PI,0); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else if(B.kind==='flute'){ const nb=Math.max(4,n), u=w/nb; for(let i=0;i<nb;i++){ ctx.fillStyle=_lcCss(i%3===0?K:i%3===1?Wt:fl); const ww=u*(0.5+0.3*Math.sin(i/nb*Math.PI)); ctx.fillRect(x+i*u+(u-ww)/2,y,ww,h); } }
+    else { ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(x,y,w,h); _lcBenday(ctx,x,y,w,h,Math.max(5,D*0.03),fl,(px,py)=>_lcClamp(((px-x)/w+(py-y)/h)/2*1.1,0.08,1)); }
+    ctx.restore(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; ctx.strokeRect(x,y,w,h); });
+  // the clef, at the climax, as big as it is loud
+  if(played>=cl.t0*cn || played>=cl.a){ const B=blocks.find(B=>B.q===cl)||blocks[0]; const s=D*(0.9+0.35*((cl.vmax||0.5)/vm)), u=s/2.8, cx=_lcClamp(B.x+B.w/2,u*0.7,CW-u*0.7), cy=_lcClamp(B.y+B.h/2,u*1.75,CH-u*1.45);
+    const ink=_lcFlatOn(B.gr,B.gr,isBW); ctx.lineCap='round'; ctx.lineJoin='round';
+    _lcClefPath(ctx,cx,cy,s); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=u*0.26; ctx.stroke(); _lcClefPath(ctx,cx,cy,s); ctx.strokeStyle=_lcCss(_LC_WHT); ctx.lineWidth=u*0.15; ctx.stroke();
+    const P=_lcClefPath(ctx,cx,cy,s), e=P[P.length-1]; ctx.fillStyle=_lcCss(_LC_BLK); ctx.beginPath(); ctx.arc(e[0]+u*0.04,e[1]-u*0.08,u*0.2,0,6.2832); ctx.fill(); ctx.fillStyle=_lcCss(ink); ctx.beginPath(); ctx.arc(e[0]+u*0.04,e[1]-u*0.08,u*0.12,0,6.2832); ctx.fill(); }
+  try{ globalThis.__LC_LISTEN={v:'clef',panels:blocks.map(B=>B.kind)}; }catch(_){} _setCurE(0.5);
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // LICHTENSTEIN — Ben-Day dots, fat black contours, poster-flat colour.
 // Phases: 0 mosaic (a page of comic panels) · 1 burst · 2 Entablatures
-// · 3 brushstrokes · 4 mirrors · 5 Sunrise. Song character: density → raster tightness, energy → contour
+// · 3 brushstrokes · 4 Modern Painting with Clef · 5 Landscape. Song character: density → raster tightness, energy → contour
 // weight and shape sizes.
 function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim || !chords || !chords.length) return;
@@ -8807,7 +8852,7 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   _lcStepPx=Math.max(5,Math.round(S*0.014));   // the size of his screen on this canvas: fine enough for the eye to mix the two inks
   const _pc=(i)=>_lcInk(_picChord(chords,Math.min(cn-1,Math.max(0,i)),gc,mode==='bw').rgb,mode==='bw'), NEWC=true;
   const fillC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i)):css(flat(c)); }, dotC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i).dot):css(flat(c)); };   // the piece's colours, printed in his inks
-  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 burst · 3 Entablatures (replaces the close-up curves) · 4 brushstrokes · 5 mirrors · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
+  // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 burst · 3 Entablatures (replaces the close-up curves) · 4 brushstrokes · 5 Modern Painting with Clef (replaces the mirrors) · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _lcListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   const pick=pick0-1;
@@ -8853,28 +8898,7 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
     }
     return;
   }
-  if(pick===4){ // mirrors
-    ctx.fillStyle=INK; ctx.fillRect(0,0,CW,CH);
-    const discs=Math.max(5,Math.round(4+14*dnaD)), per=Math.ceil(cn/discs);   // a dense piece: more mirrors, a little smaller
-    for(let k=0;k<discs;k++){
-      const i=Math.min(cn-1,k*per); if(i>=N && k>0) break;
-      const m=meta(i);
-      const cx=CW*(0.12+0.76*((k*GA/(Math.PI*2))%1)), cy=CH*(0.12+0.76*rnd());
-      const R=(S*0.12+m.dur*S*0.10)*(0.75+0.5*dnaE)*(1.1-0.3*dnaD);
-      ctx.fillStyle=fillC(i); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
-      ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.clip();
-      ctx.fillStyle=INK;
-      const st=dotStep*0.75;
-      for(let y=cy-R;y<cy+R;y+=st)
-        for(let x=cx-R+(((y/st)|0)%2)*st/2;x<cx+R;x+=st){
-          const d=Math.hypot(x-cx,y-cy)/R;
-          ctx.beginPath(); ctx.arc(x,y,dotR*0.35+dotR*1.2*d,0,7); ctx.fill();
-        }
-      ctx.restore();
-      ctx.strokeStyle=PAPER; ctx.lineWidth=LW; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
-    }
-    return;
-  }
+  if(pick===4){ lichtensteinModernClef(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Modern Painting with Clef (replaces the mirrors)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
