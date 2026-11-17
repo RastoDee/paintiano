@@ -6074,6 +6074,50 @@ function picassoListen3(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   try{ globalThis.__PC_LISTEN={v:'listen3',per,grip,planes:n,motifs:motif.filter(Boolean)}; }catch(_){} _setCurE(0.5);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO — BOTTLE AND GLASS (papier collé, 1912–13): papers pasted on the sheet, a passage each — wallpaper, false wood
+// grain, newsprint, plain coloured paper, black paper, a scrap of the piece's own score — and across them in charcoal
+// the bottle with its label and the glass beside it. The bottle is drawn through the loudest passage, its two halves set
+// apart by the piece's leaps, shaded stroke by stroke; the glass in the next loudest, its rim from above, its bowl from
+// the side, a facet for every voice. The papers keep the chords' own hues, quietened.
+// ═══════════════════════════════════════════════════════════════════════════
+function picassoBottle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const grip=0.75+0.15*(1-X.pace); const mute=(c)=>{ if(isBW) return _pxGrey(c); let [hh,s,l]=_pxHsl(c); s=s*(1-grip)+Math.min(s,0.36)*grip; l=l*(1-0.5*grip)+0.62*0.5*grip; return _pxRgbH(hh,Math.max(0,Math.min(1,s)),Math.max(0.2,Math.min(0.86,l))); };   // the chord's own hue, quietened
+  const wall=isBW?[214,212,206]:_pxMix(_pxCol(chords,0,gc,isBW),[232,224,206],0.78); ctx.fillStyle=_pxCss(wall); ctx.fillRect(0,0,CW,CH); _pxWash(ctx,CW,CH,wall,ss,8,0.05);
+  const G=_kd2Phrases(A,Math.round(6+X.pace*3)); const kinds=['wall','news','wood','plain','black','score','plain','wood','news'];
+  const Ops=_mtOps(); let ci=0; G.forEach((q,i)=>{ if(q.vmax>G[ci].vmax) ci=i; });
+  G.forEach((q,i)=>{ const r=_pxR(70400+i,ss); const kind=kinds[(i+(ss&3))%kinds.length]; const w=CW*(0.34+0.26*r())*(0.8+0.4*Math.min(1.5,q.n/(cn/G.length))), h=CH*(0.2+0.2*r()); const x=CW*(0.1+0.8*((i+0.5)/G.length))-w/2+(r()-.5)*CW*0.12, y=CH*(0.08+0.62*((i*0.618)%1));
+    const a=(r()-.5)*0.25, cxp=x+w/2, cyp=y+h/2, ca=Math.cos(a), sa=Math.sin(a); const P=[[x,y],[x+w,y+(r()-.5)*h*0.1],[x+w,y+h],[x+(r()-.5)*w*0.08,y+h]].map(([px,py])=>[cxp+(px-cxp)*ca-(py-cyp)*sa,cyp+(px-cxp)*sa+(py-cyp)*ca]);
+    const col=mute(_pxCol(chords,Math.floor((q.a+q.b)/2),gc,isBW)), col2=mute(_pxCol(chords,q.a,gc,isBW));
+    Ops.at(q.t0, ()=>{ if(kind==='score'){ _pxPaper(ctx,P,'plain',[236,230,212],null,r,D); ctx.save(); _pxPoly(ctx,P); ctx.clip(); const st=D*0.012; ctx.strokeStyle='rgba(40,34,28,0.75)'; ctx.lineWidth=Math.max(0.7,D*0.0015); for(let sys=0;sys<2;sys++){ const by=y+h*(0.3+0.4*sys); for(let k=0;k<5;k++){ ctx.beginPath(); ctx.moveTo(x,by+k*st); ctx.lineTo(x+w,by+k*st); ctx.stroke(); }
+        ctx.fillStyle='rgba(30,26,22,0.85)'; const N=14; for(let k=0;k<N;k++){ const e=A.ev[Math.min(cn-1,q.a+Math.floor((q.b-q.a)*(sys*N+k)/(2*N)))]; if(!e) continue; const nx=x+w*(0.06+0.9*k/N), ny=by+st*4-(((e.top-60)%14+14)%14)*st*0.5; ctx.beginPath(); ctx.ellipse(nx,ny,st*0.55,st*0.4,-0.4,0,6.28); ctx.fill(); ctx.beginPath(); ctx.moveTo(nx+st*0.5,ny); ctx.lineTo(nx+st*0.5,ny-st*3); ctx.stroke(); } } ctx.restore(); }
+      else _pxPaper(ctx,P,kind,col,col2,r,D); }); });
+  Ops.run(reveal);
+  // the bottle and the glass in charcoal, drawn as the piece plays: the bottle through its loudest passage, its two halves
+  // apart by the piece's leaps, its label; the glass in the next loudest, its rim seen from above and its bowl from the side
+  const ink='rgba(24,20,18,0.92)'; const lw=Math.max(1.4,D*0.0048); let c2=ci===0?1:0; G.forEach((q,i)=>{ if(i!==ci && q.vmax>G[c2].vmax) c2=i; });
+  const bx=CW*(0.4+(X.trend-0.5)*0.1), by=CH*0.62, bw=D*0.15, bh=CH*0.26, sh=D*(0.02+0.05*X.leaps);
+  const half=(sd,dx,dy)=>{ const P=[[0.2,-1.15],[0.2,-0.62]]; _matBez([0.2,-0.62],[0.22,-0.42],[0.92,-0.46],[0.95,-0.22],10,P); P.push([0.95,0.95],[0,0.95]); return P.map(([u,v])=>[bx+dx+sd*u*bw,by+dy+v*bh]); };
+  const bq=G[ci]; if(bq.t0<=reveal){ const f=Math.max(0,Math.min(1,(reveal-bq.t0)/Math.max(0.25,bq.t1-bq.t0))); ctx.save(); ctx.strokeStyle=ink; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.lineJoin='round';
+    const L=half(-1,-sh/2,0), R=half(1,sh/2,-bh*0.12); if(f>0.35){ ctx.save(); ctx.globalAlpha=Math.min(1,(f-0.35)*3)*0.22; _pxPoly(ctx,[[bx+sh/2,by-bh*1.21]].concat(R.slice(1)).concat([[bx+sh/2,by+bh*0.89]])); ctx.fillStyle='rgba(40,32,24,1)'; ctx.fill(); ctx.restore(); }
+    _pxDraw(ctx,L,f*2.4); _pxDraw(ctx,R,f*2.4-0.5); _pxDraw(ctx,[[bx-bw*0.2-sh/2,by-bh*1.15],[bx+bw*0.2+sh/2,by-bh*1.21]],(f-0.4)*4);
+    // the label, a pasted paper with its stencilled word
+    if(f>0.55){ const lx=bx-bw*0.75, ly=by-bh*0.05, lw2=bw*1.5, lh=bh*0.36; ctx.save(); ctx.globalAlpha=Math.min(1,(f-0.55)*4); _pxPaper(ctx,[[lx,ly],[lx+lw2,ly-lh*0.05],[lx+lw2,ly+lh],[lx,ly+lh]],'plain',[236,228,206],null,_pxR(70900,ss),D); ctx.restore();
+      ctx.fillStyle=ink; ctx.font=`700 ${Math.round(lh*0.42)}px Georgia, 'Times New Roman', serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; const word='MARC', k=Math.ceil(word.length*Math.min(1,(f-0.6)*3)); if(k>0) ctx.fillText(word.slice(0,k),lx+lw2/2,ly+lh*0.52); }
+    // charcoal shading down the shadowed half, a stroke for every few notes
+    const nS=Math.round((8+14*(A.ch?A.ch.density:0.3))*Math.max(0,Math.min(1,(f-0.3)*1.6))); ctx.lineWidth=Math.max(0.7,lw*0.45); for(let k=0;k<nS;k++){ const u=0.15+0.75*k/Math.max(1,nS); ctx.beginPath(); ctx.moveTo(bx+sh/2+bw*u*0.95,by-bh*0.3); ctx.lineTo(bx+sh/2+bw*u*0.95-bw*0.12,by+bh*0.9); ctx.stroke(); }
+    ctx.restore(); }
+  const gq=G[c2]; if(gq && gq.t0<=reveal){ const f=Math.max(0,Math.min(1,(reveal-gq.t0)/Math.max(0.2,gq.t1-gq.t0))); const gx=bx+bw*2.1, gy=by+bh*0.12, gr=D*0.1;
+    ctx.save(); ctx.strokeStyle=ink; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.lineJoin='round';
+    _pxDraw(ctx,_pxArcP(gx,gy-gr*1.1,gr,gr*0.32,0,Math.PI*2,28),f*2.2);
+    _pxDraw(ctx,[[gx-gr,gy-gr*1.1],[gx-gr*0.85,gy-gr*0.3],[gx-gr*0.3,gy+gr*0.15],[gx,gy+gr*0.2],[gx+gr*0.3,gy+gr*0.15],[gx+gr*0.85,gy-gr*0.3],[gx+gr,gy-gr*1.1]],f*2.2-0.5);
+    _pxDraw(ctx,[[gx,gy+gr*0.2],[gx,gy+gr*1.2]],(f-0.55)*4); _pxDraw(ctx,_pxArcP(gx,gy+gr*1.25,gr*0.6,gr*0.16,0,Math.PI*2,22),(f-0.7)*4);
+    const nf=Math.max(3,Math.min(6,Math.round(X.poly)+2)); ctx.lineWidth=Math.max(0.7,lw*0.5); for(let k=0;k<nf;k++){ const u=-0.7+1.4*(k+0.5)/nf; _pxDraw(ctx,[[gx+u*gr,gy-gr*0.98],[gx+u*gr*0.4,gy+gr*0.1]],(f-0.8-k*0.03)*6); }
+    ctx.restore(); }
+  _pxCanvas(ctx,CW,CH,ss,0.03); try{ globalThis.__PC_LISTEN={v:'bottle',papers:G.length}; }catch(_){} _setCurE(0.5);
+}
+
 function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
@@ -6083,13 +6127,13 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // button cycles phaseIndex; _capN caps it on Free.
   // VARIANT (chosen by vote): 0 Picasso listens (picassoListen3: the piece's own cubist picture, round his guitar, in the
   // period its music asks for) · 1 Light line · 2 The Old Guitarist · 3 Les Demoiselles · 4 Analytic
-  // cubism · 5 The Guitar (papier collé) · 6 Three Musicians · 7 Still life with guitar. Retired (code kept): the first
+  // cubism · 5 Bottle and glass (papier collé, picassoBottle) · 6 Three Musicians · 7 Still life with guitar. Retired (code kept): the first
   // Listens, the second (picassoListen2, which chose among the paintings, with the living blue period picassoBlue),
-  // Weeping Woman, the first Guitar, Guernica.
+  // Weeping Woman, the first Guitar, the papier collé Guitar (picassoGuitar), Guernica.
   const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===0) return picassoListen3(ctx,CW,CH,chords,lim,gc,ss,mode);
   if(pick===4) return picassoAnalytic(ctx,CW,CH,chords,lim,gc,ss,mode);
-  if(pick===5) return picassoGuitar(ctx,CW,CH,chords,lim,gc,ss,mode);
+  if(pick===5) return picassoBottle(ctx,CW,CH,chords,lim,gc,ss,mode);
   if(pick===7) return picassoStillLife(ctx,CW,CH,chords,lim,gc,ss,mode);
   _pcPaintAny([0,0,5,6,0,0,3,0][pick],ctx,CW,CH,chords,lim,gc,ss,mode);
 }
