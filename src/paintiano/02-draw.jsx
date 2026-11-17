@@ -3983,59 +3983,48 @@ function _pcFigure(pose,o){ const {list,F,flat,skin,PAL,D,CW,CH,x0,floorY,T,q,lo
   else if(attr==='glass'){ F(T(0.6),[[ax-s*0.6,ay-s*1.8],[ax+s*0.6,ay-s*1.8],[ax+s*0.3,ay-s*0.5],[ax+s*0.1,ay-s*0.1],[ax+s*0.5,ay],[ax-s*0.5,ay],[ax-s*0.1,ay-s*0.1],[ax-s*0.3,ay-s*0.5]],_pcMix(col(P.white,1),[255,255,255],0.4),{hatch:0.25,hang:1.4,ink:0.8}); }
   else { F(T(0.6),_pgEll(ax+s*0.3,ay-s*1.2,s*1.1,s*1.4,0.2,14),_pcMix(PAL.ink,[255,255,255],0.3),{hatch:0.2,hang:0.9}); F(T(0.62),_pgEll(ax+s*0.3,ay-s*1.2,s*0.8,s*1.1,0.2,12),_pcMix([200,215,230],col(P.blue,3),0.3),{hatch:0.4,hang:1.1,ink:0.6}); list.push({id:id(),t:T(0.63),line:[[ax+s*0.3,ay+s*0.2],[ax+s*0.3,ay+s*1.2]],col:PAL.ink,lw:Math.max(1,D*0.004)}); }   // the mirror
 }
-// ── Picasso phase LIGHT LINE — the 1949 "light drawings". ──
-// One unbroken luminous stroke draws itself across a near-black ground for
-// the WHOLE song: chord energy drives speed, thickness and loop-arabesques;
-// quiet passages run white, energetic passages tint into the chord's colour
-// (whole phrases, not single segments). BW mode = pure white light, accents
-// carried by width/glow alone — which is exactly what Picasso's original
-// black-and-white photographs were. Deterministic: the path is generated
-// sequentially from chord 0, so any progress prefix is identical.
+// ── Picasso phase LIGHT LINE — the 1949 light drawings, photographed by Gjon Mili in the dark: Picasso drew in the air
+// with a small light, one unbroken stroke, and the long exposure kept it. Here the piece draws it: one continuous line of
+// light across the black, a sweeping gesture for every passage — from where the last one ended to its own place on the
+// golden angle round the middle; the louder the passage, the wider the loop it throws; the line swells and climbs with
+// the notes, higher notes lifting it; at each accent a small flare. The light is warm white, its glow in the chord's own
+// hue. It draws itself as the piece plays and ends where the piece ends.
 function picassoPhaseLightLine(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw';
-  const cn=chords.length, N=Math.max(1,Math.min(cn,lim));
-  const D=Math.min(CW,CH);
-  // near-black ground + soft vignette
-  ctx.fillStyle='#0c0b0e'; ctx.fillRect(0,0,CW,CH);
-  const vg=ctx.createRadialGradient(CW/2,CH/2,D*0.2,CW/2,CH/2,D*0.75);
-  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.42)');
-  ctx.fillStyle=vg; ctx.fillRect(0,0,CW,CH);
-  const r=_seedRnd(9100,ss,0,0); r(); r();
-  let x=CW*(0.10+r()*0.12), y=CH*(0.35+r()*0.3), ang=r()*6.28318;
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), isAcc=_mtAccOf(A);
+  ctx.fillStyle='#0b0a0d'; ctx.fillRect(0,0,CW,CH);
+  { const r=_pxR(73000,ss); for(let i=0;i<7;i++){ const x=r()*CW, y=r()*CH, R=D*(0.3+0.5*r()); const g=ctx.createRadialGradient(x,y,0,x,y,R); g.addColorStop(0,'rgba(60,56,64,0.10)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); } }
+  const vg=ctx.createRadialGradient(CW/2,CH/2,D*0.25,CW/2,CH/2,D*0.85); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.5)'); ctx.fillStyle=vg; ctx.fillRect(0,0,CW,CH);
+  const G=_kd2Phrases(A,Math.max(5,Math.min(9,Math.round(5+4*(A.ch?A.ch.density:0.3)+2*X.pace)))); const n=G.length; let lf=0;
+  // the places of the gestures: the golden angle round the middle, the higher passages higher
+  const cx=CW*0.5, cy=CH*0.5, mx=CW*0.42, my=CH*0.4; const pts=[]; const r0=_pxR(73100,ss);
+  let px=cx+(r0()-.5)*CW*0.3, py=cy+(r0()-.5)*CH*0.2, pa=r0()*6.28; const path=[];   // [x,y,t,v,col]
+  G.forEach((q,i)=>{ const h=_mtHearSpan(A,q.a,q.b), r=_pxR(73200+i,ss); const rad=0.35+0.6*Math.sqrt((i+1)/n), th=i*2.39996+ss*0.001;
+    const ex=Math.max(CW*0.08,Math.min(CW*0.92,cx+Math.cos(th)*mx*rad)), ey=Math.max(CH*0.07,Math.min(CH*0.93,cy+Math.sin(th)*my*rad+(0.5-h.reg)*CH*0.18));
+    const L=Math.hypot(ex-px,ey-py)||1, ea=Math.atan2(ey-py,ex-px)+(r()-.5)*1.4; const c1=[px+Math.cos(pa)*L*0.45,py+Math.sin(pa)*L*0.45], c2=[ex-Math.cos(ea)*L*0.45,ey-Math.sin(ea)*L*0.45];
+    const loud=Math.min(1,h.vmax||0.6), loopR=D*(0.05+0.14*loud*loud)*(h.leap>4?1.15:1), turn=(h.dir>=0?-1:1);
+    const M=Math.max(40,Math.round(L/(D*0.006)+loopR/(D*0.004))); const a=q.a, b=Math.max(q.a+1,q.b);
+    for(let k=0;k<=M;k++){ const u=k/M, v=1-u; let x=v*v*v*px+3*v*v*u*c1[0]+3*v*u*u*c2[0]+u*u*u*ex, y=v*v*v*py+3*v*v*u*c1[1]+3*v*u*u*c2[1]+u*u*u*ey;
+      const dx=3*v*v*(c1[0]-px)+6*v*u*(c2[0]-c1[0])+3*u*u*(ex-c2[0]), dy=3*v*v*(c1[1]-py)+6*v*u*(c2[1]-c1[1])+3*u*u*(ey-c2[1]); const tl=Math.hypot(dx,dy)||1, tx=dx/tl, ty=dy/tl;
+      // the loop the passage throws, in the middle of its gesture
+      if(u>0.38 && u<0.62){ const w=(u-0.38)/0.24, ang=w*6.2832; const ox=Math.sin(ang)*loopR, oy=(1-Math.cos(ang))*loopR*turn; x+=tx*ox-ty*oy; y+=ty*ox+tx*oy; }
+      // the notes lift the line: higher notes higher, a little
+      const ci=Math.min(cn-1,a+Math.floor((b-a)*u)), e=A.ev[ci]; if(e) lf+=((A.reg(e.top)-h.reg)*D*0.04-lf)*0.08; x+=-ty*lf; y+=tx*lf;
+      path.push([x,y,(a+(b-a)*u)/cn,e?e.v:0.5,ci]); }
+    px=ex; py=ey; pa=ea; });
+  // the light: a wide faint glow in the chord's hue, a narrower one, the warm white core; drawn as far as the piece has come
+  const upto=path.findIndex(p=>p[2]>reveal); const N=upto<0?path.length:upto; if(N<2){ _setCurE(0.5); return; }
   ctx.lineCap='round'; ctx.lineJoin='round';
-  let tint=0; // smoothed colour amount — whole phrases, not single segments
-  for(let i=0;i<N;i++){
-    const ch=chords[i];
-    const E=(ch&&typeof ch._E==='number')?ch._E:0.5;
-    _setCurE(E);
-    const cc=_picChord(chords,i,gc,isBW).rgb;
-    // phrase-level tint: eases toward the chord colour in energetic passages
-    tint += ((0.6 + 0.4*(E>0.55 ? Math.min(1,(E-0.35)*1.5) : 0)) - tint)*0.25;   // the light is always the music's colour, fullest where it is loud
-    const t=isBW?0:tint;
-    const R=Math.round(255+(cc[0]-255)*t), G=Math.round(250+(cc[1]-250)*t), B=Math.round(240+(cc[2]-240)*t);
-    const col='rgba('+R+','+G+','+B+',0.92)';
-    const w=D*0.0016*(1+2.1*E);
-    const per=7, sp=D*(0.006+0.007*E);
-    ctx.beginPath(); ctx.moveTo(x,y);
-    for(let k=0;k<per;k++){
-      ang += (r()-0.5)*0.42 + 0.16*Math.sin((i*per+k)*0.13);
-      if(E>0.72 && r()<0.10){        // accent → arabesque loop
-        for(let q=0;q<22;q++){ ang+=0.29; x+=Math.cos(ang)*sp*0.8; y+=Math.sin(ang)*sp*0.68; ctx.lineTo(x,y); }
-      }
-      x+=Math.cos(ang)*sp; y+=Math.sin(ang)*sp*0.85;
-      if(x<CW*0.06||x>CW*0.94){ ang=Math.PI-ang; x=Math.max(CW*0.06,Math.min(CW*0.94,x)); }
-      if(y<CH*0.07||y>CH*0.93){ ang=-ang; y=Math.max(CH*0.07,Math.min(CH*0.93,y)); }
-      ctx.lineTo(x,y);
-    }
-    // glow pass + bright core: the same path stroked three times (wide faint
-    // halo, mid halo, core) — reads like the former shadowed stroke without a
-    // shadowBlur raster per chord segment.
-    const gb=D*0.016*(0.8+E);
-    const halo='rgba('+R+','+G+','+B+',';
-    ctx.strokeStyle=halo+'0.03)'; ctx.lineWidth=w+gb*1.6; ctx.stroke();
-    ctx.strokeStyle=halo+'0.05)'; ctx.lineWidth=w+gb*0.7; ctx.stroke();
-    ctx.strokeStyle=col; ctx.lineWidth=w; ctx.stroke();
-  }
+  const glowCol=(ci)=>{ if(isBW) return [235,235,230]; let [h,s,l]=_pxHsl(_pxCol(chords,ci,gc,isBW)); return _pxRgbH(h,Math.min(0.85,s*0.85),0.62); };
+  const pass=(lw,alpha,colF)=>{ const step=8; for(let k=1;k<N;k+=step){ const k2=Math.min(N-1,k+step); ctx.beginPath(); ctx.moveTo(path[k-1][0],path[k-1][1]); for(let j=k;j<=k2;j++) ctx.lineTo(path[j][0],path[j][1]); ctx.strokeStyle=_pxCss(colF(path[k][4]),alpha); ctx.lineWidth=lw(path[k][3]); ctx.stroke(); } };
+  pass(v=>D*(0.022+0.018*v),0.08,glowCol); pass(v=>D*(0.009+0.007*v),0.24,glowCol); pass(v=>D*(0.0028+0.0035*v),0.95,()=>isBW?[250,250,248]:[255,248,232]);
+  // the flares at the accents
+  const fl=[]; let last=-1e9; for(let k=0;k<path.length;k++){ const ci=path[k][4]; if(ci===last) continue; last=ci; const e=A.ev[ci]; if(e&&isAcc(e)) fl.push([k,e.v]); } const keep=new Set(fl.sort((p,q)=>q[1]-p[1]||p[0]-q[0]).slice(0,8).map(f=>f[0]));
+  for(const k of keep){ if(k>=N) continue; const ci=path[k][4], e=A.ev[ci]; const [x,y]=path[k], R=D*(0.012+0.02*e.v);
+    const g=ctx.createRadialGradient(x,y,0,x,y,R*2.4); g.addColorStop(0,'rgba(255,252,240,0.9)'); g.addColorStop(0.25,_pxCss(glowCol(ci),0.35)); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,R*2.4,0,6.2832); ctx.fill(); }
+  // the point of light where the hand is now
+  const hd=path[N-1]; if(reveal<0.999){ const g=ctx.createRadialGradient(hd[0],hd[1],0,hd[0],hd[1],D*0.035); g.addColorStop(0,'rgba(255,255,250,1)'); g.addColorStop(1,'rgba(255,240,200,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(hd[0],hd[1],D*0.035,0,6.2832); ctx.fill(); }
+  try{ globalThis.__PC_LISTEN={v:'light2',gestures:n}; }catch(_){} _setCurE(0.5);
 }
 
 // Shared helper for the new Picasso phases: average a chord's colour + energy.
