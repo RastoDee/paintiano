@@ -8051,20 +8051,40 @@ function stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode){
     ctx.strokeStyle=isBW?'#e8e4da':'#efe9dc'; ctx.lineWidth=Math.max(1.5,D*0.008); ctx.beginPath(); poly.forEach((p,q)=>q?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke(); });
 }
 
-// ── Stella F: Interlocking arcs — rainbow protractor arcs interleaved. ──
+// ── Stella F: Interlocking arcs — the Protractor interlaces (Firuzabad, 1970): great rings of fluorescent bands linked in
+// a chain down the whole canvas and off its edges, and where two rings cross their bands weave, one over at the first crossing and under at the
+// next, a pinstripe of the dark ground between every band. Each band is a passage of the piece, as wide as the passage is long,
+// in its colour; the passages are dealt round the links in turn, so the whole chain grows at once, each link from its inner
+// band outward, each band sweeping round from its own angle, the way the melody goes, for a third of the piece, so many arcs
+// grow at once; the louder
+// links the larger; the links sway with their register. Arcs everywhere at first; the chain at the end. ──
 function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#1a1a1a':'#14121a';ctx.fillRect(0,0,CW,CH);
-  const arcs=Math.max(4,Math.min(40,Math.round(cn/3)));
-  const vis=Math.max(1,Math.ceil(N/cn*arcs));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+4400,ss,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/arcs)),gc,isBW);
-    const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.1+rnd()*0.25);
-    const a0=rnd()*Math.PI*2,a1=a0+Math.PI*(0.5+rnd());
-    ctx.strokeStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.lineWidth=Math.max(3,R*0.22);ctx.lineCap='butt';
-    ctx.beginPath();ctx.arc(cx,cy,R,a0,a1);ctx.stroke();
-  }
+  const ss=sessionSeed|0, S=_stxSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn;
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A);
+  const canvas=isBW?[22,22,24]:[20,18,26]; ctx.fillStyle=_stxCss(canvas); ctx.fillRect(0,0,CW,CH);   // the dark ground of the first screen; the pinstripes between the bands are the ground too
+  // a chain of links down the whole canvas, running off at both ends, as his interlaces fill theirs: each link a part of the
+  // piece; each crossing its own, and no link touching the one after next
+  const land=CW>CH*1.1, span=land?CW:CH, side=land?CH:CW, R=side*0.5, k1=1.02, step=R*k1; const nR=Math.max(3,Math.ceil((span*1.04-2*R)/step)+1);
+  const nb=Math.max(3,Math.min(6,Math.round(3+3*S.density+X.pace))); const G=_kd2Phrases(A,nR*nb); const per=Math.ceil(G.length/nR);
+  const parts=[]; for(let k=0;k<nR;k++){ const g=G.filter((q,i)=>i%nR===k); if(g.length){ const hs=g.map(q=>_mtHearSpan(A,q.a,q.b)); parts.push({g,h:{vmax:Math.max(...hs.map(h=>h.vmax||0.6)),reg:hs.reduce((s,h)=>s+h.reg,0)/hs.length}}); } }   // the passages dealt round the links in turn: the whole chain grows at once
+  const vm=Math.max(...parts.map(p=>p.h.vmax||0.6)); parts.forEach(p=>{ p.R=R*(0.92+0.08*(p.h.vmax||0.6)/vm); });   // the louder part, the larger link
+  const total=2*R+step*(parts.length-1); let along=(span-total)/2+R;
+  const rings=[]; parts.forEach((p,k)=>{ if(k) along+=step; const across=side/2+(p.h.reg-0.5)*side*0.1+(k%2?1:-1)*side*0.05;
+    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; rr+=w; return b; });
+    rings.push({cx,cy,R:Rk,r0:rk,bands}); });
+  const gap=Math.max(1.2,D*0.0045);
+  const drawRing=(ring)=>{ for(const b of ring.bands){ if(b.q.t0>reveal) break; const t1=Math.min(1,b.q.t0+0.38), f=Math.max(0,Math.min(1,(reveal-b.q.t0)/Math.max(0.02,t1-b.q.t0)));   // each band keeps sweeping for a third of the piece: many arcs grow at once
+      const ccw=b.dir<0, sw=6.2832*Math.min(1,f), a0=b.a0, a1=a0+(ccw?-sw:sw);   // a band sweeps round from its own angle, either way, as its passage plays
+      ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.arc(ring.cx,ring.cy,b.a,a1,a0,!ccw); ctx.closePath(); ctx.fillStyle=_stxCss(b.col); ctx.fill();
+      ctx.strokeStyle=_stxCss(canvas); ctx.lineWidth=gap; ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.a,a0,a1,ccw); ctx.stroke(); ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.stroke(); } };
+  rings.forEach(drawRing);
+  // the weave: where ring k and ring k+1 cross, ring k goes back over at one crossing — the other crossing stays under
+  for(let k=0;k+1<rings.length;k++){ const p=rings[k], q=rings[k+1]; const dx=q.cx-p.cx, dy=q.cy-p.cy, d=Math.hypot(dx,dy)||1; if(d>=p.R+q.R) continue;
+    const mx=(p.cx+q.cx)/2, my=(p.cy+q.cy)/2, hlen=0, ux=-dy/d, uy=dx/d; const side=((k+(X.trend>=0.5?0:1))%2)?1:-1;
+    ctx.save(); ctx.beginPath(); ctx.arc(q.cx,q.cy,q.R+gap,0,6.2832); ctx.arc(q.cx,q.cy,q.r0-gap,6.2832,0,true); ctx.clip();   // only where the other ring lies on it…
+    const L2=D*4; ctx.beginPath(); ctx.moveTo(mx-dx/d*L2,my-dy/d*L2); ctx.lineTo(mx+dx/d*L2,my+dy/d*L2); ctx.lineTo(mx+dx/d*L2+ux*side*L2,my+dy/d*L2+uy*side*L2); ctx.lineTo(mx-dx/d*L2+ux*side*L2,my-dy/d*L2+uy*side*L2); ctx.closePath(); ctx.clip();   // …and on one side only
+    drawRing(p); ctx.restore(); }
+  try{ globalThis.__ST_LISTEN={v:'interlace',rings:rings.length,bands:G.length}; }catch(_){} _setCurE(0.5);
 }
 
 // ── Bloom (Sam Francis) ──────────────────────────────────────────────────────
@@ -28499,7 +28519,7 @@ const STUDIO_HOME_SAMPLE = { u:'/studio/home.webp', src:'sample' };
 // read on a Pro AI device 5 Nov 2026; the Atmosphere's title in the 9 languages (_atmoTitleL)
 const SAMPLE_IMG_BAKE = {"The Starry Night — Van Gogh":{"atmo":{"v":0.35,"e":0.82,"root":0,"title":{"EN":"Swirl of the night sky","SK":"Vírenie nočnej oblohy","DE":"Wirbel des Nachthimmels","FR":"Tourbillon du ciel nocturne","ES":"Remolino del cielo nocturno","PT":"Redemoinho do céu noturno","zh":"夜空的漩涡","zhTW":"夜空的漩渦","ja":"夜空の渦"}},"mel":{"notes":[["E5",1,0,108],["D5",0.5,1,104],["E5",0.5,1.5,106],["F5",1,2,110],["E5",1,3,105],["D5",1,4,102],["C5",0.5,5,100],["D5",0.5,5.5,103],["E5",1,6,108],["A5",1,7,112],["G5",1,8,110],["F5",0.5,9,106],["E5",0.5,9.5,104],["D5",1,10,100],["C5",0.5,11,98],["B4",0.5,11.5,96],["A4",1,12,102],["C5",0.5,13,104],["B4",0.5,13.5,100],["A4",1,14,98],["G4",0.5,15,96],["A4",0.5,15.5,98],["B4",0.5,16,100],["C5",0.5,16.5,103],["D5",1,17,106],["E5",1,18,110],["D5",0.5,19,105],["C5",0.5,19.5,102],["D5",1,20,104],["E5",1,21,108],["F5",0.5,22,106],["E5",0.5,22.5,104],["D5",1,23,100]],"chords":[[["D3","F3","A3","D4"],1,0,80],[["D3","F3","A3","D4"],1,1,76],[["D3","F3","A3","F4"],1,2,78],[["A2","E3","A3","C4"],1,3,75],[["G2","D3","G3","B3"],1,4,74],[["G2","D3","G3","B3"],1,5,72],[["A2","E3","A3","C4"],1,6,76],[["A2","E3","A3","E4"],1,7,80],[["D3","F3","A3","D4"],1,8,78],[["D3","F3","A3","D4"],1,9,75],[["E3","G3","B3","E4"],1,10,74],[["A2","E3","A3","C4"],1,11,72],[["D3","F3","A3","D4"],1,12,76],[["E3","G3","B3","E4"],1,13,74],[["A2","C3","E3","A3"],1,14,72],[["G2","D3","G3","B3"],1,15,70],[["G2","D3","G3","B3"],1,16,72],[["A2","E3","A3","C4"],1,17,75],[["D3","F3","A3","D4"],1,18,78],[["D3","F3","A3","D4"],1,19,76],[["G2","D3","G3","B3"],1,20,74],[["A2","E3","A3","C4"],1,21,76],[["A2","C3","E3","G3"],1,22,78],[["D3","F3","A3","D4"],1,23,82]],"tempo":90,"title":"Swirl of the night sky"}},"Water Lily Pond — Monet":{"atmo":{"v":0.42,"e":0.1,"root":0,"title":{"EN":"A quiet pond in summer","SK":"Tichý rybník v lete","DE":"Stiller Teich im Sommer","FR":"Étang paisible en été","ES":"Estanque tranquilo en verano","PT":"Lago tranquilo no verão","zh":"夏日静谧的池塘","zhTW":"夏日靜謐的池塘","ja":"夏の静かな池"}},"mel":{"notes":[["E5",1,0,100],["D5",1,1,98],["C5",1,2,96],["D5",1,3,98],["E5",1,4,102],["G5",1,5,104],["A5",2,6,108],["G5",1,8,100],["E5",1,9,98],["D5",1,10,96],["E5",1,11,98],["G5",1,12,102],["A5",1,13,104],["G5",1,14,100],["E5",1,15,98],["D5",1,16,96],["C5",1,17,98],["A4",1,18,100],["G4",1,19,98],["A4",1,20,100],["C5",1,21,102],["E5",2,22,110]],"chords":[[["C3","G3","C4","E4"],1,0,78],[["C3","G3","C4","E4"],1,1,76],[["C3","G3","C4","E4"],1,2,75],[["D3","A3","D4","F4"],1,3,76],[["C3","G3","C4","E4"],1,4,78],[["C3","E3","G3","E4"],1,5,78],[["A2","E3","A3","C4"],2,6,80],[["C3","G3","C4","E4"],1,8,78],[["C3","G3","C4","E4"],1,9,76],[["D3","A3","D4","F4"],1,10,76],[["C3","G3","C4","E4"],1,11,78],[["A2","E3","A3","C4"],1,12,80],[["D3","A3","D4","F4"],1,13,80],[["G2","D3","G3","D4"],1,14,82],[["G2","D3","G3","D4"],1,15,80],[["A2","E3","A3","E4"],1,16,82],[["A2","C3","E3","A3"],1,17,80],[["D3","A3","D4","F4"],1,18,80],[["G2","D3","G3","B3"],1,19,82],[["G2","D3","G3","B3"],1,20,84],[["G2","D3","G3","B3"],1,21,86],[["C3","G3","C4","E4"],2,22,85]],"tempo":90,"title":"A quiet pond in summer"}},"The Scream — Munch":{"atmo":{"v":-0.85,"e":0.95,"root":0,"title":{"EN":"A scream of existential dread","SK":"Výkrik existenciálnej hrôzy","DE":"Schrei existenzieller Angst","FR":"Cri d’angoisse existentielle","ES":"Grito de angustia existencial","PT":"Grito de angústia existencial","zh":"存在之恐惧的呐喊","zhTW":"存在之恐懼的吶喊","ja":"実存の恐怖の叫び"}},"mel":{"notes":[["G#5",1,0,112],["G#5",0.5,1,108],["A#5",0.5,1.5,114],["G#5",1,2,110],["F5",1,3,106],["D#5",1,4,112],["D#5",0.5,5,108],["F5",0.5,5.5,114],["G#5",1,6,116],["C5",1,7,104],["G#5",1,8,118],["A#5",0.5,9,112],["G#5",0.5,9.5,110],["F5",1,10,108],["D#5",0.5,11,106],["C5",0.5,11.5,104],["D#5",1,12,112],["F5",0.5,13,110],["D#5",0.5,13.5,108],["C5",1,14,118],["G#4",1,15,116]],"chords":[[["G#2","D#3","G#3","D#4"],1,0,88],[["G#2","D#3","G#3","D#4"],1,1,84],[["C3","G#3","C4","D#4"],1,2,86],[["F2","C3","A#3","F4"],1,3,82],[["D#2","A#2","G#3","D#4"],1,4,88],[["D#2","A#2","G#3","D#4"],1,5,84],[["G#2","D#3","G#3","D#4"],1,6,90],[["C3","G#3","C4","G#4"],1,7,86],[["G#2","D#3","G#3","D#4"],1,8,92],[["A#2","F3","A#3","D#4"],1,9,88],[["F2","C3","A#3","F4"],1,10,86],[["D#2","A#2","G#3","D#4"],1,11,90],[["G#2","D#3","G#3","D#4"],1,12,88],[["A#2","F3","A#3","D#4"],1,13,86],[["D#2","A#2","F3","G#3"],1,14,92],[["G#1","D#2","G#2","D#3"],1,15,96]],"tempo":132,"title":"A scream of existential dread"}}};
 function _atmoTitleL(t, lang){ return (t && typeof t==='object') ? (t[lang] || t.EN || '') : (t || ''); }
-const PF_FIRST = { piece:1, style:'arcs', phase:6, u:'/studio/first.webp' };   // Flight of the Bumble-Bee by Stella (interlocking arcs) — the picture is this very painting, made in the app; bold from the first second, on a dark ground
+const PF_FIRST = { piece:1, style:'arcs', phase:6, u:'/studio/first.webp' };   // Flight of the Bumble-Bee by Stella (interlocking arcs: his Protractor interlace, a chain of links down the whole canvas) — the picture is this very painting, made in the app; bold from the first second, on a dark ground
 // MINE — My Music · My Images · ♥ Favorites as one grid of paintings
 const MINE_CSS = `
 .pf-mine{position:fixed;inset:0;z-index:100002;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:#0b0a10;color:#f2eee8;font-family:'Outfit','Helvetica Neue',Arial,sans-serif;padding:calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px));animation:pfMineIn .22s ease-out}
