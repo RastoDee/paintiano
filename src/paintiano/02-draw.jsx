@@ -5697,20 +5697,40 @@ function stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode){
     ctx.strokeStyle=isBW?'#e8e4da':'#efe9dc'; ctx.lineWidth=Math.max(1.5,D*0.008); ctx.beginPath(); poly.forEach((p,q)=>q?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke(); });
 }
 
-// ── Stella F: Interlocking arcs — rainbow protractor arcs interleaved. ──
+// ── Stella F: Interlocking arcs — the Protractor interlaces (Firuzabad, 1970): great rings of fluorescent bands linked in
+// a chain down the whole canvas and off its edges, and where two rings cross their bands weave, one over at the first crossing and under at the
+// next, a pinstripe of the dark ground between every band. Each band is a passage of the piece, as wide as the passage is long,
+// in its colour; the passages are dealt round the links in turn, so the whole chain grows at once, each link from its inner
+// band outward, each band sweeping round from its own angle, the way the melody goes, for a third of the piece, so many arcs
+// grow at once; the louder
+// links the larger; the links sway with their register. Arcs everywhere at first; the chain at the end. ──
 function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
-  ctx.fillStyle=isBW?'#1a1a1a':'#14121a';ctx.fillRect(0,0,CW,CH);
-  const arcs=Math.max(4,Math.min(40,Math.round(cn/3)));
-  const vis=Math.max(1,Math.ceil(N/cn*arcs));
-  for(let i=0;i<vis;i++){
-    const rnd=_seedRnd(i+4400,ss,0,0);
-    const {rgb}=_picChord(chords,Math.floor(i*(cn/arcs)),gc,isBW);
-    const cx=rnd()*CW,cy=rnd()*CH,R=Math.min(CW,CH)*(0.1+rnd()*0.25);
-    const a0=rnd()*Math.PI*2,a1=a0+Math.PI*(0.5+rnd());
-    ctx.strokeStyle=`rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;ctx.lineWidth=Math.max(3,R*0.22);ctx.lineCap='butt';
-    ctx.beginPath();ctx.arc(cx,cy,R,a0,a1);ctx.stroke();
-  }
+  const ss=sessionSeed|0, S=_stxSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn;
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A);
+  const canvas=isBW?[22,22,24]:[20,18,26]; ctx.fillStyle=_stxCss(canvas); ctx.fillRect(0,0,CW,CH);   // the dark ground of the first screen; the pinstripes between the bands are the ground too
+  // a chain of links down the whole canvas, running off at both ends, as his interlaces fill theirs: each link a part of the
+  // piece; each crossing its own, and no link touching the one after next
+  const land=CW>CH*1.1, span=land?CW:CH, side=land?CH:CW, R=side*0.5, k1=1.02, step=R*k1; const nR=Math.max(3,Math.ceil((span*1.04-2*R)/step)+1);
+  const nb=Math.max(3,Math.min(6,Math.round(3+3*S.density+X.pace))); const G=_kd2Phrases(A,nR*nb); const per=Math.ceil(G.length/nR);
+  const parts=[]; for(let k=0;k<nR;k++){ const g=G.filter((q,i)=>i%nR===k); if(g.length){ const hs=g.map(q=>_mtHearSpan(A,q.a,q.b)); parts.push({g,h:{vmax:Math.max(...hs.map(h=>h.vmax||0.6)),reg:hs.reduce((s,h)=>s+h.reg,0)/hs.length}}); } }   // the passages dealt round the links in turn: the whole chain grows at once
+  const vm=Math.max(...parts.map(p=>p.h.vmax||0.6)); parts.forEach(p=>{ p.R=R*(0.92+0.08*(p.h.vmax||0.6)/vm); });   // the louder part, the larger link
+  const total=2*R+step*(parts.length-1); let along=(span-total)/2+R;
+  const rings=[]; parts.forEach((p,k)=>{ if(k) along+=step; const across=side/2+(p.h.reg-0.5)*side*0.1+(k%2?1:-1)*side*0.05;
+    const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; rr+=w; return b; });
+    rings.push({cx,cy,R:Rk,r0:rk,bands}); });
+  const gap=Math.max(1.2,D*0.0045);
+  const drawRing=(ring)=>{ for(const b of ring.bands){ if(b.q.t0>reveal) break; const t1=Math.min(1,b.q.t0+0.38), f=Math.max(0,Math.min(1,(reveal-b.q.t0)/Math.max(0.02,t1-b.q.t0)));   // each band keeps sweeping for a third of the piece: many arcs grow at once
+      const ccw=b.dir<0, sw=6.2832*Math.min(1,f), a0=b.a0, a1=a0+(ccw?-sw:sw);   // a band sweeps round from its own angle, either way, as its passage plays
+      ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.arc(ring.cx,ring.cy,b.a,a1,a0,!ccw); ctx.closePath(); ctx.fillStyle=_stxCss(b.col); ctx.fill();
+      ctx.strokeStyle=_stxCss(canvas); ctx.lineWidth=gap; ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.a,a0,a1,ccw); ctx.stroke(); ctx.beginPath(); ctx.arc(ring.cx,ring.cy,b.b,a0,a1,ccw); ctx.stroke(); } };
+  rings.forEach(drawRing);
+  // the weave: where ring k and ring k+1 cross, ring k goes back over at one crossing — the other crossing stays under
+  for(let k=0;k+1<rings.length;k++){ const p=rings[k], q=rings[k+1]; const dx=q.cx-p.cx, dy=q.cy-p.cy, d=Math.hypot(dx,dy)||1; if(d>=p.R+q.R) continue;
+    const mx=(p.cx+q.cx)/2, my=(p.cy+q.cy)/2, hlen=0, ux=-dy/d, uy=dx/d; const side=((k+(X.trend>=0.5?0:1))%2)?1:-1;
+    ctx.save(); ctx.beginPath(); ctx.arc(q.cx,q.cy,q.R+gap,0,6.2832); ctx.arc(q.cx,q.cy,q.r0-gap,6.2832,0,true); ctx.clip();   // only where the other ring lies on it…
+    const L2=D*4; ctx.beginPath(); ctx.moveTo(mx-dx/d*L2,my-dy/d*L2); ctx.lineTo(mx+dx/d*L2,my+dy/d*L2); ctx.lineTo(mx+dx/d*L2+ux*side*L2,my+dy/d*L2+uy*side*L2); ctx.lineTo(mx-dx/d*L2+ux*side*L2,my-dy/d*L2+uy*side*L2); ctx.closePath(); ctx.clip();   // …and on one side only
+    drawRing(p); ctx.restore(); }
+  try{ globalThis.__ST_LISTEN={v:'interlace',rings:rings.length,bands:G.length}; }catch(_){} _setCurE(0.5);
 }
 
 // ── Bloom (Sam Francis) ──────────────────────────────────────────────────────
