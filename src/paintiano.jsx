@@ -7352,21 +7352,35 @@ function _vsListen(ctx,CW,CH,chords,lim,gc,ss,mode){
       ctx.fill(); } }
   _setCurE(0.5);
 }
-// ── Vasarely 0 · Folklore planétaire — the plastic unit: a lattice of square cells,
-// each a colour with a contrasting form inside (disc, square, ellipse, lozenge).
+// ── Vasarely 0 · Folklore planétaire — his plastic alphabet laid out in order, not deformed: square units in rows, a
+// form in each, and along every row his permutation of value — the cells run from dark to light while their forms run
+// from light to dark, so the form stands out at both ends and all but vanishes where the two cross. Here a row is a
+// stretch of the piece read left to right: each unit the loudest chord it covers, in its own colour brought to
+// one value and not pushed, the form the colour of the chords that follow; the row's form from the stretch's character — a disc when it
+// sings, a lozenge when it leaps, a square when the chords are full, an ellipse otherwise — as big as each moment is
+// loud, and the value running the way the melody goes. Unit by unit as the piece plays.
 function vasarelyPhaseFolklore(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_vsSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn;
-  const cols=Math.round((6+S.density*4)*_dW(S.density)), cell=CW/cols, rows=Math.ceil(CH/cell), n=cols*rows, vis=Math.ceil(n*reveal);
-  ctx.fillStyle=S.isBW?'#1a1a1a':'#141418'; ctx.fillRect(0,0,CW,CH);
-  for(let i=0;i<vis;i++){ const r=_vsR(70000+i,ss); r(); const cx=i%cols, cy=Math.floor(i/cols); const c=S.col(i/n); const flip=r()<0.5; const bg=flip?c:_vsPartner(c), fg=flip?_vsPartner(c):c;
-    const x=cx*cell, y=cy*cell, g=cell*0.03; ctx.fillStyle=_vsCss(bg); ctx.fillRect(x+g,y+g,cell-2*g,cell-2*g);
-    const kind=r(), sz=cell*(0.28+r()*0.14), mx=x+cell/2, my=y+cell/2; ctx.fillStyle=_vsCss(fg); ctx.beginPath();
-    if(kind<0.4) ctx.arc(mx,my,sz,0,6.2832);
-    else if(kind<0.65) ctx.rect(mx-sz,my-sz,2*sz,2*sz);
-    else if(kind<0.85) ctx.ellipse(mx,my,sz*1.15,sz*0.75,r()<0.5?0:1.5708,0,6.2832);
-    else { ctx.moveTo(mx,my-sz*1.2); ctx.lineTo(mx+sz*0.9,my); ctx.lineTo(mx,my+sz*1.2); ctx.lineTo(mx-sz*0.9,my); ctx.closePath(); }
-    ctx.fill();
-    if(r()<0.2){ ctx.fillStyle=_vsCss(bg); ctx.beginPath(); ctx.arc(mx,my,sz*0.4,0,6.2832); ctx.fill(); } }
+  const S=_vsSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, played=Math.max(1,Math.min(cn,lim));
+  const A=_kd2Analyze(chords,gc,mode);
+  const ground=isBW?[16,16,16]:[18,16,22]; ctx.fillStyle=_vsCss(ground); ctx.fillRect(0,0,CW,CH);
+  const k=6+Math.round(2*S.density), cell0=Math.min(CW,CH)/k, cols=Math.max(3,Math.round(CW/cell0)), rows=Math.max(3,Math.round(CH/cell0)), cw=CW/cols, ch=CH/rows, g=Math.min(cw,ch)*0.045;
+  const mix=(a,b,t)=>_vsMix(a,b,_vsClamp(t,0,1));
+  const even=(c)=>{ const m=(c[0]+c[1]+c[2])/3, q=c.map(x=>Math.max(0,m+(x-m)*0.9)); const l=q[0]*0.299+q[1]*0.587+q[2]*0.114||1, f=118/l; const o=q.map(x=>x*f); const mx=Math.max(...o); return mx>255?o.map(x=>x*255/mx):o; };
+  const tone=(hue,val)=>{ const dark=mix(hue,[0,0,0],0.86), lite=mix(hue,[255,252,244],0.8); return val<0.5?mix(dark,hue,val/0.5):mix(hue,lite,(val-0.5)/0.5); };
+  const avg=(i0,i1)=>{ const lo=_vsClamp(Math.floor(i0),0,cn-1), hi=_vsClamp(Math.ceil(i1)-1,lo,cn-1); let best=lo, bv=-1; for(let i=lo;i<=hi;i++){ const e=A.ev[i]; const v=e?e.v:0; if(v>bv){ bv=v; best=i; } } const o=_picChord(chords,best,gc,isBW).rgb; return isBW?o:even(o); };   // the loudest chord it covers, in its own colour at one value, not pushed
+  const N=cols*rows;
+  for(let r=0;r<rows;r++){ const a=cn*r/rows, b=cn*(r+1)/rows; const h=_mtHearSpan(A,Math.floor(a),Math.max(Math.floor(a)+1,Math.ceil(b)));
+    const kind=h.leap>6.5?'loz':h.dur>1.4?'disc':(h.n&&h.acc/h.n>0.5)?'sq':'ell'; const up=h.dir>=0;
+    for(let c=0;c<cols;c++){ const i0=a+(b-a)*c/cols, i1=a+(b-a)*(c+1)/cols; if(played<i0) continue;      // not yet sounded
+      const t=cols>1?c/(cols-1):0.5, u=up?t:1-t; const cellV=0.22+0.62*u, formV=0.84-0.62*u;               // his permutation: the cell climbs as the form falls
+      const hc=avg(i0,(i0+i1)/2), hf=avg((i0+i1)/2,i1); const sp=_mtHearSpan(A,Math.floor(i0),Math.max(Math.floor(i0)+1,Math.ceil(i1)));
+      const x=c*cw, y=r*ch; ctx.fillStyle=_vsCss(tone(hc,cellV)); ctx.fillRect(x+g,y+g,cw-2*g,ch-2*g);
+      const mx=x+cw/2, my=y+ch/2, sz=Math.min(cw,ch)*(0.24+0.16*_vsClamp(sp.vmax||0.5,0,1)); ctx.fillStyle=_vsCss(tone(hf,formV)); ctx.beginPath();
+      if(kind==='disc') ctx.arc(mx,my,sz,0,6.2832);
+      else if(kind==='sq') ctx.rect(mx-sz*0.88,my-sz*0.88,sz*1.76,sz*1.76);
+      else if(kind==='ell') ctx.ellipse(mx,my,sz*1.12,sz*0.72,(r%2)?1.5708:0,0,6.2832);
+      else { ctx.moveTo(mx,my-sz*1.18); ctx.lineTo(mx+sz*0.9,my); ctx.lineTo(mx,my+sz*1.18); ctx.lineTo(mx-sz*0.9,my); ctx.closePath(); }
+      ctx.fill(); } }
 }
 // ── Vasarely 3 · Supernovae (1959–61) — a field of small squares; along a wave
 // across the grid they turn into lozenges and shrink, at its crests into discs.
@@ -7441,7 +7455,7 @@ function drawBulgeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phase
   const cn = chords.length;
   const rnd = _seedRnd(53, ss, 0, 0);
   // ── 6-VARIANT CHOOSER (stable per painting, re-rolls on Vary) ──
-  //  0 = Folklore planétaire — the plastic unit: colour cells with a contrasting form.
+  //  0 = Folklore planétaire — his plastic alphabet in order: rows of units, his permutation of value along each row.
   //  1 = Vonal — his line series: nests of square lines that read as a pyramid seen from above, one per part of the piece.
   //  2 = Vega — colour deformed checkerboard with central bulge.
   //  3 = Supernovae — squares turning to lozenges and discs along a wave.
