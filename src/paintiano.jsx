@@ -6966,9 +6966,9 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   //  D = New York City line-grid (interwoven colored lines, no blocks, no black)
   //  E = Broadway Boogie Woogie (yellow line grid + colour square beats)
   //  F = Lozenge (diamond canvas, grid rotated 45°)
-  //  G = Tree (abstraction of branching lines)
+  //  G = Composition in Colour A, 1917 (floating planes in his four colours of that year, short black bars; the Tree retired, code kept)
   //  H = Pier & Ocean (scattered plus/minus marks forming a mesh)
-  // VARIANT: 0 What he heard (_mdListen, generative) · 1 Victory Boogie Woogie · 2 Composition with Red, Yellow and Blue · 3 New York City · 4 Broadway Boogie Woogie · 5 Lozenge · 6 Gray Tree · 7 Checkerboard 1919 (the Boogie-Woogie tracks, the old sparse grid and Pier & Ocean retired, approved). Free: 0 and 1.
+  // VARIANT: 0 What he heard (_mdListen, generative) · 1 Victory Boogie Woogie · 2 Composition with Red, Yellow and Blue · 3 New York City · 4 Broadway Boogie Woogie · 5 Lozenge · 6 Composition in Colour A (1917) · 7 Checkerboard 1919 (the Boogie-Woogie tracks, the old sparse grid, Pier & Ocean and the Gray Tree retired, approved). Free: 0 and 1.
   const PHASES = ['L','A','K','D','E','F','G','H'];
   const _mpn = _capN(8);
   const phase = PHASES[((phaseIndex|0)%_mpn+_mpn)%_mpn];
@@ -6977,7 +6977,7 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   if(phase==='H'){ mondrianPhaseCheckerboard(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='E'){ mondrianPhaseBroadway(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='F'){ mondrianPhaseLozenge(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(phase==='G'){ mondrianPhaseTree(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(phase==='G'){ mondrianPhaseColourA(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Composition in Colour A (the Gray Tree retired, code kept)
   if(phase==='H'){ mondrianPhasePier(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='A'){ mondrianPhaseVictory(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
 
@@ -7251,7 +7251,43 @@ function mondrianPhaseLozenge(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   _setCurE(0.5);
 }
 
-// ── Mondrian G: The Gray Tree (1911) — a trunk with boughs leaving it at
+// ── Mondrian G · Composition in Colour A / B (1917) — the year he came to the plane: on white, small rectangles of flat
+// colour in his four of that year (blue, ochre, crimson, vermilion), floating, some laid over others, and short black
+// bars among them, level or upright. Here every rectangle a chord the piece leans on (loud, or held), in the one of his
+// four nearest its own colour, as large as it is loud and as wide as it is held; chords sounding close together lie
+// over each other; the short notes between them the black bars, level in the melody, upright in the bass. The piece
+// runs down the canvas as it plays, its low notes to the left, its high ones to the right. Plane by plane as it plays.
+const _MDA_COL=[[30,54,166],[180,108,44],[176,50,84],[216,98,58]];   // blue, ochre, crimson, vermilion
+function _mdaPick(rgb,isBW){ const mx=Math.max(rgb[0],rgb[1],rgb[2]), mn=Math.min(rgb[0],rgb[1],rgb[2]), d=mx-mn; let k=1;
+  if(d>=10){ let h=mx===rgb[0]?((rgb[1]-rgb[2])/d)%6:mx===rgb[1]?(rgb[2]-rgb[0])/d+2:(rgb[0]-rgb[1])/d+4; h*=60; if(h<0) h+=360; k=(h>=110&&h<285)?0:(h>=285&&h<340)?2:(h>=340||h<28)?3:1; }
+  const c=_MDA_COL[k]; if(!isBW) return c; const g=Math.round(c[0]*0.3+c[1]*0.59+c[2]*0.11); return [g,g,g]; }
+function mondrianPhaseColourA(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH); const A=_kd2Analyze(chords,gc,mode);
+  ctx.fillStyle=isBW?'#f0efec':'#f1eee6'; ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), r=_seedRnd(3917,ss,0,0); r();
+  const dens=A.ch?A.ch.density:0.3, ev=[]; for(let i=0;i<cn;i++){ const e=A.ev[i]; if(e) ev.push(e); }
+  const vs=ev.map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1, ds=ev.map(e=>e.dur).sort((a,b)=>a-b), dMed=ds[ds.length>>1]||1;
+  // the field: a margin of white all round, as on his canvas
+  const mx=CW*0.09, my=CH*0.08, W=CW-2*mx, H=CH-2*my;
+  // the chords the piece leans on: loud against their neighbours, or held; the rest of the short notes give the bars
+  const sal=ev.map(e=>{ let lo=0,n=0; for(let k=Math.max(0,e.i-4);k<=Math.min(cn-1,e.i+4);k++){ const o=A.ev[k]; if(!o||k===e.i) continue; n++; if(o.v<e.v) lo++; } return {e,s:(n?lo/n:0.5)*0.6+clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1)*0.25+clamp(e.dur/dMed/3,0,1)*0.3}; });
+  const nR=Math.round(clamp(24+20*dens,24,44)), nB=Math.round(nR*0.8);
+  // one plane for each stretch of the piece (the chord it leans on most there), and a bar for each stretch from its short notes
+  const rects=[], bars=[], inR=new Set(); for(let k=0;k<nR;k++){ let best=null; for(const o of sal){ if(o.e.t<k/nR||o.e.t>=(k+1)/nR) continue; if(!best||o.s>best.s) best=o; } if(best){ rects.push(best.e); inR.add(best.e); } }
+  for(let k=0;k<nB;k++){ let best=null; for(const o of sal){ if(o.e.t<k/nB||o.e.t>=(k+1)/nB||inR.has(o.e)||o.e.dur>dMed) continue; if(!best||o.s>best.s) best=o; } if(best) bars.push(best.e); }
+  // the register by rank among the chosen chords, so the whole width is used whatever the piece's range
+  const regs=rects.concat(bars).map(e=>(e.top+e.bass)/2).sort((a,b)=>a-b), rank=(m)=>{ let lo=0,hi=regs.length; while(lo<hi){ const md=(lo+hi)>>1; if(regs[md]<m) lo=md+1; else hi=md; } return lo/Math.max(1,regs.length-1); };
+  const at=(e)=>[mx+W*clamp(0.04+0.92*rank((e.top+e.bass)/2)+(r()-0.5)*0.16,0,1), my+H*clamp(e.t+(r()-0.5)*0.05,0,1)];
+  const items=[];
+  for(const e of rects.sort((a,b)=>a.i-b.i)){ const [x,y]=at(e), f=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1), s=D*(0.075+0.05*f)*(0.85+0.3*r()), wide=clamp(e.dur/dMed,0.6,1.8), w=s*clamp(0.75+0.35*(wide-1),0.7,1.35), h=s*clamp(1.15-0.3*(wide-1),0.75,1.3);
+    items.push({i:e.i,k:'r',x:x-w/2,y:y-h/2,w,h,col:_mdaPick(_picChord(chords,e.i,gc,isBW).rgb,isBW)}); }
+  for(const e of bars){ const [x,y]=at(e), bass=e.top-e.bass>7&&A.reg(e.top)<0.45, L=D*(0.032+0.016*r()), T=D*0.011;
+    items.push({i:e.i,k:'b',x:bass?x-T/2:x-L/2,y:bass?y-L/2:y-T/2,w:bass?T:L,h:bass?L:T,col:isBW?[20,20,20]:[24,22,22]}); }
+  items.sort((a,b)=>a.i-b.i);
+  for(const it of items){ if(it.i>=played) break; ctx.fillStyle=`rgb(${it.col[0]},${it.col[1]},${it.col[2]})`; ctx.fillRect(it.x,it.y,it.w,it.h); }
+  _setCurE(0.5);
+}
+// ── (retired, code kept) Mondrian: The Gray Tree (1911) — a trunk with boughs leaving it at
 // several heights and sweeping out sideways in arches, up then falling away,
 // each putting out smaller arches of its own: the crown spreads wider than it
 // is tall and the curves cross in rhythm, over a ground of faceted grey planes
@@ -19378,7 +19414,7 @@ const ARTIST_VARIANTS = {
     {ground:'#f8f8f4',mark:{gridline:1},size:[.1,.3],layout:{grid:1},density:.2,outline:0,lines:0},
     {ground:'#f8f8f4',mark:{gridline:.7,rect:.3},size:[.02,.05],layout:{grid:1},density:1,outline:0,lines:0,tone:'gold'},
     {ground:'#e6e2da',mark:{gridrect:1},size:[.15,.45],layout:{diagonal:1},density:.2,tone:'primary'},   // Lozenge (his, on a light wall)
-    {ground:'#b4b0a6',mark:{arc:.6,beam:.4},size:[.1,.35],layout:{radial:1},density:.3,outline:0,lines:0,tone:'mono'},   // The Gray Tree
+    {ground:'#f1eee6',mark:{rect:1},size:[.05,.1],layout:{scatter:1},density:.35,outline:0,lines:0,tone:'primary'},   // Composition in Colour A (1917; the Gray Tree retired)
     {ground:'#e4dfd2',mark:{checker:.7,rect:.3},size:[.06,.08],layout:{grid:1},density:1,tone:'primary'},   // Checkerboard (1919, his light or dark board)
   ],
   bauhaus: [
