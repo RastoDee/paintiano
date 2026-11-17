@@ -6118,6 +6118,55 @@ function picassoBottle(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   _pxCanvas(ctx,CW,CH,ss,0.03); try{ globalThis.__PC_LISTEN={v:'bottle',papers:G.length}; }catch(_){} _setCurE(0.5);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PICASSO — HARLEQUIN: the lozenges of the harlequin's costume, which he painted all his life (the rose period, the
+// Harlequin of 1915, the Three Musicians, Paulo as Harlequin), as the whole picture: the piece's tones as a mosaic of
+// diamonds, the costume broken into cubist planes. No figure, only the pattern.
+//   the planes    the piece's sections, three to five, cut the picture with slanting lines; in each the lattice lies at
+//                 its own angle and size, the diamonds smaller the quicker the section
+//   the diamonds  a diamond for every few chords, in the chord's colour (its own hue, quietened to his harlequins' tones),
+//                 filled one by one as they sound, row after row; the loudest accents black; a long held chord lit from
+//                 inside; a wide leap a small light diamond inside
+//   the seams     the black lines of the lattice with the white piping beside them, the planes' edges heavy
+// ═══════════════════════════════════════════════════════════════════════════
+function picassoHarlequin(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), isAcc=_mtAccOf(A); const ink=[22,20,20], white=[244,238,224], lw=Math.max(1.4,D*0.004);
+  const grip=0.9; const tone=(c)=>{ if(isBW) return _pxGrey(c); let [h,s,l]=_pxHsl(c); s=s*(1-grip)+Math.min(s,0.3)*grip; l=l*(1-0.65*grip)+0.45*0.65*grip; return _pxRgbH(h,Math.max(0,Math.min(1,s)),Math.max(0.14,Math.min(0.86,l))); };
+  const ground=_pxMix(tone(_pxCol(chords,0,gc,isBW)),[236,228,212],0.7); ctx.fillStyle=_pxCss(ground); ctx.fillRect(0,0,CW,CH);
+  // the planes: slanting cuts down the picture, one plane per section
+  const P=Math.max(3,Math.min(5,Math.round(3+X.pace*1.5+(cn>500?1:0)))); const xs=[0]; for(let k=1;k<P;k++){ const r=_pxR(72000+k,ss); xs.push(CW*(k/P)+(r()-.5)*CW*0.08); } xs.push(CW);
+  const sl=[]; for(let k=0;k<=P;k++){ const r=_pxR(72050+k,ss); sl.push(k===0||k===P?0:(r()-.5)*Math.min(CW*0.2,CW/P*0.7)); }
+  const planes=[]; for(let k=0;k<P;k++) planes.push([[xs[k]+sl[k],0],[xs[k+1]+sl[k+1],0],[xs[k+1]-sl[k+1],CH],[xs[k]-sl[k],CH]]);
+  // vs: the loudest accents, about one diamond in twelve
+  const vs=[]; for(let i=0;i<cn;i++){ const e=A.ev[i]; if(e && isAcc(e)) vs.push(e.v); } vs.sort((a,b)=>b-a);
+  const total=Math.max(70,Math.min(260,Math.round(cn*0.34))); let made=0;
+  planes.forEach((Q,k)=>{ const a=Math.floor(k*cn/P), b=Math.floor((k+1)*cn/P); const h=_mtHearSpan(A,a,b); const r=_pxR(72100+k,ss);
+    const area=_pxArea(Q), M=Math.max(6,Math.round(total*area/(CW*CH))); const s=Math.sqrt(area/M)*(1.05-0.15*h.v)*(1.1-0.2*X.pace*(h.n/(cn/P)));   // the diamond's half-diagonals
+    const th=(r()-.5)*0.5, ca=Math.cos(th), sa=Math.sin(th), sx=s*0.62, sy=s*0.95;   // tall diamonds, as on the costume
+    const [qx,qy]=_pxCent(Q); const R=Math.hypot(CW,CH); const cells=[];
+    const nv=Math.ceil(R/sy), nu=Math.ceil(R/sx); for(let v=-nv;v<=nv;v++) for(let u=-nu;u<=nu;u++){ if(((u+v)%2+2)%2) continue; const lx=u*sx, ly=v*sy; const x=qx+lx*ca-ly*sa, y=qy+lx*sa+ly*ca; if(x<-s||x>CW+s||y<-s||y>CH+s) continue;
+      // inside the plane (by its centre)
+      const inQ=(px,py)=>{ let pos=0,neg=0; for(let i=0;i<4;i++){ const p=Q[i], q=Q[(i+1)%4]; const cr=(q[0]-p[0])*(py-p[1])-(q[1]-p[1])*(px-p[0]); if(cr>0) pos++; else if(cr<0) neg++; } return !(pos&&neg); };
+      if(!inQ(x,y) && !inQ(x-sx*ca,y-sx*sa) && !inQ(x+sx*ca,y+sx*sa) && !inQ(x+sy*sa,y-sy*ca) && !inQ(x-sy*sa,y+sy*ca)) continue;   // every diamond that reaches into the plane
+      cells.push({x,y,ly:y,lx:x}); }
+    cells.sort((p,q)=>(Math.round(p.y/sy)-Math.round(q.y/sy))||(p.x-q.x)); const nC=cells.length; const thr=vs[Math.min(vs.length-1,Math.floor(vs.length*0.25))]||9;
+    ctx.save(); _pxPoly(ctx,Q); ctx.clip();
+    const dia=(x,y,f)=>[[x-sx*ca*f,y-sx*sa*f].map((v,i)=>v),[x+sy*sa*f,y-sy*ca*f],[x+sx*ca*f,y+sx*sa*f],[x-sy*sa*f,y+sy*ca*f]];
+    cells.forEach((c,m)=>{ const ci=Math.min(cn-1,a+Math.floor((b-a)*m/Math.max(1,nC))); if(ci/cn>reveal) return; const e=A.ev[ci]; const col=tone(_pxCol(chords,ci,gc,isBW));
+      const black=!!e && isAcc(e) && e.v>=thr && (m%3===0); const Dm=dia(c.x,c.y,1.0);
+      _pxPoly(ctx,Dm); ctx.fillStyle=_pxCss(black?ink:col); ctx.fill();
+      if(!black && e && e.dur>=2){ _pxPoly(ctx,dia(c.x,c.y,0.62)); ctx.fillStyle=_pxCss(_pxMix(col,white,0.22)); ctx.fill(); }   // a held chord: its diamond lit from inside
+      const prev=A.ev[ci-1]; if(!black && e && prev && Math.abs(e.top-prev.top)>=10 && m%2===0){ _pxPoly(ctx,dia(c.x,c.y,0.34)); ctx.fillStyle=_pxCss(_pxMix(col,white,0.6)); ctx.fill(); } made++; });
+    // the seams: black lattice lines with the white piping beside them, over the diamonds that have come
+    const shown=cells.filter((c,m)=>Math.min(cn-1,a+Math.floor((b-a)*m/Math.max(1,nC)))/cn<=reveal);
+    ctx.lineJoin='round'; for(const c of shown){ const Dm=dia(c.x,c.y,1.0); ctx.strokeStyle=_pxCss(white,0.85); ctx.lineWidth=lw*1.9; _pxPoly(ctx,Dm); ctx.stroke(); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw; _pxPoly(ctx,Dm); ctx.stroke(); }
+    ctx.restore(); });
+  // the planes' edges, heavy, drawn as their sections begin
+  planes.forEach((Q,k)=>{ if(k===0) return; const t0=k/P; if(t0>reveal) return; const f=Math.min(1,(reveal-t0)*P*2); ctx.strokeStyle=_pxCss(ink); ctx.lineWidth=lw*3.2; ctx.lineCap='round'; _pxDraw(ctx,[Q[0],Q[3]],f); });
+  _pxCanvas(ctx,CW,CH,ss,0.03); try{ globalThis.__PC_LISTEN={v:'harlequin',planes:P,diamonds:made}; }catch(_){} _setCurE(0.5);
+}
+
 function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex){
   if(!lim||!chords||!chords.length) return;
   const ss=sessionSeed|0;
@@ -6126,12 +6175,14 @@ function drawPicassoOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // paintings on the facet engine below (_pc2Paint). Free: 0 and 1. The Next
   // button cycles phaseIndex; _capN caps it on Free.
   // VARIANT (chosen by vote): 0 Picasso listens (picassoListen3: the piece's own cubist picture, round his guitar, in the
-  // period its music asks for) · 1 Light line · 2 The Old Guitarist · 3 Les Demoiselles · 4 Analytic
+  // period its music asks for) · 1 Light line · 2 The Old Guitarist · 3 Harlequin (picassoHarlequin) · 4 Analytic
   // cubism · 5 Bottle and glass (papier collé, picassoBottle) · 6 Three Musicians · 7 Still life with guitar. Retired (code kept): the first
   // Listens, the second (picassoListen2, which chose among the paintings, with the living blue period picassoBlue),
-  // Weeping Woman, the first Guitar, the papier collé Guitar (picassoGuitar), Guernica.
+  // Weeping Woman, the first Guitar, the papier collé Guitar (picassoGuitar), Les Demoiselles
+  // (picassoPhaseDemoiselles), Guernica.
   const _pn=_capN(8); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick===0) return picassoListen3(ctx,CW,CH,chords,lim,gc,ss,mode);
+  if(pick===3) return picassoHarlequin(ctx,CW,CH,chords,lim,gc,ss,mode);
   if(pick===4) return picassoAnalytic(ctx,CW,CH,chords,lim,gc,ss,mode);
   if(pick===5) return picassoBottle(ctx,CW,CH,chords,lim,gc,ss,mode);
   if(pick===7) return picassoStillLife(ctx,CW,CH,chords,lim,gc,ss,mode);
