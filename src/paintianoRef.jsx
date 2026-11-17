@@ -8546,26 +8546,79 @@ function _bendayField(ctx,x,y,w,h,fill,r,step,alpha){
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LICHTENSTEIN form engine — the comic-print vocabulary as primitives: Ben-Day
-// dot fields, thick black contours, flat primaries (snapped by hue, so the song
-// still decides which), and his motifs: brushstroke, explosion, sunrise, speech
+// dot fields, thick black contours, his inks (every colour of the piece printed
+// with them, see LICHTENSTEIN'S PRINTING below), and his motifs: brushstroke, explosion, sunrise, speech
 // balloon, wave, mirror. Slot 0 is the app's mosaic (a page of comic panels);
 // slot 5 is Sunrise (1965), coloured by the piece.
 const _lcR=(a,ss)=>_seedRnd(a,ss,0,0);
 const _lcClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const _lcMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
-const _lcCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+const _lcCss=(c,a)=>(c&&c.ink&&!c.ink.solid&&_lcStepPx)?_lcPattern(c,_lcStepPx):`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;   // a printed colour of the piece fills as its screen
 const _LC_BLK=[20,18,20], _LC_WHT=[250,248,240];
 const _LC_PRIM=[[222,40,38],[250,214,30],[30,90,190]], _LC_GREY=[[60,60,60],[200,200,200],[120,120,120]];
 let _lcPal=_LC_PRIM;
+// ── LICHTENSTEIN'S PRINTING — how he stays himself and the piece keeps its colour. Nothing but his inks and the white
+// paper: yellow, red, blue and black laid flat, and for the dot screens also the lighter blue and the crimson of his
+// screens. A colour of the piece he had no ink for is printed as the comics printed it — one ink flat (or the paper)
+// and a screen of Ben-Day dots of another over it — and the eye makes the colour: green is yellow under blue dots,
+// sea-green blue dots and small yellow dots on the paper, violet blue under crimson dots, bordeaux his red under blue
+// dots, orange yellow under red dots, pink red dots on the paper, sky blue dots on the paper. The mixed colours go where
+// he put his dots — the grounds; the shapes on them stay flat in one of his inks.
+let _lcStepPx=0;
+const _LC_INK={Y:[250,214,30],R:[222,40,38],B:[30,90,190],K:[20,18,20],W:[250,248,240],C:[20,150,215],M:[196,26,96]};   // C and M only ever as dots
+const _lcLin=(v)=>{ v/=255; return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4); };
+const _lcDelin=(v)=>{ v=Math.max(0,Math.min(1,v)); return 255*(v<=0.0031308?v*12.92:1.055*Math.pow(v,1/2.4)-0.055); };
+function _lcLab(c){ const r=_lcLin(c[0]),g=_lcLin(c[1]),b=_lcLin(c[2]); const f=(t)=>t>0.008856?Math.cbrt(t):7.787*t+16/116; const x=f((r*0.4124+g*0.3576+b*0.1805)/0.9505), y=f(r*0.2126+g*0.7152+b*0.0722), z=f((r*0.0193+g*0.1192+b*0.9505)/1.089); return [116*y-16,500*(x-y),200*(y-z)]; }
+function _lcSee(parts){ let r=0,g=0,b=0; for(const [c,w] of parts){ r+=_lcLin(c[0])*w; g+=_lcLin(c[1])*w; b+=_lcLin(c[2])*w; } return [_lcDelin(r),_lcDelin(g),_lcDelin(b)]; }
+const _lcInkMemo=new Map(), _lcSpecMemo=new Map(), _lcPatMemo=new Map();
+// the printing for one colour of the piece: by its hue the inks, by its lightness how they are laid
+function _lcSpec(rgb,isBW){ const [h,s]=_lcHsv(rgb), L=_lcLab(rgb)[0], cl=(x)=>+_lcClamp(x,0.12,0.78).toFixed(2), u=(a,b)=>_lcClamp((h-a)/(b-a),0,1);
+  if(isBW || s<0.18){ if(L>88) return {g:'W',solid:true}; if(L<18) return {g:'K',solid:true}; return {g:'W',d:'K',c:cl((88-L)/80)}; }
+  let sp;
+  if(h<15||h>=335) sp={g:'R',solid:true};
+  else if(h<40) sp={g:'Y',d:'R',c:cl(0.7-0.45*u(15,40))};            // orange: yellow under red dots
+  else if(h<70) sp={g:'Y',solid:true};
+  else if(h<145) sp={g:'Y',d:'C',c:cl(0.24+0.44*u(70,145))};          // green: yellow under blue dots
+  else if(h<178) sp=L>52?{g:'W',d:'C',c:0.39,d2:'Y',c2:+(0.3-0.18*u(145,178)).toFixed(2)}:{g:'B',d:'Y',c:cl(0.36-0.2*u(145,178))};   // sea-green: blue and small yellow dots on the paper (deep: blue under small yellow dots)
+  else if(h<205) sp={g:'W',d:'C',c:0.66};                              // sky: blue dots on the paper
+  else if(h<250) sp={g:'B',solid:true};
+  else sp={g:'B',d:'M',c:cl(0.2+0.45*u(250,335))};                    // violet to purple: blue under crimson dots
+  if(L>78 && sp.g!=='W'){ const t=cl(0.3+(92-L)/40); sp=sp.solid?{g:'W',d:sp.g,c:t}:{g:'W',d:sp.g,c:+Math.min(0.39,t).toFixed(2),d2:sp.d,c2:+Math.min(0.39,Math.max(0.1,sp.c*0.6)).toFixed(2)}; }   // a pale colour: the dots on the paper
+  else if(L<34 && sp.solid && sp.g!=='K'){ sp={g:sp.g,d:sp.g==='R'?'B':'K',c:cl((40-L)/40+0.2)}; }   // a deep one: his red under blue dots goes to bordeaux, the others take black dots
+  return sp; }
+function _lcEntry(s){ const sk=JSON.stringify(s); let out=_lcSpecMemo.get(sk); if(out) return out;
+  const I=_LC_INK, parts=[[I[s.g],1-(s.c||0)-(s.c2||0)]]; if(s.d) parts.push([I[s.d],s.c]); if(s.d2) parts.push([I[s.d2],s.c2]);
+  out=_lcSee(parts).map(v=>Math.round(v)); out.ink=s; out.dot=s.g==='W'?(s.d?I[s.d]:I.W):I[s.g]; out.key=sk; _lcSpecMemo.set(sk,out); return out; }
+// a colour of the piece as he would print it (the same printing for the same colour, always)
+function _lcInk(rgb,isBW){ const key=(isBW?'b':'c')+(((rgb[0]|0)>>3)<<10|((rgb[1]|0)>>3)<<5|((rgb[2]|0)>>3)); const hit=_lcInkMemo.get(key); if(hit) return hit;
+  const out=_lcEntry(_lcSpec(rgb,isBW)); _lcInkMemo.set(key,out); return out; }
+// the ink that carries a printed colour most (the dot ink on the paper, else the ground), as one of his flat inks
+function _lcMain(c){ const s=c.ink; if(!s) return null; const k=s.g==='W'?(s.d||'W'):s.g; return k==='C'?'B':k==='M'?'R':k; }
+// the flat ink a printed colour leans to
+function _lcFlat(c){ const k=_lcMain(c); return k&&k!=='W'?_lcEntry({g:k,solid:true}):c; }
+// a shape's colour on a printed ground: one of his flat inks — the one the shape's own colour leans to, unless the ground is
+// already in it, then the next of red, yellow, blue
+function _lcFlatOn(want,ground,isBW){ const gk=_lcMain(ground); if(isBW) return _lcEntry({g:gk==='K'?'W':'K',solid:true}); let k=_lcMain(want);
+  if(!k||k==='W'||k==='K'||k===gk){ const o=['R','Y','B']; k=o[(o.indexOf(k==='W'||k==='K'||!k?gk:k)+1+o.length)%o.length]; if(k===gk) k=o[(o.indexOf(k)+1)%3]; }
+  return _lcEntry({g:k,solid:true}); }
+// another printed colour that stands apart from a (b when it does, else a's opposite)
+function _lcOther(a,b,isBW){ if(b && b!==a){ const la=_lcLab(a), lb=_lcLab(b); if(Math.hypot(la[0]-lb[0],la[1]-lb[1],la[2]-lb[2])>28) return b; } return _lcInk([255-a[0],255-a[1],255-a[2]],!!isBW); }
+// the screen as a fill: the ground ink, and on it the dots of the second ink on a 45° lattice (a second screen in its gaps)
+function _lcPattern(c,step){ const k=c.key+'|'+step; let p=_lcPatMemo.get(k); if(p) return p;
+  const s=c.ink, I=_LC_INK, G=I[s.g]; let cv; try{ cv=document.createElement('canvas'); }catch(_){ cv=new OffscreenCanvas(step,step); } cv.width=step; cv.height=step; const x=cv.getContext('2d');
+  x.fillStyle=`rgb(${G[0]},${G[1]},${G[2]})`; x.fillRect(0,0,step,step);
+  const dots=(ink,cov,pts)=>{ if(!ink||!cov) return; const C=I[ink]; const r=step*Math.sqrt(cov/(2*Math.PI)); x.fillStyle=`rgb(${C[0]},${C[1]},${C[2]})`; x.beginPath(); for(const [px,py] of pts){ x.moveTo(px+r,py); x.arc(px,py,r,0,6.2832); } x.fill(); };
+  const h=step/2; dots(s.d,s.c,[[0,0],[step,0],[0,step],[step,step],[h,h]]); dots(s.d2,s.c2,[[h,0],[h,step],[0,h],[step,h]]);
+  p=x.createPattern(cv,'repeat'); _lcPatMemo.set(k,p); return p; }
 // snap a chord colour to red / yellow / blue by hue (grey steps in B&W); returns the palette entry itself
 function _lcPrim(rgb,isBW){ if(isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; return l>150?_LC_GREY[1]:l>90?_LC_GREY[2]:_LC_GREY[0]; }
   const mx=Math.max(rgb[0],rgb[1],rgb[2]), mn=Math.min(rgb[0],rgb[1],rgb[2]), d=mx-mn; if(d<18) return _LC_PRIM[0]; let h= mx===rgb[0]?((rgb[1]-rgb[2])/d)%6 : mx===rgb[1]?(rgb[2]-rgb[0])/d+2 : (rgb[0]-rgb[1])/d+4; h*=60; if(h<0) h+=360;
   return (h<35||h>=300)?_LC_PRIM[0]:(h<150)?_LC_PRIM[1]:_LC_PRIM[2]; }
 function _lcSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   _lcPal=isBW?_LC_GREY:_LC_PRIM;
-  return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,col:(t)=>_lcPrim(_picChord(chords,_lcClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb,isBW)}; }
+  return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,col:(t)=>{ const rgb=_picChord(chords,_lcClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb; return _lcInk(rgb,isBW); }}; }
 // Ben-Day dots inside the current clip: a 45° lattice, dot radius from f(x,y) 0..1
-function _lcBenday(ctx,x0,y0,w,h,step,col,f){ ctx.fillStyle=_lcCss(col); ctx.beginPath(); const s=step; for(let j=-1;j*s*0.5<h+s;j++){ const y=y0+j*s*0.5; const off=(j%2)?s/2:0; for(let i=-1;i*s<w+s;i++){ const x=x0+i*s+off; const r=s*0.42*f(x,y); if(r<0.3) continue; ctx.moveTo(x+r,y); ctx.arc(x,y,r,0,6.2832); } } ctx.fill(); }
+function _lcBenday(ctx,x0,y0,w,h,step,col,f){ ctx.fillStyle=_lcCss(col&&col.ink?col.dot:col); ctx.beginPath(); const s=step; for(let j=-1;j*s*0.5<h+s;j++){ const y=y0+j*s*0.5; const off=(j%2)?s/2:0; for(let i=-1;i*s<w+s;i++){ const x=x0+i*s+off; const r=s*0.42*f(x,y); if(r<0.3) continue; ctx.moveTo(x+r,y); ctx.arc(x,y,r,0,6.2832); } } ctx.fill(); }
 const _lcPoly=(ctx,pts)=>{ ctx.beginPath(); pts.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); };
 function _lcHsv(c){ const r=c[0]/255,g=c[1]/255,b=c[2]/255; const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; let h=0; if(d>0){ if(mx===r) h=((g-b)/d)%6; else if(mx===g) h=(b-r)/d+2; else h=(r-g)/d+4; h*=60; if(h<0) h+=360; } return [h, mx?d/mx:0, mx]; }
 function _lcFromH(h,s,v){ const f=(n)=>{ const k=(n+h/60)%6; return (v-v*s*Math.max(0,Math.min(k,4-k,1)))*255; }; return [f(5),f(3),f(1)]; }
@@ -8578,7 +8631,7 @@ function _lcBrush(ctx,x,y,w,h,c,lw,r){ // a single comic brushstroke: a swash wi
   ctx.lineWidth=lw*0.6; for(let k=0;k<3;k++){ ctx.beginPath(); const o=(k-1)*h*0.08; for(let i=4;i<=N-6;i++){ const p=pts[i]; i>4?ctx.lineTo(p[0],p[1]+o):ctx.moveTo(p[0],p[1]+o); } ctx.stroke(); } }
 function _lcBoom(ctx,x,y,w,h,c,lw,r){ const cx=x+w/2, cy=y+h/2, n=10+(r()*4|0), pts=[]; for(let i=0;i<n*2;i++){ const a=i/(n*2)*6.2832, rr=(i%2?0.22:0.48)*Math.min(w,h)*(0.85+r()*0.3); pts.push([cx+Math.cos(a)*rr*1.1,cy+Math.sin(a)*rr]); }
   _lcPoly(ctx,pts); ctx.fillStyle=_lcCss(c); ctx.fill(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; ctx.lineJoin='miter'; ctx.stroke();
-  const inner=pts.map(p=>[cx+(p[0]-cx)*0.5,cy+(p[1]-cy)*0.5]); _lcPoly(ctx,inner); ctx.fillStyle=_lcCss(c===_lcPal[1]?_LC_WHT:_lcPal[1]); ctx.fill(); ctx.stroke(); }
+  const inner=pts.map(p=>[cx+(p[0]-cx)*0.5,cy+(p[1]-cy)*0.5]); _lcPoly(ctx,inner); ctx.fillStyle=_lcCss((c===_lcPal[1]||(c[0]===_lcPal[1][0]&&c[1]===_lcPal[1][1]&&c[2]===_lcPal[1][2]))?_LC_WHT:_lcPal[1]); ctx.fill(); ctx.stroke(); }
 function _lcSun(ctx,x,y,w,h,c,lw,r){ const cx=x+w/2, hy=y+h*0.62; ctx.fillStyle=_lcCss(_lcPal[1]); ctx.beginPath(); ctx.arc(cx,hy,w*0.2,Math.PI,0); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; ctx.stroke();
   for(let i=0;i<7;i++){ const a=Math.PI+(i+0.5)/7*Math.PI; ctx.fillStyle=_lcCss(i%2?c:_LC_WHT); _lcPoly(ctx,[[cx+Math.cos(a-0.09)*w*0.26,hy+Math.sin(a-0.09)*w*0.26],[cx+Math.cos(a)*w*0.6,hy+Math.sin(a)*w*0.6],[cx+Math.cos(a+0.09)*w*0.26,hy+Math.sin(a+0.09)*w*0.26]]); ctx.fill(); ctx.stroke(); }
   for(let k=0;k<3;k++){ ctx.fillStyle=_lcCss(k%2?_LC_WHT:_lcPal[2]); ctx.fillRect(x,hy+k*h*0.12,w,h*0.12); ctx.strokeRect(x,hy+k*h*0.12,w,h*0.12); } }
@@ -8617,19 +8670,19 @@ function _lcListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const list=[]; const push=(t,draw)=>list.push({t,draw,id:list.length});
   ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(0,0,CW,CH);
   const gut=D*0.025; const vert = CW>=CH; const boxes=[]; for(let k=0;k<nP;k++){ if(vert){ const w=(CW-gut*(nP+1))/nP; boxes.push([gut+k*(w+gut),gut,w,CH-2*gut]); } else { const h=(CH-gut*(nP+1))/nP; boxes.push([gut,gut+k*(h+gut),CW-2*gut,h]); } }
-  panels.forEach((P,k)=>{ const [x,y,w,h]=boxes[k]; const q=P.q; const col=S.col(q.t), col2=S.col(Math.min(0.999,q.t+0.2)); const bg=_lcPal[(_lcPal.indexOf(col)+1)%3]; const flat=loud>0.7 && P.ev!=='burst'; const t0=q.t0;
-    push(t0,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); if(flat){ ctx.fillStyle=_lcCss(bg); ctx.fillRect(x,y,w,h); } else { ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(x,y,w,h); _lcBenday(ctx,x,y,w,h,Math.max(3,D*(0.022-0.008*dens)),bg,()=>0.7); }
-      if(P.ev==='burst' || el.rays){ const cx=x+w*(trend>0.5?0.1:0.9), cy=y+h*0.95; ctx.fillStyle=_lcCss(P.ev==='burst'?col:_LC_WHT); for(let i=0;i<9;i++){ const a=-3.1416+(i+0.5)/9*3.1416; if(i%2) continue; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a-0.12)*D*2,cy+Math.sin(a-0.12)*D*2); ctx.lineTo(cx+Math.cos(a+0.12)*D*2,cy+Math.sin(a+0.12)*D*2); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*0.8; ctx.stroke(); } }
+  panels.forEach((P,k)=>{ const [x,y,w,h]=boxes[k]; const q=P.q; const col=S.col(q.t), col2=S.col(Math.min(0.999,q.t+0.2)); const bg=col.ink?col:_lcPal[(_lcPal.indexOf(col)+1)%3]; const flat=loud>0.7 && P.ev!=='burst'; const t0=q.t0;
+    push(t0,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); if(flat||(bg.ink&&!bg.ink.solid)){ ctx.fillStyle=_lcCss(bg); ctx.fillRect(x,y,w,h); } else { ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(x,y,w,h); _lcBenday(ctx,x,y,w,h,Math.max(3,D*(0.022-0.008*dens)),bg,()=>0.7); }
+      if(P.ev==='burst' || el.rays){ const cx=x+w*(trend>0.5?0.1:0.9), cy=y+h*0.95; ctx.fillStyle=_lcCss(P.ev==='burst'?(col.ink?_lcFlatOn(col2,bg,S.isBW):col):_LC_WHT); for(let i=0;i<9;i++){ const a=-3.1416+(i+0.5)/9*3.1416; if(i%2) continue; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a-0.12)*D*2,cy+Math.sin(a-0.12)*D*2); ctx.lineTo(cx+Math.cos(a+0.12)*D*2,cy+Math.sin(a+0.12)*D*2); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*0.8; ctx.stroke(); } }
       ctx.restore(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.4; ctx.strokeRect(x,y,w,h); });
-    const mx=x+w*0.08, my=y+h*0.1, mw=w*0.84, mh=h*0.8; const mc = col===bg ? col2===bg ? _lcPal[(_lcPal.indexOf(bg)+2)%3] : col2 : col;
+    const mx=x+w*0.08, my=y+h*0.1, mw=w*0.84, mh=h*0.8; const mc = col.ink ? _lcFlatOn(col2,bg,S.isBW) : col===bg ? col2===bg ? _lcPal[(_lcPal.indexOf(bg)+2)%3] : col2 : col;
     if(P.ev==='boom'){ push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); const s=0.7+0.5*q.vmax; _lcBoom(ctx,x+w*(0.5-0.5*s),y+h*(0.5-0.5*s),w*s,h*s,mc,lw*1.2,r); ctx.restore(); }); }
-    else if(P.ev==='brush'){ const n=Math.max(1,Math.min(3,Math.round(poly))); for(let j=0;j<n;j++){ const bc=j===0?mc:S.col(Math.min(0.999,q.t+0.1*(j+1))); const by=my+mh*(0.1+0.7*j/Math.max(1,n-1))*(n>1?1:0)+ (n===1?mh*0.25:0); push(t0+0.03+j*0.05,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); ctx.translate(x+w/2,by+mh*0.2); ctx.rotate((r()-.5)*0.5); _lcBrush(ctx,-w*0.48,-mh*0.2,w*0.96,mh*0.4,bc===bg?_LC_WHT:bc,lw,r); ctx.restore(); }); } }
+    else if(P.ev==='brush'){ const n=Math.max(1,Math.min(3,Math.round(poly))); for(let j=0;j<n;j++){ const bc=j===0?mc:(col.ink?_lcFlatOn(S.col(Math.min(0.999,q.t+0.1*(j+1))),bg,S.isBW):S.col(Math.min(0.999,q.t+0.1*(j+1)))); const by=my+mh*(0.1+0.7*j/Math.max(1,n-1))*(n>1?1:0)+ (n===1?mh*0.25:0); push(t0+0.03+j*0.05,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); ctx.translate(x+w/2,by+mh*0.2); ctx.rotate((r()-.5)*0.5); _lcBrush(ctx,-w*0.48,-mh*0.2,w*0.96,mh*0.4,bc===bg?_LC_WHT:bc,lw,r); ctx.restore(); }); } }
     else if(P.ev==='sun'){ push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); _lcSun(ctx,x,y+h*0.05,w,h*0.95,mc,lw,r); ctx.restore(); }); }
     else if(P.ev==='wave'){ push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); let wc=mc===_lcPal[1]?_lcPal[2]:mc; if(wc===bg) wc=_lcPal[(_lcPal.indexOf(bg)+1)%3]; if(wc===_lcPal[1]) wc=_lcPal[(_lcPal.indexOf(bg)+2)%3]; _lcWave(ctx,x,y+h*0.2,w,h*0.8,wc,lw,r); ctx.restore(); }); }
     else if(P.ev==='mirror'){ push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); const s=Math.min(mw,mh)*0.9; _lcMirror(ctx,x+w/2-s*0.5,y+h/2-s*0.55,s,s*1.1,mc,lw,r); ctx.restore(); }); }
     else { push(t0+0.03,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); const s=0.5+0.3*q.vmax; _lcBoom(ctx,x+w*(0.5-0.5*s),y+h*(0.45-0.5*s),w*s,h*s,mc,lw,r); ctx.restore(); }); }
   });
-  if(el.booms){ const E=_kd2Events(A,Math.round(6+leaps*8)).filter(e=>e.acc).slice(0,5); E.forEach((e,i)=>{ const k=Math.min(nP-1,Math.floor(e.t*nP)); const [x,y,w,h]=boxes[k]; const bx=x+w*(0.1+0.7*r0()), by=y+h*(0.08+0.3*r0()), s=D*(0.06+0.06*e.v); const col=S.col(e.t); push(e.t,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); _lcBoom(ctx,bx,by,s,s,col,lw*0.7,r); ctx.restore(); }); }); }
+  if(el.booms){ const E=_kd2Events(A,Math.round(6+leaps*8)).filter(e=>e.acc).slice(0,5); E.forEach((e,i)=>{ const k=Math.min(nP-1,Math.floor(e.t*nP)); const [x,y,w,h]=boxes[k]; const bx=x+w*(0.1+0.7*r0()), by=y+h*(0.08+0.3*r0()), s=D*(0.06+0.06*e.v); const col=_lcFlat(S.col(e.t)); push(e.t,(ctx,r)=>{ ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); _lcBoom(ctx,bx,by,s,s,col,lw*0.7,r); ctx.restore(); }); }); }
   if(el.balloon){ const k=Math.min(nP-1,Math.floor(c.t*nP)); const [x,y,w,h]=boxes[k]; const bw=Math.min(w*0.5,D*0.3), bh=bw*0.75; const bx=x+(c.t*nP-k<0.5?w*0.06:w-bw-w*0.06), by=y+h*0.05; push(Math.min(0.95,c.t+0.05),(ctx,r)=>{ _lcBalloon(ctx,bx,by,bw,bh,_LC_WHT,lw,r); ctx.fillStyle=_lcCss(_LC_BLK); ctx.font=`bold ${Math.round(bh*0.42)}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(bx+bw*0.2,by+bh*0.2,bw*0.6,bh*0.42); ctx.fillStyle=_lcCss(_LC_BLK); ctx.fillText(major?'♪':'♪?',bx+bw/2,by+bh*0.42); }); }
   list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_lcClamp(reveal,0,1)); for(let i=0;i<n;i++){ const f=list[i]; const r=_lcR(f.id*37+71100,ss); r(); f.draw(ctx,r); }
   _setCurE(0.5);
@@ -8642,8 +8695,8 @@ function lichtensteinPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode){
   for(let i=0;i<vis;i++){ const r=_lcR(66000+i,ss); r(); const cx=i%COLS, cy=Math.floor(i/COLS); const x=gut+cx*cw, y=gut+cy*ch, w=cw-gut, h=ch-gut;
     const c=S.col(i/n), bgc=S.col(Math.min(0.999,i/n+0.33)); const flat=r()<0.4;
     ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
-    if(flat){ ctx.fillStyle=_lcCss(bgc); ctx.fillRect(x,y,w,h); } else { ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(x,y,w,h); _lcBenday(ctx,x,y,w,h,Math.max(3,D*0.016),bgc,()=>0.75); }
-    const m=_LC_MOT[(r()*_LC_MOT.length)|0]; let mc=c; if(mc===bgc) mc=_lcPal[(_lcPal.indexOf(c)+1)%3]; m(ctx,x+w*0.06,y+h*0.06,w*0.88,h*0.88,mc,lw,r);
+    const gr=c.ink?c:bgc; if(flat||(gr.ink&&!gr.ink.solid)){ ctx.fillStyle=_lcCss(gr); ctx.fillRect(x,y,w,h); } else { ctx.fillStyle=_lcCss(_LC_WHT); ctx.fillRect(x,y,w,h); _lcBenday(ctx,x,y,w,h,Math.max(3,D*0.016),gr,()=>0.75); }
+    const m=_LC_MOT[(r()*_LC_MOT.length)|0]; let mc=c; if(c.ink) mc=_lcFlatOn(bgc,c,S.isBW); else if(mc===bgc) mc=_lcPal[(_lcPal.indexOf(c)+1)%3]; m(ctx,x+w*0.06,y+h*0.06,w*0.88,h*0.88,mc,lw,r);
     ctx.restore(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw*1.3; ctx.strokeRect(x,y,w,h); }
   ctx.restore();
 }
@@ -8714,6 +8767,9 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   const dotStep=(S*0.017)*(1.25-0.5*dnaD), dotR=dotStep*0.27;
   const GA=Math.PI*2*(1-2/(1+Math.sqrt(5)));
   ctx.fillStyle=PAPER; ctx.fillRect(0,0,CW,CH);
+  _lcStepPx=Math.max(5,Math.round(S*0.014));   // the size of his screen on this canvas: fine enough for the eye to mix the two inks
+  const _pc=(i)=>_lcInk(_picChord(chords,Math.min(cn-1,Math.max(0,i)),gc,mode==='bw').rgb,mode==='bw'), NEWC=true;
+  const fillC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i)):css(flat(c)); }, dotC=(i)=>{ const c=col(i); return NEWC?_lcCss(_pc(i).dot):css(flat(c)); };   // the piece's colours, printed in his inks
   // VARIANT: 0 What he heard (_lcListen, generative) · 1 Mosaic · 2 burst · 3 close-up curves · 4 brushstrokes · 5 mirrors · 6 Landscape (the melody draws the ridges; replaces Sunrise). Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _lcListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -8722,13 +8778,13 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
   if(pick===0){ lichtensteinPhaseMosaic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===5){ lichtensteinLandscape(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Sunrise (a near copy of his 1965 picture) retired, code kept
   if(pick===1){ // burst
-    _bendayField(ctx,0,0,CW,CH,css(flat(col(1))),dotR,dotStep,0.45);
+    _bendayField(ctx,0,0,CW,CH,dotC(1),dotR,dotStep,0.45);
     const cx=CW/2, cy=CH*0.52;
     // the rays: ~30 for a calm piece, up to ~90 for a torrent of notes, reaching out to the frame; a ray each its own chord's colour
     const nRay=Math.round(24+66*dnaD), _rstep=Math.max(1,cn/nRay), hw=0.04*Math.sqrt(30/nRay);
     for(let k=0;k<nRay;k++){ const i=Math.min(cn-1,Math.floor(k*_rstep)); if(i>=N && k>0) break;
       const m=meta(i); const a=k*GA, len=S*(0.2+0.2*dnaD)+Math.min(1,m.dur)*S*0.26;
-      ctx.fillStyle=css(flat(col(i)));
+      ctx.fillStyle=fillC(i);
       ctx.beginPath(); ctx.moveTo(cx,cy);
       ctx.lineTo(cx+Math.cos(a-hw)*len,cy+Math.sin(a-hw)*len);
       ctx.lineTo(cx+Math.cos(a+hw)*len,cy+Math.sin(a+hw)*len);
@@ -8739,16 +8795,16 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
     for(let k=0;k<20;k++){const a=k/20*Math.PI*2, r=(k%2?S*0.10:S*0.24)*(0.8+0.4*rnd());
       const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r; k?ctx.lineTo(x,y):ctx.moveTo(x,y);}
     ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle=css(flat(col(0))); ctx.beginPath(); ctx.arc(cx,cy,S*0.07*(0.75+0.5*dnaE),0,7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=fillC(0); ctx.beginPath(); ctx.arc(cx,cy,S*0.07*(0.75+0.5*dnaE),0,7); ctx.fill(); ctx.stroke();
     return;
   }
   if(pick===2){ // close-up curves
-    _bendayField(ctx,0,0,CW,CH,css(flat(col(2))),dotR*0.95,dotStep*0.9,0.4);
+    _bendayField(ctx,0,0,CW,CH,dotC(2),dotR*0.95,dotStep*0.9,0.4);
     const bands=7, per=Math.ceil(cn/bands);
     for(let b=0;b<bands;b++){
       const i=Math.min(cn-1,b*per); if(i>=N && b>0) break;
       const m=meta(i);
-      ctx.fillStyle=css(flat(col(i))); ctx.strokeStyle=INK; ctx.lineWidth=LW*1.2;
+      ctx.fillStyle=fillC(i); ctx.strokeStyle=INK; ctx.lineWidth=LW*1.2;
       ctx.beginPath();
       const y0=CH*0.12+b*CH*0.12;
       ctx.moveTo(-20,y0);
@@ -8759,13 +8815,13 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
     return;
   }
   if(pick===3){ // brushstrokes
-    _bendayField(ctx,0,0,CW,CH,css(flat(col(3))),dotR,dotStep,0.42);
+    _bendayField(ctx,0,0,CW,CH,dotC(3),dotR,dotStep,0.42);
     const rows=6, per=Math.ceil(cn/rows);
     for(let k=0;k<rows;k++){
       const i=Math.min(cn-1,k*per); if(i>=N && k>0) break;
       const m=meta(i);
       const x0=CW*0.08, x1=CW*0.92, y=CH*0.14+k*CH*0.15, th=(CH*0.05+m.dur*CH*0.05)*(0.75+0.5*dnaE);
-      ctx.fillStyle=css(flat(col(i))); ctx.strokeStyle=INK; ctx.lineWidth=LW;
+      ctx.fillStyle=fillC(i); ctx.strokeStyle=INK; ctx.lineWidth=LW;
       ctx.beginPath(); ctx.moveTo(x0,y);
       ctx.bezierCurveTo(CW*0.3,y-th*0.8, CW*0.6,y+th*0.8, x1,y+(rnd()-0.5)*th);
       ctx.lineTo(x1-S*0.04,y+th);
@@ -8783,7 +8839,7 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
       const m=meta(i);
       const cx=CW*(0.12+0.76*((k*GA/(Math.PI*2))%1)), cy=CH*(0.12+0.76*rnd());
       const R=(S*0.12+m.dur*S*0.10)*(0.75+0.5*dnaE)*(1.1-0.3*dnaD);
-      ctx.fillStyle=css(flat(col(i))); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+      ctx.fillStyle=fillC(i); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
       ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.clip();
       ctx.fillStyle=INK;
       const st=dotStep*0.75;
