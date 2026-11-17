@@ -5489,7 +5489,7 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     if(_spick0===0){ _stListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     const _spick=_spick0-1;
     if(_spick===1){ stellaPhaseProtractor(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(_spick===2){ stellaPhaseBlack(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_spick===2){ stellaPhaseBlackLines(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===3){ stellaPhaseHyena(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===4){ stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_spick===5){ stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -5543,6 +5543,34 @@ function drawArcsOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
 }
 
+// ── Stella C (a): the Black Paintings (1958–60) — black enamel laid in bands of one width, and between the bands the thin
+// line of bare canvas the brush left, the only drawing in the picture. The pattern is one of his two: a quiet, even piece
+// has The Marriage of Reason and Squalor — two sets of inverted U's side by side, opening downward; a loud or quick one
+// Die Fahne hoch! — four sets of L's meeting in a cross at the centre. The canvas starts black and its lines appear as
+// the piece plays, a line for every passage: the outermost first in the U's, from the cross outward in the L's. Each line
+// is a thin line in the full colour of its passage.
+function stellaPhaseBlackLines(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, N=Math.max(1,Math.min(cn,lim)), reveal=N/cn, D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), dens=A.ch?A.ch.density:0.3;
+  const raw=isBW?[226,224,218]:[232,226,212], ink=isBW?[16,16,16]:[24,10,24];
+  const fahne=(X.pace>0.5 || X.loud>0.75);
+  ctx.fillStyle=_stxCss(ink); ctx.fillRect(0,0,CW,CH);
+  { const r=_seedRnd(95500,ss,0,0); r(); for(let i=0;i<10;i++){ const x=r()*CW, y=r()*CH, R=D*(0.3+0.5*r()); const g=ctx.createRadialGradient(x,y,0,x,y,R); g.addColorStop(0,'rgba(255,255,255,0.025)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); } }   // the enamel's sheen
+  const bw=fahne ? D/Math.round(18+16*dens) : (CW/4)/Math.round(6+6*dens), gap=Math.max(1.5,bw*0.12);
+  const K=fahne ? Math.floor(Math.min(CW,CH)/2/bw) : Math.floor(Math.min(CW/4,CH)/bw);
+  const G=_kd2Phrases(A,Math.max(1,K)); const n=G.length;
+  const lineCol=(k)=>{ const q=G[Math.min(n-1,Math.floor(k*n/Math.max(1,K)))]; const c=_picChord(chords,Math.min(cn-1,Math.floor((q.a+q.b)/2)),gc,isBW).rgb; return isBW?raw:c; };
+  const tOf=(k)=>{ const q=G[Math.min(n-1,Math.floor(k*n/Math.max(1,K)))]; return q.t0; };
+  ctx.lineWidth=gap; ctx.lineJoin='miter'; ctx.lineCap='butt';
+  const line=(pts,col)=>{ ctx.strokeStyle=_stxCss(col); ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); };
+  if(fahne){ const cx=CW/2, cy=CH/2;
+    for(let k=0;k<=K;k++){ if(tOf(k)>reveal+1e-9) break; const d=k*bw, c=lineCol(k);
+      for(const [sx,sy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ const X0=sx<0?0:CW, Y0=sy<0?0:CH; const px=cx+sx*d, py=cy+sy*d;
+        line([[X0,py],[px,py],[px,Y0]],c); } } }
+  else { for(const [x0,x1] of [[0,CW/2],[CW/2,CW]]){
+      for(let k=0;k<=K;k++){ if(tOf(k)>reveal+1e-9) break; const d=k*bw; if(x0+d>=x1-d) break; line([[x0+d,CH+2],[x0+d,d],[x1-d,d],[x1-d,CH+2]],lineCol(k)); } } }
+  try{ globalThis.__ST_LISTEN={v:'black',fahne,K}; }catch(_){} _setCurE(0.5);
+}
 // ── Stella C: Black Paintings — colour nested frames (recoloured from B/W). ──
 function stellaPhaseBlack(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0,isBW=mode==='bw',cn=chords.length,N=Math.max(1,Math.min(cn,lim));
