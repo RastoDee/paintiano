@@ -9222,7 +9222,64 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
 // 3 fish garden · 4 arrows over terraces · 5 dot mosaic.
 // Song character: register → which rows light up, energy → luminosity.
 // ═══════════════════════════════════════════════════════════════════════════
-// KLEE LISTENS — the picture the piece composes from everything that is his: the
+// KLEE LISTENS — as he listened himself: Klee was a violinist, and in Fuge in Rot
+// (1921) he painted a fugue. On the dark, his forms (a jug, a disc, a spindle, a
+// slab, a wedge) pass from left to right, each drawn again and again a little
+// further on, from the depth of the dark up to its full colour, so each leaves a
+// trail of itself like a voice repeating its subject. Here every voice of the
+// piece is one form (the melody's and the bass's), at the height where it sings,
+// the piece passing from left to right; every passage one form's trail, as long as the
+// passage lasts, as large as it is loud, all in one colour as his was all red: the
+// colour the whole piece sounds in, from the deep up to light (the louder, the lighter), rising or falling as
+// its melody does; a passage that answers the one before it (the fugue's answer)
+// repeats its form. Passage by passage as the piece plays.
+// ═══════════════════════════════════════════════════════════════════════════
+function _klFormPath(ctx,kind,s){ ctx.beginPath();
+  if(kind==='jug'){ ctx.ellipse(0,s*0.16,s*0.42,s*0.36,0,0,6.2832); ctx.rect(-s*0.13,-s*0.5,s*0.26,s*0.4); ctx.rect(-s*0.2,-s*0.56,s*0.4,s*0.08); }
+  else if(kind==='disc'){ ctx.arc(0,0,s*0.42,0,6.2832); }
+  else if(kind==='spindle'){ ctx.moveTo(-s*0.5,0); ctx.quadraticCurveTo(0,-s*0.5,s*0.5,0); ctx.quadraticCurveTo(0,s*0.5,-s*0.5,0); ctx.closePath(); }
+  else if(kind==='slab'){ ctx.rect(-s*0.2,-s*0.5,s*0.4,s); }
+  else { ctx.moveTo(-s*0.42,s*0.42); ctx.lineTo(0,-s*0.48); ctx.lineTo(s*0.42,s*0.42); ctx.closePath(); } }
+function _klListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH), isBW=mode==='bw';
+  const A=_kd2Analyze(chords,gc,mode), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>a==null?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const DARK=isBW?[18,18,18]:[22,15,15]; ctx.fillStyle=css(DARK); ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  const r=_seedRnd(5321,ss,0,0); r();
+  // the voices: the notes sorted by pitch into two to four voices
+  const ps=[]; for(let i=0;i<cn;i++){ const ns=(chords[i]&&(chords[i].n||chords[i].notes))||[]; for(const nt of ns) ps.push(nt.m!==undefined?nt.m:nt); } ps.sort((a,b)=>a-b);
+  const poly=ps.length/Math.max(1,cn), V=Math.round(clamp(1.5+poly*0.7,2,4)), cuts=[]; for(let k=1;k<V;k++) cuts.push(ps[Math.floor(ps.length*k/V)]||60);
+  const voiceOf=(m)=>{ let v=0; while(v<cuts.length&&m>=cuts[v]) v++; return V-1-v; };   // 0 the highest
+  const FORMS=['jug','disc','spindle','slab','wedge'];
+  const home=A.pcCol(A.tonic,60);
+  // the passages: the melody's form and, where the piece has a bass, the bass's below it, each a trail of itself
+  const P=_kd2Phrases(A,Math.round(clamp(7+A.phrases.length*0.35,7,16))); const items=[]; let prevSig=null;
+  const paint=(c,l)=>isBW?[255*l,255*l,255*l]:_bhxPigment(c,0.3,0.62,0,1,0.06,0.5,l);   // watercolour and oil, not light
+  P.forEach((p,k)=>{ const u0=p.t0, u1=p.t1;
+    const per=[]; for(let v=0;v<V;v++) per.push({n:0,m:0,vel:0});
+    for(let i=p.a;i<p.b;i++){ const ns=(chords[i]&&(chords[i].n||chords[i].notes))||[]; for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, v=voiceOf(m), q=per[v]; q.n++; q.m+=m; q.vel+=(nt.v!==undefined?nt.v:80); } }
+    const sig=Math.round(p.top/3), answer=sig===prevSig; prevSig=sig;
+    const sing=[0,V-1].filter((v,j,arr)=>per[v].n&&arr.indexOf(v)===j);
+    sing.forEach((v,j)=>{ const q=per[v], m=q.m/q.n, vel=q.vel/q.n/127, kind=FORMS[(v===0?(answer?k-1:k):(k+2))%FORMS.length];
+      // where the passage sings, across the whole height; its trail rises or falls as its melody does
+      const size=D*(0.1+0.08*clamp(vel*1.3,0,1)), y=m;
+      const e0=A.ev[p.a]||{top:m}, e1=A.ev[Math.max(p.a,p.b-1)]||{top:m}, rise=clamp((A.reg(e1.top)-A.reg(e0.top))*3,-1,1);
+      const x0=CW*0.04+(CW*0.92-size*1.7)*u0, len=clamp((u1-u0)*CW*1.4,size*0.8,size*1.7);
+      // one colour for the whole fugue, as his was red: the colour the piece sounds in, a breath of the passage's own in it
+      const base=isBW?[200,200,200]:mix(home,A.pcCol(p.pc,60),0.15), hi=0.5+0.28*clamp(vel*1.3,0,1);
+      items.push({a:p.a,b:p.b,kind,x0,x1:x0+len,y,dy:-rise*size*0.9,size,base,hi}); }); });
+  // the heights by rank among all the forms, so the whole sheet is sung over, high voices high, low ones low
+  { const ms=items.map(it=>it.y).sort((a,b)=>a-b); for(const it of items){ const rk=(ms.indexOf(it.y)+ms.lastIndexOf(it.y))/2/Math.max(1,ms.length-1); const yy=CH*clamp(0.1+0.8*(1-rk)+(r()-0.5)*0.05,0.08,0.92); it.y=yy; it.y1=yy+it.dy; } }
+  // each form's trail: drawn again and again from the dark up to its full colour, as its passage plays
+  for(const it of items){ if(it.a>=played) continue; const n=Math.max(4,Math.min(7,Math.round((it.x1-it.x0)/(it.size*0.2)))), f=clamp((played-it.a)/Math.max(1,it.b-it.a),0,1), vis=Math.max(1,Math.ceil(n*f));
+    for(let k=0;k<vis;k++){ const u=n>1?k/(n-1):1, x=it.x0+(it.x1-it.x0)*u, y=it.y+(it.y1-it.y)*u; ctx.save(); ctx.translate(x,y);
+      ctx.fillStyle=css(mix(DARK,paint(it.base,0.16+(it.hi-0.16)*u),0.25+0.75*Math.pow(u,1.2)),0.6+0.35*u); _klFormPath(ctx,it.kind,it.size*(0.94+0.06*u)); ctx.fill(); ctx.restore(); } }
+  try{ globalThis.__KL_LISTEN={v:'fuge',voices:V,systems:S,passages:P.length}; }catch(_){}
+  _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// KLEE'S WORLD (variant 1; until 17 Nov 2026 his Listens, then with world=true only the compositions no other variant
+// has: the magic squares with the line taking a walk over them, the twittering machine, the walk with its head) —
+// the picture the piece composes from everything that is his: the
 // watercolour glaze, the magic square, the line taking a walk, the city of tiles,
 // the twittering birds on their wire, the fish in the dark garden, the arrow, the
 // sun and the moon, the Senecio head. A ground, a way of composing, and over it
@@ -9238,17 +9295,18 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
 //   the signs        an arrow per big leap (up or down, as the line goes) · the sun on major, the crescent on minor ·
 //                    an eye in the head · the line's own hatching
 // ═══════════════════════════════════════════════════════════════════════════
-function _klListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+function _klListenOld(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,world){
   const ss=sessionSeed|0, cn=chords.length, reveal=Math.max(1,Math.min(cn,lim))/cn, D=Math.min(CW,CH);
   const {col,meta,css,shade}=_trioChordTools(chords,gc); const isBW=mode==='bw';
   const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
   const r0=_seedRnd(53,ss,0,0); r0();
   const ground = (pace<0.42 && loud<0.6) ? 'night' : (!major) ? 'earth' : 'glaze';
-  const comp = (pace<0.5) ? 'walk' : (regular>0.8 && pace>0.8) ? 'squares' : (poly>=2.5 && major) ? 'city' : (reg>0.58 && pace>0.65) ? 'twitter' : (!major && pace<0.7) ? 'fish' : (loud>0.65) ? 'dabs' : 'squares';
+  const comp = world ? ((pace<0.5) ? 'walk' : (reg>0.58 && pace>0.65) ? 'twitter' : 'squares') : (pace<0.5) ? 'walk' : (regular>0.8 && pace>0.8) ? 'squares' : (poly>=2.5 && major) ? 'city' : (reg>0.58 && pace>0.65) ? 'twitter' : (!major && pace<0.7) ? 'fish' : (loud>0.65) ? 'dabs' : 'squares';
   const el={ arrows: leaps>0.5, sun: major, moon: !major, eye: tens>0.2 };
   try{ globalThis.__KL_LISTEN={ground,comp,el,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
   const dark = ground!=='glaze'; const INK = dark ? (isBW?[236,232,222]:[240,230,206]) : [28,22,18]; const PAPER = comp==='dabs' ? (dark?[70,50,30]:[184,146,90]) : ground==='night' ? [14,20,26] : ground==='earth' ? [38,26,18] : [240,232,214];
-  const ci=(t)=>col(Math.min(cn-1,Math.max(0,(t*cn)|0)),1), tone=(c,k)=>shade(c,k), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+  // Klee's world in his watercolour: the piece's colours as pigment, not light (the first Listens kept its own)
+  const ci=(t)=>{ const c=col(Math.min(cn-1,Math.max(0,(t*cn)|0)),1); return (world&&!isBW)?_bhxPigment(c,0.2,0.5,0.38,0.72,0.08,0.5,null):c; }, tone=(c,k)=>shade(c,k), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
   const list=[]; const push=(t,draw)=>list.push({t,draw,id:list.length}); const lw=Math.max(1.5,D*0.004)*(0.8+0.6*loud);
   // ── the ground and its washes
   ctx.fillStyle=css(PAPER); ctx.fillRect(0,0,CW,CH);
@@ -9293,9 +9351,10 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   const dnaE=_ch?_ch.energy:0.5, dnaR=_ch?_ch.register:0.5;
   const PHI=(1+Math.sqrt(5))/2, GA=Math.PI*2*(1-1/PHI);
-  // VARIANT: 0 What he heard (_klListen, generative) · 1 magic squares · 2 polyphony · 3 Castle and Sun · 4 fish garden · 5 arrows · 6 Ad Parnassum. Free: 0 and 1.
+  // VARIANT: 0 What he heard (_klListen: his Fugue in Red, in the piece's one colour) · 1 Klee's world (the first Listens, with only its own compositions; the old magic squares retired, code kept) · 2 polyphony · 3 Castle and Sun · 4 fish garden · 5 arrows · 6 Ad Parnassum. Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _klListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick0===1){ _klListenOld(ctx,CW,CH,chords,lim,gc,ss,mode,true); return; }   // Klee's world (the old magic squares below retired, code kept)
   const pick=pick0-1;
   const ground=(a,b)=>{const g=ctx.createLinearGradient(0,0,0,CH);g.addColorStop(0,a);g.addColorStop(1,b);ctx.fillStyle=g;ctx.fillRect(0,0,CW,CH);};
   const chordTopness=(i)=>{ // 0..1 vertical home of a chord from its mean pitch
