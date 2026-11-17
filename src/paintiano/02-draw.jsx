@@ -16944,7 +16944,7 @@ const ARTIST_VARIANTS = {
   bauhaus: [
     {ground:'#f2eee4',mark:{disc:.34,tri:.33,panel:.33},size:[.08,.4],layout:{scatter:1},density:.3,tone:'primary'},   // What it heard
     {ground:'#f2eee4',mark:{disc:.34,tri:.33,panel:.33},size:[.1,.2],layout:{grid:1},density:.9,tone:'primary'},   // Vorkurs forms
-    {mark:{panel:.5,target:.3,bar:.2},size:[.1,.35],layout:{grid:1},density:.4},
+    {ground:'#f4f2ec',mark:{bar:.7,panel:.3},size:[.02,.08],layout:{stack:1},density:.7},   // Fugue (Josef Albers, glass)
     {ground:'#ece6d6',mark:{bar:.4,disc:.3,panel:.3},size:[.1,.4],layout:{stack:1},density:.3,tone:'primary'},   // Bayer poster
     {mark:{arch:.6,panel:.4},size:[.15,.45],layout:{stack:1},density:.3},
     {mark:{nest:1},size:[.2,.45],layout:{scatter:1},density:.1},   // Homage to the Square (Josef Albers)
@@ -18170,13 +18170,13 @@ function drawBauhausOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // Reveal fraction so the painting builds up with playback.
   const revealFrac = Math.max(0, Math.min(1, lim / cn));
 
-  // VARIANT: 0 What it heard (_bhListen, generative) · 1 Vorkurs forms · 2 Face (Schlemmer) · 3 Bayer poster · 4 Arches · 5 Homage to the Square · 6 Weave (Stölzl) · 7 Construction (Moholy-Nagy). Retired, approved: the old Grid, the Hanging, the old Ausstellung, Lines. Free: 0 and 1.
+  // VARIANT: 0 What it heard (_bhListen, generative) · 1 Vorkurs forms · 2 Albers' Fugue (glass picture; the Schlemmer face retired, code kept) · 3 Bayer poster · 4 Arches · 5 Homage to the Square · 6 Weave (Stölzl) · 7 Construction (Moholy-Nagy). Retired, approved: the old Grid, the Hanging, the old Ausstellung, Lines. Free: 0 and 1.
   const _pn=_capN(8); const pick=[-1,10,2,11,4,5,7,8][((phaseIndex|0)%_pn+_pn)%_pn];
   if(pick===-1){ _bhListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===10){ bauhausPhaseForms(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===11){ bauhausPhaseBayer(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===1){ bauhausPhaseHanging(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-  if(pick===2){ bauhausPhaseFace(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick===2){ bauhausPhaseFuge(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Albers' Fugue (the Schlemmer face retired, code kept)
   if(pick===3){ bauhausPhaseAusst(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===4){ bauhausPhaseArches(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick===5){ bauhausPhaseHomage(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -18481,6 +18481,41 @@ function bauhausPhaseConstruction(ctx,CW,CH,chords,lim,gc,ss,mode){
   ctx.restore();
 }
 
+// ── Phase 2: Albers, Fugue (Fuge, 1925) — one of the glass pictures Josef Albers made at the Bauhaus and named after the
+// musical form: milk glass under a thin flashed layer, cut away with the sandblaster through stencils, so that narrow
+// rectangles stand in rows, in the purest white and the deepest black with a few in colour, repeating and shifting like
+// the voices of a fugue. Here the rows are the voices of the piece — its notes sorted by pitch, the highest voice at the
+// top — read like a score, system under system; every note a bar as wide as it lasts, white in
+// a black row and black in a white one, the strongest few in the colour of their chord (held to the depth of flashed
+// glass), the quietest in grey. Bar by bar as the piece plays.
+function bauhausPhaseFuge(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+  const hsl=(c)=>{ const R=c[0]/255,G=c[1]/255,B=c[2]/255, mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2, d=mx-mn; let h=0,s2=0; if(d>1e-6){ s2=d/(1-Math.abs(2*l-1)); h=mx===R?((G-B)/d)%6:mx===G?(B-R)/d+2:(R-G)/d+4; h*=60; if(h<0) h+=360; } return [h,s2,l]; };
+  const rgbH=(h,s2,l)=>{ const C=(1-Math.abs(2*l-1))*s2, X2=C*(1-Math.abs((h/60)%2-1)), m=l-C/2; const [a,b,c]=h<60?[C,X2,0]:h<120?[X2,C,0]:h<180?[0,C,X2]:h<240?[0,X2,C]:h<300?[X2,0,C]:[C,0,X2]; return [(a+m)*255,(b+m)*255,(c+m)*255]; };
+  const glass=(c)=>{ if(isBW){ const v=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [v*0.6+50,v*0.6+50,v*0.6+50]; } const [h,s2]=hsl(c); return rgbH(h,_bhxClamp(s2*0.6,0.4,0.6),(h>=40&&h<75)?0.54:0.44); };
+  const MILK=[244,242,236], BLACK=[22,21,24], GREY=[150,150,150];
+  // the notes: each with its time, length, pitch, loudness and chord
+  const N=[]; let T=0; const tAt=new Array(cn+1);
+  for(let i=0;i<cn;i++){ tAt[i]=T; const c=chords[i], ns=(c&&(c.n||c.notes))||[], d=Math.max(0.25,Math.min(8,(c&&c.durQ)||1)); for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, v=nt.v!==undefined?nt.v:80; N.push({i,t:T,d,m,v}); } T+=d; }
+  tAt[cn]=T; if(!N.length||T<=0){ ctx.fillStyle=_bhxCss(MILK); ctx.fillRect(0,0,CW,CH); return; }
+  const ps=N.map(n=>n.m).sort((a,b)=>a-b), vs=N.map(n=>n.v).sort((a,b)=>a-b), q=(arr,f)=>arr[Math.min(arr.length-1,Math.floor(arr.length*f))];
+  const poly=N.length/cn, V=Math.round(_bhxClamp(1.5+poly*0.9,2,5)), cuts=[]; for(let k=1;k<V;k++) cuts.push(q(ps,k/V));
+  const vLo=q(vs,0.2), vMax=vs[vs.length-1]||127; const hot=new Set(N.map((n,k)=>[n.v,k]).sort((a,b)=>(b[0]-a[0])||(a[1]-b[1])).slice(0,Math.max(1,Math.round(N.length*0.08))).map(x=>x[1]));   // only the strongest notes in colour, as his few coloured panes
+  const land=CW>CH*1.1, S=Math.round(_bhxClamp(cn/(land?160:95),land?1:2,land?3:6));   // systems, as a score is laid out
+  const m=D*0.06, gapS=D*0.03, x0=m, x1=CW-m, y0=m, y1=CH-m, sysH=(y1-y0-gapS*(S-1))/S, rowH=sysH/V, sysT=T/S, W=x1-x0;
+  ctx.fillStyle=_bhxCss(MILK); ctx.fillRect(0,0,CW,CH);
+  // the rows: black and colour in turn, the flashed layers over the milk glass
+  const iAt=(t)=>{ let lo=0,hi=cn; while(lo<hi){ const md=(lo+hi)>>1; if(tAt[md+1]<=t) lo=md+1; else hi=md; } return Math.min(cn-1,lo); };
+  const flash=[]; for(let s=0;s<S;s++){ const I=[]; for(let k=0;k<6;k++) I.push(iAt(sysT*(s+(k+0.5)/6))); const c=_mixIdx(chords,I,gc,isBW,mode); if(isBW){ flash.push([205,205,205]); continue; } const [h,s2]=hsl(c); flash.push(rgbH(h,_bhxClamp(s2*0.55,0.3,0.5),(h>=40&&h<75)?0.66:0.6)); }   // each system's light rows the flashed glass of its passage's colour
+  for(let s=0;s<S;s++){ const sy=y0+s*(sysH+gapS); for(let v=0;v<V;v++){ ctx.fillStyle=_bhxCss(v%2===0?BLACK:flash[s]); ctx.fillRect(x0,sy+v*rowH,W,rowH); } ctx.strokeStyle=_bhxCss(BLACK); ctx.lineWidth=Math.max(1,D*0.0025); ctx.strokeRect(x0,sy,W,sysH); }
+  const gap=Math.max(1,W/sysT*0.08);
+  N.forEach((n,k)=>{ if(n.i>=played) return; let v=0; while(v<cuts.length&&n.m>=cuts[v]) v++; const row=V-1-v;   // the highest voice on top
+    const s=Math.min(S-1,Math.floor(n.t/sysT)), sy=y0+s*(sysH+gapS), ry=sy+row*rowH, onBlack=row%2===0;
+    const bx=x0+(n.t-s*sysT)/sysT*W, bw=Math.max(1,Math.min(x1-bx,n.d/sysT*W-gap)); const bh=rowH*0.6;   // every bar of a row the same height, as the stencil cut it
+    let col=onBlack?MILK:BLACK; if(hot.has(k)) col=glass(_picChord(chords,n.i,gc,isBW).rgb); else if(n.v<=vLo&&n.v<vMax) col=GREY;
+    ctx.fillStyle=_bhxCss(col); ctx.fillRect(bx,ry+(rowH-bh)/2,bw,bh); });
+  try{ globalThis.__ST_LISTEN={v:'fuge',voices:V,systems:S}; }catch(_){}
+}
 // ── Phase 2: Abstract cubist face ─────────────────────────────────────────
 function bauhausPhaseFace(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, cn=chords.length, rnd=_seedRnd(403,ss,0,0);
