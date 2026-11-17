@@ -5620,6 +5620,9 @@ const _stxClamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const _stxCss=(c)=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
 const _STX_CANVAS=[238,232,218];
 function _stxPaint(rgb,isBW){ const l=rgb[0]*0.299+rgb[1]*0.587+rgb[2]*0.114; if(isBW) return [l,l,l]; const g=(rgb[0]+rgb[1]+rgb[2])/3; const c=rgb.map(v=>_stxClamp(g+(v-g)*1.55,0,255)); const m=Math.max(c[0],c[1],c[2])||1; return c.map(v=>_stxClamp(v*Math.min(1.3,238/m),0,255)); }
+// a chord as the Concentric Squares paint it: its notes' colours mixed, as they come (not pushed to fluorescent)
+function _stxSoft(chords,gc,isBW){ const cn=chords.length; return (t)=>{ const ch=chords[Math.max(0,Math.min(cn-1,Math.floor(t*cn)))]; const ns=ch&&(ch.n||ch.notes); if(!ns||!ns.length) return [120,100,140];
+  let R=0,G=0,B=0,c=0; for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, v=nt.v!==undefined?nt.v:80; const [r,g,b]=gc(m,v); R+=r; G+=g; B+=b; c++; } const o=[R/c,G/c,B/c]; if(isBW){ const l=o[0]*0.299+o[1]*0.587+o[2]*0.114; return [l,l,l]; } return o; }; }
 function _stxSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   return {cn,isBW,density:ch?ch.density:0.4,col:(t)=>_stxPaint(_picChord(chords,_stxClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb,isBW)}; }
 
@@ -5665,7 +5668,7 @@ function _stListen(ctx,CW,CH,chords,lim,gc,ss,mode){
 }
 // 3 · Hyena Stomp (1962) — one band winding inward as a rectangular spiral, mitred at every turn, each run a new colour; read from the outer edge to the centre
 function stellaPhaseHyena(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const S=_stxSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
+  const S=_stxSetup(chords,gc,mode); const SC=true?_stxSoft(chords,gc,S.isBW):S.col; const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
   const rings=Math.round(_stxClamp(5+S.density*5+(S.cn>200?2:0),5,12)); const bw=D/(2*rings+0.6);
   ctx.save(); ctx.fillStyle=_stxCss(_STX_CANVAS); ctx.fillRect(0,0,CW,CH);
   // the centreline, inset half a band: along the top, down the right, back along the bottom, up the left stopping a band short — and inward
@@ -5676,12 +5679,12 @@ function stellaPhaseHyena(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const off=(j,s)=>{ const a=nrm[Math.max(0,j-1)], c=nrm[Math.min(n-1,j)]; const vx=j===0?c[0]:j===n?a[0]:a[0]+c[0], vy=j===0?c[1]:j===n?a[1]:a[1]+c[1]; return [pts[j][0]+vx*s*bw/2, pts[j][1]+vy*s*bw/2]; };
   const vis=Math.ceil(n*reveal); const gap=Math.max(1,bw*0.075);
   ctx.strokeStyle=_stxCss(_STX_CANVAS); ctx.lineWidth=gap; ctx.lineJoin='miter';
-  for(let i=0;i<vis;i++){ const q=[off(i,1),off(i+1,1),off(i+1,-1),off(i,-1)]; ctx.fillStyle=_stxCss(S.col(i/n)); ctx.beginPath(); q.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  for(let i=0;i<vis;i++){ const q=[off(i,1),off(i+1,1),off(i+1,-1),off(i,-1)]; ctx.fillStyle=_stxCss(SC(i/n)); ctx.beginPath(); q.forEach((p,k)=>k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   ctx.restore();
 }
 // 6 · Notched stripes (the aluminium and copper paintings, 1960–61) — bands jogging at right angles around a notched figure (a cross, a T, an L, an H, a stair): each band one contour further out, the jogs carried to the edges; the piece grows from the figure outward
 function stellaPhaseNotched(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const S=_stxSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
+  const S=_stxSetup(chords,gc,mode); const SC=true?_stxSoft(chords,gc,S.isBW):S.col; const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
   const r0=_seedRnd(95000,sessionSeed|0,0,0); r0(); const cx=CW/2, cy=CH/2; const a=D*0.024;
   const kind=(r0()*5)|0; let rects;
   if(kind===0) rects=[[cx-a*4,cy-a,cx+a*4,cy+a],[cx-a,cy-a*4,cx+a,cy+a*4]];                                          // cross
@@ -5695,7 +5698,7 @@ function stellaPhaseNotched(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const K=Math.ceil(far/bw)+1; const vis=Math.max(1,Math.ceil(K*reveal));
   ctx.save(); ctx.fillStyle=_stxCss(_STX_CANVAS); ctx.fillRect(0,0,CW,CH);
   const fillUnion=(d)=>{ ctx.beginPath(); for(const q of rects){ ctx.rect(q[0]-d,q[1]-d,q[2]-q[0]+2*d,q[3]-q[1]+2*d); } ctx.fill('nonzero'); };
-  for(let k=vis-1;k>=0;k--){ const d=k*bw; ctx.fillStyle=_stxCss(_STX_CANVAS); fillUnion(d+bw); ctx.fillStyle=_stxCss(S.col(k/K)); fillUnion(d+bw-gap); }
+  for(let k=vis-1;k>=0;k--){ const d=k*bw; ctx.fillStyle=_stxCss(_STX_CANVAS); fillUnion(d+bw); ctx.fillStyle=_stxCss(SC(k/K)); fillUnion(d+bw-gap); }
   ctx.restore();
 }
 
