@@ -15111,7 +15111,7 @@ function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // Phases: 0 Resurrection (rings from the centre, cream) · 1 Concerto (rows) ·
 // 2 Starry Night (columns on night blue, the highest notes the pale stars) ·
 // 3 Snoopy (columns, each in the colour of the chord that opens it) ·
-// 4 Eclipse (rings from a point high on the left, around a dark sun) ·
+// 4 Eclipse (rings from a point high on the left, around a dark sun, each ring one colour) ·
 // 5 Red Azaleas (rows in two tones: the root chord, the loud chords in a second).
 // Free: 0 and 1.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -15377,19 +15377,24 @@ function drawThomasOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     for(let i=0;i<cn;i++) loud[i]=sc[i]>=loudCut ? 1 : 0;
   }
   // Snoopy: each column is ONE colour — the colour of the chord that opens it
-  const segC=pick===3 ? new Array(L.seg.length) : null;
+  const _thNew=true;   // (17 Nov 2026) her paint, not light; her hand freer; the Starry Night a night; the Eclipse in rings of one colour each
+  // the astronauts in the Starry Night: the loudest chords keep their own warm colour, every other dab is night
+  const astro=new Uint8Array(cn); if(_thNew&&pick===2){ const so=Array.from(vel).sort((a,b)=>a-b), cut=so[Math.min(cn-1,Math.floor(cn*0.93))]; for(let i=0;i<cn;i++) astro[i]=vel[i]>=cut&&cut>so[0]?1:0; }
+  const segC=(pick===3||(_thNew&&pick===4)) ? new Array(L.seg.length) : null;
   if(segC){ for(const d of L.D) if(!segC[d.g]) segC[d.g]=chordCol(d.c); }
-  const jit=0.1+0.08*energy;     // the energy of the piece: how freely the hand cuts the corners
+  const jit=_thNew?0.2+0.1*energy:0.1+0.08*energy;     // the energy of the piece: how freely the hand cuts the corners
   for(const d of L.D){
     if(d.c>=lim) break;          // dabs run in chord order — the painting grows with the music
     const v=vel[d.c];
     let c;
-    if(pick===3) c=lift(segC[d.g], 0.74+0.42*v);
+    if(pick===3||(_thNew&&pick===4)) c=lift(segC[d.g], 0.74+0.42*v);
     else if(pick===5) c=loud[d.c] ? lift(loudC, 0.92+0.16*v) : lift(rootC, 0.8+0.34*v);
     else {
       c=lift(chordCol(d.c), 0.86+0.26*v);
       if(pick===2 && star[d.c]) c=isBW ? [236,236,236] : mix(c,[236,241,255],0.82);
+      else if(_thNew && pick===2 && !astro[d.c] && !isBW) c=mix(c,[22,40,118],0.66);
     }
+    if(_thNew && !isBW && !(pick===2 && star[d.c])) c=_bhxPigment(c,0.35,0.72,0.2,0.8,0.05,0.4,null);
     c=lift(c, 1+d.lt*0.08);      // no two dabs quite the same
     _setCurE(chords[d.c] && chords[d.c]._E);
     ctx.fillStyle=css(c);
