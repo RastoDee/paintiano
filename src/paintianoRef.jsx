@@ -19734,23 +19734,23 @@ const ARTIST_VARIANTS = {
   ],
   picasso: [
     {ground:'#c8b090',mark:{pcfacet:.45,pcpaper:.3,pcguitar:.25},size:[.06,.22],edge:0,alpha:.95,layout:{scatter:.7,flow:.3},outline:.4,density:.4,nosnap:true},   // Listens
-    {mark:{neon:.7,ring:.3},size:[.06,.22],edge:.5,layout:{flow:.6,scatter:.4},density:.2},                                            // Light line
+    {ground:'#08080c',mark:{neon:1},size:[.06,.22],edge:.5,layout:{flow:1},density:.15,tone:'pure'},                                            // Light line: one gesture of light per passage, on the dark
     {ground:'#1a2c52',mark:{facet:.6,poly:.4},size:[.1,.3],edge:0,alpha:.9,layout:{scatter:1},outline:.6,density:.3,tone:'dark',nosnap:true},   // The Old Guitarist: blue planes
-    {ground:'#dcc0a2',mark:{facet:.6,poly:.4},size:[.07,.24],edge:0,alpha:.85,layout:{scatter:1},outline:.3,density:.5,nosnap:true},   // Demoiselles: big facets with a contour in the song's colours
+    {ground:'#3a3048',mark:{diamond:.8,pcfacet:.2},size:[.04,.1],edge:0,alpha:1,layout:{grid:1},outline:.5,density:.9,nosnap:true},   // Harlequin: the tone mosaic of diamonds
     {ground:'#8a7350',mark:{pcfacet:1},size:[.05,.16],edge:0,alpha:.9,layout:{scatter:.5,radial:.5},outline:0,density:.7,tone:'dark',nosnap:true},   // Analytic cubism: lit planes
-    {ground:'#d6c4a0',mark:{pcpaper:.65,pcguitar:.35},size:[.1,.26],edge:0,alpha:1,layout:{scatter:1},outline:0,density:.35,nosnap:true},   // The Guitar: papier collé
+    {ground:'#d6c4a0',mark:{pcpaper:.6,paper:.2,cutout:.2},size:[.1,.26],edge:0,alpha:1,layout:{scatter:1},outline:0,density:.35,nosnap:true},   // Bottle and glass: papier collé
     {ground:'#5c3e2a',mark:{panel:.5,poly:.3,diamond:.2},size:[.06,.24],edge:0,alpha:1,layout:{grid:.6,scatter:.4},outline:.8,density:.5},   // Three Musicians: cut paper
     {ground:'#c8b090',mark:{pcguitar:.4,panel:.35,disc:.25},size:[.08,.26],edge:0,alpha:1,layout:{stack:.6,scatter:.4},outline:.9,density:.35,nosnap:true},   // Still life with guitar
   ],
-  matisse: [   // his own papers and scissors, slot for slot with the engine
-    {ground:'#f6f2e9',mark:{mtleaf:.3,mtalgae:.2,mtsheet:.2,mtcoral:.15,mtburst:.15},size:[.06,.2],layout:{scatter:.8,grid:.2},density:.45},   // Listens
+  matisse: [   // his own papers and scissors, slot for slot with the engine: Listens, Polynesia, the Snail, Beasts of the Sea, Vence, La Gerbe, the Great Seaweed, the frames
+    {ground:'#f6f2e9',mark:{mtsheet:.35,mtbird:.2,mtcoral:.15,mtalgae:.15,mtleaf:.15},size:[.06,.2],layout:{grid:.6,scatter:.4},density:.45},   // Listens: the Parakeet and the Mermaid, white forms on coloured sheets
     {ground:'#22408a',mark:{mtbird:.35,mtfish:.25,mtalgae:.2,mtburst:.2},size:[.06,.18],layout:{grid:.6,scatter:.4},density:.4},   // Polynesia
     {ground:'#f5f1e8',mark:{mtsheet:.75,mtburst:.25},size:[.08,.24],layout:{radial:.7,scatter:.3},density:.35},   // The Snail
     {ground:'#f6f2e9',mark:{mtsheet:.4,mtfish:.25,mtalgae:.2,mtcoral:.15},size:[.07,.2],layout:{stack:.6,scatter:.4},density:.4},   // Beasts of the Sea
-    {ground:'#f0ece2',mark:{mtlobed:.6,mtsheet:.25,mtleaf:.15},size:[.07,.22],layout:{stack:.5,scatter:.5},density:.35},   // The Tree of Life
-    {ground:'#e8e2cc',mark:{mtleaf:1},size:[.08,.3],layout:{radial:1},density:.25},   // La Gerbe
-    {ground:'#f5f1e8',mark:{mtalgae:.7,mtsheet:.3},size:[.1,.3],layout:{scatter:1},density:.2},   // The Great Seaweed
-    {ground:'#6a8a3a',mark:{panel:.5,mtleaf:.25,mtburst:.25},size:[.04,.12],layout:{grid:1},density:1},   // nested-frame grid
+    {ground:'#f0ece2',mark:{mtleaf:.45,arch:.3,mtsheet:.25},size:[.07,.22],layout:{grid:.6,stack:.4},density:.4},   // Vence: tall windows, each its own glass, leaves in them
+    {ground:'#e8e2cc',mark:{mtleaf:1},size:[.08,.3],layout:{radial:1},density:.25},   // La Gerbe: a sheaf of leaves
+    {ground:'#f5f1e8',mark:{mtalgae:.6,mtsheet:.4},size:[.1,.3],layout:{grid:.5,scatter:.5},density:.25},   // The Great Seaweed: white seaweed on upright sheets
+    {ground:'#2e2a4a',mark:{panel:.5,mtleaf:.25,mtburst:.25},size:[.04,.12],layout:{grid:1},density:1},   // the frames: the tone mosaic in cut gouache papers
   ],
   pollock: [   // slot order = solo variants: Classic drip, Autumn Rhythm, Lavender Mist, Blue Poles, Convergence, Number 14 black, Sparse, White Light
     {mark:{drip:.8,splat:.2},size:[.03,.12],layout:{flow:1},density:.6},   // What he heard
@@ -19773,18 +19773,18 @@ const ARTIST_VARIANTS = {
     {ground:'#f8f8f4',mark:{cell:.8,dot:.2},size:[.05,.12],edge:.3,alpha:.7,layout:{radial:1},density:.3},
   ],
   kusama: [
-    {mark:{dot:.7,sphere:.15,net:.15},size:[.01,.1],layout:{scatter:1},density:.7,tone:'pure'},   // What she heard
+    {ground:'#050408',mark:{dot:.7,sphere:.3},size:[.005,.03],edge:.5,alpha:.9,layout:{scatter:.5,stack:.5},density:.7,lines:0,tone:'pure'},   // What she heard: her Infinity Mirrored Room, a light for every chord in the dark
     {ground:'#e9e2cf',mark:{panel:.5,dotcluster:.5},size:[.03,.09],layout:{grid:1},density:1},
     {ground:'#f4f4ee',mark:{dot:1},size:[.004,.02],layout:{scatter:1},density:1,tone:'pure'},
-    {ground:'#5a4a2a',mark:{net:1},size:[.03,.06],layout:{grid:1},density:1},
+    {ground:'#1e5a48',mark:{net:.8,dot:.2},size:[.03,.06],layout:{grid:1},density:1},   // Infinity Net (from the first Listens)
     {ground:'#1a1410',mark:{sphere:1},size:[.08,.25],layout:{scatter:1},density:.3},
     {ground:'#111111',mark:{dot:.7,dotcluster:.3},size:[.1,.3],layout:{scatter:1},density:.25},
     {ground:'#d85a1a',mark:{net:.7,spiral:.3},size:[.05,.1],layout:{scatter:1},density:.3,lines:0},
     {ground:'#f0c020',mark:{dot:.7,sphere:.3},size:[.01,.06],layout:{scatter:1},density:.6,tone:'pure'},   // Pumpkin
   ],
   miro: [
-    {ground:'#f2ece0',mark:{blob:.4,star:.3,dot:.3},size:[.04,.12],layout:{scatter:1},density:.2,outline:.9,tone:'primary'},   // What he heard
-    {ground:'#1b1812',mark:{star:.35,dot:.3,cross:.15,miroblob:.2},size:[.02,.07],layout:{scatter:1},density:.2,outline:.2},
+    {ground:'#dcd6e2',mark:{star:.2,dot:.2,miroblob:.2,eye:.15,ring:.15,tri:.1},size:[.02,.07],layout:{field:.6,scatter:.4},density:.5,lines:.7,outline:.9,tone:'primary'},   // What he heard: his Constellations, a sign for every chord, joined into constellations
+    {ground:'#f2ece0',mark:{blob:.4,star:.3,dot:.3},size:[.04,.12],layout:{scatter:1},density:.2,outline:.9,tone:'primary'},   // Miró's world (the first Listens)
     {ground:'#d8f4ee',mark:{cross:.5,rays:.3,dot:.2},size:[.02,.06],layout:{scatter:1},density:.08},
     {ground:'#1f3a8a',mark:{dot:.6,star:.2,wavyline:.2},size:[.03,.08],layout:{scatter:1},density:.15,tone:'primary'},
     {ground:'#f5f2e8',mark:{miroblob:.6,dot:.2,star:.2},size:[.03,.1],layout:{scatter:1},density:.2,lines:.4,outline:.5},
@@ -19792,10 +19792,10 @@ const ARTIST_VARIANTS = {
     {ground:'#f2ece0',mark:{blob:.4,star:.3,dot:.3},size:[.04,.1],layout:{scatter:1},density:.2,outline:.9,tone:'primary'},     // Femme et oiseaux
   ],
   mondrian: [
-    {ground:'#f6f3ec',mark:{gridrect:1},size:[.1,.5],layout:{grid:1},density:.25,tone:'primary'},   // What he heard
+    {ground:'#f6f3ec',mark:{gridline:.75,rect:.25},size:[.03,.1],layout:{grid:1},density:.4,outline:0,lines:0,tone:'primary'},   // What he heard: his late lines gathering at the edges, short colour between them (Place de la Concorde)
     {ground:'#f4f1e8',mark:{rect:.7,gridrect:.3},size:[.04,.12],layout:{grid:1},density:.6,lines:0,tone:'primary'},   // Victory Boogie Woogie
     {ground:'#f6f3ec',mark:{gridrect:1},size:[.15,.5],layout:{grid:1},density:.2,tone:'primary'},   // Composition with Red, Yellow and Blue
-    {ground:'#f8f8f4',mark:{gridline:1},size:[.1,.3],layout:{grid:1},density:.2,outline:0,lines:0},
+    {ground:'#f8f8f4',mark:{gridline:1},size:[.1,.3],layout:{grid:1},density:.2,outline:0,lines:0,tone:'primary'},   // New York City: lines of colour
     {ground:'#f2efe6',mark:{gridline:.7,rect:.3},size:[.02,.05],layout:{grid:1},density:1,outline:0,lines:0,tone:'gold'},   // Broadway Boogie Woogie
     {ground:'#e6e2da',mark:{gridrect:1},size:[.15,.45],layout:{diagonal:1},density:.2,tone:'primary'},   // Lozenge (his, on a light wall)
     {ground:'#f1eee6',mark:{rect:1},size:[.05,.1],layout:{scatter:1},density:.35,outline:0,lines:0,tone:'primary'},   // Composition in Colour A (1917; the Gray Tree retired)
@@ -19821,14 +19821,14 @@ const ARTIST_VARIANTS = {
     {ground:'#f3eee1',mark:{cloud:.6,beam:.25,dot:.15},size:[.08,.28],edge:.8,alpha:.65,layout:{flow:.6,scatter:.4},density:.4,layers:2,lines:.5},   // Improvisation
     {ground:'#f7f4ec',mark:{bar:.3,tri:.3,rect:.2,disc:.2},size:[.03,.16],layout:{flow:1},density:.3,outline:.6,lines:.4},   // On White II
   ],
-  gold: [
-    {ground:'#5a4826',mark:{tile:.3,goldspiral:.3,target:.2,eye:.2},size:[.03,.1],layout:{field:.5,scatter:.5},density:.6,tone:'gold'},   // What he heard
-    {mark:{tile:.4,goldspiral:.3,target:.3},size:[.03,.08],layout:{grid:1},density:.8},
-    {mark:{goldspiral:.5,ring:.5},size:[.06,.2],layout:{scatter:1},density:.4,lines:.5},
-    {ground:'#5a1a1a',mark:{disc:.5,arc:.5},size:[.03,.1],alpha:.9,layout:{radial:1},density:.4,tone:'gold'},
-    {ground:'#5a4826',mark:{rect:.4,target:.4,goldspiral:.2},size:[.02,.06],layout:{field:.6,scatter:.4},density:.8,tone:'gold'},   // The Kiss
+  gold: [   // slot order = solo variants: What he heard, the ornament dress, the golden vine, the golden rain, the Kiss, Tree of Life, Farm Garden
+    {ground:'#b8913a',mark:{tile:.35,goldspiral:.25,target:.2,eye:.2},size:[.03,.1],layout:{flow:.5,field:.5},density:.6,tone:'gold'},   // What he heard: gold mosaic, dark ribbons, spirals and eyes
+    {ground:'#3a2a14',mark:{panel:.3,goldspiral:.3,target:.2,dot:.2},size:[.03,.1],layout:{grid:1},density:.7,tone:'gold'},   // the ornament dress: gold panels of spirals, dots and targets
+    {ground:'#b8913a',mark:{goldspiral:.55,stem:.25,tile:.2},size:[.04,.14],layout:{flow:.6,field:.4},density:.4,lines:.5,tone:'gold'},   // the golden vine: a vine of spirals over the gold
+    {ground:'#2e1e34',mark:{disc:.6,dot:.25,target:.15},size:[.02,.07],alpha:.9,layout:{flow:.6,stack:.4},density:.5,tone:'gold'},   // the golden rain: gold coins falling in the dark
+    {ground:'#5a4826',mark:{rect:.35,target:.3,arch:.2,goldspiral:.15},size:[.02,.07],layout:{field:.6,scatter:.4},density:.8,tone:'gold'},   // The Kiss: one mantle, his rectangles, her circles
     {ground:'#efe2bc',mark:{goldspiral:.6,eye:.25,tri:.15},size:[.04,.12],layout:{radial:.5,scatter:.5},density:.4,tone:'gold'},    // Tree of Life
-    {ground:'#2c4628',mark:{dot:.7,disc:.3},size:[.02,.06],layout:{grid:1},density:1},   // Farm Garden with Sunflowers
+    {ground:'#2c4628',mark:{dot:.5,petal:.3,disc:.2},size:[.02,.06],layout:{field:1},density:1},   // Farm Garden: a carpet of blooms, sunflowers
   ],
   rothko: [   // slot order = solo variants: No. 61, Orange and Yellow, White Center, Four Darks in Red, Seagram, Multiform, No. 10, Chapel
     {mark:{field:1},size:[.3,.6],edge:.9,alpha:.8,layout:{stack:1},density:.5},   // What he heard
@@ -19840,15 +19840,15 @@ const ARTIST_VARIANTS = {
     {ground:'#e4c89a',mark:{field:1},size:[.15,.35],edge:.3,alpha:.6,layout:{scatter:1},density:.5},
     {ground:'#1a1418',mark:{field:1},size:[.4,.7],edge:.7,alpha:.5,layout:{stack:1},density:.3,tone:'dark'},
   ],
-  bulge: [   // slot order = solo phases: Folklore, Vonal, Vega, Supernovae, Kezdi cubes, Zebra, Vonal tunnel
+  bulge: [   // slot order = solo phases: What he heard, Folklore, Vonal, Vega, Supernovae, Hexagon cubes, Zebra, Vonal tunnel
     {mark:{bulge:.5,disc:.25,diamond:.25},size:[.04,.1],layout:{grid:1},density:1,warp:.6},   // What he heard
-    {ground:'#141418',mark:{rect:.5,disc:.5},size:[.03,.06],layout:{grid:1},density:1},
-    {ground:'#3a3a2a',mark:{vstripes:1},size:[.02,.05],layout:{stack:1},density:.8},
-    {mark:{bulge:.7,checker:.3},size:[.02,.05],layout:{grid:1},density:1},
-    {ground:'#16161a',mark:{rect:.6,dot:.4},size:[.01,.03],layout:{grid:1},density:1},
-    {mark:{cube:1},size:[.015,.04],layout:{grid:1},density:1},
-    {ground:'#0e0c10',mark:{band:1},size:[.02,.04],layout:{stack:1},density:.8},
-    {ground:'#0e0e14',mark:{rect:1},size:[.05,.15],layout:{radial:1},density:.5},
+    {ground:'#141418',mark:{tile:.5,diamond:.3,disc:.2},size:[.03,.06],layout:{grid:1},density:1},   // Folklore planétaire: his plastic alphabet, a form in every square
+    {ground:'#1a1428',mark:{nest:.7,gridline:.3},size:[.03,.08],layout:{grid:1},density:.8},   // Vonal: nests of square lines, pyramids seen from above
+    {mark:{bulge:.7,checker:.3},size:[.02,.05],layout:{grid:1},density:1},   // Vega
+    {ground:'#16161a',mark:{rect:.6,dot:.4},size:[.01,.03],layout:{grid:1},density:1},   // Supernovae
+    {mark:{cube:1},size:[.015,.04],layout:{grid:1},density:1},   // Hexagon cubes
+    {ground:'#0e0c10',mark:{band:1},size:[.02,.04],layout:{stack:1},density:.8},   // Zebra
+    {ground:'#0e0e14',mark:{nest:.6,rect:.4},size:[.05,.15],layout:{radial:1},density:.5},   // Vonal tunnel: a corridor ruled in his lines
   ],
   wave: [
     {ground:'#f4f2ec',mark:{wavyline:1},size:[.015,.04],layout:{stack:1},density:.9},   // What she heard
@@ -19870,14 +19870,14 @@ const ARTIST_VARIANTS = {
     {ground:'#1c3a52',mark:{goldspiral:.6,ring:.4},size:[.03,.12],layout:{radial:1},density:.3,tone:'pastel',lines:.6},            // Primordial Chaos
     {ground:'#e8e2cc',mark:{stem:1},size:[.1,.3],layout:{grid:1},density:.3},                                                       // Botanical
   ],
-  arcs: [
-    {ground:'#dedbd4',mark:{nest:.7,poly:.3},size:[.3,.6],layout:{radial:1},density:.3},   // What he heard
-    {mark:{nest:1},size:[.1,.4],layout:{radial:.5,grid:.5},density:.3},
+  arcs: [   // slot order = solo variants: What he heard, Jasper's Dilemma, Protractor, Black Paintings, Hyena Stomp, Irregular Polygon, the interlace, Notched stripes
+    {ground:'#dedbd4',mark:{nestpoly:.7,nest:.3},size:[.3,.6],layout:{radial:1},density:.3},   // What he heard: a nested polygon
+    {ground:'#e2e0da',mark:{nest:1},size:[.15,.4],layout:{stack:.5,grid:.5},density:.25},   // Jasper's Dilemma: two concentric squares on the grey-white wall
     {mark:{protractor:.7,arc:.3},size:[.2,.5],layout:{radial:1},density:.25},   // Protractor
-    {mark:{nest:1},size:[.2,.5],layout:{grid:1},density:.2},
+    {ground:'#0e0c14',mark:{nest:.6,gridline:.4},size:[.2,.5],layout:{grid:1},density:.2,lines:.6,tone:'pure'},   // Black Paintings: his two patterns in thin lines of colour
     {ground:'#eee8da',mark:{nest:.7,stripes:.3},size:[.15,.45],layout:{grid:1},density:.25},   // Hyena Stomp
-    {mark:{poly:.7,bar:.3},size:[.3,.6],alpha:.95,layout:{grid:1},density:.15},   // Irregular Polygon
-    {ground:'#141420',mark:{ring:.6,arc:.4},size:[.08,.25],layout:{scatter:1},density:.5},
+    {ground:'#e2e0da',mark:{poly:.7,bar:.3},size:[.3,.6],alpha:.95,layout:{grid:1},density:.15},   // Irregular Polygon
+    {ground:'#101018',mark:{protractor:.4,ring:.4,arc:.2},size:[.1,.3],layout:{flow:.5,radial:.5},density:.3},   // the interlace: his Protractor rings linked into a chain
     {ground:'#eee8da',mark:{step:.6,nest:.4},size:[.1,.35],layout:{radial:.5,grid:.5},density:.3,lines:0},   // Notched stripes
   ],
   pop: [
@@ -19891,13 +19891,13 @@ const ARTIST_VARIANTS = {
     {ground:'#2a7ae8',mark:{hgheart:.55,hgfig:.25,rdog:.2},size:[.08,.2],layout:{radial:.6,scatter:.4},density:.45},     // The Heart
   ],
   mitchell: [
-    {mark:{brush:1},size:[.05,.16],layout:{scatter:.6,radial:.4},density:.4},   // What she heard
-    {mark:{brush:1},size:[.04,.14],layout:{scatter:1},density:.35},
-    {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},
-    {mark:{brush:1},size:[.05,.1],layout:{scatter:1},density:.5},
-    {mark:{brush:1},size:[.05,.12],layout:{radial:1},density:.5,tone:'dark'},
-    {ground:'#e88a7a',mark:{brush:1},size:[.05,.12],layout:{radial:1},density:.4,tone:'gold'},
-    {mark:{brush:1},size:[.05,.1],layout:{scatter:1},density:.2},
+    {ground:'#f7f4ec',mark:{brush:.85,vdrip:.15},size:[.05,.16],layout:{field:.6,flow:.4},density:.7},   // What she heard: her Grande Vallée, masses of one colour, edge to edge
+    {mark:{brush:1},size:[.04,.14],layout:{scatter:1},density:.35},   // Gestural Garden
+    {mark:{brush:1},size:[.05,.2],layout:{radial:1},density:.5},   // Color Bursts
+    {mark:{brush:1},size:[.05,.1],layout:{scatter:1},density:.5},   // Diptych
+    {mark:{brush:.85,vdrip:.15},size:[.05,.12],layout:{radial:1},density:.5,tone:'dark'},   // Dark Mass: one heavy uneven mass (Calvi)
+    {ground:'#f6f1e2',mark:{brush:.7,vdrip:.3},size:[.05,.12],layout:{stack:.6,scatter:.4},density:.4,tone:'gold'},   // Sunflowers: warm masses, their dark hanging down
+    {mark:{brush:1},size:[.05,.1],layout:{scatter:1},density:.2},   // Late White
   ],
   monet: [   // in a fusion Monet is the water the partner paints on: every chord lays a patch of tonal touches UNDER the other hand
     {mark:{surface:.9,disc:.1},size:[.09,.14],edge:0,alpha:.92,layout:{field:.7,scatter:.3},density:.9},   // What he heard
@@ -19919,17 +19919,17 @@ const ARTIST_VARIANTS = {
     {ground:'#1e3f6e',mark:{petal:.7,stem:.3},size:[.02,.06],layout:{flow:1},density:.4,tone:'dark'},
   ],
   lichtenstein: [
-    {ground:'#faf8f0',mark:{benday:.35,lcboom:.25,lcbrush:.2,panel:.2},size:[.1,.3],layout:{grid:.5,scatter:.5},density:.3,outline:1},   // What he heard
+    {ground:'#faf8f0',mark:{panel:.35,lcmirror:.3,benday:.2,lcboom:.15},size:[.1,.3],layout:{grid:.5,scatter:.5},density:.3,outline:1},   // What he heard: panels, mirrors, dots
     {ground:'#faf8f0',mark:{panel:.4,benday:.3,lcboom:.2,speech:.1},size:[.06,.14],layout:{grid:1},density:.6,outline:1},   // Mosaic: comic panels
-    {ground:'#faf8f0',mark:{panel:.5,benday:.3,stripes:.2},size:[.1,.3],layout:{grid:1},density:.3,outline:1},   // Perfect and Imperfect Paintings
+    {ground:'#faf8f0',mark:{poly:.5,benday:.3,beam:.2},size:[.1,.3],layout:{grid:.5,scatter:.5},density:.3,outline:1},   // Perfect and Imperfect Paintings: a line for every passage cutting the canvas into polygons
     {ground:'#e8e7e3',mark:{lcmirror:.6,benday:.4},size:[.2,.45],layout:{stack:1},density:.15,outline:1},   // Mirrors: zones of dots, flat colour and light
     {ground:'#faf8f0',mark:{lcbrush:.8,benday:.2},size:[.12,.3],layout:{flow:1},density:.3,outline:1},   // Brushstrokes
-    {ground:'#faf8f0',mark:{panel:.5,benday:.3,lcboom:.2},size:[.1,.3],layout:{grid:1},density:.3,outline:1},   // Modern Painting with Clef: Deco panels
+    {ground:'#faf8f0',mark:{panel:.4,rays:.2,arc:.2,benday:.2},size:[.1,.3],layout:{grid:1},density:.3,outline:1},   // Modern Painting with Clef: Deco panels, rays, arcs and steps
     {ground:'#faf8f0',mark:{lcridge:.65,benday:.35},size:[.1,.3],layout:{stack:1},density:.25,outline:1},   // Landscape
   ],
   klee: [
-    {ground:'#efe6d2',mark:{tile:.4,step:.3,dot:.3},size:[.03,.1],layout:{grid:.5,scatter:.5},density:.4,outline:.5},   // What he heard
-    {mark:{tile:1},size:[.04,.1],layout:{grid:1},density:1},
+    {ground:'#16100f',mark:{disc:.3,arch:.2,rect:.2,tri:.15,cutout:.15},size:[.06,.16],edge:.1,alpha:.85,layout:{flow:.6,stack:.4},density:.4,outline:0},   // What he heard: his Fugue in Red, forms on the dark, each again and again from the deep up to the piece's one colour
+    {ground:'#efe6d2',mark:{tile:.4,step:.3,dot:.3},size:[.03,.1],layout:{grid:.5,scatter:.5},density:.4,outline:.5,tone:'pastel'},   // Klee's world (the first Listens): squares, the walking line, in watercolour
     {ground:'#e8e0d0',mark:{rect:1},size:[.04,.12],alpha:.6,layout:{scatter:1},density:.6,edge:0},
     {ground:'#1e1814',mark:{rect:.5,tri:.3,arch:.2},size:[.04,.1],layout:{stack:.6,grid:.4},density:.8,edge:0},          // Castle and Sun
     {ground:'#141420',mark:{dotline:.7,dot:.3},size:[.05,.2],layout:{flow:1},density:.3,edge:0,tone:'pastel'},
@@ -19946,8 +19946,8 @@ const ARTIST_VARIANTS = {
     {ground:'#282434',mark:{fan:1},size:[.3,.6],layout:{scatter:.55,radial:.45},density:.1},
     {ground:'#161422',mark:{blob:.7,disc:.3},size:[.05,.12],layout:{stack:.6,grid:.4},density:.45},
   ],
-  thomas: [   // slot order = solo variants: Resurrection, Concerto, Starry Night, Snoopy, Eclipse, Red Azaleas
-    {ground:'#f5f1e6',mark:{dab:1},size:[.02,.05],layout:{rings:.4,stack:.4,flow:.2},density:1,tone:'pure'},   // What she heard
+  thomas: [   // slot order = solo variants: What she heard (her Sonata), Resurrection, Concerto, Starry Night, Snoopy, Eclipse, Red Azaleas
+    {ground:'#f5f1e6',mark:{dab:.85,vband:.15},size:[.015,.04],layout:{grid:.7,stack:.3},density:1,tone:'pure'},   // What she heard: her Sonata, columns of dabs in one colour over upright bands of the others
     {ground:'#f5f1e6',mark:{dab:1},size:[.012,.03],layout:{radial:1},density:.9},                                   // Resurrection: rings from the centre
     {ground:'#f7f3ea',mark:{dab:1},size:[.014,.034],layout:{grid:1},density:.9},                                    // Concerto: rows
     {ground:'#0f1a4a',mark:{dab:1},size:[.012,.03],layout:{grid:.7,scatter:.3},density:.9,tone:'pure'},            // Starry Night: columns on night blue
