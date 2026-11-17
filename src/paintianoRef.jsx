@@ -6968,11 +6968,11 @@ function drawMondrianOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
   //  F = Lozenge (diamond canvas, grid rotated 45°)
   //  G = Composition in Colour A, 1917 (floating planes in his four colours of that year, short black bars; the Tree retired, code kept)
   //  H = Pier & Ocean (scattered plus/minus marks forming a mesh)
-  // VARIANT: 0 What he heard (_mdListen, generative) · 1 Victory Boogie Woogie · 2 Composition with Red, Yellow and Blue · 3 New York City · 4 Broadway Boogie Woogie · 5 Lozenge · 6 Composition in Colour A (1917) · 7 Checkerboard 1919 (the Boogie-Woogie tracks, the old sparse grid, Pier & Ocean and the Gray Tree retired, approved). Free: 0 and 1.
+  // VARIANT: 0 What he heard (his late line rhythm, Place de la Concorde / Trafalgar Square; the old grid _mdListen retired, code kept) · 1 Victory Boogie Woogie · 2 Composition with Red, Yellow and Blue · 3 New York City · 4 Broadway Boogie Woogie · 5 Lozenge · 6 Composition in Colour A (1917) · 7 Checkerboard 1919 (the Boogie-Woogie tracks, the old sparse grid, Pier & Ocean and the Gray Tree retired, approved). Free: 0 and 1.
   const PHASES = ['L','A','K','D','E','F','G','H'];
   const _mpn = _capN(8);
   const phase = PHASES[((phaseIndex|0)%_mpn+_mpn)%_mpn];
-  if(phase==='L'){ _mdListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(phase==='L'){ mondrianPhaseConcorde(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // What he heard: the rhythm of his late lines (the old listening grid _mdListen retired, code kept)
   if(phase==='K'){ mondrianPhaseClassic(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='H'){ mondrianPhaseCheckerboard(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(phase==='E'){ mondrianPhaseBroadway(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -7251,6 +7251,70 @@ function mondrianPhaseLozenge(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   _setCurE(0.5);
 }
 
+// ── Mondrian · What he heard (Počúva) — the piece drawing its own Mondrian in the language he found listening to jazz
+// and boogie-woogie: Place de la Concorde / Trafalgar Square (1938–43), his late Paris, London and New York canvases:
+// white, the black lines gathering toward the edges and leaving the middle open, many of them doubled or tripled
+// close beside each other, some stopping at another line; the colour in one band held against the canvas's edge, and
+// in the channels between close lines, and in short stretches of the lines themselves, red, yellow and blue.
+// Here the piece's rhythm: a vertical where each passage ends, doubled where a passage repeats the one before it,
+// tripled where it repeats it closely; a horizontal where each of its voices sits, doubled where two voices sit close;
+// the lines as heavy as the piece is loud. Its peaks the bands, in their chords' primaries, at the edge nearest to
+// where they fall in time and register; its loud stretches fill the channels there; its loudest chords colour short
+// stretches of line, each where it falls. How much colour, the piece's life decides. Line by line as the piece plays.
+function mondrianPhaseConcorde(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH); const A=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A);
+  ctx.fillStyle=isBW?'#efeeea':'#f5f2ea'; ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), r=_seedRnd(3991,ss,0,0); r();
+  const dens=A.ch?A.ch.density:0.3, lw=Math.max(3,Math.round(D*(0.012+0.006*clamp((X.loud-0.3)/0.5,0,1)))), gap=lw*2.4;
+  const edge=(u)=>(1-Math.cos(Math.PI*clamp(u,0,1)))/2;   // the lines gather toward the edges, the middle stays open
+  const xAt=(t)=>CW*(0.03+0.94*edge(t)), yAt=(m)=>CH*(0.03+0.94*edge(1-A.reg(m)));
+  // the verticals: the passages' ends, doubled or tripled where a passage repeats the one before it
+  const nS=Math.round(clamp(4+6*dens,4,9)), G=_kd2Phrases(A,nS), vx=[];
+  const like=(a,b)=>!a||!b?0:1-clamp(Math.abs(a.top-b.top)/10+Math.abs(a.vmax-b.vmax)*2,0,1);
+  G.forEach((g,k)=>{ if(k===G.length-1) return; let x=xAt(g.t1); if(vx.some(v=>Math.abs(v.x-x)<gap*1.5)) x+=gap*(x<CW/2?1.6:-1.6); const s=like(g,G[k+1]), short=g.n<(cn/G.length)*0.7, d=x<CW/2?1:-1;
+    vx.push({x,t:g.b,short}); if(s>0.4) vx.push({x:x+d*gap,t:g.b,short:false}); if(s>0.75) vx.push({x:x+2*d*gap,t:g.b,short:false}); });
+  // the horizontals: where the voices sit, doubled where two sit close
+  const regs=[]; A.phrases.forEach(p=>{ regs.push(p.top); if(X.poly>=1.6) regs.push(p.bass); }); regs.sort((a,b)=>a-b);
+  const nH=Math.round(clamp(4+4*dens,4,8)), hy=[]; for(let k=0;k<nH;k++){ const m=regs[Math.min(regs.length-1,Math.floor((k+0.5)/nH*regs.length))]; let y=yAt(m);
+    const near=hy.find(h=>Math.abs(h.y-y)<gap*2.5); if(near){ if(!near.dbl){ near.dbl=true; const d=near.y<CH/2?1:-1; hy.push({y:near.y+d*gap*1.7,dbl:true}); } continue; } hy.push({y,dbl:false}); }
+  hy.sort((a,b)=>a.y-b.y); vx.sort((a,b)=>a.x-b.x);
+  for(const v of vx){ v.y0=0; v.y1=CH; if(v.short&&hy.length>1){ const k=Math.floor(r()*hy.length); if(r()<0.5) v.y1=hy[k].y+lw/2; else v.y0=hy[k].y-lw/2; } }
+  // how much colour: as much as the piece has life (a calm piece stays airy, a lively loud one fills its channels)
+  const E=clamp(0.35*dens+0.65*(X.energy==null?0.5:X.energy),0,1), tOfX=(x)=>Math.acos(clamp(1-2*clamp((x/CW-0.03)/0.94,0,1),-1,1))/Math.PI;
+  const snapAt=(i)=>_mdSnap(_picChord(chords,clamp(i,0,cn-1),gc,isBW).rgb,isBW), fill=(col,x,y,w,h)=>{ ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`; ctx.fillRect(x,y,w,h); };
+  const xs=[0,...vx.map(v=>v.x),CW], ys=[0,...hy.map(h=>h.y),CH], nI=xs.length-1, nJ=ys.length-1;
+  const bounded=(i,j)=>{ const ok=(k)=>k===0||k===xs.length-1||(vx[k-1].y0<=ys[j]+1&&vx[k-1].y1>=ys[j+1]-1); return ok(i)&&ok(i+1); };
+  const cellBox=(i,j)=>({x:xs[i]+(i?lw/2:0),y:ys[j]+(j?lw/2:0),w:xs[i+1]-xs[i]-(i?lw/2:0)-(i<nI-1?lw/2:0),h:ys[j+1]-ys[j]-(j?lw/2:0)-(j<nJ-1?lw/2:0)});
+  const taken=new Set();
+  // the bands: the piece's peaks, each in its chord's primary, in the long cell against the edge nearest to where it falls
+  const peaks=A.phrases.slice().sort((a,b)=>b.vmax-a.vmax).slice(0,1+Math.round(2*E));
+  for(const q of peaks){ const px=xAt(q.t), py=yAt(q.top); let best=null, bd=1e9;
+    for(let i=0;i<nI;i++) for(let j=0;j<nJ;j++){ if(!(i===0||j===0||i===nI-1||j===nJ-1)||taken.has(i+','+j)||!bounded(i,j)) continue; const b=cellBox(i,j), a=b.w*b.h;
+      if(b.w<lw||b.h<lw||a<CW*CH*0.01||a>CW*CH*0.09||Math.max(b.w/b.h,b.h/b.w)<2.2) continue; const d=Math.max(0,b.x-px,px-b.x-b.w)+Math.max(0,b.y-py,py-b.y-b.h); if(d<bd){ bd=d; best=[i,j,b]; } }
+    if(!best) continue; taken.add(best[0]+','+best[1]); if(q.a<played) fill(snapAt(q.a),best[2].x,best[2].y,best[2].w,best[2].h); }
+  // the channels between close lines, filled where the piece is loud there, in the primary of the chord sounding there
+  const chans=[]; for(let i=0;i<nI;i++) for(let j=0;j<nJ;j++){ if(taken.has(i+','+j)||!bounded(i,j)) continue; const b=cellBox(i,j); if(b.w<lw*0.6||b.h<lw*0.6) continue;
+    if(b.w<gap*1.9||b.h<gap*2.6){ const t=tOfX(b.x+b.w/2), ci=Math.floor(t*(cn-1)); let sv=0,sn=0; for(let k=Math.max(0,ci-3);k<=Math.min(cn-1,ci+3);k++){ const e=A.ev[k]; if(e){ sv+=e.v; sn++; } } chans.push({b,ci,s:(sn?sv/sn:0)+0.08*Math.sin((i*7+j*13)*1.3)}); } }
+  chans.sort((a,b)=>b.s-a.s); const nCh=Math.round(chans.length*(0.2+0.6*E));
+  for(const ch of chans.slice(0,nCh)){ if(ch.ci<played) fill(snapAt(ch.ci),ch.b.x,ch.b.y,ch.b.w,ch.b.h); }
+  // the lines: the horizontals from the start, each vertical as its passage ends
+  ctx.fillStyle=isBW?'#141414':'#141210';
+  for(const h of hy) ctx.fillRect(0,h.y-lw/2,CW,lw);
+  for(const v of vx){ if(v.t>played+1) continue; ctx.fillRect(v.x-lw/2,v.y0,lw,v.y1-v.y0); }
+  // the coloured stretches of line: the loudest chords, each on the short stretch of line nearest to where it falls
+  const segs=[]; const shortMax=D*0.13;
+  vx.forEach((v,vi)=>{ const cuts=[v.y0,...hy.map(h=>h.y).filter(y=>y>v.y0&&y<v.y1),v.y1]; for(let k=0;k<cuts.length-1;k++){ const a=cuts[k]-(k?lw/2:0), b=cuts[k+1]+(k<cuts.length-2?lw/2:0); if(b-a>lw*1.5&&b-a<shortMax) segs.push({o:'v',x:v.x,a,b,t:v.t,key:'v'+vi+'_'+k}); } });
+  hy.forEach((h,hi)=>{ const cuts=[0,...vx.filter(v=>v.y0<=h.y&&v.y1>=h.y).map(v=>v.x),CW]; for(let k=0;k<cuts.length-1;k++){ const a=cuts[k]-(k?lw/2:0), b=cuts[k+1]+(k<cuts.length-2?lw/2:0); if(b-a>lw*1.5&&b-a<shortMax) segs.push({o:'h',y:h.y,a,b,key:'h'+hi+'_'+k}); } });
+  const ev=[]; for(let i=0;i<cn;i++){ const e=A.ev[i]; if(e) ev.push(e); } ev.sort((a,b)=>b.v-a.v);
+  const nC=Math.round(3+9*E), used=new Set(); let k2=0;
+  // (laid out for the whole piece, so nothing moves while it plays; each shows once its chord has sounded)
+  for(const e of ev){ if(k2>=nC) break; const ex=xAt(e.t), ey=yAt(e.top); let best=null, bdd=1e9;
+    for(const s of segs){ if(used.has(s.key)) continue; const sx=s.o==='v'?s.x:(s.a+s.b)/2, sy=s.o==='v'?(s.a+s.b)/2:s.y, d=Math.abs(sx-ex)+Math.abs(sy-ey); if(d<bdd){ bdd=d; best=s; } }
+    if(!best) break; used.add(best.key); k2++; if(e.i>=played||(best.o==='v'&&best.t>played+1)) continue;
+    const col=_mdSnap(_picChord(chords,e.i,gc,isBW).rgb,isBW); ctx.fillStyle=`rgb(${col[0]},${col[1]},${col[2]})`;
+    if(best.o==='v') ctx.fillRect(best.x-lw/2,best.a,lw,best.b-best.a); else ctx.fillRect(best.a,best.y-lw/2,best.b-best.a,lw); }
+  _setCurE(0.5);
+}
 // ── Mondrian G · Composition in Colour A / B (1917) — the year he came to the plane: on white, small rectangles of flat
 // colour in his four of that year (blue, ochre, crimson, vermilion), floating, some laid over others, and short black
 // bars among them, level or upright. Here every rectangle a chord the piece leans on (loud, or held), in the one of his
