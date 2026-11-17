@@ -3421,7 +3421,8 @@ function _pxCent(P){ let x=0,y=0; for(const p of P){ x+=p[0]; y+=p[1]; } return 
 function picassoAnalytic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
   const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A); const tintC=_pxCol(chords,(A.phrases[0]||{a:0}).a,gc,isBW);
-  const ochre=isBW?[150,150,150]:_pxMix([164,130,90],tintC,0.3), dark=isBW?[38,38,38]:_pxMix([44,36,28],tintC,0.06), light=isBW?[236,236,232]:_pxMix([238,224,194],tintC,0.06);
+  const tone=(c)=>{ if(isBW) return _pxGrey(c); let [h,s,l]=_pxHsl(c); s=s*0.15+Math.min(s,0.17)*0.85; l=l*0.5+0.5*0.5; return _pxRgbH(h,Math.max(0,Math.min(1,s)),Math.max(0.15,Math.min(0.85,l))); };
+  const ochre=isBW?[150,150,150]:_pxMix([164,130,90],tone(tintC),0.25), dark=isBW?[38,38,38]:_pxMix([44,36,28],tintC,0.06), light=isBW?[236,236,232]:_pxMix([238,224,194],tintC,0.06);
   const g=ctx.createLinearGradient(0,0,0,CH); g.addColorStop(0,_pxCss(_pxMix(ochre,light,0.15))); g.addColorStop(1,_pxCss(_pxMix(ochre,dark,0.45))); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
   const r0=_pxR(70100,ss); ctx.save(); _pxBrushIn(ctx,0,0,CW,CH,ochre,r0,D,240,null,0.28); ctx.restore(); _pxWash(ctx,CW,CH,ochre,ss,10,0.08);
   // the form: a tall pyramid-oval, as his seated figures and still lifes were built; cut into planes by the notes
@@ -3432,7 +3433,7 @@ function picassoAnalytic(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   polys.forEach((P,i)=>{ if(!P._e) P._e=E[0]||{i:0,v:0.6,top:60}; }); polys.sort((p,q)=>p._e.i-q._e.i);
   const vis=Math.max(1,Math.ceil(polys.length*reveal));
   for(let i=0;i<vis;i++){ const P=polys[i], e=P._e, r=_pxR(70300+i,ss); const [qx,qy]=_pxCent(P); const d=Math.hypot((qx-cx)/ax,(qy-cy)/ay);
-    const L=0.18+0.7*e.v*(1.1-0.35*d)*(0.75+0.5*r()); const base=_pxMix(dark,light,Math.max(0.05,Math.min(0.95,L))); const tint=isBW?base:_pxMix(base,_pxMix(ochre,_pxCol(chords,e.i,gc,isBW),0.7),0.45);   /* the planes carry the music's colour through his ochre and grey */
+    const L=0.18+0.7*e.v*(1.1-0.35*d)*(0.75+0.5*r()); const base=_pxMix(dark,light,Math.max(0.05,Math.min(0.95,L))); const tint=isBW?base:_pxMix(base,tone(_pxCol(chords,e.i,gc,isBW)),0.5);   /* the planes carry the music's colour through his ochre and grey */
     const th=r()*6.2832, R=D*0.12; const gr=ctx.createLinearGradient(qx-Math.cos(th)*R,qy-Math.sin(th)*R,qx+Math.cos(th)*R,qy+Math.sin(th)*R); gr.addColorStop(0,_pxCss(_pxMix(tint,light,0.5),0.9)); gr.addColorStop(0.5,_pxCss(tint,0.86)); gr.addColorStop(1,_pxCss(_pxMix(tint,dark,0.6),0.9));
     ctx.save(); _pxPoly(ctx,P); ctx.fillStyle=gr; ctx.globalAlpha=Math.max(0.12,Math.min(0.95,1.35-0.9*d)); ctx.fill(); ctx.clip(); ctx.globalAlpha=1; let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(const p of P){ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); } _pxBrushIn(ctx,x0,y0,x1-x0,y1-y0,tint,r,D,8,th,0.25); ctx.restore();
     // the edges: some dark, some light, some left open (passage)
