@@ -7828,9 +7828,9 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     const _FIF=[0,7,2,9,4,11,6,1,8,3,10,5]; const _slot=_FIF.indexOf(_key);
     // frequencies: fa from key position, fb from register — wide spread of shapes
     const fa = 2 + (_slot % 7);
-    const fb = 2 + Math.round(dnaR*5);
+    let fb = 2 + Math.round(dnaR*5); { const gcd=(a,b)=>b?gcd(b,a%b):a; if(fb===fa) fb++; while(gcd(fa,fb)>1) fb++; }   // coprime, never equal: always a closed knot, never a single arc
     // phase from density/energy → opens loops into knots/stars; key adds offset
-    const delta = (Math.PI/2)*(0.3 + dnaD*1.4) + _slot*0.13;
+    let delta = (Math.PI/2)*(0.3 + dnaD*1.4) + _slot*0.13; { const q=((delta%(Math.PI/2))+Math.PI/2)%(Math.PI/2); if(q<0.25 || q>Math.PI/2-0.25) delta+=0.45; }   // off the phases where the figure folds flat
     const Ax = A*(0.85+0.15*dnaE), Ay = A*(0.85+0.15*(1-dnaE));
     const steps=Math.max(480, cn*12);
     ctx.lineCap='round'; ctx.lineJoin='round';
@@ -7838,18 +7838,18 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     let prev=null;
     for(let s2=0;s2<=steps;s2++){ const t=s2/steps, tt=t*Math.PI*2;
       const x=cx+Math.sin(fa*tt+delta)*Ax, y=cy+Math.sin(fb*tt)*Ay;
-      if(prev){ ctx.strokeStyle='rgba(201,168,76,.05)'; ctx.lineWidth=Math.max(3,S*0.011); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
+      if(prev){ ctx.strokeStyle='rgba(214,180,96,.09)'; ctx.lineWidth=Math.max(5,S*0.02); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
       prev={x,y};
     }
     // colour core (colour flows with the chords) - chord index maps through the
     // FULL song so played segments keep their colour; the core grows along the
     // curve with playback instead of re-flowing every frame.
     // a calm piece is one thread; a dense one a cord of up to five, side by side, each a neighbouring voice's colour
-    const coreT=N/cn, nT=1+Math.round(dnaDF*4);
+    const coreT=N/cn, nT=2+Math.round(dnaDF*3);
     for(let th=0; th<nT; th++){ prev=null; const k=th-(nT-1)/2, dd=delta+k*0.1, sx=1-Math.abs(k)*0.05;
     for(let s2=0;s2<=steps;s2++){ const t=s2/steps; if(t>coreT) break; const idx=Math.min(N-1,((t*cn)|0)+th), col=chordCol(idx), m=chordMeta(idx), tt=t*Math.PI*2;
       const x=cx+Math.sin(fa*tt+dd)*Ax*sx, y=cy+Math.sin(fb*tt)*Ay*sx;
-      if(prev){ ctx.strokeStyle=css(col, 0.55+0.3*m.vel); ctx.lineWidth=Math.max(1.3,S*0.0038); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
+      if(prev){ ctx.strokeStyle=css(col.map(v=>Math.min(255,v*(0.8+0.4*m.vel))), 0.6+0.35*m.vel); ctx.lineWidth=Math.max(1.6,S*0.0056); ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(x,y); ctx.stroke(); }
       prev={x,y};
     } }
     return;
@@ -7857,7 +7857,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
 
   if(pick===1){
     // — 1 · SÚHVEZDIE — chords on the circle of fifths; tetivy only between close ones —
-    const R=S*0.40;
+    const R=S*0.47;
     const pts=[];
     for(let i=0;i<N;i++){
       const chord=chords[Math.min(cn-1,i)], notes=(chord&&(chord.n||chord.notes))||[];
@@ -7870,9 +7870,9 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
       pts.push({x:cx+Math.cos(a)*rr, y:cy+Math.sin(a)*rr, i, slot});
     }
     for(let i=1;i<pts.length;i++){ const d=Math.abs(pts[i].slot-pts[i-1].slot); if(!(d<=1||d>=11)) continue;
-      const m=chordMeta(i); ctx.strokeStyle=css([201,168,76], 0.12+0.14*m.vel); ctx.lineWidth=1;
+      const m=chordMeta(i); ctx.strokeStyle=css([214,180,96], 0.22+0.25*m.vel); ctx.lineWidth=Math.max(1,S*0.0018);
       ctx.beginPath(); ctx.moveTo(pts[i-1].x,pts[i-1].y); ctx.lineTo(pts[i].x,pts[i].y); ctx.stroke(); }
-    for(const p of pts){ const m=chordMeta(p.i), col=chordCol(p.i); const rad=Math.max(1.2, S*0.003+m.dur*S*0.006);
+    for(const p of pts){ const m=chordMeta(p.i), col=chordCol(p.i); const rad=Math.max(1.6, (S*0.0045+Math.min(1.2,m.dur)*S*0.009)*(0.8+0.4*m.vel));
       const g=ctx.createRadialGradient(p.x,p.y,0.4,p.x,p.y,rad*2.4);
       g.addColorStop(0, css(col.map(q=>Math.min(255,q*1.3+30)),0.95)); g.addColorStop(0.4, css(col,0.7)); g.addColorStop(1, css(col,0));
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,rad*2.4,0,7); ctx.fill();
@@ -7958,11 +7958,12 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
 
   if(pick===4){
     // — 5 · VEJÁR — rays radiating at the golden angle, length = duration —
-    const fcy=CH*(0.52+0.10*dnaR);
+    const fcy=CH*(0.52+0.10*dnaR), Rmax=Math.hypot(Math.max(cx,CW-cx), Math.max(fcy,CH-fcy));
+    const ds=[]; for(let i=0;i<cn;i++) ds.push(chordMeta(i).dur); const so=ds.slice().sort((a,b)=>a-b), rank=(d)=>{ let lo=0,hi=so.length; while(lo<hi){ const md=(lo+hi)>>1; if(so[md]<d) lo=md+1; else hi=md; } return lo/Math.max(1,so.length-1); };   // a note's length among the piece's own: the fan fills the canvas whatever the tempo
     for(let i=0;i<N;i++){ const m=chordMeta(i), col=chordCol(i); const a=i*GA - Math.PI/2;
-      const r0=S*0.03, r1=r0+(S*0.10+m.dur*S*0.32);
+      const r0=S*0.03, r1=r0+Rmax*(0.3+0.7*rank(m.dur));
       const x0=cx+Math.cos(a)*r0, y0=fcy+Math.sin(a)*r0, x1=cx+Math.cos(a)*r1, y1=fcy+Math.sin(a)*r1;
-      ctx.strokeStyle=css(col, 0.4+0.35*m.vel); ctx.lineWidth=Math.max(1, S*0.0016); ctx.lineCap='round';
+      ctx.strokeStyle=css(col.map(v=>Math.min(255,v*(0.8+0.4*m.vel))), 0.45+0.4*m.vel); ctx.lineWidth=Math.max(1.2, S*(0.0018+0.0022*m.vel)); ctx.lineCap='round';
       ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
       ctx.fillStyle=css(col.map(q=>Math.min(255,q*1.3+30)), 0.85); ctx.beginPath(); ctx.arc(x1,y1, Math.max(1, S*0.004*m.vel+1),0,7); ctx.fill(); }
     return;
