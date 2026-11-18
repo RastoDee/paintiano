@@ -9903,6 +9903,48 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
 // RafFel · Sunflower 137.5° (Nov 2026): every note a seed, each turned the golden angle from the one before and set out by the
 // square root of its number (Vogel) — the head grows from its heart outward as the piece plays, its Fibonacci spirals (21, 34,
 // 55 …) showing by themselves, traced in gold. A seed is its note's colour, as large as the note is long, as bright as it is loud.
+// RafFel · Chladni figures (Nov 2026): the canvas a plate the piece sets ringing. Each passage drives it at its own pitch — a
+// higher passage a finer mode (n, m) — and sand gathers on the lines that stay still: cos nπx·cos mπy ± cos mπx·cos nπy = 0.
+// The sand is the passage's colour; when the next passage comes the figure changes and the old sand stays as a fainter ghost
+// beneath, so the end shows the whole piece, its last figure brightest. Hudba zviditeľnená fyzikou.
+const _RF_CH_MODES=(()=>{ const L=[]; for(let n=1;n<=9;n++) for(let m=n+1;m<=10;m++) L.push([n,m,n*n+m*m]); return L.sort((a,b)=>a[2]-b[2]); })();
+let _rfChCache=null;
+function _rfChladni(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
+  const prog=Math.max(1,Math.min(lim,chords.length))/chords.length; chords=chords0||chords;
+  const cn=chords.length, S=Math.min(CW,CH);
+  const css=(c,a)=>a===undefined?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  // ── the plate: dark metal, a faint sheen
+  const c0=chords[0], n0=(c0&&(c0.n||c0.notes))||[]; let g0=[40,30,50]; if(n0.length){ const m=n0[0].m!==undefined?n0[0].m:n0[0]; g0=gc(m,80); }
+  ctx.fillStyle=`rgb(${(g0[0]*0.06+8)|0},${(g0[1]*0.06+7)|0},${(g0[2]*0.06+12)|0})`; ctx.fillRect(0,0,CW,CH);
+  const sh=ctx.createLinearGradient(0,0,CW,CH); sh.addColorStop(0,'rgba(255,255,255,0.035)'); sh.addColorStop(0.5,'rgba(255,255,255,0)'); sh.addColorStop(1,'rgba(255,255,255,0.025)'); ctx.fillStyle=sh; ctx.fillRect(0,0,CW,CH);
+  // ── the passages and their sand (computed once per piece and size)
+  const key=cn+'|'+CW+'|'+CH+'|'+(sessionSeed|0)+'|'+mode+'|'+(chords[0]&&chords[0].t)+'|'+(chords[cn-1]&&chords[cn-1].t);
+  if(!_rfChCache || _rfChCache.key!==key){
+    const P=Math.max(4,Math.min(9,Math.round(3+Math.sqrt(cn)/4))), pass=[]; const rnd=_seedRnd(149,sessionSeed|0,0,0);
+    let lo=127,hi=0; for(let i=0;i<cn;i+=Math.max(1,(cn/300)|0)){ const ns=(chords[i]&&(chords[i].n||chords[i].notes))||[]; for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt; if(m<lo) lo=m; if(m>hi) hi=m; } }
+    const cell=Math.max(1.5,Math.min(CW,CH)/330), gx=Math.ceil(CW/cell), gy=Math.ceil(CH/cell), PI=Math.PI;
+    for(let p=0;p<P;p++){ const i0=Math.floor(p/P*cn), i1=Math.max(i0+1,Math.floor((p+1)/P*cn)); let sm=0,k=0; const wpc=new Float32Array(12);
+      for(let i=i0;i<i1;i++){ const ns=(chords[i]&&(chords[i].n||chords[i].notes))||[]; for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, v=nt.v!==undefined?nt.v:80; sm+=m; k++; wpc[((Math.round(m)%12)+12)%12]+=v/110*Math.min(1.6,(nt.durMs||400)/900+0.25); } }
+      const pm=k?sm/k:60, reg=Math.max(0,Math.min(1,(pm-lo)/Math.max(6,hi-lo))), md=_RF_CH_MODES[Math.min(_RF_CH_MODES.length-1, 2+Math.round(reg*14)+(p%2))], sg=(p%3===1)?-1:1, n=md[0], mm=md[1];
+      let wt=0; for(let q=0;q<12;q++) wt+=wpc[q]; const cum=[]; let acc=0; for(let q=0;q<12;q++){ acc+=wpc[q]/Math.max(1e-6,wt); cum.push(acc); }
+      const B=[...Array(12)].map(()=>[]);   // the sand by tone (one colour each), in the order it falls
+      for(let yy=0;yy<gy;yy++){ const y=(yy+0.5)/gy, cy1=Math.cos(n*PI*y), cy2=Math.cos(mm*PI*y);
+        for(let xx=0;xx<gx;xx++){ const x=(xx+0.5)/gx, f=Math.cos(n*PI*x)*cy2+sg*Math.cos(mm*PI*x)*cy1, af=Math.abs(f);
+          if(af<0.085 && rnd()<(1-af/0.085)){ const r=rnd(); let q=0; while(q<11 && cum[q]<r) q++; B[q].push((xx+rnd())*cell, (yy+rnd())*cell); } } }
+      for(const b of B){ for(let i=b.length/2-1;i>0;i--){ const j=(rnd()*(i+1))|0; const tx=b[i*2], ty=b[i*2+1]; b[i*2]=b[j*2]; b[i*2+1]=b[j*2+1]; b[j*2]=tx; b[j*2+1]=ty; } }   // fallen in any order: a passage half heard shows half its sand all over its figure
+      pass.push({B, i0, i1}); }
+    _rfChCache={key, pass, layer:null, upto:-1};
+  }
+  const C=_rfChCache, P=C.pass.length, at=prog*P, cur=Math.min(P-1,Math.floor(at)), fr=Math.min(1,at-cur);
+  const gs=Math.max(1.2,S*0.0042);
+  const grains=(c2,p,a,frac)=>{ const q=C.pass[p]; for(let pc=0;pc<12;pc++){ const b=q.B[pc], n=Math.floor(b.length/2*frac); if(!n) continue; const cl=gc(60+pc,90).map(v=>Math.min(255,v*1.1+30)); c2.fillStyle=css(cl,a); for(let g=0;g<n;g++){ c2.fillRect(b[g*2]-gs/2, b[g*2+1]-gs/2, gs, gs); } } };
+  // the passages before: ghosts, the older the fainter (kept as one picture until the next passage comes)
+  if(cur>0){ if(!C.layer || C.upto!==cur || C.layer.width!==CW || C.layer.height!==CH){ const L=(typeof document!=='undefined') ? document.createElement('canvas') : new OffscreenCanvas(CW,CH); L.width=CW; L.height=CH; const lc=L.getContext('2d');
+      for(let p=0;p<cur;p++){ const age=cur-p; grains(lc,p,Math.max(0.2,0.72-age*0.1),1); } C.layer=L; C.upto=cur; }
+    ctx.drawImage(C.layer,0,0); }
+  ctx.globalCompositeOperation='lighter'; grains(ctx,cur,0.9,fr); ctx.globalCompositeOperation='source-over';   // the passage playing now: its sand gathering, brightest where its lines cross
+  _setCurE(0.5);
+}
 // RafFel · Circle of fifths (Nov 2026): a rose window of the piece's harmony. Twelve petals in the order of fifths (C at the top,
 // G, D, A … round), each in its tone's colour; rings from the heart out to the rim are the piece in time, its start in the middle,
 // its end at the edge — a pane glows as much as its tone sounds in that stretch, dark glass where it is silent. Lead between the
@@ -10315,7 +10357,8 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
 
-  if(pick===5){
+  if(pick===5){ _rfChladni(ctx,CW,CH,chords,lim,gc,ss,mode,_chords0); return; }   // Chladni figures (the Composition parked at 925)
+  if(pick===925){
     // — 6 · KOMPOZÍCIA — scattered points joined into a coloured graph —
     // Deterministic scatter seeded from the piece, so it's stable per song.
     const rnd2=_seedRnd(137, ss, 1, 0);
