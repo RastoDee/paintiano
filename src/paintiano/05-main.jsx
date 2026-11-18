@@ -16584,7 +16584,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{ const on=!!(btlTab && btlAlone); if(!btlTab && btlAlone){ setBtlAlone(false); } if(on===btlAloneOn.current) return; btlAloneOn.current=on; _pfSysBars(on); },[!!btlTab, btlAlone]);
   useEffect(()=>{ try{
     if(btlTab){ if(playing && !micPainting && !micListening && !recording && handlePauseClickRef.current){ btlPausedRef.current=true; handlePauseClickRef.current(); } }
-    else if(btlPausedRef.current){ btlPausedRef.current=false; if(studioOn && !studioHome && holdPaused && !playing && !micPainting && !micListening && handlePauseClickRef.current) handlePauseClickRef.current(); }
+    else if(btlPausedRef.current){ btlPausedRef.current=false; if(studioOn && (!studioHome || (feedAt>=0 && feedLoaded!==null)) && holdPaused && !playing && !micPainting && !micListening && handlePauseClickRef.current) handlePauseClickRef.current(); }
   }catch(_){} },[!!btlTab]);
   // the gesture is shown once, where it can be used
   useEffect(()=>{ if(!_btlOn() || !studioOn || studioHome || !chords.length) return; let seen=false; try{ seen=localStorage.getItem('paintiano_btl_hint')==='1'; }catch(_){}
@@ -16681,7 +16681,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[studioFs, studioLive, studioHome]);
   const [stChg, setStChg] = useState(null);   // ✦ Change: null | 'music' | 'image' | 'paint' (the tab that is open)
-  const _stPaused = (go)=>{ if(playing && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} setTimeout(go, 160); } else go(); };
+  const stResumeRef = useRef(null);   // the painting a sheet paused (✦ Change → Music / Image / Mood): it plays on if the sheet closes with nothing new
+  const _stPaused = (go)=>{ if(playing && handlePauseClickRef.current){ stResumeRef.current={t:Date.now(), ch:chordsRef.current}; try{ handlePauseClickRef.current(); }catch(_){} setTimeout(go, 160); } else { stResumeRef.current=null; go(); } };
+  useEffect(()=>{ const R=stResumeRef.current; if(!R || pickMode || showMoodMenu) return; stResumeRef.current=null; if(Date.now()-R.t>180000) return;
+    const tm=setTimeout(()=>{ try{ if(chordsRef.current===R.ch && holdPausedRef.current && !playingRef.current && !recording && handlePauseClickRef.current){ wakeAudioRef.current=Date.now(); handlePauseClickRef.current(); } }catch(_){} }, 220);
+    return ()=>clearTimeout(tm); },[pickMode, showMoodMenu]);   // cancelled: the same painting plays on from where it stopped (a new piece plays by itself)
   const _stHome = ()=>{ setStChg(null); let pr=null; try{ pr=_captureHomeArt(); }catch(_){} _imageFromMusicRef.current=false; _musicFromImageRef.current=false;
     // home once its card's picture is ready (a frame or two): the card never shows up empty
     return new Promise(res=>{ let gone=false; const go=()=>{ if(gone) return; gone=true; if(backBtnRef.current) backBtnRef.current.click(); res(); };
@@ -19361,6 +19365,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         // one gesture: up = the next painting; everything else is a tap or a button (a hold shows the song, never pauses)
         const _fTE = (e)=>{ { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } if(MH.on){ MH.on=false; feedTouchRef.current=null; setMetaPoke(n=>n+1); return; } }
           const st=feedTouchRef.current; feedTouchRef.current=null; const tt=e.changedTouches && e.changedTouches[0]; if(!st || !tt) return;
+          if(!_acRunning() && !st.e){ try{ unlockAudio(); }catch(_){} }   // the lift is the gesture iOS takes for the sound (the touch down is not): a swipe wakes it, so the next painting plays
           if(st.fd){ const S=st.S||[], a=S[0], z=S[S.length-1], now=performance.now(); let v=0;   // the finger's speed in its last 100 ms (none if it stopped before it lifted)
             if(a && z && z[0]>a[0] && now-z[0]<80) v = st.ax==='y' ? (z[2]-a[2])/(z[0]-a[0]) : (z[1]-a[1])/(z[0]-a[0]);
             _fdEnd(st.fd, v); return; }
@@ -21809,6 +21814,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(!immersive || (viewMode==='image' && !studioFs && !(basicMode&&liteImageMode) && !(!basicMode&&composerDice&&imgComposer))) return;
           const s = _swipeStartRef.current; _swipeStartRef.current = null;
           if(!s) return;
+          if(s.fd && !_acRunning()){ try{ unlockAudio(); }catch(_){} }   // a swipe to another look: the lift wakes the sound (iOS), so it plays as a new painting does
           if(s.fd){ _swipeWasGestureRef.current = true; const S=s.S||[], a=S[0], z=S[S.length-1], now=performance.now(); let v=0;   // the finger's speed in its last 100 ms (none if it stopped before it lifted)
             if(a && z && z[0]>a[0] && now-z[0]<80) v = s.ax==='y' ? (z[2]-a[2])/(z[0]-a[0]) : (z[1]-a[1])/(z[0]-a[0]);
             _sdEnd(s.fd, v); return; }
