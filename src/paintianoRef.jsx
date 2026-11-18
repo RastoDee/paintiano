@@ -28808,18 +28808,31 @@ function _sig4Rank(m, z){
       const d=_sig4Dist(m, c); const s = -SIG4_KD*d + (x.v===0 ? SIG4_PB : 0) + (SIG4_FAIR[x.k]||0); return {k:x.k, v:x.v, s, d, c}; })
     .sort((a,b)=>(b.s-a.s) || (a.k<b.k?-1:a.k>b.k?1:a.v-b.v));
 }
-// The Signature is always a fusion (Nov 2026): two to four of the eight closest painters (each in its closest variant) share the
-// canvas, so the painting has their traits together (their mean) — the fusion whose traits sit closest to the music is the one;
-// its closest hand leads. Two hands that clash never share one. (One painter only when no fusion can be formed at all.)
-const SIG4_NEAR = 8, SIG4_LAM = 0, SIG4_MAXH = 4;   // the painters a fusion is formed from · what each hand past two has to earn · the most hands (as a Fusion has)
-const SIG4_GCT = 0.4, SIG4_AC = 0.35;     // the fusion's style: dense + tense over this → Genesis; stretches this far apart → Collage
-function _sig4Fusion(m, rank){
-  const best=[]; for(const x of rank){ if(!best.some(y=>y.k===x.k)) best.push(x); if(best.length>=SIG4_NEAR) break; }
-  let top=null; const n=best.length, mem=[];
-  const go=(i)=>{ if(mem.length>=2){ const c={}; for(const a of SIG4_AX) c[a]=mem.reduce((t,x)=>t+x.c[a],0)/mem.length; const d=_sig4Dist(m,c); const s=-SIG4_KD*d - SIG4_LAM*(mem.length-2); if(!top || s>top.s) top={mem:mem.slice(), s, d}; }
-    if(mem.length>=SIG4_MAXH) return; for(let j=i;j<n;j++){ if(mem.some(y=>_sigClash(y.k,best[j].k))) continue; mem.push(best[j]); go(j+1); mem.pop(); } };
+// The Signature is always a fusion (Nov 2026), its style read from the music first: stretches that differ (the windows' energy apart)
+// → Collage, dense and tense → Genesis, one even whole → Synthesis. Then the hands for that style, two to four of the closest painters
+// (each in its closest variant): a Synthesis / Genesis is one painting of their traits together (their mean, closest to the whole
+// music); a Collage's hands each carry the stretches they fit best (every hand at least one), weighed with the whole. Two hands that
+// clash never share one. SIG4_FAIRF: per painter, how far a near tie leans toward him — calibrated so every painter leads his fair
+// share of real music (the closest fit still wins; without it a few "middle" painters were in most signatures).
+const SIG4_NEAR = 8, SIG4_WIN = 2, SIG4_MAXH = 4;   // the painters a fusion is formed from (+ each stretch's two closest, for a Collage) · the most hands
+const SIG4_LAMC = 0.04, SIG4_CW = 0.75;              // what each Collage hand past two has to earn · how much the stretches weigh against the whole
+const SIG4_GCT = 0.4, SIG4_AC = 0.5;                // the style: dense + tense over this → Genesis; stretches this far apart → Collage
+const SIG4_FAIRF = {raffel:-0.075,picasso:0.059,matisse:0.087,pollock:0.2,bloom:0.102,kusama:-0.066,miro:0.153,mondrian:0.007,bauhaus:-0.001,kandinsky:0.04,gold:0.003,rothko:-0.2,bulge:0.015,wave:-0.018,spiral:-0.132,arcs:0.056,pop:-0.2,mitchell:0.2,monet:0.2,hokusai:0.051,lichtenstein:0.06,klee:-0.086,delaunay:0.081,thomas:0.041};
+function _sig4Fusion(m, rank, win, fs){
+  const pool=[]; for(const x of rank){ if(!pool.some(y=>y.k===x.k)) pool.push(x); if(pool.length>=SIG4_NEAR) break; }
+  if(fs==='A') for(const w of win){ const r=_sig4Rank(w,null); let n=0; for(const x of r){ if(++n>SIG4_WIN) break; if(!pool.some(y=>y.k===x.k)){ const wx=rank.find(y=>y.k===x.k); if(wx) pool.push(wx); } } }
+  let top=null; const mem=[];
+  const evalM=()=>{ const n=mem.length, c={}; for(const a of SIG4_AX) c[a]=mem.reduce((t,x)=>t+x.c[a],0)/n; let d=_sig4Dist(m,c), own=null;
+    if(fs==='A'){ own=new Array(n).fill(0); let dc=0; for(const w of win){ let bi=0, bd=1e9; mem.forEach((x,i)=>{ const q=_sig4Dist(w,x.c); if(q<bd){ bd=q; bi=i; } }); own[bi]++; dc+=bd; } dc/=win.length;
+      if(own.some(o=>o<1)) return; d=SIG4_CW*dc+(1-SIG4_CW)*d; }
+    const s=-SIG4_KD*d - (fs==='A' ? SIG4_LAMC*(n-2) : 0) + mem.reduce((t,x)=>t+(SIG4_FAIRF[x.k]||0),0)/n;
+    if(!top || s>top.s) top={mem:mem.slice(), s, own}; };
+  const go=(i)=>{ if(mem.length>=2) evalM(); if(mem.length>=SIG4_MAXH) return; for(let j=i;j<pool.length;j++){ if(mem.some(y=>_sigClash(y.k,pool[j].k))) continue; mem.push(pool[j]); go(j+1); mem.pop(); } };
   go(0);
-  return top; }
+  if(!top) return null;
+  // the lead: a Collage's hand that carries the most of the music, a Synthesis' / Genesis' closest one
+  const ord = top.own ? top.mem.map((x,i)=>[x,top.own[i]]).sort((a,b)=>(b[1]-a[1]) || (b[0].s-a[0].s)).map(q=>q[0]) : top.mem.slice().sort((a,b)=>b.s-a.s);
+  return {mem:ord, s:top.s}; }
 function computeSongSignature(events, opts){
   const _audio = !!(opts && opts.audio);
   events=_keyNormOf(events);   // key-free (see _keyD): the ✦ Signature is one for every key
@@ -28830,45 +28843,27 @@ function computeSongSignature(events, opts){
     if(_audio) for(const a of ['O','F','T','C','W']) m[a]*=0.5;   // a recording read by ear: its timing and voices are only roughly known
     const rank=_sig4Rank(m, z);
     const bestOf=(k)=>rank.find(x=>x.k===k);
-    // the music's own regimes: ten stretches of time, each with its energy — a piece that moves between calm and driven
-    // parts (an Adagio and its Allegro, a theme and its storm) is two characters
+    // the music's own regimes: ten stretches of time, each with its seven traits — a piece that moves between calm and driven
+    // parts (an Adagio and its Allegro, a theme and its storm) is several characters
     const t0=+ev[0].startMs||0, t1=+ev[ev.length-1].startMs||0, win=[];
-    if(ev.length>=60 && t1-t0>30000){ for(let i=0;i<10;i++){ const a=t0+(t1-t0)*i/10, b=t0+(t1-t0)*(i+1)/10; const part=ev.filter(c=>(+c.startMs||0)>=a && ((+c.startMs||0)<b || i===9)); if(part.length>=8){ const F=_sig4Feat(part); win.push({part, E:_sig4Axes(F.z).E}); } } }
-    let contrast=0, pa=null, pb=null;
-    if(win.length>=6){ const Es=win.map(w=>w.E).sort((x,y)=>x-y), q=(p)=>Es[Math.round((Es.length-1)*p)]; contrast=q(.85)-q(.15);
-      if(!_audio && contrast>0.6){ const mid=(q(.85)+q(.15))/2; const lo=[].concat(...win.filter(w=>w.E<mid).map(w=>w.part)), hi=[].concat(...win.filter(w=>w.E>=mid).map(w=>w.part));
-        if(lo.length>=20 && hi.length>=20){ const FL=_sig4Feat(lo), FH=_sig4Feat(hi); pa={m:_sig4Axes(FL.z), z:FL.z}; pb={m:_sig4Axes(FH.z), z:FH.z}; } } }
+    if(ev.length>=60 && t1-t0>30000){ for(let i=0;i<10;i++){ const a=t0+(t1-t0)*i/10, b=t0+(t1-t0)*(i+1)/10; const part=ev.filter(c=>(+c.startMs||0)>=a && ((+c.startMs||0)<b || i===9)); if(part.length>=8){ const F=_sig4Feat(part); const wm=_sig4Axes(F.z); if(_audio) for(const q of ['O','F','T','C','W']) wm[q]*=0.5; win.push(wm); } } }
+    let contrast=0; if(win.length>=6){ const Es=win.map(w=>w.E).sort((x,y)=>x-y), q=(p)=>Es[Math.round((Es.length-1)*p)]; contrast=q(.85)-q(.15); }
+    const fs0 = (win.length>=6 && contrast>SIG4_AC) ? 'A' : (m.C+m.T>SIG4_GCT) ? 'G' : 'E';
     const lead=rank[0]; let keys=[lead.k], phs=[lead.v], fs=null, why='solo';
-    const ok=(k, have)=>!have.includes(k) && !have.some(b=>_sigClash(k,b));
-    if(pa && pb){
-      // a piece of contrasting parts: the whole piece's painter, and beside him the painter of the part that differs from it most
-      // (among the whole piece's eight closest, so the two stay one signature)
-      const near=[]; for(const x of rank){ if(!near.includes(x.k)) near.push(x.k); if(near.length>=8) break; }
-      const far=(q)=>{ let d=0; for(const a of SIG4_AX){ const e=q.m[a]-m[a]; d+=e*e; } return d; };
-      const pt=far(pa)>=far(pb) ? pa : pb;
-      const B=_sig4Rank(pt.m, pt.z).find(x=>x.k!==lead.k && near.includes(x.k) && ok(x.k,[lead.k]));
-      if(B){ keys=[lead.k, B.k]; phs=[lead.v, B.v]; fs='A'; why='sections'; }
-    }
-    const FU = fs ? null : _sig4Fusion(m, rank);
-    if(FU){
-      // the closest fusion; its style from the music: dense and tense → a new painter born of their genes
-      // (Genesis), stretches that differ → side by side (Collage), one even whole → melted into one painting (Synthesis)
-      const mem=FU.mem.slice().sort((a,b)=>b.s-a.s); keys=mem.map(x=>x.k); phs=mem.map(x=>x.v); why='fusion';
-      fs = (m.C+m.T>SIG4_GCT) ? 'G' : (contrast>SIG4_AC) ? 'A' : 'E';
-    }
+    const FU=_sig4Fusion(m, rank, win, fs0);
+    if(FU){ keys=FU.mem.map(x=>x.k); phs=FU.mem.map(x=>x.v); fs=fs0; why='fusion'; }
     const mode = _audio
       ? (W.f.chrom>0.14 ? 'kontra' : W.bestMaj ? (W.f.dens>SIG_AUDIO_DENS_MID ? 'spectral' : 'harmony') : (W.f.dens>SIG_AUDIO_DENS_MID ? 'kontra' : 'phi'))
       : Object.keys(SIG_PALETTES).map(a=>{ const [b,p]=SIG_PALETTES[a]; let v=b; for(const k in p) v+=p[k]*z[k]; return [v,a]; }).sort((x,y)=>y[0]-x[0])[0][1];
     return {v:SIG_V, keys, ph:phs[0], ...(keys.length>1 ? {phs, fs} : {}), mode, z, f:W.f, seed:W.seed, why};
   }catch(_){ return null; }
 }
-// ── PICTURE SIGNATURE ── the one piece a picture "is": its composer in one of his two forms (or a Jam of two–three), the
-// jam's style and the palette. The picture is read on a fixed 96-wide grid (the same on every screen) into the same seven
-// traits a piece of music has — energy, light, order, flow, tension, richness, weight — and every composer's two forms
-// (COMPOSER_FORMS2) are described by theirs; the closest form is the picture's piece. A picture whose two halves (in the order
-// the music reads it) are two characters is a Collage of the whole's composer and the one of the half that differs most; a
-// rich, tense one a Genesis; an even, flowing one that two composers fit equally well a Synthesis. Two of one family (the
-// still ones, the motor ones) never share a stage. ISIG_CURATED: hand-picked for the built-in pictures (by title).
+// ── PICTURE SIGNATURE ── the one piece a picture "is": a Jam of two to four composers, each in one of his two forms, its style and
+// the palette. The picture is read on a fixed 96-wide grid (the same on every screen) into the same seven traits a piece of music
+// has — energy, light, order, flow, tension, richness, weight — and every composer's two forms (COMPOSER_FORMS2) are described by
+// theirs. The style comes from the picture (two halves of different character → Collage, rich and tense → Genesis, else Synthesis),
+// then the composers for it (see computeImageSignature). Two of one family (the still ones, the motor ones) never share a stage.
+// ISIG_CURATED: hand-picked for the built-in pictures (by title).
 const ISIG_REF = {E:[0.423,0.217],L:[0.415,0.097],W:[0.207,0.438],C:[31.453,11.494],K:[17.571,6.54],T:[0.288,0.133],S:[0.278,0.262],R:[2.055,0.74],H:[2.647,2.027],M:[2.529,0.696]};
 // E energy · L lightness · W warmth · C chroma · K contrast · T texture · S symmetry · R regions (log) · H hue groups · M mode (0 lydian … 5 phrygian) — the palette's reading
 // the measures a picture is read by, over a spread of real pictures (paintings and photographs): [mean, sd]
@@ -28882,7 +28877,9 @@ const ISIG4_TW = {E:{C:.35,K:.25,oeC:.15,ed:.2,red:.1},B:{L:.6,Wc:.4},O:{S:.4,oe
   T:{K:.35,red:.25,hvC:.2,oeC:.2},C:{R:.3,H:.25,ed:.3,hvC:.15},W:{L:-.6,bh:.4}};
 const ISIG4_AR = {E:[0,.72],B:[-.03,.86],O:[-.01,.63],F:[0,.57],T:[0,.69],C:[0,.73],W:[.03,.64]};
 const ISIG4_AX = ['E','B','O','F','T','C','W'], ISIG4_CON = 0.2;
-const ISIG4_NEAR = 8, ISIG4_LAM = 0, ISIG4_MAXH = 4, ISIG4_GCT = 0.4, ISIG4_AC = 0.1;   // a Jam: from the eight closest · each composer past two · at most four · its style (see below)
+const ISIG4_NEAR = 8, ISIG4_MAXH = 4, ISIG4_GCT = 0.4, ISIG4_CW = 0.6, ISIG4_LAMC = 0.04, ISIG4_NS = 4;   // a Jam: from the eight closest · at most four · rich + tense → Genesis · a Collage: its strips against the whole, each hand past two, the strips
+// per composer, how far a near tie leans toward him: calibrated so each leads his fair share of pictures (the closest fit still wins)
+const ISIG4_FAIRC = {satie:-0.155,chopin:0.032,debussy:-0.059,glass:0.037,vine:0.04,gershwin:0.042,yiruma:0.093,bach:-0.117,beethoven:-0.039,rachmaninov:0.2,einaudi:0.071,hisaishi:0.068,mozart:-0.184,schubert:0.111,tchaikovsky:0.029};
 // what each form sounds like on the same seven: [energy, light, order, flow, tension, richness, weight]
 const ISIG4_FORMS = {
   satie:[[-.9,0,.5,.6,-.3,-.7,-.1],[-.7,-.5,-.1,.3,.3,-.6,.1]],            // Gymnopédie · Gnossienne
@@ -28973,22 +28970,24 @@ function computeImageSignature(img, title){
     const m=_isig4Axes(_isig4Meas(px,nc,nr,D)); const rank=_isig4Rank(m); const lead=rank[0];
     const ok=(k,have)=>!have.includes(k) && !(ISIG_FAMILY[k] && have.some(b=>ISIG_FAMILY[b]===ISIG_FAMILY[k]));
     let keys=[lead.k], fs=null;
-    // its two halves, in the order the music reads it (left → right): two characters (energy, light, tension, weight) make a
-    // Collage — the whole's composer, and beside him the one of the half that differs most (among the whole's eight closest)
-    const hw=nc>>1, half=(x0,x1)=>{ const q=[]; for(let y=0;y<nr;y++) for(let x=x0;x<x1;x++) q.push(px[y*nc+x]); return _isig4Axes(_isig4Meas(q,x1-x0,nr,_imgDNA(q,x1-x0,nr,[],null))); };
-    const hs=[half(0,hw), half(hw,nc)]; let con=0; for(const a of ['E','B','T','W']){ const d=hs[0][a]-hs[1][a]; con+=d*d; } con/=4;
-    if(con>ISIG4_CON){ const near=rank.slice(0,8).map(x=>x.k);
-      const pm=hs.map((p,i)=>{ const o={}; for(const a of ISIG4_AX) o[a]=m[a]+(p[a]-hs[1-i][a])/2; return o; });
-      const far=pm.map(p=>_isig4Dist(m,[...ISIG4_AX.map(a=>p[a])])), pt=pm[far[0]>=far[1]?0:1];
-      const B=_isig4Rank(pt).find(x=>x.k!==lead.k && near.includes(x.k) && ok(x.k,[lead.k])); if(B){ keys=[lead.k,B.k]; fs='A'; } }
-    // the picture's piece is always a Jam (Nov 2026): two to four of the eight closest composers (each in his closer form) play together,
-    // so the piece has their traits together (their mean) — the Jam whose traits sit closest to the picture is the one, its closest
-    // composer leading; its style: rich + tense → Genesis, halves apart → Collage, else Synthesis (one composer only when no Jam can be formed)
-    if(!fs){ const near=rank.slice(0,ISIG4_NEAR); let top=null; const mem=[];
-      const go=(i)=>{ if(mem.length>=2){ const c=ISIG4_AX.map((a,q)=>mem.reduce((t,x)=>t+ISIG4_FORMS[x.k][x.f][q],0)/mem.length); const s=-3*_isig4Dist(m, c)-ISIG4_LAM*(mem.length-2); if(!top || s>top.s) top={mem:mem.slice(), s}; }
-        if(mem.length>=ISIG4_MAXH) return; for(let j=i;j<near.length;j++){ if(!ok(near[j].k, mem.map(y=>y.k))) continue; mem.push(near[j]); go(j+1); mem.pop(); } };
-      go(0);
-      if(top){ keys=top.mem.slice().sort((x,y)=>y.s-x.s).map(x=>x.k); fs=(m.C+m.T>ISIG4_GCT) ? 'G' : (con>ISIG4_AC) ? 'A' : 'E'; } }
+    // the style from the picture first: two halves (in the order the music reads it, left → right) of different character (energy,
+    // light, tension, weight) → Collage; rich and tense → Genesis; one even whole → Synthesis
+    const part=(x0,x1)=>{ const q=[]; for(let y=0;y<nr;y++) for(let x=x0;x<x1;x++) q.push(px[y*nc+x]); return _isig4Axes(_isig4Meas(q,x1-x0,nr,_imgDNA(q,x1-x0,nr,[],null))); };
+    const hw=nc>>1, hs=[part(0,hw), part(hw,nc)]; let con=0; for(const a of ['E','B','T','W']){ const d=hs[0][a]-hs[1][a]; con+=d*d; } con/=4;
+    const fs0 = con>ISIG4_CON ? 'A' : (m.C+m.T>ISIG4_GCT) ? 'G' : 'E';
+    // the picture's piece is always a Jam (Nov 2026) of two to four composers (each in his closer form): a Synthesis / Genesis judged by
+    // their traits together (the mean, closest to the whole picture), a Collage by its hands each taking the strips they fit best
+    // (four strips, left → right; every hand at least one), weighed with the whole; the leader: the closest — of a Collage, the one with most strips
+    let strips=null; if(fs0==='A'){ const w=Math.floor(nc/ISIG4_NS); strips=[]; for(let i=0;i<ISIG4_NS;i++) strips.push(part(i*w, i===ISIG4_NS-1 ? nc : (i+1)*w)); }
+    const pool=rank.slice(0,ISIG4_NEAR); if(strips) for(const st of strips){ for(const x of _isig4Rank(st).slice(0,2)) if(!pool.some(y=>y.k===x.k)){ const rx=rank.find(y=>y.k===x.k); if(rx) pool.push(rx); } }
+    let top=null; const mem=[];
+    const evalM=()=>{ const n=mem.length, c=ISIG4_AX.map((a,q)=>mem.reduce((t,x)=>t+ISIG4_FORMS[x.k][x.f][q],0)/n); let d=_isig4Dist(m,c), own=null;
+      if(strips){ own=new Array(n).fill(0); let dc=0; for(const st of strips){ let bi=0, bd=1e9; mem.forEach((x,i)=>{ const q=_isig4Dist(st, ISIG4_FORMS[x.k][x.f]); if(q<bd){ bd=q; bi=i; } }); own[bi]++; dc+=bd; } dc/=strips.length;
+        if(own.some(o=>o<1)) return; d=ISIG4_CW*dc+(1-ISIG4_CW)*d; }
+      const s=-3*d - (strips ? ISIG4_LAMC*(n-2) : 0) + mem.reduce((t,x)=>t+(ISIG4_FAIRC[x.k]||0),0)/n; if(!top || s>top.s) top={mem:mem.slice(), s, own}; };
+    const go=(i)=>{ if(mem.length>=2) evalM(); if(mem.length>=ISIG4_MAXH) return; for(let j=i;j<pool.length;j++){ if(!ok(pool[j].k, mem.map(y=>y.k))) continue; mem.push(pool[j]); go(j+1); mem.pop(); } };
+    go(0);
+    if(top){ const ord = top.own ? top.mem.map((x,i)=>[x,top.own[i]]).sort((a,b)=>(b[1]-a[1]) || (b[0].s-a[0].s)).map(q=>q[0]) : top.mem.slice().sort((a,b)=>b.s-a.s); keys=ord.map(x=>x.k); fs=fs0; }
     const mode = bw ? 'bw' : (z.K>0.8 || (z.C>0.5 && z.E>0.5)) ? 'kontra' : z.H>0.6 ? 'spectral' : z.S>0.6 ? 'phi' : 'harmony';
     return { keys, fs, mode, h:0, ...(keys.length===1 ? {sf:lead.f} : {}), z, m };
   }catch(_){ return null; }
