@@ -9930,19 +9930,19 @@ function _rfChladni(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
       const B=[...Array(12)].map(()=>[]);   // the sand by tone (one colour each), in the order it falls
       for(let yy=0;yy<gy;yy++){ const y=(yy+0.5)/gy, cy1=Math.cos(n*PI*y), cy2=Math.cos(mm*PI*y);
         for(let xx=0;xx<gx;xx++){ const x=(xx+0.5)/gx, f=Math.cos(n*PI*x)*cy2+sg*Math.cos(mm*PI*x)*cy1, af=Math.abs(f);
-          if(af<0.07 && rnd()<(1-af/0.07)*0.85){ const r=rnd(); let q=0; while(q<11 && cum[q]<r) q++; B[q].push((xx+rnd())*cell, (yy+rnd())*cell); } } }
+          if(af<0.085 && rnd()<(1-af/0.085)){ const r=rnd(); let q=0; while(q<11 && cum[q]<r) q++; B[q].push((xx+rnd())*cell, (yy+rnd())*cell); } } }
       for(const b of B){ for(let i=b.length/2-1;i>0;i--){ const j=(rnd()*(i+1))|0; const tx=b[i*2], ty=b[i*2+1]; b[i*2]=b[j*2]; b[i*2+1]=b[j*2+1]; b[j*2]=tx; b[j*2+1]=ty; } }   // fallen in any order: a passage half heard shows half its sand all over its figure
       pass.push({B, i0, i1}); }
     _rfChCache={key, pass, layer:null, upto:-1};
   }
   const C=_rfChCache, P=C.pass.length, at=prog*P, cur=Math.min(P-1,Math.floor(at)), fr=Math.min(1,at-cur);
-  const gs=Math.max(1,S*0.0028);
+  const gs=Math.max(1.2,S*0.0042);
   const grains=(c2,p,a,frac)=>{ const q=C.pass[p]; for(let pc=0;pc<12;pc++){ const b=q.B[pc], n=Math.floor(b.length/2*frac); if(!n) continue; const cl=gc(60+pc,90).map(v=>Math.min(255,v*1.1+30)); c2.fillStyle=css(cl,a); for(let g=0;g<n;g++){ c2.fillRect(b[g*2]-gs/2, b[g*2+1]-gs/2, gs, gs); } } };
   // the passages before: ghosts, the older the fainter (kept as one picture until the next passage comes)
   if(cur>0){ if(!C.layer || C.upto!==cur || C.layer.width!==CW || C.layer.height!==CH){ const L=(typeof document!=='undefined') ? document.createElement('canvas') : new OffscreenCanvas(CW,CH); L.width=CW; L.height=CH; const lc=L.getContext('2d');
-      for(let p=0;p<cur;p++){ const age=cur-p; grains(lc,p,Math.max(0.14,0.6-age*0.1),1); } C.layer=L; C.upto=cur; }
+      for(let p=0;p<cur;p++){ const age=cur-p; grains(lc,p,Math.max(0.2,0.72-age*0.1),1); } C.layer=L; C.upto=cur; }
     ctx.drawImage(C.layer,0,0); }
-  grains(ctx,cur,0.95,fr);   // the passage playing now: its sand gathering
+  ctx.globalCompositeOperation='lighter'; grains(ctx,cur,0.9,fr); ctx.globalCompositeOperation='source-over';   // the passage playing now: its sand gathering, brightest where its lines cross
   _setCurE(0.5);
 }
 // RafFel · Circle of fifths (Nov 2026): a rose window of the piece's harmony. Twelve petals in the order of fifths (C at the top,
