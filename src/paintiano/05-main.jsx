@@ -64,76 +64,25 @@ function computeMusicDNA(events){
 
 // §5.10  SONG SIGNATURE — the one painting every piece "is"
 // ────────────────────────────────────────────────────────────────────────────
-// Deterministic per piece and identical for every user: a richer feature
-// vector than the DNA (density, tempo, register, spread, regularity, tension,
-// major/minor, chromaticism, polyphony, legato, leaps) is z-scored against
-// fixed reference stats and matched to hand-tuned painter profiles. The best
-// match leads; a close runner-up (or two) joins as a Fusion. Variant and
-// palette come from the same vector plus a hash of the notes, tone is 'pure'.
-// Calibrated on 97 library moods + ~540 real pieces (Bach, Beethoven, Mozart,
-// Haydn, Schumann, Chopin, Joplin, Palestrina, Monteverdi, folk tunes) +
-// the 3 built-in samples, weighted so every painter wins a fair share.
-// SIG_V is the signature version — bump it when profiles or rules change so
-// older posters stay honest about which edition they show.
-const SIG_V = 3;
+// Deterministic per piece and identical for every user (key-free). Since v4 (18 Nov 2026) the song and the painting are
+// measured on the same seven axes and matched (SIG4_* below); before, the music cast 2–5 painters by roles and a hash of
+// the notes picked the variant. The features are z-scored against fixed reference stats (SIG_REF: 97 library moods + ~540
+// real pieces). SIG_V is the signature version — bump it when the rules change so older posters stay honest.
+const SIG_V = 4;
 const SIG_REF={dens:[1.160,0.517],tempo:[-5.658,0.578],reg:[63.701,4.632],spread:[29.514,10.962],regul:[-0.491,0.281],tens:[0.095,0.160],major:[0.245,0.366],chrom:[0.085,0.087],poly:[2.227,0.820],legato:[0.231,0.408],leaps:[6.203,3.430]};
-const SIG_PROFILES={
-  rothko:[-1.413,{dens:-0.516,tempo:-0.516,legato:0.516,major:-0.258,reg:-0.258,poly:0.258}],
-  monet:[-0.232,{dens:-0.186,legato:0.621,reg:0.621,major:0.311,tens:-0.311}],
-  pollock:[-0.941,{dens:0.535,tempo:0.535,regul:-0.535,chrom:0.267,leaps:0.267}],
-  mondrian:[-0.213,{regul:0.555,tens:-0.555,chrom:-0.555,major:0.277}],
-  kusama:[-0.095,{regul:0.667,dens:0.667,poly:-0.333}],
-  bulge:[-0.335,{regul:0.667,dens:0.333,spread:-0.667}],
-  wave:[-0.196,{regul:0.667,legato:0.333,spread:-0.667}],
-  kandinsky:[-0.120,{tens:0.555,chrom:0.555,leaps:0.555,spread:0.277}],
-  mitchell:[-0.371,{tempo:0.316,regul:-0.632,spread:0.632,legato:-0.316}],
-  miro:[-0.379,{major:0.654,leaps:0.654,dens:-0.196,poly:-0.327}],
-  picasso:[-0.600,{chrom:0.756,regul:-0.378,tens:0.378,major:-0.378}],
-  matisse:[-0.453,{major:0.836,poly:0.418,tempo:0.251,regul:0.251}],
-  bloom:[-0.515,{legato:0.707,major:0.354,reg:0.354,dens:-0.354,tens:-0.354}],
-  bauhaus:[-0.487,{regul:0.692,poly:0.692,tens:-0.208}],
-  gold:[-0.764,{reg:-0.369,poly:0.737,major:-0.221,legato:0.369,spread:0.369}],
-  spiral:[-0.383,{leaps:-0.816,legato:0.408,reg:0.408}],
-  arcs:[-0.218,{regul:0.546,legato:0.546,spread:0.546,major:0.327}],
-  pop:[-0.467,{major:0.654,dens:0.654,tempo:0.327,tens:-0.196}],
-  hokusai:[-0.435,{spread:0.793,leaps:0.397,major:-0.397,legato:0.238}],
-  lichtenstein:[0.072,{major:0.447,dens:0.447,regul:0.447,poly:-0.447,leaps:0.447}],
-  klee:[-0.898,{poly:-0.793,dens:-0.238,reg:0.397,regul:0.397}],
-  delaunay:[-0.474,{tempo:0.518,spread:0.518,major:0.518,dens:0.311,legato:-0.311}],
-  raffel:[0.318,{}]
-};
 const SIG_PALETTES={kontra:[0.069,{tens:0.811,major:-0.487,chrom:0.324}],spectral:[-0.384,{spread:0.848,leaps:0.424,dens:0.318}],harmony:[0.354,{regul:0.808,legato:0.505,poly:0.303}],phi:[-0.038,{dens:-0.615,tempo:-0.492,leaps:-0.492,major:0.369}]};
 const SIG_MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
 const SIG_MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
-// SIGNATURE = A FUSION BY ROLES. Every painter plays one role in the print,
-// and each role is driven by its own layer of the music:
-//   structure  (composition, grid)      ← rhythm, regularity, polyphony
-//   gesture    (marks, strokes)         ← melody, energy, tempo
-//   field      (ground, colour field)   ← harmony, legato, minor
-//   ornament   (pattern, glyph)         ← density, brightness, major
-//   light      (cosmos, radiance)       ← register, range, leaps
-// The two strongest roles always paint; a role joins as 3rd–5th member when
-// its layer is nearly as strong (within SIG_ROLE_TAU). Never two painters of
-// the same role. Inside a role the painter closest to the music wins.
-const SIG_ROLES={
-  structure:{bias:0.037,w:{regul:0.864,poly:0.432,chrom:-0.259},painters:{mondrian:0.069,bauhaus:-0.491,klee:0.037,bulge:0.378,wave:0.087,arcs:-0.079}},
-  gesture:{bias:-0.076,w:{dens:0.520,tempo:0.520,regul:-0.520,leaps:0.347,tens:0.260},painters:{pollock:-0.530,mitchell:0.101,picasso:-0.123,hokusai:0.268,kandinsky:0.283}},
-  field:{bias:-0.553,w:{legato:0.691,tempo:-0.518,dens:-0.432,major:-0.259},painters:{rothko:-0.890,monet:0.335,bloom:0.042,raffel:0.513}},
-  ornament:{bias:0.142,w:{dens:0.503,major:0.704,tens:-0.402,regul:0.302},painters:{gold:-0.167,kusama:0.119,lichtenstein:0.249,pop:-0.218,miro:0.017}},
-  light:{bias:0.450,w:{reg:0.704,spread:0.503,leaps:0.402,major:0.302},painters:{spiral:-0.131,delaunay:-0.131,matisse:0.262}},
-};
-const SIG_ROLE_TAU=1.1;
 // Pairs that never share a Signature (the few left flat after the 209-pair
-// gallery review): the crossing came out as haze, or one hand buried the other. When a role's best
-// painter would clash with a member already chosen, the role takes its next
-// best. Order inside a pair does not matter.
+// gallery review): the crossing came out as haze, or one hand buried the other. When a member would clash
+// with one already chosen, the next closest painter takes his place. Order inside a pair does not matter.
 const SIG_BLACKLIST=new Set([
   'rothko|matisse','bauhaus|raffel','bauhaus|rothko','mitchell|rothko','pollock|bloom','pollock|matisse','bloom|spiral',
 ].map(s=>s.split('|').sort().join('|')));
 const _sigClash=(a,b)=> SIG_BLACKLIST.has([a,b].sort().join('|'));
 // The built-in pieces are the shop window — the first painting a new user ever
 // sees. Their Signatures are hung by hand (still the same for everyone); every
-// other piece keeps the computed one. Roles follow SIG_ROLES, or the part a painter plays in that very painting (one role per member).
+// other piece keeps the computed one. Roles: the part a painter plays in that very painting (one role per member).
 // fs pins the Fusion style (A take turns · E new painter), so the shop window looks the same on every tier.
 // what the draw module needs to paint a Signature the same for everyone: its members, the pinned variants and style of a hung one;
 // sig:true makes an unpinned one take the coin of its address instead of the tier's fusion style (Free would otherwise always take turns)
@@ -306,114 +255,238 @@ function _drawImagePlayhead(ctx,o,memo){
   ctx.restore();
 }
 
-// Audio recordings: what survives transcription is TONALITY — mode, key centre
-// and how busy the texture is. Mode × energy picks the leading role, the key
-// centre (circle-of-fifths position) picks the second role and every painter;
-// an ambiguous mode or a chromatic texture adds members.
-const SIG_AUDIO_LEAD={majHi:'ornament',majLo:'light',minHi:'gesture',minLo:'field'};
+// Audio recordings: what survives transcription is TONALITY — mode, key centre and how busy the texture is; the rest of
+// the axes count half (see computeSongSignature), the palette follows mode × density.
 const SIG_AUDIO_DENS_MID=1.33;   // median transcribed event density (log events/s)
+// ── SONG SIGNATURE v4 ── the painting a piece IS: the song and the painting measured on the same seven axes and matched
+//   E energy (calm ↔ driven) · B light (dark, minor ↔ bright, major) · O order (free ↔ ruled) · F flow (detached ↔ sustained)
+//   T tension (serene ↔ dramatic) · C richness (sparse ↔ dense, many voices) · W weight (airy, high ↔ massive, low)
+// The music's axes come from its features (z-scores against fixed reference stats); every painter's every variant has its
+// axes read from its genes (the same DNA the fusions breed from: marks, layout, size, density, edge, opacity, wobble, lines,
+// ground). The best (painter, variant) wins: the painter's own profile (who he is for music) + how closely the variant's
+// character fits the song + a little for "What he heard", the variant the song composes itself.
+// One painter unless the music itself is several: contrasting sections → Collage (each section's painter, side by side),
+// one dense, tense whole of many voices → Genesis (a new painter from the leads' genes), two hands equally close on a
+// flowing, even piece → Synthesis. Palette by the same features. Deterministic, the same for everyone, key-free.
+const SIG4_AX = ['E','B','O','F','T','C','W'];
+const SIG4_AW = {E:1.0, B:0.8, O:0.8, F:1.0, T:1.0, C:0.7, W:0.7};
+const SIG4_MK = (()=>{ const g=(s)=>new Set(s.split(' '));
+  return { h:g('rect gridrect gridline bar band vband stripes vstripes checker tile cube step panel diamond tri poly nestpoly nest cross arrow facet pcfacet protractor zigzag benday lcmirror'),
+    r:g('disc ring kring dot dotcluster dotline target orphic sphere bulge phi phiarc arc arch spiral goldspiral fan eye net'),
+    o:g('blob miroblob cell cloud petal mtleaf mtalgae mtcoral stem field surface splat dab paper cutout mtsheet pcpaper crest'),
+    l:g('brush lcbrush drip vdrip wavyline wave chain beam rays neon hgchalk lcridge') }; })();
+function _sig4Lum(h){ if(typeof h!=='string' || h[0]!=='#' || h.length<7) return .2; const r=parseInt(h.slice(1,3),16)/255, g=parseInt(h.slice(3,5),16)/255, b=parseInt(h.slice(5,7),16)/255; return .2126*r+.7152*g+.0722*b; }
+function _sig4Raw(d){ const mk=d.mark||{}, ly=d.layout||{}; let tot=0, nt=0; const sh={h:0,r:0,o:0,l:0,m:0};
+  for(const k in mk){ const w=+mk[k]||0; if(w<=0) continue; tot+=w; if(w>.1) nt++; const c=SIG4_MK.h.has(k)?'h':SIG4_MK.r.has(k)?'r':SIG4_MK.o.has(k)?'o':SIG4_MK.l.has(k)?'l':'m'; sh[c]+=w; }
+  for(const k in sh) sh[k]/=(tot||1); let lt=0; for(const k in ly) lt+=(+ly[k]||0); const L=(k)=>(+ly[k]||0)/(lt||1);
+  const sz=Array.isArray(d.size)?(d.size[0]+d.size[1])/2:.2, den=d.density==null?.3:+d.density, wob=+d.wobble||0, ln=+d.lines||0, al=d.alpha==null?1:+d.alpha, ed=+d.edge||0, ol=+d.outline||0, gL=_sig4Lum(d.ground), lay=+d.layers||1;
+  return { E: den+.8*wob+.6*ln+.8*sh.l+.5*L('scatter')+.6*L('diagonal')-1.2*sz-.6*L('field')-.4*sh.o,
+    B: gL+.15*sh.r+.15*sh.m,
+    O: L('grid')+.7*L('stack')+.4*L('radial')+sh.h-.8*wob-.6*L('scatter')-.4*sh.o-.3*L('flow')+.3*ol,
+    F: L('flow')+.6*L('field')+.8*sh.o+.3*sh.r+.6*ed+.5*(1-al)-.6*sh.h-.4*ol,
+    T: .7*sh.h+.6*ol+.5*L('diagonal')+.4*wob+.3*ln-.5*sh.o-.4*ed-.3*(1-al)+(gL<.15?.3:0),
+    C: den+.15*lay+.12*nt+.3*ln-.5*sz,
+    W: 1.2*sz+.6*L('field')+.5*L('stack')+.5*(1-gL)+.3*al-.4*den-.3*sh.l };
+}
+let _sig4VC = null;   // every painter's every variant on the seven axes (built once, from the genes)
+function _sig4Variants(){
+  if(_sig4VC) return _sig4VC;
+  const P=Object.keys(ARTIST_VARIANT_N).filter(k=>k!=='mosaic' && k!=='notes' && ARTIST_DNA[k]);
+  const rows=[]; for(const k of P){ const n=ARTIST_VARIANT_N[k]||1; for(let v=0;v<n;v++){ let d=null; try{ d=_dnaOf(k,v); }catch(_){} if(d) rows.push({k,v,r:_sig4Raw(d)}); } }
+  const st={}; for(const a of SIG4_AX){ const xs=rows.map(x=>x.r[a]); const m=xs.reduce((s,x)=>s+x,0)/xs.length; const sd=Math.sqrt(xs.reduce((s,x)=>s+(x-m)*(x-m),0)/xs.length)||1; st[a]=[m,sd]; }
+  for(const x of rows){ x.c={}; for(const a of SIG4_AX) x.c[a]=Math.tanh(((x.r[a]-st[a][0])/st[a][1])/1.6); }
+  _sig4VC={rows,P}; return _sig4VC;
+}
+const SIG4_REF = {sus:[6.641,0.628]};   // how long the upper voice sings (its notes' duration-weighted mean, log ms) — over the 109 calibration pieces
+const SIG4_KD = 3.0, SIG4_PB = 0.07;   // distance on one scale; a little more for "What he heard" (the variant the song composes)
+const SIG4_FAIR = {};   // per-painter offsets (none needed: SIG4_PMAP lays the painters onto the music, so each leads a fair share of real pieces)
+function _sig4AxesRaw(z){ const t=(x)=>x;
+  return { E:t(.45*z.tempo+.4*z.dens+.2*z.leaps-.1*z.legato-.3*(z.sus||0)), B:t(.8*z.major+.35*z.reg), O:t(.8*z.regul-.35*z.chrom-.2*z.tens),
+    F:t(.35*z.legato+.6*(z.sus||0)-.25*z.leaps-.1*z.tempo), T:t(.55*z.tens+.25*z.chrom+.2*z.spread-.25*z.major), C:t(.5*z.poly+.45*z.dens+.2*z.spread),
+    W:t(-.6*z.reg+.35*z.poly-.2*z.tempo) }; }
+const SIG4_MREF = {E:[0,.71],B:[0,.87],O:[0,.9],F:[0,.75],T:[0,.68],C:[0,.70],W:[0,.72]};   // the music axes' spread over the calibration pieces: each axis is put on the painters' scale
+function _sig4Axes(z){ const r=_sig4AxesRaw(z), o={}; for(const a of SIG4_AX){ const q=SIG4_MREF && SIG4_MREF[a]; o[a]=q ? Math.tanh(((r[a]-q[0])/q[1])/1.25) : Math.tanh(r[a]/1.6); } return o; }
+function _sig4Dist(m, c){ let s=0, w=0; for(const a of SIG4_AX){ const d=m[a]-c[a]; s+=SIG4_AW[a]*d*d; w+=SIG4_AW[a]; } return s/w; }
+// the features of a stretch of music (the whole piece, or one of its sections)
+function _sig4Feat(ev){
+  const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+  const med=a=>{ const s=[...a].sort((x,y)=>x-y); return s[s.length>>1]; };
+  const sd=a=>{ const m=avg(a); return Math.sqrt(avg(a.map(x=>(x-m)*(x-m)))); };
+  const mOf=n=>(n&&n.m!==undefined)?n.m:(typeof n==='number'?n:60), vOf=n=>(n&&n.v!==undefined)?n.v:100, dOf=n=>(n&&n.durMs)?n.durMs:300;
+  const ts=ev.map(ch=>+ch.startMs||0).sort((a,b)=>a-b);
+  const spanS=Math.max(1,ts[ts.length-1]-ts[0])/1000;
+  const iv=[]; for(let i=1;i<ts.length;i++){ const d=ts[i]-ts[i-1]; if(d>1) iv.push(d); }
+  const medIv=iv.length?med(iv):500;
+  const P=[],D=[]; let seed=2166136261>>>0;
+  for(const ch of ev) for(const n of ch.n){ const m=mOf(n), v=vOf(n); P.push(m); D.push(dOf(n)); seed=Math.imul(seed^((m|0)&255),16777619)>>>0; seed=Math.imul(seed^((v|0)&255),16777619)>>>0; }
+  const Ps=[...P].sort((a,b)=>a-b);
+  const pc=new Array(12).fill(0);
+  for(const ch of ev) for(const n of ch.n) pc[((mOf(n)%12)+12)%12]+=Math.max(1,dOf(n));
+  const corr=(a,b)=>{ const ma=avg(a), mb=avg(b); let num=0,da=0,db=0; for(let i=0;i<12;i++){ num+=(a[i]-ma)*(b[i]-mb); da+=(a[i]-ma)*(a[i]-ma); db+=(b[i]-mb)*(b[i]-mb); } const den=Math.sqrt(da*db); return den?num/den:0; };
+  let best=-9, bestR=0, bestMaj=1;
+  for(let r=0;r<12;r++){ const rot=pc.slice(r).concat(pc.slice(0,r)); const cm=corr(rot,SIG_MAJ), cn=corr(rot,SIG_MIN); if(cm>best){best=cm;bestR=r;bestMaj=1;} if(cn>best){best=cn;bestR=r;bestMaj=0;} }
+  const scale=bestMaj?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10];
+  const tot=pc.reduce((a,b)=>a+b,0)||1;
+  let inkey=0; for(let i=0;i<12;i++) if(scale.includes(((i-bestR)%12+12)%12)) inkey+=pc[i];
+  const rot=pc.slice(bestR).concat(pc.slice(0,bestR));
+  let dis=0,pairs=0;
+  for(const ch of ev){ const ns=ch.n.map(mOf); for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++){ const d=Math.abs(ns[i]-ns[j])%12; pairs++; if(d===1||d===2||d===6||d===11) dis++; } }
+  const tops=ev.slice().sort((a,b)=>(+a.startMs||0)-(+b.startMs||0)).map(ch=>Math.max(...ch.n.map(mOf)));
+  let leaps=0; if(tops.length>1){ let s=0; for(let i=1;i<tops.length;i++) s+=Math.abs(tops[i]-tops[i-1]); leaps=s/(tops.length-1); }
+  const cv=(iv.length>2&&avg(iv)>0)?sd(iv)/avg(iv):0.5;
+  const f={ dens:Math.log(ev.length/spanS+0.1), tempo:-Math.log(Math.max(40,medIv)), reg:avg(P), spread:Ps[(Ps.length*.95)|0]-Ps[(Ps.length*.05)|0],
+    regul:-cv, tens:pairs?dis/pairs:0, major:corr(rot,SIG_MAJ)-corr(rot,SIG_MIN), chrom:1-inkey/tot, poly:avg(ev.map(ch=>ch.n.length)),
+    legato:Math.log(Math.max(20,med(D))/Math.max(40,medIv)), leaps };
+  { const th=Ps[Math.floor(Ps.length*.7)]; let a=0, b=0; for(const ch of ev) for(const n of ch.n){ if(mOf(n)<th) continue; const x=Math.max(30,dOf(n)); a+=x*x; b+=x; } f.sus=Math.log(a/(b||1)); }   // the singing voice: how long the upper notes ring
+  const z={}; for(const k in SIG_REF){ const [m,s]=SIG_REF[k]; z[k]=Math.max(-3,Math.min(3,(f[k]-m)/s)); }
+  for(const k in SIG4_REF){ const [m,s]=SIG4_REF[k]; z[k]=Math.max(-3,Math.min(3,(f[k]-m)/s)); }
+  return {f, z, bestMaj, bestR, seed};
+}
+// Who each painter is, on the seven axes — the character of his painting as it would be heard (art history, not fitting):
+// [E energy, B light, O order, F flow, T tension, C richness, W weight]
+const SIG4_PAINTER = {
+  rothko:[-.8,-.5,.2,.8,.1,-.7,.8], monet:[-.4,.5,-.5,.8,-.6,.2,-.3], mitchell:[.5,.1,-.8,.2,.4,.5,.2], pollock:[.9,0,-.9,-.1,.6,.9,0],
+  kandinsky:[.5,.2,-.1,-.2,.6,.5,-.2], klee:[-.1,.1,.4,.1,-.1,.2,-.4], mondrian:[.2,.4,.95,-.6,-.2,-.1,0], bauhaus:[0,.2,.8,-.4,0,.1,.1],
+  kusama:[.4,.2,.5,-.2,.2,.8,-.2], miro:[.3,.7,-.5,-.1,-.2,-.1,-.6], matisse:[.1,.9,-.2,.4,-.6,-.1,-.3], picasso:[.4,-.3,-.2,-.6,.8,.4,.3],
+  gold:[-.2,.2,.3,.5,-.1,.8,.3], spiral:[-.3,.2,.4,.5,-.3,.3,-.2], delaunay:[.5,.7,.3,.2,-.1,.3,-.2], hokusai:[.3,0,0,.4,.3,.4,0],
+  lichtenstein:[.5,.6,.5,-.7,.3,.1,-.1], pop:[.9,.6,.4,-.6,.1,.3,-.3], bulge:[.2,.2,.9,-.2,.2,.4,0], wave:[.3,.1,.8,.5,.2,.5,-.2],
+  arcs:[.4,.6,.9,-.2,.2,.2,.1], bloom:[-.1,.3,-.7,.6,-.3,0,-.6], raffel:[-.2,0,.2,.3,-.2,-.2,0], thomas:[.3,.8,.6,0,-.4,.5,-.4] };
+// the painters' scale laid onto the music's (each axis: the painters' mean and spread → the music's, over ~90 real pieces),
+// so every painter stands where the music most like him stands: [painters μ, σ, music μ, σ]
+const SIG4_PMAP = {E:[.188,.389,-.102,.64],B:[.283,.336,-.085,.575],O:[.165,.54,-.172,.455],F:[.079,.435,.106,.512],T:[.029,.355,-.052,.468],C:[.258,.35,.059,.444],W:[-.092,.303,.373,.465]};
+const SIG4_VK = 0.6;   // how far a variant's own genes move it from its painter
+// every (painter, variant) for these axes, best first: the painter's character moved by the variant's genes, as close to the music as possible
+function _sig4Rank(m, z){
+  const V=_sig4Variants();
+  if(!V.mean){ V.mean={}; for(const k of V.P){ const rs=V.rows.filter(x=>x.k===k); const mm={}; for(const a of SIG4_AX) mm[a]=rs.reduce((s,x)=>s+x.c[a],0)/rs.length; V.mean[k]=mm; } }
+  return V.rows.filter(x=>SIG4_PAINTER[x.k]).map(x=>{ const P=SIG4_PAINTER[x.k], c={}; SIG4_AX.forEach((a,i)=>{ const q=SIG4_PMAP[a]; const p=q[2]+(P[i]-q[0])/q[1]*q[3]; c[a]=Math.max(-1,Math.min(1,p+SIG4_VK*q[3]*(x.c[a]-V.mean[x.k][a]))); });
+      const d=_sig4Dist(m, c); const s = -SIG4_KD*d + (x.v===0 ? SIG4_PB : 0) + (SIG4_FAIR[x.k]||0); return {k:x.k, v:x.v, s, d}; })
+    .sort((a,b)=>(b.s-a.s) || (a.k<b.k?-1:a.k>b.k?1:a.v-b.v));
+}
 function computeSongSignature(events, opts){
   const _audio = !!(opts && opts.audio);
-  events=_keyNormOf(events);   // key-free (see _keyD), its register too: the ✦ Signature (its painters) is one for every key
+  events=_keyNormOf(events);   // key-free (see _keyD): the ✦ Signature is one for every key
   try{
-    const ev=(events||[]).filter(ch=>ch&&ch.n&&ch.n.length);
+    const ev=(events||[]).filter(ch=>ch&&ch.n&&ch.n.length).sort((a,b)=>(+a.startMs||0)-(+b.startMs||0));
     if(ev.length<4) return null;
-    const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
-    const med=a=>{ const s=[...a].sort((x,y)=>x-y); return s[s.length>>1]; };
-    const sd=a=>{ const m=avg(a); return Math.sqrt(avg(a.map(x=>(x-m)*(x-m)))); };
-    const mOf=n=>(n&&n.m!==undefined)?n.m:(typeof n==='number'?n:60);
-    const vOf=n=>(n&&n.v!==undefined)?n.v:100;
-    const dOf=n=>(n&&n.durMs)?n.durMs:300;
-    const ts=ev.map(ch=>+ch.startMs||0).sort((a,b)=>a-b);
-    const spanS=Math.max(1,ts[ts.length-1]-ts[0])/1000;
-    const iv=[]; for(let i=1;i<ts.length;i++){ const d=ts[i]-ts[i-1]; if(d>1) iv.push(d); }
-    const medIv=iv.length?med(iv):500;
-    const P=[],V=[],D=[]; let seed=2166136261>>>0;
-    for(const ch of ev) for(const n of ch.n){ const m=mOf(n), v=vOf(n); P.push(m); V.push(v); D.push(dOf(n)); seed=Math.imul(seed^((m|0)&255),16777619)>>>0; seed=Math.imul(seed^((v|0)&255),16777619)>>>0; }
-    const Ps=[...P].sort((a,b)=>a-b);
-    // Krumhansl key profile: major-ness and share of out-of-key weight
-    const pc=new Array(12).fill(0);
-    for(const ch of ev) for(const n of ch.n) pc[((mOf(n)%12)+12)%12]+=Math.max(1,dOf(n));
-    const corr=(a,b)=>{ const ma=avg(a), mb=avg(b); let num=0,da=0,db=0; for(let i=0;i<12;i++){ num+=(a[i]-ma)*(b[i]-mb); da+=(a[i]-ma)*(a[i]-ma); db+=(b[i]-mb)*(b[i]-mb); } const den=Math.sqrt(da*db); return den?num/den:0; };
-    let best=-9, bestR=0, bestMaj=1;
-    for(let r=0;r<12;r++){ const rot=pc.slice(r).concat(pc.slice(0,r)); const cm=corr(rot,SIG_MAJ), cn=corr(rot,SIG_MIN); if(cm>best){best=cm;bestR=r;bestMaj=1;} if(cn>best){best=cn;bestR=r;bestMaj=0;} }
-    const scale=bestMaj?[0,2,4,5,7,9,11]:[0,2,3,5,7,8,10];
-    const tot=pc.reduce((a,b)=>a+b,0)||1;
-    let inkey=0; for(let i=0;i<12;i++) if(scale.includes(((i-bestR)%12+12)%12)) inkey+=pc[i];
-    const rot=pc.slice(bestR).concat(pc.slice(0,bestR));
-    // dissonant in-chord intervals
-    let dis=0,pairs=0;
-    for(const ch of ev){ const ns=ch.n.map(mOf); for(let i=0;i<ns.length;i++)for(let j=i+1;j<ns.length;j++){ const d=Math.abs(ns[i]-ns[j])%12; pairs++; if(d===1||d===2||d===6||d===11) dis++; } }
-    const tops=ev.slice().sort((a,b)=>(+a.startMs||0)-(+b.startMs||0)).map(ch=>Math.max(...ch.n.map(mOf)));
-    let leaps=0; if(tops.length>1){ let s=0; for(let i=1;i<tops.length;i++) s+=Math.abs(tops[i]-tops[i-1]); leaps=s/(tops.length-1); }
-    const cv=(iv.length>2&&avg(iv)>0)?sd(iv)/avg(iv):0.5;
-    const f={
-      dens:Math.log(ev.length/spanS+0.1),
-      tempo:-Math.log(Math.max(40,medIv)),
-      reg:avg(P),
-      spread:Ps[(Ps.length*.95)|0]-Ps[(Ps.length*.05)|0],
-      regul:-cv,
-      tens:pairs?dis/pairs:0,
-      major:corr(rot,SIG_MAJ)-corr(rot,SIG_MIN),
-      chrom:1-inkey/tot,
-      poly:avg(ev.map(ch=>ch.n.length)),
-      legato:Math.log(Math.max(20,med(D))/Math.max(40,medIv)),
-      leaps,
-    };
-    const z={}; for(const k in SIG_REF){ const [m,s]=SIG_REF[k]; z[k]=Math.max(-3,Math.min(3,(f[k]-m)/s)); }
-    const _rk=Object.keys(SIG_ROLES);
-    let roles;
-    if(_audio){
-      const hi = f.dens > SIG_AUDIO_DENS_MID;
-      const lead = SIG_AUDIO_LEAD[(bestMaj?'maj':'min')+(hi?'Hi':'Lo')];
-      const fifth = (bestR*7)%12;
-      const rest = _rk.filter(r=>r!==lead);
-      const second = rest[fifth % rest.length];
-      roles=[lead, second];
-      const more = (Math.abs(f.major)<0.12 ? 1 : 0) + (f.chrom>0.10 ? 1 : 0) + (f.tens>0.22 ? 1 : 0);
-      const pool = rest.filter(r=>r!==second);
-      for(let i=0;i<more && i<pool.length;i++) roles.push(pool[(fifth+i*5)%pool.length]);
-      roles = roles.filter((r,i,a)=>a.indexOf(r)===i);
-    } else {
-      const rsc=_rk.map(r=>{ const R=SIG_ROLES[r]; let s=R.bias; for(const k in R.w) s+=R.w[k]*z[k]; return [s,r]; }).sort((x,y)=>y[0]-x[0]);
-      roles=[rsc[0][1], rsc[1][1]];
-      for(let i=2;i<5;i++) if(rsc[0][0]-rsc[i][0] < SIG_ROLE_TAU) roles.push(rsc[i][1]);
+    const W=_sig4Feat(ev), z=W.z, m=_sig4Axes(z);
+    if(_audio) for(const a of ['O','F','T','C','W']) m[a]*=0.5;   // a recording read by ear: its timing and voices are only roughly known
+    const rank=_sig4Rank(m, z);
+    const bestOf=(k)=>rank.find(x=>x.k===k);
+    // the music's own regimes: ten stretches of time, each with its energy — a piece that moves between calm and driven
+    // parts (an Adagio and its Allegro, a theme and its storm) is two characters
+    const t0=+ev[0].startMs||0, t1=+ev[ev.length-1].startMs||0, win=[];
+    if(!_audio && ev.length>=60 && t1-t0>30000){ for(let i=0;i<10;i++){ const a=t0+(t1-t0)*i/10, b=t0+(t1-t0)*(i+1)/10; const part=ev.filter(c=>(+c.startMs||0)>=a && ((+c.startMs||0)<b || i===9)); if(part.length>=8){ const F=_sig4Feat(part); win.push({part, E:_sig4Axes(F.z).E}); } } }
+    let contrast=0, pa=null, pb=null;
+    if(win.length>=6){ const Es=win.map(w=>w.E).sort((x,y)=>x-y), q=(p)=>Es[Math.round((Es.length-1)*p)]; contrast=q(.85)-q(.15);
+      if(contrast>0.6){ const mid=(q(.85)+q(.15))/2; const lo=[].concat(...win.filter(w=>w.E<mid).map(w=>w.part)), hi=[].concat(...win.filter(w=>w.E>=mid).map(w=>w.part));
+        if(lo.length>=20 && hi.length>=20){ const FL=_sig4Feat(lo), FH=_sig4Feat(hi); pa={m:_sig4Axes(FL.z), z:FL.z}; pb={m:_sig4Axes(FH.z), z:FH.z}; } } }
+    const lead=rank[0]; let keys=[lead.k], phs=[lead.v], fs=null, why='solo';
+    const ok=(k, have)=>!have.includes(k) && !have.some(b=>_sigClash(k,b));
+    if(pa && pb){
+      // a piece of contrasting parts: the whole piece's painter, and beside him the painter of the part that differs from it most
+      // (among the whole piece's eight closest, so the two stay one signature)
+      const near=[]; for(const x of rank){ if(!near.includes(x.k)) near.push(x.k); if(near.length>=8) break; }
+      const far=(q)=>{ let d=0; for(const a of SIG4_AX){ const e=q.m[a]-m[a]; d+=e*e; } return d; };
+      const pt=far(pa)>=far(pb) ? pa : pb;
+      const B=_sig4Rank(pt.m, pt.z).find(x=>x.k!==lead.k && near.includes(x.k) && ok(x.k,[lead.k]));
+      if(B){ keys=[lead.k, B.k]; phs=[lead.v, B.v]; fs='A'; why='sections'; }
     }
-    const keys = [];
-    roles.forEach((r,ri)=>{
-      const P=SIG_ROLES[r].painters, names=Object.keys(P);
-      let ranked;
-      if(_audio){ const s0=((bestR*7)%12 + ri*3) % names.length; ranked=names.map((_,j)=>names[(s0+j)%names.length]); }
-      else ranked=names.map(a=>{ const pr=SIG_PROFILES[a][1]; let s=P[a]; for(const k in pr) s+=pr[k]*z[k]; return [s,a]; }).sort((x,y)=>y[0]-x[0]).map(x=>x[1]);
-      // the best painter of the role that does not clash with a member already in
-      keys.push(ranked.find(a=>!keys.some(b=>_sigClash(a,b))) || ranked[0]);
-    });
-    // palette by character — the same scoring, four palette profiles; never custom
+    if(!fs && m.C>0.45 && m.T>0.25){
+      // one dense, tense whole of many voices: a new painter born of the closest hands' genes
+      const mem=[lead]; for(const x of rank){ if(mem.length>=3) break; if(!ok(x.k, mem.map(y=>y.k))) continue; if(lead.s-x.s<0.3) mem.push(x); }
+      if(mem.length>=2){ keys=mem.map(x=>x.k); phs=mem.map(x=>x.v); fs='G'; why='genesis'; }
+    }
+    if(!fs && m.F>0.45){
+      // an even, flowing piece two hands fit equally well: they melt into one shared painting
+      const sec2=rank.find(x=>x.k!==lead.k && ok(x.k,[lead.k]));
+      if(sec2 && lead.s-sec2.s<0.02){ keys=[lead.k, sec2.k]; phs=[lead.v, sec2.v]; fs='E'; why='synthesis'; }
+    }
     const mode = _audio
-      ? (f.chrom>0.14 ? 'kontra' : bestMaj ? (f.dens>SIG_AUDIO_DENS_MID ? 'spectral' : 'harmony') : (f.dens>SIG_AUDIO_DENS_MID ? 'kontra' : 'phi'))
+      ? (W.f.chrom>0.14 ? 'kontra' : W.bestMaj ? (W.f.dens>SIG_AUDIO_DENS_MID ? 'spectral' : 'harmony') : (W.f.dens>SIG_AUDIO_DENS_MID ? 'kontra' : 'phi'))
       : Object.keys(SIG_PALETTES).map(a=>{ const [b,p]=SIG_PALETTES[a]; let v=b; for(const k in p) v+=p[k]*z[k]; return [v,a]; }).sort((x,y)=>y[0]-x[0])[0][1];
-    const nV=(typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[keys[0]])||1;
-    const ph=((seed>>>8)%nV);
-    return {v:SIG_V, keys, roles, ph, mode, z, f, seed};
+    return {v:SIG_V, keys, ph:phs[0], ...(keys.length>1 ? {phs, fs} : {}), mode, z, f:W.f, seed:W.seed, why};
   }catch(_){ return null; }
 }
-// ── PICTURE SIGNATURE ── the one piece a picture "is": its composer (or a Jam session of two–three), the jam's style and
-// the palette. Read from the picture's DNA (_imgDNA) on a fixed 96-wide grid, so it is the same on every screen; each
-// composer has a profile over the DNA's z-scores (ISIG_REF: the spread of a calibration set of paintings). A second
-// composer joins when it is nearly as close and the picture has the variety for it (regions · hues), a third only on a
-// rich one; two of one family (the still ones, the motor ones) never share a stage. Collage (A) when the picture is
-// made of distinct parts, Synthesis (E) when it is one whole (mirror symmetry over variety); in a Synthesis the
-// best-matching composer is the ground. ISIG_CURATED: hand-picked for the built-in pictures (by title).
+// ── PICTURE SIGNATURE ── the one piece a picture "is": its composer in one of his two forms (or a Jam of two–three), the
+// jam's style and the palette. The picture is read on a fixed 96-wide grid (the same on every screen) into the same seven
+// traits a piece of music has — energy, light, order, flow, tension, richness, weight — and every composer's two forms
+// (COMPOSER_FORMS2) are described by theirs; the closest form is the picture's piece. A picture whose two halves (in the order
+// the music reads it) are two characters is a Collage of the whole's composer and the one of the half that differs most; a
+// rich, tense one a Genesis; an even, flowing one that two composers fit equally well a Synthesis. Two of one family (the
+// still ones, the motor ones) never share a stage. ISIG_CURATED: hand-picked for the built-in pictures (by title).
 const ISIG_REF = {E:[0.423,0.217],L:[0.415,0.097],W:[0.207,0.438],C:[31.453,11.494],K:[17.571,6.54],T:[0.288,0.133],S:[0.278,0.262],R:[2.055,0.74],H:[2.647,2.027],M:[2.529,0.696]};
-// E energy · L lightness · W warmth · C chroma · K contrast · T texture · S symmetry · R regions (log) · H hue groups · M mode (0 lydian … 5 phrygian)
-const ISIG_PROFILES = {
-  satie:{E:-0.8,T:-0.4,K:-0.3,H:-0.3,R:-0.3}, debussy:{E:-0.6,K:-0.5,R:0.4,T:-0.1,C:0.1}, einaudi:{E:-0.5,H:-0.4,K:-0.2,S:0.2},
-  chopin:{L:-0.5,E:-0.2,W:-0.2,T:0.2,M:0.4}, schubert:{L:-0.2,W:0.3,E:-0.2,R:0.2}, rachmaninov:{L:-0.6,K:0.4,M:0.5,C:0.2},
-  beethoven:{K:0.7,E:0.4,W:0.2,L:-0.2}, mozart:{L:0.7,M:-0.5,K:-0.2,S:0.3}, bach:{S:0.7,T:0.4,H:-0.3}, glass:{S:0.5,T:0.5,E:0.2,H:-0.3},
-  vine:{E:0.9,T:0.4,K:0.3}, gershwin:{W:0.6,E:0.5,C:0.3}, yiruma:{L:0.4,E:-0.3,K:-0.5,C:-0.2}, hisaishi:{W:0.4,C:0.4,L:0.2,H:0.2},
-  tchaikovsky:{C:0.4,H:0.4,M:0.2,E:-0.1},
+// E energy · L lightness · W warmth · C chroma · K contrast · T texture · S symmetry · R regions (log) · H hue groups · M mode (0 lydian … 5 phrygian) — the palette's reading
+// the measures a picture is read by, over a spread of real pictures (paintings and photographs): [mean, sd]
+// Wc warmth (as much as there is colour) · ed edges · ax lines along the frame · hard sharp edges (of all) · oeC how many ways the strokes run · lineFr strokes that run one way ·
+// rep a pattern repeating · bh the lower third darker than the upper · red red heat · hvC hues across the wheel · sharp steps over ramps
+const ISIG4_REF = {C:[19.47,10.17],K:[17.51,5.61],oeC:[0.82,0.13],ed:[5.18,2.02],red:[0.13,0.21],L:[0.4,0.11],Wc:[0.43,0.49],S:[0.25,0.22],ax:[0.42,0.07],rep:[0.6,0.17],hard:[0.62,0.17],lineFr:[0.43,0.18],sharp:[0.67,0.06],hvC:[0.18,0.21],R:[2.06,0.57],H:[1.7,1],bh:[0.05,0.12]};
+// each trait as a mix of the measures (energy: colour, contrast, restless strokes, edges · light: light, warmth (as much as the picture has colour) · order: symmetry,
+// strokes one way, lines along the frame, repetition · flow: soft edges, long strokes, curves · tension: contrast, red, clashing hues,
+// restless strokes · richness: regions, hues, detail · weight: dark, heavy below)
+const ISIG4_TW = {E:{C:.35,K:.25,oeC:.15,ed:.2,red:.1},B:{L:.6,Wc:.4},O:{S:.4,oeC:-.3,ax:.15,rep:.15},F:{hard:-.35,lineFr:.3,ed:-.2,oeC:.25,sharp:-.15},
+  T:{K:.35,red:.25,hvC:.2,oeC:.2},C:{R:.3,H:.25,ed:.3,hvC:.15},W:{L:-.6,bh:.4}};
+const ISIG4_AR = {E:[0,.72],B:[-.03,.86],O:[-.01,.63],F:[0,.57],T:[0,.69],C:[0,.73],W:[.03,.64]};
+const ISIG4_AX = ['E','B','O','F','T','C','W'], ISIG4_CON = 0.2;
+// what each form sounds like on the same seven: [energy, light, order, flow, tension, richness, weight]
+const ISIG4_FORMS = {
+  satie:[[-.9,0,.5,.6,-.3,-.7,-.1],[-.7,-.5,-.1,.3,.3,-.6,.1]],            // Gymnopédie · Gnossienne
+  chopin:[[-.4,-.3,.1,.8,.2,.1,.2],[.5,.4,.3,.3,0,.1,-.4]],                // Nocturne · Valse
+  debussy:[[-.3,.1,-.4,.8,.2,.5,0],[.2,.6,0,.5,-.3,.3,-.4]],               // Images · Arabesque
+  glass:[[.4,-.1,.9,.2,0,.1,0],[-.4,-.4,.8,.4,.1,-.3,.3]],                 // Étude · Metamorphosis
+  vine:[[.9,-.1,.5,-.5,.4,.5,.2],[-.6,-.4,.2,.5,.2,-.3,.4]],               // Toccata · Elegy
+  gershwin:[[.8,.5,.3,-.4,.3,.4,.2],[-.1,-.1,.1,.2,.5,.1,.4]],             // Stride · Blues
+  yiruma:[[-.2,.4,.5,.6,-.6,-.2,-.3],[-.1,-.3,.4,.5,-.2,.1,-.1]],          // Ballad · Rain
+  bach:[[.3,.2,.7,-.4,0,.6,-.1],[.2,.2,.8,.4,.1,.3,0]],                    // Invention · Prelude
+  beethoven:[[.5,-.4,.1,-.1,.7,.5,.6],[.2,.3,.5,0,0,-.3,-.2]],             // Sonata · Bagatelle
+  rachmaninov:[[.5,-.6,0,-.2,.8,.7,.9],[-.5,-.5,0,.9,.4,.2,.3]],           // Prelude · Vocalise
+  einaudi:[[-.4,-.2,.8,.5,-.4,-.4,0],[.3,-.1,.8,.3,-.2,.1,.2]],            // Ostinato · Pulse
+  hisaishi:[[.3,.2,.3,.5,.2,.4,0],[.6,.9,.3,.2,-.4,.4,-.4]],               // Waltz · Summer
+  mozart:[[.3,.8,.8,.1,-.6,0,-.6],[.7,.5,.7,-.3,-.1,.1,-.4]],              // Sonata · Rondo
+  schubert:[[.1,.3,.2,.8,0,.3,0],[-.3,-.4,.3,.6,.3,0,.2]],                 // Impromptu · Serenade
+  tchaikovsky:[[-.3,-.2,.3,.7,.1,.2,.1],[.9,.6,.6,-.5,.1,.3,-.1]],         // Barcarolle · Trepak
 };
 const ISIG_FAMILY = {satie:'still', einaudi:'still', yiruma:'still', glass:'motor', vine:'motor'};
+// the measures of one picture (px: nc×nr {r,g,b}; D: its _imgDNA)
+function _isig4Meas(px, nc, nr, D){
+  const n=nc*nr, L=new Float32Array(n), Hh=new Float32Array(n), Cc=new Float32Array(n);
+  for(let i=0;i<n;i++){ const p=px[i]; const [h,s,l]=toHsl(p.r,p.g,p.b); L[i]=l; Hh[i]=h; Cc[i]=s*Math.min(l,100-l)/50; }
+  // edges (Sobel on the lightness): how many, which way, how sharp
+  const gx=new Float32Array(n), gy=new Float32Array(n), M=new Float32Array(n);
+  for(let y=1;y<nr-1;y++) for(let x=1;x<nc-1;x++){ const i=y*nc+x; const a=(dx,dy)=>L[i+dy*nc+dx];
+    const X=(a(1,-1)+2*a(1,0)+a(1,1))-(a(-1,-1)+2*a(-1,0)+a(-1,1)), Y=(a(-1,1)+2*a(0,1)+a(1,1))-(a(-1,-1)+2*a(0,-1)+a(1,-1));
+    gx[i]=X/8; gy[i]=Y/8; M[i]=Math.hypot(X,Y)/8; }
+  let sm=0, axs=0, hiS=0, loS=0;
+  for(let i=0;i<n;i++){ const m=M[i]; if(m<=0) continue; sm+=m; let t=Math.atan2(gy[i],gx[i])*180/Math.PI; t=((t%180)+180)%180;
+    if(Math.min(Math.min(t,180-t),Math.abs(t-90))<15) axs+=m; if(m>2) loS+=m; if(m>8) hiS+=m; }
+  const R=3;
+  // strokes: 7×7 windows whose edges all run one way (their share), and over all such places how many ways they run
+  let lines=0, tot=0;
+  for(let y=R+1;y<nr-R-1;y+=4) for(let x=R+1;x<nc-R-1;x+=4){ let a=0,b=0,c=0; for(let dy=-R;dy<=R;dy++) for(let dx=-R;dx<=R;dx++){ const i=(y+dy)*nc+x+dx; a+=gx[i]*gx[i]; b+=gx[i]*gy[i]; c+=gy[i]*gy[i]; }
+    const tr=a+c; const coh=tr>1e-6?Math.sqrt((a-c)*(a-c)+4*b*b)/tr:0; tot++; if(coh>0.55 && tr>98) lines++; }
+  const ob=new Float32Array(12); let obW=0;
+  for(let y=R+1;y<nr-R-1;y++) for(let x=R+1;x<nc-R-1;x++){ let a=0,b=0,c=0; for(let dy=-R;dy<=R;dy+=2) for(let dx=-R;dx<=R;dx+=2){ const i=(y+dy)*nc+x+dx; a+=gx[i]*gx[i]; b+=gx[i]*gy[i]; c+=gy[i]*gy[i]; }
+    const tr=a+c; if(tr<64) continue; const coh=Math.sqrt((a-c)*(a-c)+4*b*b)/tr; if(coh<0.6) continue;
+    const ang=((0.5*Math.atan2(2*b,a-c)*180/Math.PI)%180+180)%180; const w=Math.sqrt(tr); ob[Math.min(11,Math.floor(ang/15))]+=w; obW+=w; }
+  let oeC=0; for(const v of ob){ const q=obW?v/obW:0; if(q>0) oeC-=q*Math.log(q); } oeC/=Math.log(12);
+  // steps over ramps: a hard edge is as steep over one cell as over two, a soft one half as steep
+  let d1=0,d2=0; for(let y=0;y<nr;y++) for(let x=0;x+2<nc;x++){ const i=y*nc+x; d1+=Math.abs(L[i+1]-L[i]); d2+=Math.abs(L[i+2]-L[i]); }
+  for(let y=0;y+2<nr;y++) for(let x=0;x<nc;x++){ const i=y*nc+x; d1+=Math.abs(L[i+nc]-L[i]); d2+=Math.abs(L[i+2*nc]-L[i]); }
+  // weight below, red heat, hues across the wheel, a pattern that repeats
+  let top=0,tn=0,bot=0,bn=0; for(let y=0;y<nr;y++) for(let x=0;x<nc;x++){ const i=y*nc+x; if(y<nr/3){ top+=L[i]; tn++; } else if(y>=2*nr/3){ bot+=L[i]; bn++; } }
+  let red=0, hs=0, hc=0, cw=0; for(let i=0;i<n;i++){ if(Cc[i]>22 && (Hh[i]>=340 || Hh[i]<25)) red++; if(Cc[i]>8){ const a=Hh[i]*Math.PI/180; hs+=Math.sin(a)*Cc[i]; hc+=Math.cos(a)*Cc[i]; cw+=Cc[i]; } }
+  let rep=-1; { const mL=L.reduce((s,v)=>s+v,0)/n; let vA=0; for(let i=0;i<n;i++) vA+=(L[i]-mL)**2;
+    for(const st of [3,4,6,8]){ let num=0; for(let y=0;y<nr;y++) for(let x=0;x+st<nc;x++){ const i=y*nc+x; num+=(L[i]-mL)*(L[i+st]-mL); } rep=Math.max(rep,vA?num/vA:0); } }
+  const hv=cw?1-Math.hypot(hs,hc)/cw:0, hues=new Set(D.regions.filter(r=>!r.grey).map(r=>Math.round(r.hue/30)%12));
+  return {C:D.chroma, K:D.contrast, L:D.lightness, Wc:D.warmth*Math.min(1,D.chroma/20), S:D.symmetry, R:Math.log(1+D.regions.length), H:hues.size,
+    ed:sm/n, ax:sm?axs/sm:0.33, hard:loS?hiS/loS:0, oeC, lineFr:tot?lines/tot:0, rep, bh:(tn&&bn)?(top/tn-bot/bn)/100:0, red:red/n, hvC:hv*Math.min(1,D.chroma/20), sharp:d2?d1/d2:1};
+}
+// the seven traits (−1 … 1) from the measures
+function _isig4Axes(f){ const o={}; for(const a of ISIG4_AX){ let v=0; const T=ISIG4_TW[a]; for(const k in T){ const r=ISIG4_REF[k]; const x=+f[k]; v+=T[k]*((isFinite(x)?x:r[0])-r[0])/r[1]; } o[a]=Math.tanh(((v-ISIG4_AR[a][0])/ISIG4_AR[a][1])/1.25); } return o; }
+function _isig4Dist(m, P){ let s=0; ISIG4_AX.forEach((a,i)=>{ const d=m[a]-P[i]; s+=d*d; }); return s/ISIG4_AX.length; }
+// every composer in his better-fitting form, the closest first
+function _isig4Rank(m){ const out=[]; for(const k in ISIG4_FORMS){ if(typeof COMPOSER_FORMS2!=='undefined' && !COMPOSER_FORMS2[k]) continue; let b=null; ISIG4_FORMS[k].forEach((P,f)=>{ const s=-3*_isig4Dist(m,P); if(!b || s>b.s) b={k,f,s}; }); out.push(b); }
+  return out.sort((a,b)=>(b.s-a.s) || (a.k<b.k?-1:1)); }
 const ISIG_CURATED = {
   'The Starry Night — Van Gogh': {keys:['debussy','rachmaninov'], fs:'A', mode:'harmony'},   // the swirling sky in Debussy's colours, the dark village and cypress in Rachmaninov's — taking turns
   'Water Lily Pond — Monet':     {keys:['debussy'], mode:'harmony'},                          // Monet's pond is Debussy's own water
@@ -436,35 +509,42 @@ function computeImageSignature(img, title){
       const [,ss,ll]=toHsl(p.r,p.g,p.b); if(ss>25 && ll<85 && ll>6) vivid++; }
     const cur=(title && ISIG_CURATED[title]) ? ISIG_CURATED[title] : null;
     const bw=(vivid/(nc*nr))<0.05;
-    if(cur) return { keys:cur.keys.slice(), fs:cur.fs||null, mode:bw?'bw':(cur.mode||'harmony'), h:0 };
+    if(cur) return { keys:cur.keys.slice(), fs:cur.fs||null, mode:bw?'bw':(cur.mode||'harmony'), h:0, ...(cur.sf!=null ? {sf:cur.sf} : {}) };
     const base=pixelsToImageEvents(px,nc,nr,COF,'harmony','lr',0); const D=_imgDNA(px,nc,nr,base,COF);
     const hues=new Set(D.regions.filter(r=>!r.grey).map(r=>Math.round(r.hue/30)%12));
     const f={E:D.energy,L:D.lightness,W:D.warmth,C:D.chroma,K:D.contrast,T:D.texture,S:D.symmetry,R:Math.log(1+D.regions.length),H:hues.size,M:D.modeIdx};
     const z={}; for(const k in ISIG_REF){ const m=ISIG_REF[k][0], s=ISIG_REF[k][1]; const v=+f[k]; z[k]=Math.max(-3,Math.min(3,((isFinite(v)?v:m)-m)/s)); }
-    const rank=Object.keys(ISIG_PROFILES).map(k=>{ const P=ISIG_PROFILES[k]; let s=0; for(const a in P) s+=P[a]*z[a]; return [s,k]; })
-      .sort((a,b)=>(b[0]-a[0]) || (a[1]<b[1]?-1:1));
-    const rich=(z.R+z.H)/2; const keys=[rank[0][1]]; const fam=new Set([ISIG_FAMILY[keys[0]]].filter(Boolean));
-    for(let i=1;i<rank.length && keys.length<3;i++){
-      const s=rank[i][0], k=rank[i][1]; if(s<rank[0][0]-0.35) break;
-      const fm=ISIG_FAMILY[k]; if(fm && fam.has(fm)) continue;
-      if(keys.length===1 ? rich>-0.3 : rich>0.8){ keys.push(k); if(fm) fam.add(fm); } else break;
-    }
+    // the picture's seven traits, and every composer in his closer form
+    const m=_isig4Axes(_isig4Meas(px,nc,nr,D)); const rank=_isig4Rank(m); const lead=rank[0];
+    const ok=(k,have)=>!have.includes(k) && !(ISIG_FAMILY[k] && have.some(b=>ISIG_FAMILY[b]===ISIG_FAMILY[k]));
+    let keys=[lead.k], fs=null;
+    // its two halves, in the order the music reads it (left → right): two characters (energy, light, tension, weight) make a
+    // Collage — the whole's composer, and beside him the one of the half that differs most (among the whole's eight closest)
+    const hw=nc>>1, half=(x0,x1)=>{ const q=[]; for(let y=0;y<nr;y++) for(let x=x0;x<x1;x++) q.push(px[y*nc+x]); return _isig4Axes(_isig4Meas(q,x1-x0,nr,_imgDNA(q,x1-x0,nr,[],null))); };
+    const hs=[half(0,hw), half(hw,nc)]; let con=0; for(const a of ['E','B','T','W']){ const d=hs[0][a]-hs[1][a]; con+=d*d; } con/=4;
+    if(con>ISIG4_CON){ const near=rank.slice(0,8).map(x=>x.k);
+      const pm=hs.map((p,i)=>{ const o={}; for(const a of ISIG4_AX) o[a]=m[a]+(p[a]-hs[1-i][a])/2; return o; });
+      const far=pm.map(p=>_isig4Dist(m,[...ISIG4_AX.map(a=>p[a])])), pt=pm[far[0]>=far[1]?0:1];
+      const B=_isig4Rank(pt).find(x=>x.k!==lead.k && near.includes(x.k) && ok(x.k,[lead.k])); if(B){ keys=[lead.k,B.k]; fs='A'; } }
+    // a rich, tense whole: a new composer born of the closest ones' genes
+    if(!fs && m.C>0.45 && m.T>0.25){ const mem=[lead]; for(const x of rank){ if(mem.length>=3) break; if(!ok(x.k,mem.map(y=>y.k))) continue; if(lead.s-x.s<0.3) mem.push(x); } if(mem.length>=2){ keys=mem.map(x=>x.k); fs='G'; } }
+    // an even, flowing whole two composers fit equally well: they melt into one piece
+    if(!fs && m.F>0.45){ const s2=rank.find(x=>x.k!==lead.k && ok(x.k,[lead.k])); if(s2 && lead.s-s2.s<0.02){ keys=[lead.k,s2.k]; fs='E'; } }
     const mode = bw ? 'bw' : (z.K>0.8 || (z.C>0.5 && z.E>0.5)) ? 'kontra' : z.H>0.6 ? 'spectral' : z.S>0.6 ? 'phi' : 'harmony';
-    const fs = keys.length>1 ? (((z.S-rich)/2)>0.2 ? 'E' : 'A') : null;
-    return { keys, fs, mode, h:0 };
+    return { keys, fs, mode, h:0, ...(keys.length===1 ? {sf:lead.f} : {}), z, m };
   }catch(_){ return null; }
 }
 // intro = the line over the canvas the first time a Signature plays (what the word means)
 const SIG_I18N = {
-  EN:{label:'Signature',intro:'The one painting this song chose for itself — the same for everyone.',tip:'This song’s signature painting — a fusion of 2–5 painters, each in its own role, with variant and palette chosen by the music’s character. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'},introImg:'The one piece this picture chose for itself — the same for everyone.',tipImg:'This picture’s signature piece — one composer or a Jam session of two or three, with style and palette chosen by the picture’s character. The same for everyone. Tap again to switch it off.'},
-  SK:{label:'Signatúra',intro:'Jediný obraz, ktorý si táto skladba vybrala sama — u každého rovnaký.',tip:'Signatúrna maľba tejto skladby — fúzia 2–5 maliarov, každý vo svojej role, variant a paleta podľa charakteru hudby. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'},introImg:'Jediná skladba, ktorú si tento obraz vybral sám — u každého rovnaká.',tipImg:'Signatúrna skladba tohto obrazu — jeden skladateľ alebo Jam session dvoch až troch, štýl a paleta podľa charakteru obrazu. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.'},
-  DE:{label:'Signatur',intro:'Das eine Bild, das sich dieses Stück selbst ausgesucht hat — für alle gleich.',tip:'Das Signaturbild dieses Stücks — eine Fusion aus 2–5 Malern, jeder in seiner Rolle, Variante und Palette nach dem Charakter der Musik. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'},introImg:'Das eine Stück, das sich dieses Bild selbst ausgesucht hat — für alle gleich.',tipImg:'Das Signaturstück dieses Bildes — ein Komponist oder eine Jam session aus zwei bis drei, Stil und Palette nach dem Charakter des Bildes. Für alle gleich. Erneut tippen schaltet es aus.'},
-  FR:{label:'Signature',intro:'Le seul tableau que ce morceau a choisi lui-même — le même pour tous.',tip:'La peinture-signature de ce morceau — une fusion de 2 à 5 peintres, chacun dans son rôle, variante et palette d’après le caractère de la musique. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'},introImg:'Le seul morceau que cette image a choisi elle-même — le même pour tous.',tipImg:'Le morceau-signature de cette image — un compositeur ou une Jam session de deux ou trois, style et palette d’après le caractère de l’image. Le même pour tous. Touche à nouveau pour le désactiver.'},
-  ES:{label:'Firma',intro:'El único cuadro que esta canción eligió por sí misma — el mismo para todos.',tip:'La pintura-firma de esta canción — una fusión de 2 a 5 pintores, cada uno en su rol, variante y paleta según el carácter de la música. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'},introImg:'La única pieza que esta imagen eligió por sí misma — la misma para todos.',tipImg:'La pieza-firma de esta imagen — un compositor o una Jam session de dos o tres, estilo y paleta según el carácter de la imagen. La misma para todos. Toca de nuevo para desactivarla.'},
-  PT:{label:'Assinatura',intro:'O único quadro que esta música escolheu para si — igual para todos.',tip:'A pintura-assinatura desta música — uma fusão de 2 a 5 pintores, cada um no seu papel, variante e paleta pelo carácter da música. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'},introImg:'A única peça que esta imagem escolheu para si — igual para todos.',tipImg:'A peça-assinatura desta imagem — um compositor ou uma Jam session de dois ou três, estilo e paleta pelo carácter da imagem. Igual para todos. Toca de novo para a desligar.'},
-  zh:{label:'签名',intro:'这首曲子为自己选出的唯一一幅画——人人看到的都一样。',tip:'这首曲子的签名画——由音乐的性格组成 2–5 位画家各司其职的融合，并选出变体与调色板。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'},introImg:'这幅画为自己选出的唯一一首曲子——人人听到的都一样。',tipImg:'这幅画的签名曲——一位作曲家，或两到三位的 Jam session，风格与调色板由画的性格选出。人人相同。 再点一次即可关闭。'},
-  zhTW:{label:'簽名',intro:'這首曲子為自己選出的唯一一幅畫——人人看到的都一樣。',tip:'這首曲子的簽名畫——由音樂的性格組成 2–5 位畫家各司其職的融合，並選出變體與調色盤。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'},introImg:'這幅畫為自己選出的唯一一首曲子——人人聽到的都一樣。',tipImg:'這幅畫的簽名曲——一位作曲家，或兩到三位的 Jam session，風格與調色盤由畫的性格選出。人人相同。 再點一次即可關閉。'},
-  ja:{label:'署名',intro:'この曲が自分で選んだ、ただ一枚の絵——誰にとっても同じ。',tip:'この曲の署名画——音楽の性格から、役割を分けた 2〜5 人のフュージョンとバリアント・パレットが選ばれます。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'},introImg:'この絵が自分で選んだ、ただ一つの曲——誰にとっても同じ。',tipImg:'この絵の署名曲——一人の作曲家、または二〜三人の Jam session。スタイルとパレットは絵の性格から選ばれます。誰にとっても同じ一曲。 もう一度タップでオフ。'},
+  EN:{label:'Signature',intro:'The one painting this song chose for itself — the same for everyone.',tip:'This song’s signature painting — the painter and the variant that fit the music best on seven traits: energy, light, order, flow, tension, richness, weight. A fusion only when the music itself is several. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'},introImg:'The one piece this picture chose for itself — the same for everyone.',tipImg:'This picture’s signature piece — the composer and his form that fit the picture best on seven traits: energy, light, order, flow, tension, richness, weight. A Jam session only when the picture itself is several. The same for everyone. Tap again to switch it off.'},
+  SK:{label:'Signatúra',intro:'Jediný obraz, ktorý si táto skladba vybrala sama — u každého rovnaký.',tip:'Signatúrna maľba tejto skladby — maliar a variant, ktorý k hudbe sedí najviac v siedmich črtách: energia, svetlo, poriadok, plynutie, napätie, bohatstvo, váha. Fúzia, len keď je skladba sama viacerými. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'},introImg:'Jediná skladba, ktorú si tento obraz vybral sám — u každého rovnaká.',tipImg:'Signatúrna skladba tohto obrazu — skladateľ a jeho forma, ktorá k obrazu sedí najviac v siedmich črtách: energia, svetlo, poriadok, plynutie, napätie, bohatstvo, váha. Jam session, len keď je obraz sám viacerými. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.'},
+  DE:{label:'Signatur',intro:'Das eine Bild, das sich dieses Stück selbst ausgesucht hat — für alle gleich.',tip:'Das Signaturbild dieses Stücks — der Maler und die Variante, die in sieben Zügen am besten zur Musik passen: Energie, Licht, Ordnung, Fluss, Spannung, Fülle, Gewicht. Eine Fusion nur, wenn die Musik selbst mehreres ist. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'},introImg:'Das eine Stück, das sich dieses Bild selbst ausgesucht hat — für alle gleich.',tipImg:'Das Signaturstück dieses Bildes — der Komponist und seine Form, die in sieben Zügen am besten zum Bild passen: Energie, Licht, Ordnung, Fluss, Spannung, Fülle, Gewicht. Eine Jam session nur, wenn das Bild selbst mehreres ist. Für alle gleich. Erneut tippen schaltet es aus.'},
+  FR:{label:'Signature',intro:'Le seul tableau que ce morceau a choisi lui-même — le même pour tous.',tip:'La peinture-signature de ce morceau — le peintre et la variante qui collent le mieux à la musique sur sept traits : énergie, lumière, ordre, fluidité, tension, richesse, poids. Une fusion seulement quand la musique est elle-même plusieurs. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'},introImg:'Le seul morceau que cette image a choisi elle-même — le même pour tous.',tipImg:'Le morceau-signature de cette image — le compositeur et sa forme qui lui vont le mieux sur sept traits : énergie, lumière, ordre, fluidité, tension, richesse, poids. Une Jam session seulement quand l’image est elle-même plusieurs. Le même pour tous. Touche à nouveau pour le désactiver.'},
+  ES:{label:'Firma',intro:'El único cuadro que esta canción eligió por sí misma — el mismo para todos.',tip:'La pintura-firma de esta canción — el pintor y la variante que mejor encajan con la música en siete rasgos: energía, luz, orden, fluidez, tensión, riqueza, peso. Una fusión solo cuando la música misma es varias. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'},introImg:'La única pieza que esta imagen eligió por sí misma — la misma para todos.',tipImg:'La pieza-firma de esta imagen — el compositor y su forma que mejor le encajan en siete rasgos: energía, luz, orden, fluidez, tensión, riqueza, peso. Una Jam session solo cuando la imagen misma es varias. La misma para todos. Toca de nuevo para desactivarla.'},
+  PT:{label:'Assinatura',intro:'O único quadro que esta música escolheu para si — igual para todos.',tip:'A pintura-assinatura desta música — o pintor e a variante que melhor combinam com a música em sete traços: energia, luz, ordem, fluidez, tensão, riqueza, peso. Uma fusão só quando a própria música é várias. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'},introImg:'A única peça que esta imagem escolheu para si — igual para todos.',tipImg:'A peça-assinatura desta imagem — o compositor e a sua forma que melhor lhe combinam em sete traços: energia, luz, ordem, fluidez, tensão, riqueza, peso. Uma Jam session só quando a própria imagem é várias. Igual para todos. Toca de novo para a desligar.'},
+  zh:{label:'签名',intro:'这首曲子为自己选出的唯一一幅画——人人看到的都一样。',tip:'这首曲子的签名画——在七个特质上与音乐最契合的画家和变体：能量、明暗、秩序、流动、张力、丰富、分量。只有音乐本身包含几种性格时才是融合。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'},introImg:'这幅画为自己选出的唯一一首曲子——人人听到的都一样。',tipImg:'这幅画的签名曲——在七个特质上与画最契合的作曲家和他的曲式：能量、明暗、秩序、流动、张力、丰富、分量。只有画本身包含几种性格时才是 Jam session。人人相同。 再点一次即可关闭。'},
+  zhTW:{label:'簽名',intro:'這首曲子為自己選出的唯一一幅畫——人人看到的都一樣。',tip:'這首曲子的簽名畫——在七個特質上與音樂最契合的畫家和變體：能量、明暗、秩序、流動、張力、豐富、分量。只有音樂本身包含幾種性格時才是融合。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'},introImg:'這幅畫為自己選出的唯一一首曲子——人人聽到的都一樣。',tipImg:'這幅畫的簽名曲——在七個特質上與畫最契合的作曲家和他的曲式：能量、明暗、秩序、流動、張力、豐富、分量。只有畫本身包含幾種性格時才是 Jam session。人人相同。 再點一次即可關閉。'},
+  ja:{label:'署名',intro:'この曲が自分で選んだ、ただ一枚の絵——誰にとっても同じ。',tip:'この曲の署名画——七つの特徴（エネルギー、明るさ、秩序、流れ、緊張、豊かさ、重さ）で音楽にいちばん合う画家とバリアント。音楽そのものがいくつもの性格を持つときだけフュージョンに。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'},introImg:'この絵が自分で選んだ、ただ一つの曲——誰にとっても同じ。',tipImg:'この絵の署名曲——七つの特徴（エネルギー、明るさ、秩序、流れ、緊張、豊かさ、重さ）で絵にいちばん合う作曲家とその形式。絵そのものがいくつもの性格を持つときだけ Jam session に。誰にとっても同じ一曲。 もう一度タップでオフ。'},
 };
 
 // Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
@@ -4771,6 +4851,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     kontraAutoRef.current = false;
     _liteJamStyleRef.current = s.keys.length>1 ? s.keys[0] : null;
     if(s.keys.length>1 && ensembleOnRef.current) setJamOn(true);
+    if(s.keys.length===1 && jamOnRef.current) setJamOn(false);   // one painter: the Signature is a solo
     setStyle(s.keys[0]); setPainterStage(s.keys.slice(1)); setPhaseIndex(s.ph|0);
     setMode(s.mode); setShowColorPalette(false); setCustomArmed(false);
     setSigActive(true);
@@ -4786,7 +4867,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // back to the previous selection (artist, stage, variant, palette)
       if(p.style===null) setNotesMode(!!p.notesMode);
       setStyle(p.style); setPainterStage(p.stage); setPhaseIndex(p.ph); setMode(p.mode);
-      if(!p.jamOn) setJamOn(false);
+      if(!p.jamOn) setJamOn(false); else if(!jamOnRef.current) setJamOn(true);
       _liteJamStyleRef.current = p.stage.length ? p.style : null;
     } else {
       // nothing to return to: keep the artist, drop a stage that only ✦ put up
@@ -5304,7 +5385,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the next variant, from the first style. A composer alone: his two forms (COMPOSER_FORMS2) — the first, the second.
   const jamVarHistRef = useRef({key:'', st:[], fw:[]});
   const soloFormRef = useRef({k:null, v:0});   // the form of the composer playing alone (0 his first, 1 his second) — for this picture
-  const _soloForm = ()=>{ const k=imgComposerRef.current, F=soloFormRef.current; return (k && F && F.k===k && !imgSigActiveRef.current) ? (F.v|0) : 0; };
+  const _soloForm = ()=>{ const k=imgComposerRef.current, F=soloFormRef.current;
+    if(imgSigActiveRef.current){ const g=imgSigRef.current; return (g && g.keys && g.keys.length===1 && g.keys[0]===k) ? (g.sf|0) : 0; }   // the picture's ✦: its own form
+    return (k && F && F.k===k) ? (F.v|0) : 0; };
   const _soloHas = (k)=> !!(k && typeof COMPOSER_FORMS2!=='undefined' && COMPOSER_FORMS2[k]);
   const _formName = (k, v)=>{ const d=COMPOSER_FORM_NAMES[lang]||COMPOSER_FORM_NAMES.EN; const a=(d && d[k]) || COMPOSER_FORM_NAMES.EN[k]; return a ? a[v?1:0] : ''; };
   const _palTo = (to, pal)=>{ if(to.md){ if(to.md!==mode && !palGoldRef.current && setupPalettes.includes(to.md)){ kontraAutoRef.current=false; setShowColorPalette(false); setCustomArmed(false); setMode(to.md); } }   // the palette it had (a gold palette stays)
@@ -5317,7 +5400,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
     else { to={ v:cur?0:1, md:null }; H.st.push(now); }
     if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift();
-    if(to.sig && imgSigRef.current && !imgSigActiveRef.current){ soloFormRef.current={ k, v:0 }; try{ _applyImgSig(); }catch(_){} _palTo(to, false); setJamFlipN(n=>n+1); return true; }   // → back onto the picture's ✦: it comes back exactly
+    if(to.sig && imgSigRef.current && !imgSigActiveRef.current){ soloFormRef.current={ k, v:(imgSigRef.current.sf|0) }; try{ _applyImgSig(); }catch(_){} _palTo(to, false); setJamFlipN(n=>n+1); return true; }   // → back onto the picture's ✦: it comes back exactly
     if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; if(!crOnRef.current && !composerDice) setComposerDice(true); }   // ← from the picture's ✦: the latch lets go (as a painting's ✦ on ←) — its composer was the picture's choice, not yours: ↑ still draws the next one
     soloFormRef.current={ k, v:to.v };
     _palTo(to, pal); setJamFlipN(n=>n+1); return true; };
@@ -6496,6 +6579,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(s.keys.length>1 && ensembleOnRef.current && !crOnRef.current){ crOnRef.current=true; setCrOn(true); }
     _lastComposerRef.current = s.keys[0];
     imgComposerRef.current = s.keys[0]; setImgComposer(s.keys[0]);
+    if(s.keys.length===1) soloFormRef.current = { k:s.keys[0], v:(s.sf|0) };   // the composer in the form the picture chose
     composerStageRef.current = s.keys.slice(1); setComposerStage(s.keys.slice(1));
     if(s.mode && s.mode!==mode){ kontraAutoRef.current = (s.mode==='kontra'); setShowColorPalette(false); setCustomArmed(false); setMode(s.mode); }
     setImgSigActive(true);
@@ -11918,7 +12002,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){}
           }
           try{ globalThis.__IMG_SIG=null; }catch(_){}
-          imgSigRef.current=_isg; setImgSig(_isg);
+          imgSigRef.current=_isg; setImgSig(_isg); try{ globalThis.__PAINT_IMG_SIG=_isg; }catch(_){}   // as __PAINT_SONG_SIG: what the picture's ✦ is (poster tools, tests)
           let _isgOpen=false;
           const _isReturn = imgReturnLoadRef.current || !!_fr; imgReturnLoadRef.current = false;
           if(_fr){ const _k0=((_fr.keys||[]).filter(Boolean)); soloFormRef.current={ k:_k0.length===1 ? _k0[0] : null, v:_k0.length===1 ? (_fr.sf|0) : 0 }; }
