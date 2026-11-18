@@ -10159,7 +10159,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   ctx.fillStyle = `rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`;
   ctx.fillRect(0,0,CW,CH);
 
-  // VARIANT: 0 What it heard (_rfListen, generative) · 1 Niť (Lissajous) · 2 Súhvezdie · 3 Niť (spiral) · 4 Vlna · 5 Vejár · 6 Kompozícia. Free: 0 and 1.
+  // VARIANT: 0 What it heard = Golden music (_rfGolden) · 1 Niť (Lissajous) · 2 Súhvezdie · 3 Slnečnica 137,5° · 4 Kruh kvínt · 5 Vejár · 6 Chladniho obrazce. Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _rfGolden(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   const pick=pick0-1;
@@ -20764,7 +20764,7 @@ function composeImageCallResponse(px,nc,nr,table,colorMode,keys){
 // ─────────────────────────────────────────────────────────────────────────────
 const ARTIST_DNA = {
   mosaic:       {ground:'#04040a',mark:{rect:1},                          size:[.03,.08],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
-  raffel:       {ground:'#06060c',mark:{phiarc:.8,ring:.2},               size:[.15,.4], edge:.2, alpha:.9, layout:{radial:.6,scatter:.4},   outline:0, tone:'pure',    wobble:.1, lines:.2,layers:1,density:.15,halftone:0},
+  raffel:       {ground:'#0e0816',mark:{rfgold:.5,rfseed:.25,rfrose:.25}, size:[.12,.4], edge:0,  alpha:1,  layout:{radial:.6,scatter:.4},   outline:0, tone:'pure',    wobble:0,  lines:.2,layers:1,density:.15,halftone:0},
   picasso:      {ground:'#c8b090',mark:{pcfacet:.45,pcpaper:.3,pcguitar:.25},size:[.06,.22],edge:0, alpha:.95,layout:{scatter:.7,flow:.3},     outline:.4,tone:'pure',    wobble:.3, lines:.2,layers:1,density:.4, halftone:0},
   matisse:      {ground:'#f6f2e9',mark:{mtleaf:.35,mtalgae:.25,mtsheet:.2,mtburst:.2},size:[.06,.2],edge:0,alpha:1,layout:{scatter:.8,grid:.2},     outline:0, tone:'pure',    wobble:.3, lines:0, layers:1,density:.45,halftone:0},
   pollock:      {ground:'#f2ede0',mark:{drip:.75,splat:.25},              size:[.006,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.9, lines:.6,layers:2,density:.6, halftone:0},
@@ -20794,14 +20794,14 @@ ARTIST_DNA.notes = ARTIST_DNA.mosaic;
 // the engine's own phase picker, so Vary/Next in Jam walks the parents' true
 // variants). Each entry overrides the artist's base genes.
 const ARTIST_VARIANTS = {
-  raffel: [
-    {mark:{chain:.4,phiarc:.3,rays:.3},size:[.1,.4],layout:{radial:.5,scatter:.5},density:.2,lines:.6},   // What it heard
-    {mark:{phiarc:1},size:[.2,.45],layout:{radial:1},density:.12},
-    {mark:{chain:.7,beam:.3},size:[.05,.15],layout:{scatter:1},density:.2,lines:.6},
-    {mark:{phiarc:.6,goldspiral:.4},size:[.2,.5],layout:{radial:1},density:.15},
-    {mark:{wave:.7,phiarc:.3},size:[.08,.25],layout:{grid:1},density:.5,lines:0},
-    {mark:{rays:.6,phiarc:.4},size:[.2,.5],layout:{radial:1},density:.15},
-    {mark:{phi:.5,phiarc:.3,chain:.2},size:[.1,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.4},
+  raffel: [   // slot order = solo variants: Golden music, Lissajous, Constellation, Sunflower 137.5°, Circle of fifths, Fan, Chladni figures
+    {ground:'#0e0816',mark:{rfgold:.75,goldspiral:.25},size:[.12,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.2},   // What it heard: Golden music, the golden rectangle's squares in rings, the spiral in gold
+    {ground:'#0e0816',mark:{rflissa:1},size:[.12,.3],layout:{radial:.5,scatter:.5},density:.08,lines:0},   // Lissajous: the thread, one closed knot
+    {ground:'#0b0712',mark:{chain:.65,dot:.35},size:[.04,.12],layout:{scatter:1},density:.25,lines:.6},   // Constellation: the piece's stars, joined by gold threads
+    {ground:'#0e0816',mark:{rfseed:.85,dot:.15},size:[.12,.4],layout:{radial:1},density:.18},   // Sunflower 137.5°: seeds at the golden angle
+    {ground:'#0a0712',mark:{rfrose:.85,ring:.15},size:[.14,.42],layout:{radial:1},density:.15},   // Circle of fifths: the rose window
+    {ground:'#0e0816',mark:{rays:.8,dot:.2},size:[.15,.45],layout:{radial:1},density:.15,lines:0},   // Fan: rays from the heart
+    {ground:'#0a0a12',mark:{rfsand:.85,dot:.15},size:[.12,.35],layout:{grid:.6,scatter:.4},density:.25,lines:0},   // Chladni figures: sand on the still lines
   ],
   picasso: [
     {ground:'#c8b090',mark:{pcfacet:.45,pcpaper:.3,pcguitar:.25},size:[.06,.22],edge:0,alpha:.95,layout:{scatter:.7,flow:.3},outline:.4,density:.4,nosnap:true},   // Listens
@@ -21395,12 +21395,63 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
 // geometry (_fuMark), whatever the hand; every other mark is a closed form the hand paints (_fuForm)
 // Haring's cast keeps his own hand in a crossing too: as a silhouette in the fused hand it reads as a pictogram
 const _FU_HRC=/^(figure|dog|hgfig|hgchalk|hgpair|hgtv|rdog)$/;
-const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest|dab)$/;
+const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest|dab|rfgold|rfseed|rfrose|rflissa|rfsand)$/;
 // ── the signs of the painters we reworked, in a Collage drawn by their own engines (Haring's figures, pairs, TV heads,
 // saucers, hearts and our round dog; Matisse's cut papers; Picasso's planes, pasted papers and charcoal guitar;
 // Lichtenstein's brushstroke, explosion, mirror, wave and ridge). In a Synthesis they become plain forms (_FU_SYN_MAP).
-const _FU_SIGN=/^(hgfig|hgchalk|hgpair|hgtv|hgsaucer|hgheart|rdog|mtleaf|mtalgae|mtcoral|mtbird|mtfish|mtburst|mtlobed|mtsheet|pcfacet|pcpaper|pcguitar|lcbrush|lcboom|lcmirror|lcwave|lcridge)$/;
+// ── RafFel's forms for the fusions (Nov 2026): each a small copy of one of his paintings, in the piece's two colours and his gold —
+// rfgold Golden music (the golden rectangle cut into its squares, each in rings from its pivot, the spiral through them), rfseed the
+// Sunflower 137.5° (seeds at the golden angle, the spirals of 13 and 21 showing), rfrose the Circle of fifths (a rose window, lead
+// between the panes), rflissa Lissajous' thread (one closed knot), rfsand Chladni's figure (sand on the lines that stay still) ──
+const _RF_GOLD=[214,180,96];
+function _rfMark(ctx,kind,rr,c,c2,R){
+  const css=(q,a)=>`rgba(${q[0]|0},${q[1]|0},${q[2]|0},${a==null?1:a})`, G=_RF_GOLD, PHI=1.6180339887;
+  const lt=(q,t)=>q.map(v=>v+(255-v)*t), dk=(q,t)=>q.map(v=>v*(1-t));
+  if(Math.abs(c[0]-c2[0])+Math.abs(c[1]-c2[1])+Math.abs(c[2]-c2[2])<40) c2=lt(c,0.4);
+  ctx.save(); ctx.globalAlpha=1; ctx.lineCap='butt'; ctx.lineJoin='round';
+  switch(kind){
+    case 'rfgold': { const W=rr*1.9, H=W/PHI; let Q={x:-W/2,y:-H/2,w:W,h:H}; const sq=[];
+      for(let k=0,d=3;k<9;k++,d=(d+1)%4){ let s, q;
+        if(d===0){ s=Q.w; q={x:Q.x,y:Q.y,s,cx:Q.x,cy:Q.y+s,a0:Math.PI*1.5}; Q={x:Q.x,y:Q.y+s,w:Q.w,h:Q.h-s}; }
+        else if(d===1){ s=Q.h; q={x:Q.x+Q.w-s,y:Q.y,s,cx:Q.x+Q.w-s,cy:Q.y,a0:0}; Q={x:Q.x,y:Q.y,w:Q.w-s,h:Q.h}; }
+        else if(d===2){ s=Q.w; q={x:Q.x,y:Q.y+Q.h-s,s,cx:Q.x+s,cy:Q.y+Q.h-s,a0:Math.PI*0.5}; Q={x:Q.x,y:Q.y,w:Q.w,h:Q.h-s}; }
+        else { s=Q.h; q={x:Q.x,y:Q.y,s,cx:Q.x+s,cy:Q.y+s,a0:Math.PI}; Q={x:Q.x+s,y:Q.y,w:Q.w-s,h:Q.h}; }
+        if(s<rr*0.07) break; sq.push(q); }
+      sq.forEach((q,j)=>{ const A=j%2?c2:c, B=j%2?c:c2; ctx.save(); ctx.beginPath(); ctx.rect(q.x,q.y,q.s,q.s); ctx.clip(); ctx.fillStyle=css(dk(A,0.7)); ctx.fillRect(q.x,q.y,q.s,q.s);
+        const n=Math.max(3,Math.round(q.s/(rr*0.08))), st=q.s/n; ctx.lineWidth=st*0.64;
+        for(let i=0;i<n;i++){ const t=R(); ctx.strokeStyle=css(t<0.55?A:t<0.85?B:lt(A,0.35)); ctx.beginPath(); ctx.arc(q.cx,q.cy,st*(i+0.5),q.a0,q.a0+Math.PI/2); ctx.stroke(); }
+        ctx.restore(); });
+      ctx.strokeStyle=css(G,0.85); ctx.lineWidth=Math.max(0.6,rr*0.012); sq.forEach(q=>ctx.strokeRect(q.x,q.y,q.s,q.s));
+      ctx.strokeStyle=css(lt(G,0.2)); ctx.lineWidth=Math.max(0.9,rr*0.03); ctx.lineCap='round'; ctx.beginPath(); sq.forEach(q=>ctx.arc(q.cx,q.cy,q.s,q.a0,q.a0+Math.PI/2)); ctx.stroke(); break; }
+    case 'rfseed': { const N=144, GA=2.399963229728653, cc=rr/Math.sqrt(N+0.5);
+      ctx.fillStyle=css(dk(c,0.8)); ctx.beginPath(); ctx.arc(0,0,rr*1.03,0,6.2832); ctx.fill();
+      for(let k=N-1;k>=0;k--){ const r=cc*Math.sqrt(k+0.5), a=k*GA, x=Math.cos(a)*r, y=Math.sin(a)*r, f=0.62+0.38*Math.sqrt(k/N), q=(k%13)<6 ? c : ((k%21)<10 ? c2 : lt(c,0.3));
+        ctx.fillStyle=css(dk(q,0.5)); ctx.beginPath(); ctx.ellipse(x,y,cc*0.88*f,cc*0.68*f,a,0,6.2832); ctx.fill();
+        ctx.fillStyle=css(q); ctx.beginPath(); ctx.ellipse(x,y,cc*0.7*f,cc*0.53*f,a,0,6.2832); ctx.fill(); }
+      const hg=ctx.createRadialGradient(0,0,0,0,0,cc*2.4); hg.addColorStop(0,css([250,232,170],0.95)); hg.addColorStop(1,css(G,0)); ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(0,0,cc*2.4,0,6.2832); ctx.fill(); break; }
+    case 'rfrose': { const rb=[0.27,0.52,0.77,1].map(v=>v*rr), ld=rr*0.024;
+      for(let i=0;i<3;i++){ const M=i===2?24:12;
+        for(let j=0;j<M;j++){ const ga=ld/rb[i+1], a0=j/M*6.2832-Math.PI/2+ga, a1=(j+1)/M*6.2832-Math.PI/2-ga, r0=rb[i]+ld, r1=rb[i+1]-ld, w=0.5+0.5*R(), q=lt(dk(((j+i)%2)?c2:c,0.4*(1-w)),0.16*w);
+          const g=ctx.createRadialGradient(0,0,r0,0,0,r1); g.addColorStop(0,css(dk(q,0.28))); g.addColorStop(1,css(lt(q,0.1))); ctx.fillStyle=g;
+          ctx.beginPath(); ctx.arc(0,0,r1,a0,a1); ctx.arc(0,0,r0,a1,a0,true); ctx.closePath(); ctx.fill(); } }
+      ctx.fillStyle=css(dk(c2,0.25)); ctx.beginPath(); ctx.arc(0,0,rb[0]-ld,0,6.2832); ctx.fill();
+      ctx.fillStyle=css(G); for(let j=0;j<6;j++){ const a=j/6*6.2832; ctx.beginPath(); ctx.arc(Math.cos(a)*rr*0.13,Math.sin(a)*rr*0.13,rr*0.042,0,6.2832); ctx.fill(); } ctx.beginPath(); ctx.arc(0,0,rr*0.055,0,6.2832); ctx.fill();
+      ctx.strokeStyle=css(G,0.95); ctx.lineWidth=Math.max(0.8,rr*0.022); ctx.beginPath(); ctx.arc(0,0,rr*1.03,0,6.2832); ctx.stroke(); break; }
+    case 'rflissa': { const P=[[1,2],[2,3],[3,4],[3,5],[4,5],[2,5]][(R()*6)|0], a=P[0], b=P[1], dl=Math.PI/(2*b)+0.2+R()*0.3, N=260, pts=[];
+      for(let i=0;i<=N;i++){ const t=i/N*6.2832; pts.push([Math.sin(a*t+dl)*rr, Math.sin(b*t)*rr*0.86]); }
+      const run=()=>{ ctx.beginPath(); pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.stroke(); };
+      ctx.strokeStyle=css(G,0.22); ctx.lineWidth=Math.max(2,rr*0.09); run(); ctx.strokeStyle=css(c2); ctx.lineWidth=Math.max(1.2,rr*0.04); run(); ctx.strokeStyle=css(lt(c,0.15)); ctx.lineWidth=Math.max(0.8,rr*0.022); run(); break; }
+    case 'rfsand': { const Mo=[[1,2],[1,3],[2,3],[1,4],[3,4],[2,5],[1,5]][(R()*7)|0], n=Mo[0], m=Mo[1], h=rr*0.92, g=34, gr=Math.max(1,rr*0.034), PI=Math.PI;
+      ctx.fillStyle=css(dk(c,0.86),0.6); ctx.fillRect(-h,-h,2*h,2*h);
+      for(let yi=0;yi<g;yi++) for(let xi=0;xi<g;xi++) for(let z=0;z<3;z++){ const u=(xi+R())/g, v=(yi+R())/g, af=Math.abs(Math.cos(n*PI*u)*Math.cos(m*PI*v)-Math.cos(m*PI*u)*Math.cos(n*PI*v));
+        if(af<0.12 && R()<1-af/0.12){ ctx.fillStyle=css(R()<0.3?lt(c2,0.2):lt(c,0.4)); ctx.fillRect(-h+u*2*h-gr/2,-h+v*2*h-gr/2,gr,gr); } }
+      ctx.strokeStyle=css(G,0.7); ctx.lineWidth=Math.max(0.6,rr*0.01); ctx.strokeRect(-h,-h,2*h,2*h); break; }
+  }
+  ctx.restore();
+}
+const _FU_SIGN=/^(hgfig|hgchalk|hgpair|hgtv|hgsaucer|hgheart|rdog|mtleaf|mtalgae|mtcoral|mtbird|mtfish|mtburst|mtlobed|mtsheet|pcfacet|pcpaper|pcguitar|lcbrush|lcboom|lcmirror|lcwave|lcridge|rfgold|rfseed|rfrose|rflissa|rfsand)$/;
 function _fuSign(ctx,kind,rr,col,col2,F,R){
+  if(/^rf/.test(kind)){ _rfMark(ctx,kind,rr,_fuRgb(col),_fuRgb(col2||col),R); return; }   // RafFel's forms keep the piece's own two colours
   let c=_fuRgb(col), c2=_fuRgb(col2||col); const seed=(R()*1e9)|0, K=_HG_BLK, D=F._S||rr*6, dir=R()<0.5?1:-1;
   const g=String(F.ground||'')[0]==='#' ? _fuHex(F.ground) : _fuRgb(F.ground||'rgb(128,128,128)'); const lum=(q)=>(q[0]*0.299+q[1]*0.587+q[2]*0.114)/255;
   const apart=(q,from)=>Math.abs(q[0]-from[0])+Math.abs(q[1]-from[1])+Math.abs(q[2]-from[2]);
@@ -21797,9 +21848,9 @@ const _FG={
   arcs:{form:{nestpoly:.6,protractor:.4}, hand:'bands', comp:'concentric', col:'stella'},
   bulge:{form:{disc:1}, hand:'precise', comp:'bulge', col:'vasarely'},
   bauhaus:{form:{tri:.3,disc:.3,rect:.2,arch:.2}, hand:'crisp', comp:'construct', col:'bauhaus'},
-  raffel:{form:{chain:.4,phiarc:.4,rays:.2}, hand:'goldline', comp:'golden', col:'raffel'}
+  raffel:{form:{rfgold:.36,rfseed:.34,rfrose:.3}, hand:'goldrings', comp:'golden', col:'raffel'}   // his forms of today: Golden music's rectangle, the Sunflower, the rose window
 };
-const _FG_LINE=/^(goldspiral|wavyline|chain|phiarc|rays)$/;
+const _FG_LINE=/^(goldspiral|wavyline|chain|phiarc|rays|rflissa|rfsand)$/;
 // forms of the gene engine's own, where the mark vocabulary has none: Klimt's Tree of Life curl and the robe of The Kiss
 const _FG_FORM={
   klcurl:(g,s,cA,cB,R)=>{ const T=2.3*6.2832, N=90, L=[], Rr=[]; for(let i=0;i<=N;i++){ const u=i/N, th=u*T, r=s*(0.08+0.92*Math.pow(u,1.15)), w=s*(0.05+0.13*u), x=Math.cos(th)*r, y=Math.sin(th)*r, nx=Math.cos(th), ny=Math.sin(th); L.push([x+nx*w/2,y+ny*w/2]); Rr.push([x-nx*w/2,y-ny*w/2]); }
@@ -21875,7 +21926,7 @@ function _fgColour(key,A,bw){
     stella:{ground:[232,226,212], ink:[20,20,24], light:[250,248,240], c:(c)=>_fgSnap(c,_FG_SW.stella)},
     vasarely:{ground:pig(tonic,0.6,0.85,0.32,0.4), ink:[20,20,24], light:[250,248,240], c:(c,r)=> r<0.5 ? pig(c,0.7,0.95,0.55,0.65) : pig([255-tonic[0],255-tonic[1],255-tonic[2]],0.7,0.95,0.5,0.6)},
     bauhaus:{ground:[236,230,214], ink:[20,20,24], light:[248,244,234], c:(c,r)=> r<0.12 ? [24,22,28] : _fgSnap(c,_FG_SW.bauhaus)},
-    raffel:{ground:[20,18,26], ink:[214,178,96], light:[244,226,170], c:(c,r)=> r<0.4 ? [214,178,96] : pig(c,0.5,0.75,0.6,0.72)}
+    raffel:{ground:_fgMix([14,8,22],pig(tonic,0.5,0.7,0.1,0.14),0.3), ink:[214,180,96], light:[244,226,170], c:(c,r)=> r<0.1 ? [214,180,96] : pig(c,0.7,0.95,0.5,0.62)}   // his night, the piece's colours lit in it, gold for the accents
   }[key] || {ground:[240,234,222], ink:[30,30,36], light:[248,246,240], c:(c)=>pig(c,0.55,0.85,0.35,0.55)};
   if(bw){ const g=(c)=>{ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [l,l,l]; }; const c0=P.c; return {ground:g(P.ground), ink:g(P.ink), light:g(P.light), c:(c,r)=>g(c0(c,r))}; }
   return P;
@@ -21918,8 +21969,12 @@ const _FG_HAND={
       for(let k=0;k<n;k++){ const a=(R()<0.6?-1.1:0.3)+(R()-0.5)*0.8, x=h+(R()-0.5)*s*1.6, y=h+(R()-0.5)*s*1.6, L=s*(1.2+0.8*R()), pts=[]; for(let i=0;i<=7;i++){ const u=i/7-0.5; pts.push([x+Math.cos(a)*L*u+Math.sin(u*3+k)*s*0.08, y+Math.sin(a)*L*u]); }
         const q=R(), col=q<0.5?c:q<0.68?_fgMix(c,[255,255,255],0.22):q<0.86?c2:q<0.94?[244,240,232]:_fgMix(c,[0,0,0],0.4); _jmBrush(t,pts,s*(0.2+0.14*R()),col,0.96,0.35,R,false); } },
     after:(ctx,it,s,P,R,c)=>{ for(let k=0;k<2;k++){ const a=R()*6.2832, x=it.x+Math.cos(a)*s*0.8, y=it.y+Math.sin(a)*s*0.8, pts=[]; for(let i=0;i<=5;i++){ const u=i/5; pts.push([x+Math.cos(a)*s*0.5*u, y+Math.sin(a)*s*0.5*u]); } _jmBrush(ctx,pts,s*0.09,c,0.9,0.6,R,true); } }},
-  // RafFel: the form drawn as a fine golden line, its colour only breathed in
+  // RafFel: the form drawn as a fine golden line, its colour only breathed in (the hand of his first paintings, kept)
   goldline:{tex:(t,W)=>{ t.globalCompositeOperation='destination-in'; t.fillStyle='rgba(0,0,0,0.3)'; t.fillRect(0,0,W,W); }, ring:(s)=>[[214,178,96], Math.max(1.1,s*0.022)]},
+  // RafFel: Golden music's hand — the form laid in rings of its colours from a corner, as his squares are, every fifth ring a thread of gold, a gold hairline round it
+  goldrings:{tex:(t,W,h,s,c,c2,P,R)=>{ const sx=R()<0.5?1:-1, sy=R()<0.5?1:-1, px=h-sx*s*(0.85+0.3*R()), py=h-sy*s*(0.85+0.3*R()), st=s*0.11, L=[c,_fgMix(c,[255,255,255],0.2),c2,_fgMix(c,[0,0,0],0.28)];
+      t.globalAlpha=0.85; for(let r=st*0.5,k=0;r<s*3.4;r+=st,k++){ const g=k%5===4; t.strokeStyle=_fgCss(g?[214,180,96]:L[(k+(R()<0.3?1:0))%4]); t.lineWidth=st*(g?0.24:0.66); t.beginPath(); t.arc(px,py,r,0,6.2832); t.stroke(); } t.globalAlpha=1; },
+    ring:(s)=>[[214,180,96], Math.max(0.9,s*0.016)]},
   // Rothko: the form laid as veils, its edges soft and burning
   veil:{veil:true},
   // Kusama: the form as light on the dark
@@ -21979,10 +22034,22 @@ function _fgLayout(comp, A, CW, CH, D, R){
     case 'concentric': {   // Stella: concentric bands round the middle, the forms ranged on them, the high voice inside
       const cx=CW/2, cy=CH/2, M=Math.min(CW,CH)*0.46; under.push((ctx,P)=>{ for(let r=M*1.25,k=0;r>M*0.1;r-=M*0.16,k++){ ctx.strokeStyle=_fgCss(k%2?P.ink:_fgMix(P.ground,P.ink,0.2),0.1); ctx.lineWidth=M*0.07; ctx.beginPath(); ctx.arc(cx,cy,r,0,6.2832); ctx.stroke(); } });
       items.forEach(it=>{ const ring=0.2+0.8*(1-it.reg), a=it.u*6.2832*2.2-Math.PI/2; it.x=cx+Math.cos(a)*M*ring*(CW/Math.min(CW,CH))*0.95; it.y=cy+Math.sin(a)*M*ring*(CH/Math.min(CW,CH))*0.95; it.s=size(it,0.1); it.rot=a+Math.PI/2; }); break; }
-    case 'golden': {   // RafFel: the forms on the golden spiral, the first the largest, winding in to its eye
-      const ex=CW*0.618, ey=CH*0.382, R0=Math.hypot(CW,CH)*0.46, b=Math.log(1.618)/(Math.PI/2);
-      under.push((ctx,P)=>{ ctx.strokeStyle=_fgCss(P.ink,0.4); ctx.lineWidth=Math.max(0.8,D*0.002); ctx.beginPath(); for(let k=0;k<=240;k++){ const th=k/240*Math.PI*5, r=R0*Math.exp(-b*th); const x=ex+Math.cos(th+2.4)*r, y=ey+Math.sin(th+2.4)*r; k?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.stroke(); });
-      items.forEach(it=>{ const th=it.u*Math.PI*5, r=R0*Math.exp(-b*th)*(it.main?0.92:0.6+0.6*R()); it.x=ex+Math.cos(th+2.4+(it.main?0:(R()-0.5)*0.8))*r; it.y=ey+Math.sin(th+2.4+(it.main?0:(R()-0.5)*0.8))*r; it.s=Math.max(D*0.02,D*0.2*Math.exp(-b*th*0.55))*(it.main?0.7+0.5*it.rk:0.4); }); break; }
+    case 'golden': {   // RafFel: Golden music — the canvas cut into the golden rectangle's squares, gold hairlines, the spiral through them; the piece shared out by the squares'
+      // sides; as in his rings, each passage grows from its square's pivot out to the spiral, its forms turned round the pivot by the golden angle (so they fill the quarter evenly, as his seeds do); the first square the largest, winding in to the eye
+      const PH=1.6180339887, Wg=CH/PH; let Q={x:(CW-Wg)/2, y:0, w:Wg, h:CH}; const sq=[];
+      for(let k=0;k<12;k++){ const d=k%4; let s, q;
+        if(d===0){ s=Q.w; q={x:Q.x,y:Q.y,s,cx:Q.x,cy:Q.y+s,a0:Math.PI*1.5}; Q={x:Q.x,y:Q.y+s,w:Q.w,h:Q.h-s}; }
+        else if(d===1){ s=Q.h; q={x:Q.x+Q.w-s,y:Q.y,s,cx:Q.x+Q.w-s,cy:Q.y,a0:0}; Q={x:Q.x,y:Q.y,w:Q.w-s,h:Q.h}; }
+        else if(d===2){ s=Q.w; q={x:Q.x,y:Q.y+Q.h-s,s,cx:Q.x+s,cy:Q.y+Q.h-s,a0:Math.PI*0.5}; Q={x:Q.x,y:Q.y,w:Q.w,h:Q.h-s}; }
+        else { s=Q.h; q={x:Q.x,y:Q.y,s,cx:Q.x+s,cy:Q.y+s,a0:Math.PI}; Q={x:Q.x+s,y:Q.y,w:Q.w-s,h:Q.h}; }
+        if(s<D*0.035) break; sq.push(q); }
+      const tot=sq.reduce((a,q)=>a+q.s,0); let acc=0; sq.forEach(q=>{ q.u0=acc/tot; acc+=q.s; q.u1=acc/tot; });
+      under.push((ctx,P)=>{ for(const q of sq){ ctx.save(); ctx.beginPath(); ctx.rect(q.x,q.y,q.s,q.s); ctx.clip(); const g=ctx.createRadialGradient(q.cx,q.cy,q.s*0.05,q.cx,q.cy,q.s*1.42); g.addColorStop(0,_fgCss(_fgMix(P.ground,P.light,0.07))); g.addColorStop(1,_fgCss(P.ground,0)); ctx.fillStyle=g; ctx.fillRect(q.x,q.y,q.s,q.s); ctx.restore(); }
+        ctx.strokeStyle=_fgCss(P.ink,0.32); ctx.lineWidth=Math.max(0.6,D*0.0014); sq.forEach(q=>ctx.strokeRect(q.x,q.y,q.s,q.s));
+        ctx.strokeStyle=_fgCss(P.ink,0.6); ctx.lineWidth=Math.max(0.8,D*0.0026); ctx.lineCap='round'; ctx.beginPath(); sq.forEach(q=>ctx.arc(q.cx,q.cy,q.s,q.a0,q.a0+Math.PI/2)); ctx.stroke(); });
+      items.forEach(it=>{ const u=clamp(it.u,0,0.9999); let q=sq[sq.length-1]; for(const z of sq){ if(u<z.u1){ q=z; break; } }
+        const f=clamp((u-q.u0)/Math.max(1e-6,q.u1-q.u0),0,1), j=q.n=(q.n||0)+1, th=q.a0+Math.PI/2*(0.05+0.9*((j*0.6180339887+0.13+0.08*R())%1)), rq=q.s*(0.14+0.8*f);
+        it.x=q.cx+Math.cos(th)*rq; it.y=q.cy+Math.sin(th)*rq; it.s=Math.max(D*0.018, q.s*(it.main ? 0.075+0.1*it.rk : 0.035)); }); break; }
     case 'grid': {   // Mondrian: the black grid, a form set in a cell
       const cols=4, rows=Math.round(cols*CH/CW); under.push((ctx,P)=>{ ctx.strokeStyle=_fgCss(P.ink); ctx.lineWidth=Math.max(2,D*0.012); for(let c=1;c<cols;c++){ ctx.beginPath(); ctx.moveTo(CW*c/cols,0); ctx.lineTo(CW*c/cols,CH); ctx.stroke(); } for(let r=1;r<rows;r++){ ctx.beginPath(); ctx.moveTo(0,CH*r/rows); ctx.lineTo(CW,CH*r/rows); ctx.stroke(); } });
       items.forEach((it,j)=>{ const cell=Math.floor(clamp(it.u,0,0.9999)*cols*rows); it.x=CW*((cell%cols)+0.5)/cols; it.y=CH*(Math.floor(cell/cols)+0.5)/rows; it.s=Math.min(CW/cols,CH/rows)*(it.main?0.34:0.16); it.rot=0; }); break; }
@@ -22204,6 +22271,8 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         else if(kind==='beam') r=Math.min(r, S*0.09);     // a beam crosses part of the canvas, not all of it
         else if(kind==='cloud') r=Math.min(r, S*0.13);    // a cloud, not a fog over everything
         else if(kind==='chain') r=Math.min(r, S*0.07);    // RafFel's constellation stays a small figure
+        else if(kind==='rflissa'){ r=Math.max(S*0.05, Math.min(r, S*0.1));   // and his thread a handful of knots spread over the piece, never a tangle
+          const B=Math.max(5, Math.min(9, Math.round(n/8))); const sl='L'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)) continue; _spanUsed.add(sl); }
         else if(kind==='net') r=Math.min(r, S*0.1);       // a patch of Kusama's net — fine mesh, never a hoop
         else if(_E && _FU_HRC.test(kind)){ r=Math.max(S*0.05, Math.min(r, S*0.095));   // Haring's cast: a readable figure, never confetti, never a giant
           const B=Math.max(6, Math.min(14, Math.round(n/6))); const sl='H'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)) continue; _spanUsed.add(sl); }   // a handful spread over the piece, not a crowd
