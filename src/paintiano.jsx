@@ -31769,7 +31769,7 @@ function PaintianoApp() {
   const zcKRef = useRef(zcK); zcKRef.current = zcK;
   const [stepToast, setStepToast] = useState(null);   // {n}: the step that has just come
   const stepToastTmRef = useRef(0);
-  const _stepSet = (n)=>{ n=Math.max(0,Math.min(3,n|0)); pfStepRef.current=Math.max(_stepFloor, n); setPfStep(n); try{ localStorage.setItem('paintiano_step', String(n)); }catch(_){} try{ window.posthog && window.posthog.capture('step_set',{step:n}); }catch(_){} if(n>0 && zcKRef.current){ zcKRef.current=0; setZcK(0); } };
+  const _stepSet = (n)=>{ n=Math.max(0,Math.min(3,n|0)); pfStepRef.current=Math.max(_stepFloor, n); setPfStep(n); try{ localStorage.setItem('paintiano_step', String(n)); }catch(_){} try{ window.posthog && window.posthog.capture('step_set',{step:n}); }catch(_){} if(n===0){ zcKRef.current=1; setZcK(1); } else if(zcKRef.current){ zcKRef.current=0; setZcK(0); } };   // Začni picked in Setup: its first minute again
   // the next step comes by itself — Tvor after the first ♥ on Hraj sa (or six paintings swiped or made), Experimentuj after the first Fusion or Jam — and says so
   const _stepUp = (n)=>{ if(pfStepRef.current>=n) return; _stepSet(n); if(n>=2){ setStepToast({n}); clearTimeout(stepToastTmRef.current); stepToastTmRef.current=setTimeout(()=>setStepToast(null), 11000); } };
   const _stepNote = (kind)=>{ try{ const st=pfStepRef.current;
