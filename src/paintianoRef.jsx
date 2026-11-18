@@ -45878,7 +45878,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const st=(e)=>{ if(e.touches.length===2 && !document.querySelector('[role="dialog"]')){ d0=dist(e.touches); done=false; } };
     const mv=(e)=>{ if(e.touches.length!==2 || !d0 || done) return; const r=dist(e.touches)/d0; if(r<=1.22 && r>=0.82) return; done=true;
       let v=r>1; if(lhOnRef.current && feedCleanRef.current) v=false;   // the first screen alone: spread or pinch, everything is back
-      if(feedCleanRef.current===v) return; feedCleanRef.current=v; setFeedClean(v); _stBuzz(10); if(v) _pfSysBars(true);
+      if(feedCleanRef.current===v) return; lhAutoRef.current=false; feedCleanRef.current=v; setFeedClean(v); _stBuzz(10); if(v) _pfSysBars(true);
       if(v){ let seen=false; try{ seen=localStorage.getItem('paintiano_clean_hint')==='1'; localStorage.setItem('paintiano_clean_hint','1'); }catch(_){} if(!seen) setFeedCleanHint(Date.now()); } else setFeedCleanHint(0); };
     const en=(e)=>{ if(e.touches.length<2) d0=0; };
     document.addEventListener('touchstart', st, {passive:true}); document.addEventListener('touchmove', mv, {passive:true}); document.addEventListener('touchend', en, {passive:true}); document.addEventListener('touchcancel', en, {passive:true});

@@ -31448,7 +31448,7 @@ const STUDIO_HOME_CSS = `
 @keyframes pfShMuteFl{0%{opacity:0;transform:scale(.72)}16%{opacity:1;transform:scale(1.07)}28%{transform:scale(1)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
 .pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-flash,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-card,.pf-fy-clean .pf-lh-foot{display:none!important}
 .pf-fy-clean .pf-sh-stage::after{display:none!important}
-.pf-fy-fade .pf-topbar,.pf-fy-fade .pf-st-bar,.pf-fy-fade .pf-sh-prog,.pf-fy-fade .pf-sh-mute,.pf-fy-fade .pf-sh-paused,.pf-fy-fade .pf-sh-flash,.pf-fy-fade .pf-sh-intro,.pf-fy-fade .pf-sh-up,.pf-fy-fade .pf-sh-next,.pf-fy-fade .pf-sh-nextx,.pf-fy-fade .pf-sh-tap,.pf-fy-fade .pf-sh-cap,.pf-fy-fade .pf-lh-card,.pf-fy-fade .pf-lh-foot{opacity:0!important;transition:opacity .8s ease!important;pointer-events:none!important}
+.pf-fy-fade .pf-topbar,.pf-fy-fade .pf-st-bar,.pf-fy-fade .pf-sh-prog,.pf-fy-fade .pf-sh-mute,.pf-fy-fade .pf-sh-paused,.pf-fy-fade .pf-sh-flash,.pf-fy-fade .pf-sh-intro,.pf-fy-fade .pf-sh-up,.pf-fy-fade .pf-sh-next,.pf-fy-fade .pf-sh-nextx,.pf-fy-fade .pf-sh-tap,.pf-fy-fade .pf-sh-cap,.pf-fy-fade .pf-lh-card,.pf-fy-fade .pf-lh-foot{opacity:0!important;transition:opacity 1.6s ease-in-out!important;pointer-events:none!important}
 .pf-fy-cleanhint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);z-index:20;transform:translateX(-50%);white-space:nowrap;padding:9px 16px;border-radius:999px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);color:#f2eee8;font-size:13px;font-weight:600;letter-spacing:.01em;pointer-events:none;animation:pfFyHint 2.6s ease both}
 @keyframes pfFyHint{0%{opacity:0;transform:translate(-50%,8px)}12%{opacity:1;transform:translate(-50%,0)}80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,0)}}
 @keyframes pfShPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
@@ -46456,22 +46456,27 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const liveHomeOn = studioHome && feedAt<0 && !feedFly && !_homeCurV() && !showIntro && !showOnboarding;   // once the splash has gone
   useEffect(()=>{ if(lhBack && (feedAt>=0 || !studioHome || homeSide)) setLhBack(false); },[lhBack, feedAt, studioHome, homeSide]);   // it plays, the Studio or a way of yours opens: For You is on again, the home card as before
   const [liveHome, setLiveHome] = useState({i:0, k:0});
-  // the first screen watched without a touch: when the next painting begins (8 s or more since the last touch), all but the painting
-  // fades away, as two spread fingers do (TikTok's clear screen) — a tap brings it back, without sound; whatever starts brings it back too
-  const _LH_IDLE = 8000; const lhIdleRef = useRef(Date.now()); const lhAutoRef = useRef(false); const [lhFade, setLhFade] = useState(false);
-  lhOnRef.current = liveHomeOn;
+  // the first screen watched without a touch (10.5 s or more): in the middle of a painting — its title gone, well before it is done, never
+  // as one painting gives way to the next — all but the painting fades slowly away, as two spread fingers do (TikTok's clear screen).
+  // A tap brings it back, without sound; whatever starts brings it back too
+  const _LH_IDLE = 10500; const lhIdleRef = useRef(Date.now()); const lhAutoRef = useRef(false); const lhStartRef = useRef(Date.now()); const [lhFade, setLhFade] = useState(false);
+  lhOnRef.current = liveHomeOn; const navMenuOpenRef = useRef(false); navMenuOpenRef.current = navMenuOpen;
   useEffect(()=>{ if(!studioHome) return; const f=()=>{ lhIdleRef.current=Date.now(); }; const o={capture:true, passive:true};
     document.addEventListener('touchstart', f, o); document.addEventListener('pointerdown', f, o); document.addEventListener('keydown', f, true); document.addEventListener('wheel', f, o);
     return ()=>{ document.removeEventListener('touchstart', f, o); document.removeEventListener('pointerdown', f, o); document.removeEventListener('keydown', f, true); document.removeEventListener('wheel', f, o); }; },[studioHome]);
+  useEffect(()=>{ lhStartRef.current=Date.now(); },[liveHomeOn, liveHome.k]);   // when this painting began
   useEffect(()=>{
     if(!liveHomeOn){ setLhFade(false); if(lhAutoRef.current){ lhAutoRef.current=false; if(feedCleanRef.current){ feedCleanRef.current=false; setFeedClean(false); } } return; }
-    if(feedCleanRef.current || Date.now()-lhIdleRef.current<_LH_IDLE) return;
-    if(navMenuOpen || stChg || showMoodMenu || pickMode || document.querySelector('[role="dialog"]')) return;
-    const t0=lhIdleRef.current; setLhFade(true);
-    const tm=setTimeout(()=>{ setLhFade(false); if(lhIdleRef.current!==t0 || feedCleanRef.current) return; lhAutoRef.current=true; feedCleanRef.current=true; setFeedClean(true); }, 800);
-    return ()=>{ clearTimeout(tm); setLhFade(false); };
+    if(feedClean) return;
+    let tf=null;
+    const iv=setInterval(()=>{ if(tf) return; const now=Date.now(), into=now-lhStartRef.current;
+      if(feedCleanRef.current || now-lhIdleRef.current<_LH_IDLE || into<3100 || into>5000) return;   // its title card gone (2.3 s), done at 7 s: the fade (1.6 s) ends well inside the painting
+      if(navMenuOpenRef.current || document.querySelector('[role="dialog"]') || document.querySelector('.pf-chg, .pf-st-sheet')) return;
+      const t0=lhIdleRef.current; setLhFade(true);
+      tf=setTimeout(()=>{ tf=null; setLhFade(false); if(lhIdleRef.current!==t0 || feedCleanRef.current || !lhOnRef.current) return; lhAutoRef.current=true; feedCleanRef.current=true; setFeedClean(true); }, 1600); }, 250);
+    return ()=>{ clearInterval(iv); if(tf) clearTimeout(tf); setLhFade(false); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[liveHomeOn, liveHome.k]);
+  },[liveHomeOn, feedClean]);
   const [livePhase, setLivePhase] = useState('card');   // card → paint → done
   const [liveMeta, setLiveMeta] = useState(null);       // {t, by, p} — title, composer, "inspired by …"
   const [liveBars, setLiveBars] = useState(null);       // the piece's colours for the pulse beneath
