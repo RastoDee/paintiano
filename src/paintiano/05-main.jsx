@@ -2646,6 +2646,7 @@ const STUDIO_FX_CSS = `
 .pf-st-tabs2 button.on::after{content:'';position:absolute;left:50%;bottom:0;width:22px;height:2.5px;margin-left:-11px;border-radius:2px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.5)}
 .pf-st-tabs2 button:not(.on):active{opacity:.55}
 .pf-st-tabs2 button:disabled{opacity:.4;pointer-events:none}
+.pf-st-tabs2 button.pf-fy-tg{pointer-events:auto}.pf-st-tabs2 button.pf-fy-tg.dim{opacity:.4}.pf-st-tabs2 button.pf-fy-tg.on:active{opacity:.55}
 .pf-st-tabs2.fy{position:absolute;left:50%;top:calc(50% + 16px);transform:translateX(-50%)}
 .pf-st-tabs2.fy.low{top:calc(50% + 22px)}
 .pf-st-tabs2 button:not(.on):not(:disabled){color:rgba(255,255,255,.86)}
@@ -16289,6 +16290,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const homeCapRef = useRef(null);   // (kind, pictureUrl?) → that mode's card, from the canvas as it is put aside   // null = the last painting; 'music' | 'image' = the card you swiped to
   const [homeSlide, setHomeSlide] = useState(null);   // the home card comes in from a side ('l'|'r')
   const _homeCur = ()=> (homeSide && (homeArtBy[homeSide] || {k:homeSide, src:homeSide==='image'?'image':'music', u:'', t:'', l:''})) || homeArt;
+  const [lhBack, setLhBack] = useState(false);   // For You switched off (its lit tab tapped): the first screen again, even over a home card, until something plays
+  const _homeCurV = ()=> (lhBack && !homeSide) ? null : _homeCur();   // the home card as For You shows it: none while it is switched off
   // Clear: the painting just wiped must not wait on the home as if it were still there (with ▶ starting it again) —
   // its card goes; the home shows another card, or For you
   // how many paintings are unfinished: each way's put-aside draft, and the one on screen (Clear all shows only from two)
@@ -17578,7 +17581,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _FEED_FIRST = { piece:PF_FIRST.piece, sel:{ style:PF_FIRST.style, phase:PF_FIRST.phase, mode:'harmony', notes:false, stage:[], sig:false } };
   feedFirstRef.current = (feedAt>=0 && feedLoaded!==null && !!(feedCards[feedAt] && feedCards[feedAt].first)) || (firstKeptRef.current && feedAt<0 && style===PF_FIRST.style && (phaseIndex|0)===PF_FIRST.phase && !painterStage.length && !sigActive);
   const _FEED_IMGS = (typeof SAMPLE_IMAGES!=='undefined') ? SAMPLE_IMAGES : [];
-  const _feedKind = ()=>{ const h=_homeCur(); return (h && (h.k==='image' || (!h.k && h.src==='image'))) ? 'img' : 'music'; };
+  const _feedKind = ()=>{ const h=_homeCurV(); return (h && (h.k==='image' || (!h.k && h.src==='image'))) ? 'img' : 'music'; };
   // For you deals from your My Music / My Images too (ids only; the file is read when the card loads)
   const feedMineRef = useRef({mus:[], img:[]});
   useEffect(()=>{ if(!studioHome) return; let c=false; const _ok=(l)=>(l||[]).filter(r=>r && !r.empty && r.blob).map(r=>({id:r.id, n:r.name||''}));
@@ -17701,6 +17704,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
+  // For You switched off (its lit tab tapped again): back to the first screen — the paintings paint themselves, silent and quick, one after another
+  const _feedOff = ()=>{ if(feedAt<0) return; const c=feedCards[feedAt]; feedResumeRef.current=null; setFeedIntro(null); setFeedNeedTap(false);
+    try{ liveOutRef.current=_feedSnap()||null; }catch(_){ liveOutRef.current=null; } if(c && c.piece!=null && c.piece!=='own') livePrevRef.current=c.piece; setLiveHome(h=>({i:h.i+1, k:Date.now()}));   // the painting you leave fades into the next one — not the one you just heard
+    if(c && c.piece==='own' && feedLoaded!==null) _feedExit(); else { _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; }
+    setHomeSide(null); setLhBack(true); _stBuzz(8); };
   const _feedStart = (want, first)=>{
     // like Lite: the very first time, the arc with its lines — the bare Mosaic, Kandinsky, ✦ Signature; every later time the piece opens on its ✦ Signature, then the shuffle
     let arc=true; try{ arc=localStorage.getItem('paintiano_feed_arc')!=='1'; localStorage.setItem('paintiano_feed_arc','1'); }catch(_){}
@@ -17917,6 +17925,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Studio straight from the first screen (from Battle opened there): its painting starts as a tap would start it,
   // and once it plays it goes into the Studio — no detour through For You
   const feedTakeWantRef = useRef(0);
+  const _lhGo = ()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } _stBuzz(12); _feedStart(null, true); };   // For You's dim tab on the first screen: on — this painting, with sound (as a tap on it)
   const _stFromLive = ()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } _tipDone('studio'); setFeedStudioLit(0); feedTakeWantRef.current=Date.now(); _stBuzz(12); _feedStart(null, true); };
   useEffect(()=>{ const w=feedTakeWantRef.current; if(!w) return; if(Date.now()-w>12000){ feedTakeWantRef.current=0; return; }
     const c=feedCards[feedAt]; if(feedAt<0 || !c || !_feedIsLoaded(c)) return;
@@ -17992,7 +18001,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   //    seconds), a title card over its first strokes, the piece's colours pulsing beneath; when it is done the next one
   //    slides up — until a tap brings the sound (the piece then starts as itself, with the music)
   const _LH_MS = 7000, _LH_HOLD = 2600;
-  const liveHomeOn = studioHome && feedAt<0 && !feedFly && !_homeCur() && !showIntro && !showOnboarding;   // once the splash has gone
+  const liveHomeOn = studioHome && feedAt<0 && !feedFly && !_homeCurV() && !showIntro && !showOnboarding;   // once the splash has gone
+  useEffect(()=>{ if(lhBack && (feedAt>=0 || !studioHome || homeSide)) setLhBack(false); },[lhBack, feedAt, studioHome, homeSide]);   // it plays, the Studio or a way of yours opens: For You is on again, the home card as before
   const [liveHome, setLiveHome] = useState({i:0, k:0});
   const [livePhase, setLivePhase] = useState('card');   // card → paint → done
   const [liveMeta, setLiveMeta] = useState(null);       // {t, by, p} — title, composer, "inspired by …"
@@ -18907,8 +18917,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         {studioOn && studioHome && _dailyShown && (
           <button type="button" className="pf-st-daily" onClick={openDailyInfo} aria-label={ts('dailyTitle','Artist of the day')}><i aria-hidden="true"/><span><small>✦ {ts('dailyBadgeTitle','Free today')}</small><b>{STYLE_INSPIRED[artistOfDay]||artistOfDay}{composerOfDay ? ' & '+(COMPOSER_INSPIRED[composerOfDay]||composerOfDay) : ''}</b></span></button>
         )}
-        {studioOn && studioHome && ((feedAt>=0 && feedCards[feedAt]) || !_homeCur()) && (<div className={'pf-st-tabs2 fy'+(_dailyShown ? ' low' : '')}><button type="button" className="on" aria-current="page" tabIndex={-1}>{_stT('sup')}</button><span className="pf-st-tabs2-w"><button type="button" className={feedStudioLit ? 'lit' : ''} disabled={!(feedAt>=0 && feedCards[feedAt])} onClick={(e)=>{ e.stopPropagation(); _tipDone('studio'); setFeedStudioLit(0); _feedTake(); }}>{_stT('studio')}</button>{feedStudioLit===2 && (<span className="pf-st-callout" role="status"><b>{_stT('tipStQ')}</b><span>{_stT('tipStDo')}</span></span>)}</span>{_btlOn() && (<button type="button" className="pf-btl-tab" disabled={!(feedAt>=0 && feedCards[feedAt]) && !(btlMine && btlMine.link)} onClick={(e)=>{ e.stopPropagation(); _btlTabOpen(); }}>Battle</button>)}</div>)}   {/* Battle waits with the Studio on the first screen (the first tap is the painting's, with sound), unless this device already plays Battle — the feed of paintings picked for you, its name where the feed apps put it — and Studio next to it: this painting becomes yours and moves into the Studio, playing on (what the › after the title did); dimmed on the first run until something plays */}
-        {studioOn && studioHome && tourRing && tourOnline && pfStepEff>0 && !tourKind && ((feedAt>=0 && feedCards[feedAt]) || !_homeCur()) && (()=>{ const W=tourWords(lang); return (<><style>{TOUR_CSS}</style><button type="button" className="pf-tour-ring" onClick={(e)=>{ e.stopPropagation(); openTour('reel'); }} aria-label={W.ui('ring')}><span className="r"><i><img src={TOUR_POSTER} alt="" draggable={false}/></i><span className="n">{W.ui('nw')}</span></span><span className="lb">{W.ui('ring')}</span></button></>); })()}   {/* the story ring: a 27 s video of the app, the first launches, until it is seen */}
+        {studioOn && studioHome && ((feedAt>=0 && feedCards[feedAt]) || !_homeCurV()) && (<div className={'pf-st-tabs2 fy'+(_dailyShown ? ' low' : '')}>{(()=>{ const on=feedAt>=0 && !!feedCards[feedAt]; return (<button type="button" className={'pf-fy-tg'+(on ? ' on' : ' dim')} aria-pressed={on} onClick={(e)=>{ e.stopPropagation(); if(on) _feedOff(); else if(liveHomeOn) _lhGo(); }}>{_stT('sup')}</button>); })()}<span className="pf-st-tabs2-w"><button type="button" className={feedStudioLit ? 'lit' : ''} disabled={!(feedAt>=0 && feedCards[feedAt])} onClick={(e)=>{ e.stopPropagation(); _tipDone('studio'); setFeedStudioLit(0); _feedTake(); }}>{_stT('studio')}</button>{feedStudioLit===2 && (<span className="pf-st-callout" role="status"><b>{_stT('tipStQ')}</b><span>{_stT('tipStDo')}</span></span>)}</span>{_btlOn() && (<button type="button" className="pf-btl-tab" disabled={!(feedAt>=0 && feedCards[feedAt]) && !(btlMine && btlMine.link)} onClick={(e)=>{ e.stopPropagation(); _btlTabOpen(); }}>Battle</button>)}</div>)}   {/* Battle waits with the Studio on the first screen (the first tap is the painting's, with sound), unless this device already plays Battle — the feed of paintings picked for you, its name where the feed apps put it — and Studio next to it: this painting becomes yours and moves into the Studio, playing on (what the › after the title did); dimmed on the first run until something plays */}
+        {studioOn && studioHome && tourRing && tourOnline && pfStepEff>0 && !tourKind && ((feedAt>=0 && feedCards[feedAt]) || !_homeCurV()) && (()=>{ const W=tourWords(lang); return (<><style>{TOUR_CSS}</style><button type="button" className="pf-tour-ring" onClick={(e)=>{ e.stopPropagation(); openTour('reel'); }} aria-label={W.ui('ring')}><span className="r"><i><img src={TOUR_POSTER} alt="" draggable={false}/></i><span className="n">{W.ui('nw')}</span></span><span className="lb">{W.ui('ring')}</span></button></>); })()}   {/* the story ring: a 27 s video of the app, the first launches, until it is seen */}
         {studioOn && studioHome && !_dailyShown && (
           <button type="button" className={'pf-st-word'+(hidHold?' pf-hid-hold':'')} onClick={()=>{ if(hidHoldRef.current.fired){ hidHoldRef.current.fired=false; return; } setNavMenuOpen(true); }} onPointerDown={_hidDown} onPointerUp={_hidUp} onPointerLeave={_hidUp} onPointerCancel={_hidUp} onContextMenu={(e)=>e.preventDefault()} aria-label="Paintiano menu" aria-expanded={navMenuOpen}>Paintiano<svg className={stMenuSeen ? 'pf-st-chev' : 'pf-st-chev pf-st-chev-new'} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{opacity:.7,marginTop:3}}><path d="M6 9l6 6 6-6"/></svg></button>)}
 
@@ -19243,7 +19253,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       {studioHome && (()=>{
         // the card: your last painting (▶ = back to it, through its source's own tile), or on a first run Liebestraum
         const _anyDraft = hasMusicDraft || hasImageDraft || hasMoodDraft || hasComposeDraft || hasMicDraft || hasMfiDraft;
-        const _hc = _homeCur();
+        const _hc = _homeCurV();
         const _smp = !_hc;
         const H = _hc || STUDIO_HOME_SAMPLE;
         const kind = _smp ? 'music' : (H.k || (H.src==='image' ? 'image' : 'music'));
