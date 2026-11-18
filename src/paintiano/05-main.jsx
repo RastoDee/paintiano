@@ -5176,10 +5176,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _variantLook = (L)=>{ nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _stLookApply(L); };
   // A Jam's variants step as a painter's (Nov 2026): ← the next one — and, as the painters' ←, a new palette; → back through the ones heard
   // (each with its own palette), and at the first it stops; ← after → goes forward again to the one you came back from.
-  // As a Fusion's ←: first this very jam in the other styles that are on (the palette stays, as a tap on the style), only then the next variant
-  // (its style drawn among those on). A composer alone: his two forms (COMPOSER_FORMS2) — the first, the second.
+  // As a Fusion's ←, in the Setup's order: this very jam in the next style that is on (the palette stays, as a tap on the style); after the last
+  // the next variant, from the first style. A composer alone: his two forms (COMPOSER_FORMS2) — the first, the second.
   const jamVarHistRef = useRef({key:'', st:[], fw:[]});
-  const jamCycleRef = useRef({sig:'', seen:[]});
   const soloFormRef = useRef({k:null, v:0});   // the form of the composer playing alone (0 his first, 1 his second) — for this picture
   const _soloForm = ()=>{ const k=imgComposerRef.current, F=soloFormRef.current; return (k && F && F.k===k && !imgSigActiveRef.current) ? (F.v|0) : 0; };
   const _soloHas = (k)=> !!(k && typeof COMPOSER_FORMS2!=='undefined' && COMPOSER_FORMS2[k]);
@@ -5208,26 +5207,24 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const curSt=_fsNorm(J.style); const now={ v:cur, md:mode, st:curSt }; let to=null;
       if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
       else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
-      else { const C=jamCycleRef.current, cs=key+'|'+cur; if(C.sig!==cs){ C.sig=cs; C.seen=[curSt]; } else if(C.seen.indexOf(curSt)<0) C.seen.push(curSt);
-        let nx=null, x=curSt; if(fuStyleCNow.length>1) for(let q=0;q<2;q++){ x=_fsNext(x,'comp'); if(fuStyleCNow.indexOf(x)>=0 && C.seen.indexOf(x)<0){ nx=x; break; } }
-        if(nx){ C.seen.push(nx); to={ v:cur, md:mode, st:nx }; }   // the same jam, the next style
-        else { const L=fuStyleCNow.length>1 ? fuStyleCNow : curSt; to={ v:cur+1, md:null, st:L[Math.floor(Math.random()*L.length)] }; }   // the next variant, its style drawn
+      else { const nx=_fsAfter(curSt, fuStyleCNow);
+        if(nx) to={ v:cur, md:mode, st:nx };                                                              // the same jam, the next style (Collage → Synthesis → Genesis)
+        else { const o=_fsOrderOf(fuStyleCNow); to={ v:cur+1, md:null, st:o.length>1 ? o[0] : curSt }; }   // after the last: the next variant, from the first style
         H.st.push(now); }
       if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift();
       globalThis.__JAM_VAR={ sig:J.sig, h:(J.h>>>0), v:to.v };
       if(to.st){ globalThis.__JAM_STYLE_PIN={ sig:J.sig, h:J.h, style:to.st }; if(to.st!==curSt) globalThis.__COMP_JAM_STYLE={ ...J, style:to.st, roles:null }; }
       _palTo(to, pal); setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
-  // A Fusion's ← (Nov 2026): first this very crossing — the same painters in the same variants — in the other styles that are on
-  // (Collage → Synthesis → Genesis, as a tap on the style would show it; the palette stays), and only then a new crossing is drawn,
-  // whose style comes as it comes — and from it again the others. → goes back through all of them, each as it was.
-  const fuCycleRef = useRef({sig:'', seen:[]});
+  // A Fusion's ← (Nov 2026), always in the Setup's order — Collage → Synthesis → Genesis (of the styles that are on): this very crossing
+  // (the same painters in the same variants) in the next style, as a tap on the style would show it, the palette staying; after the last
+  // a new crossing is drawn, and it starts again at the first. Whoever swipes knows where he is: on Genesis, ← brings new variants.
+  // → goes back through all of them, each as it was. (A Jam's ← the same: _jamVarStep.)
+  const _fsOrderOf = (on)=> ['A','E','G'].filter(x=>String(on||'').indexOf(x)>=0);
+  const _fsAfter = (cur, on)=>{ const o=_fsOrderOf(on); if(o.length<2) return null; const i=['A','E','G'].indexOf(cur); for(const x of o) if(['A','E','G'].indexOf(x)>i) return x; return null; };   // the next style that is on, or none (the last)
   const _fuStyleStep = ()=>{ try{
       if(viewMode==='image' || sigActiveRef.current || style===null || !painterStage.length || fuStyleNow.length<2) return null;
       const fa=_fusionAddr(_jamStage(), phaseIndexRef.current|0); if(!fa) return null;
-      const sig=fa.keys.join()+'|'+fa.phs.join(','), cur=_fsNorm(fa.fs), C=fuCycleRef.current;
-      if(C.sig!==sig){ C.sig=sig; C.seen=[cur]; } else if(C.seen.indexOf(cur)<0) C.seen.push(cur);
-      let nx=null, x=cur; for(let k=0;k<2;k++){ x=_fsNext(x,'art'); if(fuStyleNow.indexOf(x)>=0 && C.seen.indexOf(x)<0){ nx=x; break; } }
-      if(!nx) return null; C.seen.push(nx);
+      const nx=_fsAfter(_fsNorm(fa.fs), fuStyleNow); if(!nx) return null;
       return { keys:fa.keys.slice(), phs:fa.phs.slice(), fs:nx };
     }catch(_){ return null; } };
   const _variantNext = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal); const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
@@ -5236,7 +5233,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); if(v.look){ H.keep=true; _variantLook(v.look); } else { if(sig) H.keep=true; _variantPut(v); } return true; }
     if(pal) stUpPalRef.current=Date.now();   // the Studio rolls the palette itself, once (the Fusion's own roll stands down)
     const fst=_fuStyleStep(); if(fst){ setPhaseIndex(fst.phs[0]|0); _setFuRoll(fst); }   // the same crossing in the next style
-    const ok=fst ? true : _variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current && !fst) _fuRollPal(true); } return ok; };
+    const ok=fst ? true : _variantRoll();
+    if(ok && !fst && style!==null && painterStage.length && fuStyleNow.length>1 && fuRollRef.current){ const o=_fsOrderOf(fuStyleNow); _setFuRoll({ ...fuRollRef.current, fs:o[0] }); }   // a new crossing starts at the first style
+    if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current && !fst) _fuRollPal(true); } return ok; };
   const _variantBack = ()=>{ if(viewMode==='image') return _jamVarStep(-1); const H=varHistRef.current; if((H.key!==_varKey() && !H.keep) || !H.st.length) return false;
     const v=H.st.pop(); (H.fw || (H.fw=[])).push(v.look ? {..._variantSnap(), look:_stLookNow()} : _variantSnap()); if(H.fw.length>30) H.fw.shift();
     if(v.look){ H.keep=true; _variantLook(v.look); } else _variantPut(v); return true; };
