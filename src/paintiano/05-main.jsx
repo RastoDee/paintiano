@@ -3003,6 +3003,7 @@ const STUDIO_HOME_CSS = `
 @keyframes pfShMuteFl{0%{opacity:0;transform:scale(.72)}16%{opacity:1;transform:scale(1.07)}28%{transform:scale(1)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
 .pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-flash,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-card,.pf-fy-clean .pf-lh-foot{display:none!important}
 .pf-fy-clean .pf-sh-stage::after{display:none!important}
+.pf-fy-fade .pf-topbar,.pf-fy-fade .pf-st-bar,.pf-fy-fade .pf-sh-prog,.pf-fy-fade .pf-sh-mute,.pf-fy-fade .pf-sh-paused,.pf-fy-fade .pf-sh-flash,.pf-fy-fade .pf-sh-intro,.pf-fy-fade .pf-sh-up,.pf-fy-fade .pf-sh-next,.pf-fy-fade .pf-sh-nextx,.pf-fy-fade .pf-sh-tap,.pf-fy-fade .pf-sh-cap,.pf-fy-fade .pf-lh-card,.pf-fy-fade .pf-lh-foot{opacity:0!important;transition:opacity .8s ease!important;pointer-events:none!important}
 .pf-fy-cleanhint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);z-index:20;transform:translateX(-50%);white-space:nowrap;padding:9px 16px;border-radius:999px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);color:#f2eee8;font-size:13px;font-weight:600;letter-spacing:.01em;pointer-events:none;animation:pfFyHint 2.6s ease both}
 @keyframes pfFyHint{0%{opacity:0;transform:translate(-50%,8px)}12%{opacity:1;transform:translate(-50%,0)}80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,0)}}
 @keyframes pfShPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
@@ -17419,6 +17420,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // pinched = all back. Tap, swipe and hold work as ever. Not remembered: the next start shows everything; the first time a line says how back.
   const [feedClean, setFeedClean] = useState(false); const feedCleanRef = useRef(false); feedCleanRef.current = feedClean;
   const [feedCleanHint, setFeedCleanHint] = useState(0);
+  const lhOnRef = useRef(false);   // the silent first screen is on (its two fingers either way bring everything back)
   useEffect(()=>{ if(!studioHome){ feedCleanRef.current=false; setFeedClean(false); } },[studioHome]);
   useEffect(()=>{ const on=!!((feedClean && studioHome) || (studioLive && stLiveLv===2)); _pfSysBars(on); if(!on) return;   // the phone's bars go with everything else (and come back with it)
     const vis=()=>{ if(document.visibilityState==='visible' && (feedCleanRef.current || stLiveLvRef.current===2)) _pfSysBars(true); };   // back in the app: the app hides them again
@@ -17430,7 +17432,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     let d0=0, done=false; const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
     const st=(e)=>{ if(e.touches.length===2 && !document.querySelector('[role="dialog"]')){ d0=dist(e.touches); done=false; } };
     const mv=(e)=>{ if(e.touches.length!==2 || !d0 || done) return; const r=dist(e.touches)/d0; if(r<=1.22 && r>=0.82) return; done=true;
-      const v=r>1; if(feedCleanRef.current===v) return; feedCleanRef.current=v; setFeedClean(v); _stBuzz(10); if(v) _pfSysBars(true);
+      let v=r>1; if(lhOnRef.current && feedCleanRef.current) v=false;   // the first screen alone: spread or pinch, everything is back
+      if(feedCleanRef.current===v) return; lhAutoRef.current=false; feedCleanRef.current=v; setFeedClean(v); _stBuzz(10); if(v) _pfSysBars(true);
       if(v){ let seen=false; try{ seen=localStorage.getItem('paintiano_clean_hint')==='1'; localStorage.setItem('paintiano_clean_hint','1'); }catch(_){} if(!seen) setFeedCleanHint(Date.now()); } else setFeedCleanHint(0); };
     const en=(e)=>{ if(e.touches.length<2) d0=0; };
     document.addEventListener('touchstart', st, {passive:true}); document.addEventListener('touchmove', mv, {passive:true}); document.addEventListener('touchend', en, {passive:true}); document.addEventListener('touchcancel', en, {passive:true});
@@ -18008,6 +18011,22 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const liveHomeOn = studioHome && feedAt<0 && !feedFly && !_homeCurV() && !showIntro && !showOnboarding;   // once the splash has gone
   useEffect(()=>{ if(lhBack && (feedAt>=0 || !studioHome || homeSide)) setLhBack(false); },[lhBack, feedAt, studioHome, homeSide]);   // it plays, the Studio or a way of yours opens: For You is on again, the home card as before
   const [liveHome, setLiveHome] = useState({i:0, k:0});
+  // the first screen watched without a touch: when the next painting begins (8 s or more since the last touch), all but the painting
+  // fades away, as two spread fingers do (TikTok's clear screen) — a tap brings it back, without sound; whatever starts brings it back too
+  const _LH_IDLE = 8000; const lhIdleRef = useRef(Date.now()); const lhAutoRef = useRef(false); const [lhFade, setLhFade] = useState(false);
+  lhOnRef.current = liveHomeOn;
+  useEffect(()=>{ if(!studioHome) return; const f=()=>{ lhIdleRef.current=Date.now(); }; const o={capture:true, passive:true};
+    document.addEventListener('touchstart', f, o); document.addEventListener('pointerdown', f, o); document.addEventListener('keydown', f, true); document.addEventListener('wheel', f, o);
+    return ()=>{ document.removeEventListener('touchstart', f, o); document.removeEventListener('pointerdown', f, o); document.removeEventListener('keydown', f, true); document.removeEventListener('wheel', f, o); }; },[studioHome]);
+  useEffect(()=>{
+    if(!liveHomeOn){ setLhFade(false); if(lhAutoRef.current){ lhAutoRef.current=false; if(feedCleanRef.current){ feedCleanRef.current=false; setFeedClean(false); } } return; }
+    if(feedCleanRef.current || Date.now()-lhIdleRef.current<_LH_IDLE) return;
+    if(navMenuOpen || stChg || showMoodMenu || pickMode || document.querySelector('[role="dialog"]')) return;
+    const t0=lhIdleRef.current; setLhFade(true);
+    const tm=setTimeout(()=>{ setLhFade(false); if(lhIdleRef.current!==t0 || feedCleanRef.current) return; lhAutoRef.current=true; feedCleanRef.current=true; setFeedClean(true); }, 800);
+    return ()=>{ clearTimeout(tm); setLhFade(false); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[liveHomeOn, liveHome.k]);
   const [livePhase, setLivePhase] = useState('card');   // card → paint → done
   const [liveMeta, setLiveMeta] = useState(null);       // {t, by, p} — title, composer, "inspired by …"
   const [liveBars, setLiveBars] = useState(null);       // the piece's colours for the pulse beneath
@@ -18254,7 +18273,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[stArmOn]);
   useEffect(()=>{ if(!favView) setStFavShare(false); },[!!favView]);
   return (
-    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(studioHome?' pf-studio-home':'')+((studioHome && feedClean)?' pf-fy-clean':'')+(stLand?' pf-st-land':'')+((studioFs && stripOpen)?' pf-st-tray':'')+(studioLive?' pf-studio-live':'')+((studioFs && stFill)?' pf-studio-fill':'')+((studioFs && metaHide)?' pf-st-quiet':'')+((studioLive && stLiveLv>=1)?' pf-live-1':'')+((studioLive && stLiveLv===2)?' pf-live-2':'')+((studioLive && !composeMode)?' pf-studio-mic':'')+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
+    <div onPointerDown={basicTapUnlock} className={"pf-app-root"+(studioHome?' pf-studio-home':'')+((studioHome && feedClean)?' pf-fy-clean':'')+((studioHome && lhFade && !feedClean)?' pf-fy-fade':'')+(stLand?' pf-st-land':'')+((studioFs && stripOpen)?' pf-st-tray':'')+(studioLive?' pf-studio-live':'')+((studioFs && stFill)?' pf-studio-fill':'')+((studioFs && metaHide)?' pf-st-quiet':'')+((studioLive && stLiveLv>=1)?' pf-live-1':'')+((studioLive && stLiveLv===2)?' pf-live-2':'')+((studioLive && !composeMode)?' pf-studio-mic':'')+(basicMode?' pf-mode-lite':'')+((composeMode||micActive)?' pf-mode-live':'')+((loadedSource==='image'&&!moodFromImg)?' pf-mode-imagescan':'')+(moodFromImg?' pf-mode-mfi':'')+(isSetupView?' pf-mode-setup':'')+(immersive?' pf-immersive':'')+(favView?' pf-fav-open':'')} style={{'--pf-read-scale':effScale,'--pf-tint':tintCol,background:'radial-gradient(ellipse 125% 64% at 50% -8%,var(--pf-tint,#0e0b16),#06060c 64%)',minHeight:'100vh',width:'100%',maxWidth:'100vw',overflowX:'hidden',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',padding:showOnboarding?'48px 16px':(!isActiveView?(isDesktop?'28px 16px':'48px 16px'):((composeMode||micActive)?'4px 16px 200px':(basicMode?'4px 16px calc(88px + env(safe-area-inset-bottom, 0px))':'12px 16px 220px'))),fontFamily:"'Outfit','Helvetica Neue','PingFang SC','PingFang TC','Hiragino Sans GB','Microsoft YaHei','Microsoft JhengHei',Arial,sans-serif",color:PF.cream,touchAction:'manipulation'}}>
       <style dangerouslySetInnerHTML={{__html:`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');`+PF_STYLE+`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pfDemoFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes pfPulse{0%,100%{transform:scale(1);box-shadow:0 6px 22px rgba(240,192,64,.45)}50%{transform:scale(1.04);box-shadow:0 8px 28px rgba(240,192,64,.65)}}@keyframes pfFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-6px)}}@keyframes pfMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}@keyframes pfFlashIn{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}@keyframes pfFlashOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfSwipeFlashL{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}8%{opacity:1;transform:translate(-50%,-50%) scale(1)}90%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}@keyframes pfMosaicIntro{0%{opacity:0}11%{opacity:1}86%{opacity:1}100%{opacity:0}}@keyframes pfSwipeFlash{0%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}}`}}/>
       {showIntro && !bootIntroRef.current && <IntroSplash onDone={()=>setShowIntro(false)} tagline={'paintings, played'} skipLabel={'tap to skip'} />}
       {posterMaker && builtinPieceRef.current!=null && chords.length>0 && (!studioOn || studioFs) && (
@@ -19320,6 +19339,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(painterStage.length) return {h:_ensT('fusion'), by:t('inspiredByTitle')||'inspired by', n:sv};
           return {h:'', by:t('inspiredByTitle')||'inspired by', n:sv}; })();
         const _fTap = (e)=>{
+          if(!FC && liveHomeOn && (feedCleanRef.current || lhFade)){ lhAutoRef.current=false; feedCleanRef.current=false; setFeedClean(false); setLhFade(false); setFeedCleanHint(0); _stBuzz(8); return; }   // the first screen, the painting alone: a tap brings everything back — no sound, For You stays off
           if(!_acRunning()){ try{ unlockAudio(); }catch(_){} }   // a tap is a gesture iOS accepts: the sound wakes here
           if(!FC && (_smp || _canPlay)){   // the first screen, or your painting waiting: answer at once — sparks fly, it starts (in the tap: iOS wakes the sound here)
             try{ const r=e.currentTarget.getBoundingClientRect(), tt=(e.changedTouches && e.changedTouches[0]) || e; setFeedBurst({k:Date.now(), x:Math.round((tt.clientX||r.left+r.width/2)-r.left), y:Math.round((tt.clientY||r.top+r.height/2)-r.top)}); setTimeout(()=>setFeedBurst(null), 900); }catch(_){}
