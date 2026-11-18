@@ -5417,24 +5417,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; if(!crOnRef.current && !composerDice) setComposerDice(true); }   // ← from the picture's ✦: the latch lets go (as a painting's ✦ on ←) — its composer was the picture's choice, not yours: ↑ still draws the next one
     soloFormRef.current={ k, v:to.v };
     _palTo(to, pal); setJamFlipN(n=>n+1); return true; };
-  // A Fusion's ← → (Nov 2026): its styles are a ladder — Collage · Synthesis · Genesis (of those switched on), the same crossing (the
-  // same painters in the same variants) on every rung, as a tap on the style would show it, the palette staying. It opens on the rung
-  // its draw chose; ← steps down toward Collage and stops there, → steps up toward Genesis, and past the top comes the next round —
-  // new variants of the same painters, on the top rung again. (A Jam's ← → the same: _jamVarStep.) With one style switched on,
-  // ← brings new variants and → goes back, as for one painter.
-  const _fsOrderOf = (on)=> ['A','E','G'].filter(x=>String(on||'').indexOf(x)>=0);
+  // ← → on a Fusion or a Jam: the standard (the Guide's Gestures) — ← a new variant (the painters' / composers' variants mixed anew), → back to the one before
   const _jamVarStep = (d, pal)=>{ try{
       const J=globalThis.__COMP_JAM_STYLE, ks=[imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
       if(ks.length===1) return _soloFormStep(d, pal);
       if(!J || J.h==null || ks.length<2 || J.sig!==ks.join() || imgSigActiveRef.current) return false;
       const nv=Math.max(1,J.nv|0); if(nv<2) return false;
       const VV=globalThis.__JAM_VAR, cur=(VV && VV.sig===J.sig && (VV.h>>>0)===(J.h>>>0)) ? (VV.v|0) : (J.v|0);
-      const curSt=_fsNorm(J.style), L=_fsOrderOf(fuStyleCNow); let to=null;
-      if(L.length>=2){ const i=L.indexOf(curSt);
-        if(d>0){ if(i===0) return false; to={ v:cur, md:mode, st:L[i<0 ? 0 : i-1] }; }          // ← one rung down (Collage: the bottom)
-        else if(i>=0 && i<L.length-1) to={ v:cur, md:mode, st:L[i+1] };                       // → one rung up
-        else to={ v:cur+1, md:null, st:L[L.length-1] }; }                                      // → past the top: the next variant, on the top rung
-      else { const H=jamVarHistRef.current, key=J.sig+'|'+(J.h>>>0); if(H.key!==key){ H.key=key; H.st=[]; H.fw=[]; }
+      const curSt=_fsNorm(J.style); let to=null;
+      { const H=jamVarHistRef.current, key=J.sig+'|'+(J.h>>>0); if(H.key!==key){ H.key=key; H.st=[]; H.fw=[]; }
         const now={ v:cur, md:mode, st:curSt };
         if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
         else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
@@ -5443,19 +5434,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       globalThis.__JAM_VAR={ sig:J.sig, h:(J.h>>>0), v:to.v };
       if(to.st){ globalThis.__JAM_STYLE_PIN={ sig:J.sig, h:J.h, style:to.st }; if(to.st!==curSt) globalThis.__COMP_JAM_STYLE={ ...J, style:to.st, roles:null }; }
       _palTo(to, pal); setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
-  // the Fusion's ladder (null: not a Fusion with two styles or more on — the painter's own ← →)
-  const _fuLadder = (d, pal)=>{ try{
-      if(viewMode==='image' || sigActiveRef.current || style===null || !painterStage.length || fuStyleNow.length<2) return null;
-      const fa=_fusionAddr(_jamStage(), phaseIndexRef.current|0); if(!fa) return null;
-      const L=_fsOrderOf(fuStyleNow); if(L.length<2) return null; const i=L.indexOf(_fsNorm(fa.fs));
-      if(d<0){ if(i===0) return false;                                                       // ← Collage: the bottom rung
-        setPhaseIndex(fa.phs[0]|0); _setFuRoll({ keys:fa.keys.slice(), phs:fa.phs.slice(), fs:L[i<0 ? 0 : i-1] }); return true; }
-      if(i>=0 && i<L.length-1){ setPhaseIndex(fa.phs[0]|0); _setFuRoll({ keys:fa.keys.slice(), phs:fa.phs.slice(), fs:L[i+1] }); return true; }
-      if(pal) stUpPalRef.current=Date.now();   // → past the top: the next round, a new crossing on the top rung (and a new palette, unless it is chosen)
-      const ok=_variantRoll(); if(ok && fuRollRef.current) _setFuRoll({ ...fuRollRef.current, fs:L[L.length-1] });
-      if(ok && pal && !palGoldRef.current) _fuRollPal(true); return ok;
-    }catch(_){ return null; } };
-  const _variantNextRaw = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal); { const lad=_fuLadder(-1, pal); if(lad!==null) return lad; }
+  const _variantNextRaw = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal);
     const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
     const sig = viewMode!=='image' && !!sigActiveRef.current;
     const snap = sig ? {..._variantSnap(), look:_stLookNow()} : _variantSnap();
@@ -5463,7 +5442,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(pal) stUpPalRef.current=Date.now();   // the Studio rolls the palette itself, once (the Fusion's own roll stands down)
     const ok=_variantRoll();
     if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current) _fuRollPal(true); } return ok; };
-  const _variantBack = ()=>{ if(viewMode==='image') return _jamVarStep(-1, true); { const lad=_fuLadder(1, true); if(lad!==null) return lad; }
+  const _variantBack = ()=>{ if(viewMode==='image') return _jamVarStep(-1, true);
     const H=varHistRef.current; if((H.key!==_varKey() && !H.keep) || !H.st.length) return false;
     const v=H.st.pop(); (H.fw || (H.fw=[])).push(v.look ? {..._variantSnap(), look:_stLookNow()} : _variantSnap()); if(H.fw.length>30) H.fw.shift();
     if(v.look){ H.keep=true; _variantLook(v.look); } else _variantPut(v); return true; };
