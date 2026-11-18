@@ -25426,6 +25426,16 @@ const GUIDE_META = [
   {id:'favorites', cat:'save', glyph:'♥'},
   {id:'pro', cat:'pro', glyph:'⚡'},
   {id:'ensemble', cat:'pro', glyph:'🎭'},
+  // the Studio's step cards (cat 'step', only in the Studio's Guide): tone = the colour they wear, link = the full cards their "More" opens
+  {id:'z_up', cat:'step', tone:'start', glyph:'↑'},
+  {id:'z_fav', cat:'step', tone:'save', glyph:'♥'},
+  {id:'z_you', cat:'step', tone:'start', glyph:'✦'},
+  {id:'h_song', cat:'step', tone:'music', glyph:'🎵', link:['music']},
+  {id:'h_photo', cat:'step', tone:'book', glyph:'📷', link:['image']},
+  {id:'h_play', cat:'step', tone:'tools', glyph:'🎹', link:['compose','mic']},
+  {id:'h_swipe', cat:'step', tone:'style', glyph:'↑', link:['st_gestures']},
+  {id:'h_share', cat:'step', tone:'pro', glyph:'⇪', link:['st_share']},
+  {id:'fujam', cat:'step', tone:'save', glyph:'◎'},
 ];
 const GUIDE_I18N = {
   EN:{
@@ -25762,6 +25772,91 @@ const GUIDE_I18N = {
     ensemble:{t:`アンサンブル`, b:`フュージョン：2〜5 人の画家で一枚の絵。Jam session：2〜5 人の作曲家で一枚の画像を。`, m:`オンにする — 🔀 の隣の ◎、それから画家をタップ。最大 5 人。 ◆ コラージュ — 画家たちが並んで、それぞれ自分の筆致で。 ◆ 合成 — ひとつの共同の絵に溶け合う。 ◆ 創生 — 彼らの最良の遺伝子から新しい画家が生まれる。一人が形を、ほかが筆致・構図・色を与える。新しいバリアントごとに遺伝子を配り直す。 ◆ 様式 — オンにした様式からフュージョンごとに抽選。スタイルとパレット → アンサンブル で選べる。← は常に コラージュ → 合成 → 創生 の順で同じフュージョンを見せ、創生のあとは新しいバリアントで再びコラージュから。 ◆ × 🔀 — 1 は新しいバリアント。ALL はピン留めを残し、新しく 1〜4 人を加える。 ◆ Jam session — 作曲家がフレーズを交代する（コラージュ）、一人に融合する（合成）、または彼らの遺伝子から新しい作曲家が生まれる——旋律・和声・タッチ・拍（創生）。← は コラージュ → 合成 → 創生 の順で同じジャム、次はコラージュから次のバリアント。→ で戻る。オンのジャムをもう一度タップすると顔ぶれを固定（📌）：金の作曲家だけ、↑ で新しいパレット。 ◆ Pro — スタイルとパレット → アンサンブル でオン。`},
    }},
 };
+// The Guide in the Studio: four tabs, one per step (Začni · Hraj sa · Tvor · Experimentuj). Each tab is a list of rows —
+// one card or a few that go together (the row opens the first) — and, under it, a line: "Next: …" or "+ more cards".
+// The cards of Začni and Hraj sa are their own (cat 'step'); a Hraj sa card's "More" opens the full cards it links to.
+const GUIDE_STEPS = [
+  {rows:[['z_up'],['z_fav'],['z_you']], nx:1},
+  {rows:[['h_song'],['h_photo'],['h_play'],['h_swipe'],['h_share']], nx:2},
+  {rows:[['st_gestures'],['st_look'],['style'],['modes'],['composers'],['moods'],['fujam'],['battle'],['favorites','save']], plus:['mfi','daily','pro']},
+  {rows:[['ensemble'],['signature'],['shuffle'],['harmony','spectral','phi','kontra'],['custom'],['mosaic'],['setup']], plus:['overview','tools','st_canvas','st_home','st_menu','appmodes']},
+];
+// per language: nx = the "next step" lines ({s} = the step's name), r = a row's name and its one line, c = the step cards, p = a short name in the "+" line
+const GUIDE_STEP_I18N = {
+  EN:{sep:' — ', p:{pro:'Pro'}, nx:['Next: {s} — your song, a photo, play it yourself.','Next: {s} — variants ← →, palettes, pick your painter.'],
+   r:{z_up:['Swipe up','another painting, other music.'], z_fav:['Like it?','tap ♥, it’s yours to keep.'], z_you:['✦ Change','your turn: your song, a photo or play it yourself.'],
+    h_song:['Your song','play it, Paintiano paints it.'], h_photo:['Photo','drop it in, it plays you music.'], h_play:['Play it yourself','tap the keys or sing.'], h_swipe:['Swipe up','another painter paints your song.'], h_share:['Share','a Story with music for IG and TikTok.'],
+    st_gestures:['Gestures','← → another variant, ↓ back.'], st_look:['Look','painters and palettes. Same notes, a new hand.'], style:['24 painters','tap one and the painting repaints in their spirit. Gold stays, white changes.'], modes:['5 palettes','five colour grammars for one song.'], composers:['15 composers','a composer recomposes your picture. Each has two forms.'], moods:['How do you feel?','type a feeling, AI writes the piece.'], fujam:['Fusion and Jam','several painters on one painting, several composers on one picture.'], battle:['Battle','your painting vs. everyone’s.'], favorites:['♥, Favorites, sharing','video, Story, PNG.'],
+    ensemble:['Ensemble','Collage → Synthesis → Genesis, 📌 pin the cast.'], signature:['✦ Signature','the painting the song chose itself.'], shuffle:['Shuffle','who changes and who stays.'], harmony:['Harmony, Spectral, φ, Kontra','why the colours fit.'], custom:['Custom palette','Scriabin’s map, edit every colour.'], mosaic:['Mosaic and Notes','golden ratio, a note on every block.'], setup:['Styles & palettes','choose what you see.']},
+   c:{z_up:{t:'Music painted this', b:'Every painting is a song. Swipe up — another painting, other music.'}, z_fav:{t:'Like it? Tap ♥', b:'Tap ♥ under the painting, or double tap it. It’s yours to keep.'}, z_you:{t:'Your turn ✦', b:'Tap ✦ Change. Bring your song, a photo — or play it yourself.'},
+    h_song:{t:'Your song', b:'MP3, video or a score. Play it and Paintiano paints it.'}, h_photo:{t:'Photo', b:'Drop in a photo. Its colours play you music.'}, h_play:{t:'Play it yourself', b:'Tap the keys or sing into the mic. It paints live.'}, h_swipe:{t:'Swipe up', b:'Another painter paints your song. Swipe down to go back.'}, h_share:{t:'Share', b:'A video or a Story with the music — for IG and TikTok.'},
+    fujam:{t:'Fusion and Jam', b:'Fusion: several painters on one painting. Jam: several composers on one picture.', m:'Fusion — ✦ Change → Painter → Look → Fusion, then tap painters. ◆ Jam — With a picture, tap Jam in Look and add composers. ◆ Pro — Fusion and Jam are part of Pro. ◆ More — Collage, Synthesis, Genesis and 📌 pinning: the Experiment step → Ensemble.'}}},
+  SK:{sep:' — ', p:{pro:'Pro'}, nx:['Ďalej: {s} — tvoja pieseň, fotka, zahraj sám.','Ďalej: {s} — varianty ← →, palety, vyber si maliara.'],
+   r:{z_up:['Swipni hore','ďalšia maľba, iná hudba.'], z_fav:['Páči sa?','ťukni ♥, ostane ti.'], z_you:['✦ Zmeň','teraz ty: tvoja pieseň, fotka alebo zahraj sám.'],
+    h_song:['Tvoja pieseň','pusti ju, Paintiano ju namaľuje.'], h_photo:['Fotka','hoď ju sem, zahrá ti hudbu.'], h_play:['Zahraj sám','ťukaj klávesy alebo spievaj.'], h_swipe:['Swipni hore','tvoju pieseň namaľuje iný maliar.'], h_share:['Zdieľaj','story s hudbou na IG a TikTok.'],
+    st_gestures:['Gestá','← → iný variant maľby, ↓ späť.'], st_look:['Vzhľad','maliari a palety. Tie isté tóny, nový rukopis.'], style:['24 maliarov','ťukni a maľba sa premaľuje v jeho duchu. Zlatý drží, biely sa mení.'], modes:['5 paliet','päť farebných gramatík jednej skladby.'], composers:['15 skladateľov','obrázok prekomponuje skladateľ. Každý má dve formy.'], moods:['Ako sa cítiš?','napíš pocit, AI napíše skladbu.'], fujam:['Fúzia a Jam','viac maliarov na jednom obraze, viac skladateľov nad obrázkom.'], battle:['Battle','tvoja maľba proti všetkým.'], favorites:['♥, Obľúbené, zdieľanie','video, Story, PNG.'],
+    ensemble:['Ensemble','Koláž → Syntéza → Genéza, 📌 pripni zostavu.'], signature:['✦ Signatúra','maľba, ktorú si skladba vybrala sama.'], shuffle:['Zamiešanie','kto sa mení a kto drží.'], harmony:['Harmónia, Spektrum, φ, Kontra','prečo farby sedia.'], custom:['Vlastná paleta','Skriabinova mapa, uprav každú farbu.'], mosaic:['Mozaika a Noty','zlatý rez, tón na každom bloku.'], setup:['Štýly a palety','vyber, čo sa ti ukazuje.']},
+   c:{z_up:{t:'Toto namaľovala hudba', b:'Každá maľba je skladba. Swipni hore — ďalšia maľba, iná hudba.'}, z_fav:{t:'Páči sa? Ťukni ♥', b:'Ťukni ♥ pod maľbou alebo na ňu dvakrát. Ostane ti.'}, z_you:{t:'Teraz ty ✦', b:'Ťukni ✦ Zmeň. Daj sem svoju pieseň, fotku — alebo zahraj sám.'},
+    h_song:{t:'Tvoja pieseň', b:'MP3, video alebo noty. Pusti ju a Paintiano ju namaľuje.'}, h_photo:{t:'Fotka', b:'Hoď sem fotku. Jej farby ti zahrajú hudbu.'}, h_play:{t:'Zahraj sám', b:'Ťukaj na klávesy alebo spievaj do mikrofónu. Maľuje sa naživo.'}, h_swipe:{t:'Swipni hore', b:'Tvoju pieseň namaľuje iný maliar. Swipni dole a vrátiš sa.'}, h_share:{t:'Zdieľaj', b:'Video alebo Story s hudbou — na IG a TikTok.'},
+    fujam:{t:'Fúzia a Jam', b:'Fúzia: viac maliarov na jednom obraze. Jam: viac skladateľov nad jedným obrázkom.', m:'Fúzia — ✦ Zmeň → Maliar → Vzhľad → Fúzia, potom ťukaj na maliarov. ◆ Jam — Pri obrázku ťukni vo Vzhľade na Jam a pridaj skladateľov. ◆ Pro — Fúzia a Jam sú súčasť Pro. ◆ Viac — Koláž, Syntéza, Genéza a 📌 pripnutie: krok Experimentuj → Ensemble.'}}},
+  DE:{sep:' — ', p:{pro:'Pro'}, nx:['Weiter: {s} — dein Song, ein Foto, selbst spielen.','Weiter: {s} — Varianten ← →, Paletten, wähl deinen Maler.'],
+   r:{z_up:['Nach oben wischen','ein anderes Bild, andere Musik.'], z_fav:['Gefällt’s?','tipp ♥, es bleibt dir.'], z_you:['✦ Ändern','jetzt du: dein Song, ein Foto oder selbst spielen.'],
+    h_song:['Dein Song','abspielen, Paintiano malt ihn.'], h_photo:['Foto','rein damit, es spielt dir Musik.'], h_play:['Selbst spielen','Tasten tippen oder singen.'], h_swipe:['Nach oben wischen','ein anderer Maler malt deinen Song.'], h_share:['Teilen','eine Story mit Musik für IG und TikTok.'],
+    st_gestures:['Gesten','← → eine andere Variante, ↓ zurück.'], st_look:['Look','Maler und Paletten. Dieselben Töne, neue Handschrift.'], style:['24 Maler','antippen, und das Bild malt sich in seinem Geist neu. Gold bleibt, Weiß wechselt.'], modes:['5 Paletten','fünf Farbgrammatiken für ein Stück.'], composers:['15 Komponisten','ein Komponist komponiert dein Foto neu. Jeder hat zwei Formen.'], moods:['Wie fühlst du dich?','schreib ein Gefühl, die KI schreibt das Stück.'], fujam:['Fusion und Jam','mehrere Maler auf einem Bild, mehrere Komponisten über einem Foto.'], battle:['Battle','dein Bild gegen alle.'], favorites:['♥, Favoriten, Teilen','Video, Story, PNG.'],
+    ensemble:['Ensemble','Collage → Synthese → Genese, 📌 Besetzung anheften.'], signature:['✦ Signatur','das Bild, das sich das Stück selbst ausgesucht hat.'], shuffle:['Zufall','wer wechselt und wer bleibt.'], harmony:['Harmonie, Spektral, φ, Kontra','warum die Farben passen.'], custom:['Eigene Palette','Skrjabins Karte, jede Farbe änderbar.'], mosaic:['Mosaik und Noten','Goldener Schnitt, ein Ton auf jedem Block.'], setup:['Stile & Paletten','wähl, was du siehst.']},
+   c:{z_up:{t:'Das hat Musik gemalt', b:'Jedes Bild ist ein Stück. Wisch nach oben — ein anderes Bild, andere Musik.'}, z_fav:{t:'Gefällt’s? Tipp ♥', b:'Tipp auf ♥ unter dem Bild oder doppelt aufs Bild. Es bleibt dir.'}, z_you:{t:'Jetzt du ✦', b:'Tipp auf ✦ Ändern. Bring deinen Song, ein Foto — oder spiel selbst.'},
+    h_song:{t:'Dein Song', b:'MP3, Video oder Noten. Spiel ihn ab, und Paintiano malt ihn.'}, h_photo:{t:'Foto', b:'Wirf ein Foto rein. Seine Farben spielen dir Musik.'}, h_play:{t:'Selbst spielen', b:'Tipp auf die Tasten oder sing ins Mikro. Es malt live.'}, h_swipe:{t:'Nach oben wischen', b:'Ein anderer Maler malt deinen Song. Nach unten wischen, und du bist zurück.'}, h_share:{t:'Teilen', b:'Ein Video oder eine Story mit Musik — für IG und TikTok.'},
+    fujam:{t:'Fusion und Jam', b:'Fusion: mehrere Maler auf einem Bild. Jam: mehrere Komponisten über einem Foto.', m:'Fusion — ✦ Ändern → Maler → Look → Fusion, dann Maler antippen. ◆ Jam — Bei einem Foto im Look auf Jam tippen und Komponisten dazunehmen. ◆ Pro — Fusion und Jam gehören zu Pro. ◆ Mehr — Collage, Synthese, Genese und 📌 Anheften: Schritt Experimentiere → Ensemble.'}}},
+  FR:{sep:' — ', p:{pro:'Pro'}, nx:['Ensuite : {s} — ta chanson, une photo, joue toi-même.','Ensuite : {s} — variantes ← →, palettes, choisis ton peintre.'],
+   r:{z_up:['Glisse vers le haut','une autre peinture, une autre musique.'], z_fav:['Ça te plaît ?','touche ♥, elle reste à toi.'], z_you:['✦ Changer','à toi : ta chanson, une photo ou joue toi-même.'],
+    h_song:['Ta chanson','lance-la, Paintiano la peint.'], h_photo:['Photo','dépose-la, elle te joue de la musique.'], h_play:['Joue toi-même','tape les touches ou chante.'], h_swipe:['Glisse vers le haut','un autre peintre peint ta chanson.'], h_share:['Partage','une Story en musique pour IG et TikTok.'],
+    st_gestures:['Gestes','← → une autre variante, ↓ retour.'], st_look:['Style','peintres et palettes. Mêmes notes, autre main.'], style:['24 peintres','touche-en un et la peinture se repeint dans son esprit. Le doré reste, le blanc change.'], modes:['5 palettes','cinq grammaires de couleur pour un morceau.'], composers:['15 compositeurs','un compositeur recompose ton image. Chacun a deux formes.'], moods:['Comment tu te sens ?','écris un ressenti, l’IA écrit le morceau.'], fujam:['Fusion et Jam','plusieurs peintres sur une peinture, plusieurs compositeurs sur une image.'], battle:['Battle','ta peinture contre toutes les autres.'], favorites:['♥, Favoris, partage','vidéo, Story, PNG.'],
+    ensemble:['Ensemble','Collage → Synthèse → Genèse, 📌 épingle la distribution.'], signature:['✦ Signature','la peinture que le morceau a choisie lui-même.'], shuffle:['Aléatoire','qui change et qui reste.'], harmony:['Harmonie, Spectral, φ, Contre','pourquoi les couleurs vont ensemble.'], custom:['Palette perso','la carte de Scriabine, chaque couleur modifiable.'], mosaic:['Mosaïque et Notes','nombre d’or, une note sur chaque bloc.'], setup:['Styles et palettes','choisis ce que tu vois.']},
+   c:{z_up:{t:'La musique a peint ça', b:'Chaque peinture est un morceau. Glisse vers le haut — une autre peinture, une autre musique.'}, z_fav:{t:'Ça te plaît ? Touche ♥', b:'Touche ♥ sous la peinture, ou touche-la deux fois. Elle reste à toi.'}, z_you:{t:'À toi ✦', b:'Touche ✦ Changer. Apporte ta chanson, une photo — ou joue toi-même.'},
+    h_song:{t:'Ta chanson', b:'MP3, vidéo ou partition. Lance-la et Paintiano la peint.'}, h_photo:{t:'Photo', b:'Dépose une photo. Ses couleurs te jouent de la musique.'}, h_play:{t:'Joue toi-même', b:'Tape sur les touches ou chante dans le micro. Ça peint en direct.'}, h_swipe:{t:'Glisse vers le haut', b:'Un autre peintre peint ta chanson. Glisse vers le bas pour revenir.'}, h_share:{t:'Partage', b:'Une vidéo ou une Story avec la musique — pour IG et TikTok.'},
+    fujam:{t:'Fusion et Jam', b:'Fusion : plusieurs peintres sur une peinture. Jam : plusieurs compositeurs sur une image.', m:'Fusion — ✦ Changer → Peintre → Style → Fusion, puis touche des peintres. ◆ Jam — Avec une image, touche Jam dans Style et ajoute des compositeurs. ◆ Pro — Fusion et Jam font partie de Pro. ◆ Plus — Collage, Synthèse, Genèse et 📌 épingler : l’étape Expérimente → Ensemble.'}}},
+  ES:{sep:' — ', p:{pro:'Pro'}, nx:['Después: {s} — tu canción, una foto, tócala tú.','Después: {s} — variantes ← →, paletas, elige tu pintor.'],
+   r:{z_up:['Desliza arriba','otra pintura, otra música.'], z_fav:['¿Te gusta?','toca ♥ y se queda contigo.'], z_you:['✦ Cambiar','te toca: tu canción, una foto o tócala tú.'],
+    h_song:['Tu canción','ponla, Paintiano la pinta.'], h_photo:['Foto','suéltala, te toca música.'], h_play:['Tócala tú','toca las teclas o canta.'], h_swipe:['Desliza arriba','otro pintor pinta tu canción.'], h_share:['Comparte','una Story con música para IG y TikTok.'],
+    st_gestures:['Gestos','← → otra variante, ↓ atrás.'], st_look:['Aspecto','pintores y paletas. Las mismas notas, otra mano.'], style:['24 pintores','toca uno y la pintura se repinta con su espíritu. El dorado se queda, el blanco cambia.'], modes:['5 paletas','cinco gramáticas de color para una pieza.'], composers:['15 compositores','un compositor recompone tu imagen. Cada uno tiene dos formas.'], moods:['¿Cómo te sientes?','escribe un sentimiento, la IA escribe la pieza.'], fujam:['Fusión y Jam','varios pintores en una pintura, varios compositores sobre una imagen.'], battle:['Battle','tu pintura contra todas.'], favorites:['♥, Favoritos, compartir','vídeo, Story, PNG.'],
+    ensemble:['Ensemble','Collage → Síntesis → Génesis, 📌 fija el reparto.'], signature:['✦ Firma','la pintura que la pieza eligió ella misma.'], shuffle:['Aleatorio','quién cambia y quién se queda.'], harmony:['Armonía, Espectral, φ, Contra','por qué los colores encajan.'], custom:['Paleta personal','el mapa de Scriabin, edita cada color.'], mosaic:['Mosaico y Notas','proporción áurea, una nota en cada bloque.'], setup:['Estilos y paletas','elige lo que ves.']},
+   c:{z_up:{t:'Esto lo pintó la música', b:'Cada pintura es una pieza. Desliza arriba — otra pintura, otra música.'}, z_fav:{t:'¿Te gusta? Toca ♥', b:'Toca ♥ debajo de la pintura, o tócala dos veces. Se queda contigo.'}, z_you:{t:'Te toca ✦', b:'Toca ✦ Cambiar. Trae tu canción, una foto — o tócala tú.'},
+    h_song:{t:'Tu canción', b:'MP3, vídeo o partitura. Ponla y Paintiano la pinta.'}, h_photo:{t:'Foto', b:'Suelta una foto. Sus colores te tocan música.'}, h_play:{t:'Tócala tú', b:'Toca las teclas o canta al micro. Se pinta en vivo.'}, h_swipe:{t:'Desliza arriba', b:'Otro pintor pinta tu canción. Desliza abajo y vuelves.'}, h_share:{t:'Comparte', b:'Un vídeo o una Story con la música — para IG y TikTok.'},
+    fujam:{t:'Fusión y Jam', b:'Fusión: varios pintores en una pintura. Jam: varios compositores sobre una imagen.', m:'Fusión — ✦ Cambiar → Pintor → Aspecto → Fusión, luego toca pintores. ◆ Jam — Con una imagen, toca Jam en Aspecto y añade compositores. ◆ Pro — Fusión y Jam son parte de Pro. ◆ Más — Collage, Síntesis, Génesis y 📌 fijar: el paso Experimenta → Ensemble.'}}},
+  PT:{sep:' — ', p:{pro:'Pro'}, nx:['A seguir: {s} — a tua canção, uma foto, toca tu.','A seguir: {s} — variantes ← →, paletas, escolhe o teu pintor.'],
+   r:{z_up:['Desliza para cima','outra pintura, outra música.'], z_fav:['Gostas?','toca em ♥ e fica contigo.'], z_you:['✦ Mudar','agora tu: a tua canção, uma foto ou toca tu.'],
+    h_song:['A tua canção','põe-na a tocar, o Paintiano pinta-a.'], h_photo:['Foto','larga-a, toca-te música.'], h_play:['Toca tu','toca nas teclas ou canta.'], h_swipe:['Desliza para cima','outro pintor pinta a tua canção.'], h_share:['Partilha','uma Story com música para IG e TikTok.'],
+    st_gestures:['Gestos','← → outra variante, ↓ para trás.'], st_look:['Visual','pintores e paletas. As mesmas notas, outra mão.'], style:['24 pintores','toca num e a pintura repinta-se no seu espírito. O dourado fica, o branco muda.'], modes:['5 paletas','cinco gramáticas de cor para uma peça.'], composers:['15 compositores','um compositor recompõe a tua imagem. Cada um tem duas formas.'], moods:['Como te sentes?','escreve um sentimento, a IA escreve a peça.'], fujam:['Fusão e Jam','vários pintores numa pintura, vários compositores sobre uma imagem.'], battle:['Battle','a tua pintura contra todas.'], favorites:['♥, Favoritos, partilhar','vídeo, Story, PNG.'],
+    ensemble:['Ensemble','Colagem → Síntese → Gênese, 📌 fixa o elenco.'], signature:['✦ Assinatura','a pintura que a peça escolheu ela própria.'], shuffle:['Aleatório','quem muda e quem fica.'], harmony:['Harmonia, Espectral, φ, Contra','porque é que as cores combinam.'], custom:['Paleta personalizada','o mapa de Scriabin, edita cada cor.'], mosaic:['Mosaico e Notas','proporção áurea, uma nota em cada bloco.'], setup:['Estilos e paletas','escolhe o que te aparece.']},
+   c:{z_up:{t:'A música pintou isto', b:'Cada pintura é uma peça. Desliza para cima — outra pintura, outra música.'}, z_fav:{t:'Gostas? Toca em ♥', b:'Toca em ♥ por baixo da pintura, ou toca nela duas vezes. Fica contigo.'}, z_you:{t:'Agora tu ✦', b:'Toca em ✦ Mudar. Traz a tua canção, uma foto — ou toca tu.'},
+    h_song:{t:'A tua canção', b:'MP3, vídeo ou partitura. Põe-na a tocar e o Paintiano pinta-a.'}, h_photo:{t:'Foto', b:'Larga uma foto. As suas cores tocam-te música.'}, h_play:{t:'Toca tu', b:'Toca nas teclas ou canta para o micro. Pinta ao vivo.'}, h_swipe:{t:'Desliza para cima', b:'Outro pintor pinta a tua canção. Desliza para baixo e voltas.'}, h_share:{t:'Partilha', b:'Um vídeo ou uma Story com a música — para IG e TikTok.'},
+    fujam:{t:'Fusão e Jam', b:'Fusão: vários pintores numa pintura. Jam: vários compositores sobre uma imagem.', m:'Fusão — ✦ Mudar → Pintor → Visual → Fusão, depois toca nos pintores. ◆ Jam — Com uma imagem, toca em Jam no Visual e junta compositores. ◆ Pro — Fusão e Jam fazem parte do Pro. ◆ Mais — Colagem, Síntese, Gênese e 📌 fixar: o passo Experimenta → Ensemble.'}}},
+  zh:{sep:'：', p:{pro:'Pro'}, nx:['下一步：{s}——你的歌、一张照片、自己弹。','下一步：{s}——变体 ← →、调色板、挑你的画家。'],
+   r:{z_up:['上滑','另一幅画，另一段音乐。'], z_fav:['喜欢','点 ♥——它就归你了。'], z_you:['✦ 更换','轮到你：你的歌、照片，或自己弹。'],
+    h_song:['你的歌','放出来，Paintiano 把它画出来。'], h_photo:['照片','丢进来，它为你奏乐。'], h_play:['自己弹','点琴键或唱歌。'], h_swipe:['上滑','换一位画家画你的歌。'], h_share:['分享','带音乐的快拍，发到 IG 和 TikTok。'],
+    st_gestures:['手势','← → 换一个变体，↓ 返回。'], st_look:['外观','画家和调色板。同样的音，换一种笔法。'], style:['24 位画家','点一位，画就以他的风格重画。金色留下，白色会换。'], modes:['5 种调色板','一首曲子的五种色彩语法。'], composers:['15 位作曲家','作曲家为你的图片重新谱曲。每位有两种曲式。'], moods:['你现在感觉如何?','写下感受，AI 写出曲子。'], fujam:['融合与 Jam','几位画家共画一幅，几位作曲家共奏一张图。'], battle:['Battle','你的画对阵所有人。'], favorites:['♥、收藏、分享','视频、快拍、PNG。'],
+    ensemble:['合奏','拼贴 → 合成 → 创生，📌 固定阵容。'], signature:['✦ 签名','曲子自己选出的那幅画。'], shuffle:['随机','谁换，谁留下。'], harmony:['和声、光谱、φ、反向','为什么颜色这么搭。'], custom:['自定义调色板','斯克里亚宾色彩图，每种颜色都能改。'], mosaic:['马赛克与音符','黄金比例，每块上一个音。'], setup:['风格与调色板','选择你要看到什么。']},
+   c:{z_up:{t:'这是音乐画的', b:'每幅画都是一首曲子。上滑——另一幅画，另一段音乐。'}, z_fav:{t:'喜欢？点 ♥', b:'点画下方的 ♥，或双击画面。它就归你了。'}, z_you:{t:'轮到你了 ✦', b:'点 ✦ 更换。放入你的歌、一张照片——或者自己弹。'},
+    h_song:{t:'你的歌', b:'MP3、视频或乐谱。放出来，Paintiano 就把它画出来。'}, h_photo:{t:'照片', b:'丢一张照片进来。它的颜色为你奏出音乐。'}, h_play:{t:'自己弹', b:'点琴键，或对着麦克风唱。边弹边画。'}, h_swipe:{t:'上滑', b:'换一位画家来画你的歌。下滑就回去。'}, h_share:{t:'分享', b:'带音乐的视频或快拍——发到 IG 和 TikTok。'},
+    fujam:{t:'融合与 Jam', b:'融合：几位画家共画一幅画。Jam：几位作曲家共奏一张图。', m:'融合 — ✦ 更换 → 画家 → 外观 → 融合，再点选画家。 ◆ Jam — 打开一张图片，在外观里点 Jam，加入作曲家。 ◆ Pro — 融合和 Jam 属于 Pro。 ◆ 更多 — 拼贴、合成、创生和 📌 固定：“实验”这一步 → 合奏。'}}},
+  zhTW:{sep:'：', p:{pro:'Pro'}, nx:['下一步：{s}——你的歌、一張照片、自己彈。','下一步：{s}——變體 ← →、調色盤、挑你的畫家。'],
+   r:{z_up:['上滑','另一幅畫，另一段音樂。'], z_fav:['喜歡','點 ♥——它就歸你了。'], z_you:['✦ 更換','輪到你：你的歌、照片，或自己彈。'],
+    h_song:['你的歌','放出來，Paintiano 把它畫出來。'], h_photo:['照片','丟進來，它為你奏樂。'], h_play:['自己彈','點琴鍵或唱歌。'], h_swipe:['上滑','換一位畫家畫你的歌。'], h_share:['分享','帶音樂的限動，發到 IG 和 TikTok。'],
+    st_gestures:['手勢','← → 換一個變體，↓ 返回。'], st_look:['外觀','畫家和調色盤。同樣的音，換一種筆法。'], style:['24 位畫家','點一位，畫就以他的風格重畫。金色留下，白色會換。'], modes:['5 種調色盤','一首曲子的五種色彩語法。'], composers:['15 位作曲家','作曲家為你的圖片重新譜曲。每位有兩種曲式。'], moods:['你現在感覺如何?','寫下感受，AI 寫出曲子。'], fujam:['融合與 Jam','幾位畫家共畫一幅，幾位作曲家共奏一張圖。'], battle:['Battle','你的畫對決所有人。'], favorites:['♥、收藏、分享','影片、限動、PNG。'],
+    ensemble:['合奏','拼貼 → 合成 → 創生，📌 固定陣容。'], signature:['✦ 簽名','曲子自己選出的那幅畫。'], shuffle:['隨機','誰換，誰留下。'], harmony:['和聲、光譜、φ、反向','為什麼顏色這麼搭。'], custom:['自訂調色盤','斯克里亞賓色彩圖，每種顏色都能改。'], mosaic:['馬賽克與音符','黃金比例，每塊上一個音。'], setup:['風格與調色盤','選擇要顯示的內容。']},
+   c:{z_up:{t:'這是音樂畫的', b:'每幅畫都是一首曲子。上滑——另一幅畫，另一段音樂。'}, z_fav:{t:'喜歡？點 ♥', b:'點畫下方的 ♥，或雙擊畫面。它就歸你了。'}, z_you:{t:'輪到你了 ✦', b:'點 ✦ 更換。放入你的歌、一張照片——或自己彈。'},
+    h_song:{t:'你的歌', b:'MP3、影片或樂譜。放出來，Paintiano 就把它畫出來。'}, h_photo:{t:'照片', b:'丟一張照片進來。它的顏色為你奏出音樂。'}, h_play:{t:'自己彈', b:'點琴鍵，或對著麥克風唱。邊彈邊畫。'}, h_swipe:{t:'上滑', b:'換一位畫家來畫你的歌。下滑就回去。'}, h_share:{t:'分享', b:'帶音樂的影片或限動——發到 IG 和 TikTok。'},
+    fujam:{t:'融合與 Jam', b:'融合：幾位畫家共畫一幅畫。Jam：幾位作曲家共奏一張圖。', m:'融合 — ✦ 更換 → 畫家 → 外觀 → 融合，再點選畫家。 ◆ Jam — 開啟一張圖片，在外觀裡點 Jam，加入作曲家。 ◆ Pro — 融合和 Jam 屬於 Pro。 ◆ 更多 — 拼貼、合成、創生和 📌 固定：「實驗」這一步 → 合奏。'}}},
+  ja:{sep:'：', p:{pro:'Pro'}, nx:['次は：{s}——あなたの曲、写真、自分で弾く。','次は：{s}——バリエーション ← →、パレット、画家を選ぶ。'],
+   r:{z_up:['上にスワイプ','別の絵、別の音楽。'], z_fav:['気に入った','♥ をタップ——あなたのものに。'], z_you:['✦ 変える','次はあなた：曲、写真、または自分で弾く。'],
+    h_song:['あなたの曲','流せば Paintiano が描く。'], h_photo:['写真','ドロップすると音楽を奏でる。'], h_play:['自分で弾く','鍵盤をタップするか歌う。'], h_swipe:['上にスワイプ','別の画家があなたの曲を描く。'], h_share:['シェア','音楽つき Story を IG や TikTok へ。'],
+    st_gestures:['ジェスチャー','← → 別のバリエーション、↓ 戻る。'], st_look:['見た目','画家とパレット。同じ音、新しい筆致。'], style:['24 人の画家','タップすると、その画家の精神で描き直される。金は残り、白は変わる。'], modes:['5 パレット','一曲に五つの色の文法。'], composers:['15 人の作曲家','作曲家があなたの画像を再作曲。それぞれ二つの形式。'], moods:['今、どう感じる?','気持ちを書けば、AI が曲を書く。'], fujam:['フュージョンとジャム','複数の画家で一枚の絵、複数の作曲家で一枚の画像。'], battle:['Battle','あなたの絵 vs みんなの絵。'], favorites:['♥、お気に入り、シェア','動画、Story、PNG。'],
+    ensemble:['アンサンブル','コラージュ → 合成 → 創生、📌 顔ぶれを固定。'], signature:['✦ 署名','曲が自分で選んだ一枚。'], shuffle:['シャッフル','誰が変わり、誰が残るか。'], harmony:['ハーモニー、スペクトル、φ、反転','色が合う理由。'], custom:['カスタムパレット','スクリャービンの図、すべての色を編集。'], mosaic:['モザイクと音符','黄金比、ブロックごとに一つの音。'], setup:['スタイルとパレット','表示するものを選ぶ。']},
+   c:{z_up:{t:'音楽がこれを描いた', b:'どの絵も一曲。上にスワイプ——別の絵、別の音楽。'}, z_fav:{t:'気に入った？ ♥ をタップ', b:'絵の下の ♥ をタップ、または絵をダブルタップ。あなたのものに。'}, z_you:{t:'次はあなた ✦', b:'✦ 変える をタップ。あなたの曲、写真——または自分で弾こう。'},
+    h_song:{t:'あなたの曲', b:'MP3、動画、楽譜。流せば Paintiano が描く。'}, h_photo:{t:'写真', b:'写真をドロップ。その色が音楽を奏でる。'}, h_play:{t:'自分で弾く', b:'鍵盤をタップするか、マイクに向かって歌おう。ライブで描かれる。'}, h_swipe:{t:'上にスワイプ', b:'別の画家があなたの曲を描く。下にスワイプで戻る。'}, h_share:{t:'シェア', b:'音楽つきの動画や Story——IG や TikTok へ。'},
+    fujam:{t:'フュージョンとジャム', b:'フュージョン：複数の画家で一枚の絵。ジャム：複数の作曲家で一枚の画像を。', m:'フュージョン — ✦ 変える → 画家 → 見た目 → フュージョン、それから画家をタップ。 ◆ ジャム — 画像を開き、見た目で ジャム をタップして作曲家を加える。 ◆ Pro — フュージョンとジャムは Pro に含まれる。 ◆ もっと — コラージュ、合成、創生、📌 ピン留め：ステップ「ためす」→ アンサンブル。'}}},
+};
+function getGuideStepUI(lang){ return GUIDE_STEP_I18N[lang] || GUIDE_STEP_I18N.EN; }
 function getGuideUI(lang){ return (GUIDE_I18N[lang] || GUIDE_I18N.EN).ui; }
 // Inside the iOS app the Studio is the only view (no Atelier, no Lite): the Guide leaves the Atelier out there —
 // the 'Studio and Atelier' card is not shown and these passages are cut or shortened (the web keeps the full text).
@@ -25781,7 +25876,8 @@ function _guideIos(s, lang){ if(typeof s!=='string') return s; const a=(GUIDE_IO
 function getGuideCards(lang, studio){
   const L = GUIDE_I18N[lang] || GUIDE_I18N.EN, E = GUIDE_I18N.EN;
   const ios = (typeof window!=='undefined' && (window.__PF_NATIVE==='ios' || window.__PF_NATIVE==='android')), fx = (s)=> ios ? _guideIos(s, lang) : s;
-  return GUIDE_META.filter(m=>(studio || m.cat!=='studio') && !(ios && m.id==='appmodes')).map(m=>{ const x = L.c[m.id] || E.c[m.id];
+  const LS = GUIDE_STEP_I18N[lang] || GUIDE_STEP_I18N.EN, ES = GUIDE_STEP_I18N.EN;
+  return GUIDE_META.filter(m=>(studio || (m.cat!=='studio' && m.cat!=='step')) && !(ios && m.id==='appmodes')).map(m=>{ const x = L.c[m.id] || LS.c[m.id] || E.c[m.id] || ES.c[m.id];
     return {...m, title:x.t, body:_guidePx(fx((studio && x.bS) || x.b)), more:_guidePx(fx((studio && x.mS) || x.m))}; });
 }
 // Prices in the Guide follow the visitor's own currency, like the paywall (the first opening may still show EUR while the local prices load).
@@ -29526,6 +29622,11 @@ const GUIDE_TOPIC = {
   book:{g:'linear-gradient(135deg,#ffb08a,#ff7a3d)', i:'book'},
   battle:{g:'linear-gradient(135deg,#ff9a62,#e3415e)', i:'battle'},
   concept:{g:'linear-gradient(135deg,#cdb2ff,#8c5cff)', i:'start'},
+  // the Studio Guide's four steps
+  tab0:{g:'linear-gradient(135deg,#f0d78a,#c9a84c)', dk:1, i:'start'},
+  tab1:{g:'linear-gradient(135deg,#7ab3ff,#3f7bff)', i:'music'},
+  tab2:{g:'linear-gradient(135deg,#cdb2ff,#8c5cff)', i:'style'},
+  tab3:{g:'linear-gradient(135deg,#ff5f8f,#a86bff)', i:'save'},
 };
 const GUIDE_HUB = ['start','colors','style','music','tools','save','pro','book'];
 // in the Studio Battle takes the Book's place (the Book is one level up, in the menu); its card also stays in the Studio's 30 seconds
@@ -29538,6 +29639,7 @@ const GUIDE2_CSS = `.pf-g2 *{box-sizing:border-box}
 .pf-g2-sheet{animation:pfG2Up .28s cubic-bezier(.2,.8,.2,1) both}
 @keyframes pfG2Up{from{transform:translateY(100%)}to{transform:none}}
 .pf-g2-tp:active,.pf-g2-feat:active,.pf-g2-row:active{transform:scale(.96)}
+.pf-g2-tabs button{transition:background .15s,color .15s}
 .pf-g2-hub{scrollbar-width:none}.pf-g2-hub::-webkit-scrollbar{display:none}
 .pf-g2-search::placeholder{color:rgba(242,238,232,.62)}
 .pf-g2-search::-webkit-search-cancel-button{display:none}
@@ -29776,7 +29878,7 @@ const TourPlayer = memo(function TourPlayer({kind, lang, onClose, onPlay, onFull
     </div>);
 });
 
-const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, ts, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale, mode='guide', studio=false, art=null, onTour=null}){
+const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, ts, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale, mode='guide', studio=false, art=null, onTour=null, step=3, tab=null}){
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
   const rs = readScale || 1;
@@ -29784,6 +29886,13 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const U = getGuideUI(lang);
   const TW = tourWords(lang);
   const all = useMemo(()=>getGuideCards(lang, studio), [lang, studio]);
+  // the Studio: the Guide in four tabs, one per step — it opens on the visitor's own step (or the one a step toast names)
+  const byId = useMemo(()=>{ const o={}; for(const c of all) o[c.id]=c; return o; }, [all]);
+  const SU = getGuideStepUI(lang), SE = GUIDE_STEP_I18N.EN;
+  const stepName = (n)=>{ const d=STUDIO_I18N[lang]||STUDIO_I18N.EN; return d['stp'+n] || STUDIO_I18N.EN['stp'+n]; };
+  const [gTab, setGTab] = useState(()=> Math.max(0, Math.min(3, (tab!=null ? tab : step)|0)));
+  const tabIds = (n)=>{ const g=GUIDE_STEPS[n]; return g ? g.rows.flat().concat(g.plus||[]).filter(id=>byId[id]) : []; };
+  const tk = (c)=> c.id==='battle' ? 'battle' : (c.tone || c.cat);   // the colour a card wears
   const concept = useMemo(()=>getConceptCards(lang), [lang]);
   const bookCard = useMemo(()=>({id:'book', book:true, title:t('bookTitle')||'The Book', body:ts('bookDesc',''), cta:ts('bookExcerptCta','Book summary')}), [t, ts]);
   // the book summary as story cards (key 'bsum'): the opening, one card per part, the quote — ✕ or the last tap returns to the Book card
@@ -29794,12 +29903,12 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const [sheet, setSheet] = useState(false);
   const [sheetAll, setSheetAll] = useState(false);   // the sheet shows three rows first; "More" opens the rest
   useEffect(()=>{ if(!sheet) setSheetAll(false); },[sheet]);
-  const listOf = (k)=> k==='concept' ? concept : k==='book' ? [bookCard] : k==='bsum' ? bookSum : k==='battle' ? all.filter(c=>c.id==='battle') : all.filter(c=>c.cat===k);
+  const listOf = (k)=> k.indexOf('tab')===0 ? tabIds(+k.slice(3)).map(id=>byId[id]) : k.indexOf('lnk:')===0 ? k.slice(4).split(',').map(id=>byId[id]).filter(Boolean) : k==='concept' ? concept : k==='book' ? [bookCard] : k==='bsum' ? bookSum : k==='battle' ? all.filter(c=>c.id==='battle') : all.filter(c=>c.cat===k);
   const cards = story ? listOf(story.k) : [];
   const card = story ? cards[Math.max(0, Math.min(story.i, cards.length-1))] : null;
   const open = (k, i, auto)=>{ setSheet(false); setStory({k, i:i||0, auto:!!auto}); };   // auto: the ▶ story plays on by itself (Instagram-like)
-  const closeStory = useCallback(()=>{ setSheet(false); if(story && story.k==='bsum'){ setStory({k:'book', i:0}); return; } if(direct) onClose(); else setStory(null); }, [direct, onClose, story]);
-  const go = (d)=>{ if(!story) return; const n=story.i+d; if(n<0) return; if(n>=cards.length){ closeStory(); return; } setSheet(false); setStory({k:story.k, i:n, auto:story.auto}); };
+  const closeStory = useCallback(()=>{ setSheet(false); if(story && story.back){ setStory(story.back); return; } if(story && story.k==='bsum'){ setStory({k:'book', i:0}); return; } if(direct) onClose(); else setStory(null); }, [direct, onClose, story]);
+  const go = (d)=>{ if(!story) return; const n=story.i+d; if(n<0) return; if(n>=cards.length){ closeStory(); return; } setSheet(false); setStory({k:story.k, i:n, auto:story.auto, back:story.back}); };
   // ▶ "in 30 seconds": each card stays as long as its short text needs (4–6 s), its bar fills, then the next comes. Reading the
   // details (the sheet open) or a finger held on the card stops the time; letting go goes on from where it stood.
   const goRef = useRef(go); goRef.current = go;
@@ -29816,8 +29925,11 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
     return ()=>cancelAnimationFrame(raf);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story && story.k, story && story.i, story && story.auto]);
+  const openCard = (c)=>{ if(!c) return; if(!studio){ open(c.cat, all.filter(x=>x.cat===c.cat).indexOf(c)); return; }
+    for(const n of [gTab,0,1,2,3]){ const i=tabIds(n).indexOf(c.id); if(i>=0){ setGTab(n); open('tab'+n, i); return; } }
+    open('lnk:'+c.id, 0); };
   // back from Styles & palettes: straight to the card it was opened from
-  useEffect(()=>{ if(!initialCardId || direct) return; const c=all.find(x=>x.id===initialCardId); if(c) open(c.cat, all.filter(x=>x.cat===c.cat).indexOf(c));
+  useEffect(()=>{ if(!initialCardId || direct) return; const c=all.find(x=>x.id===initialCardId); if(c) openCard(c);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(()=>{
@@ -29841,7 +29953,8 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const q = String(guideQuery||'').trim();
   const hits = useMemo(()=> q ? all.filter(c=>guideCardMatch(c, q)) : [], [all, q]);
   const T = (k)=> GUIDE_TOPIC[k] || GUIDE_TOPIC.start;
-  const topicName = (k)=> k==='studio' ? (STUDIO_I18N[lang] || STUDIO_I18N.EN).studio : k==='concept' ? _cap(t('conceptTitle')||'Concept') : k==='book' ? _cap(ts('gcat_book','Book')) : k==='battle' ? 'Battle' : _cap(t('gcat_'+k)!=='gcat_'+k ? t('gcat_'+k) : k);
+  const kTop = (k)=> k.indexOf('lnk:')===0 ? ((byId[k.slice(4).split(',')[0]]||{}).cat || 'start') : k;   // a linked card's story wears its topic
+  const topicName = (k)=> k.indexOf('tab')===0 ? stepName(+k.slice(3)) : k==='studio' ? (STUDIO_I18N[lang] || STUDIO_I18N.EN).studio : k==='concept' ? _cap(t('conceptTitle')||'Concept') : k==='book' ? _cap(ts('gcat_book','Book')) : k==='battle' ? 'Battle' : _cap(t('gcat_'+k)!=='gcat_'+k ? t('gcat_'+k) : k);
   const circle = (k, z, iz)=>(<span aria-hidden="true" style={{width:z,height:z,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:T(k).g,color:T(k).dk?'#1a1408':'#fff'}}><GuideIco k={T(k).i} z={iz}/></span>);
   const xIco = (z)=>(<svg width={z} height={z} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>);
   const glass = {borderRadius:'50%',border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.08)',color:'#f2eee8',display:'flex',alignItems:'center',justifyContent:'center',padding:0,cursor:'pointer',flexShrink:0};
@@ -29849,6 +29962,29 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const isArt = story && (story.k==='concept' || story.k==='book' || story.k==='bsum');
 
   // ── the home of the Guide ──
+  const featEl = (<>
+      <button type="button" className="pf-g2-feat pf-g2-big" onClick={()=> onTour ? onTour('full') : open(studio ? 'studio' : 'start', 0, true)} style={{position:'relative',marginTop:16,minHeight:150,flexShrink:0,borderRadius:24,overflow:'hidden',display:'flex',alignItems:'flex-end',gap:12,padding:'16px 16px 16px 18px',border:0,background:'linear-gradient(135deg,#2a1d48,#13101b 60%,#3a2a12)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+        {onTour ? (<img src={TOUR_POSTER} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'saturate(1.15)',pointerEvents:'none'}}/>) : artBg('blur(2px) brightness(.62) saturate(1.2)')}
+        <span aria-hidden="true" style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(7,6,12,0) 10%,rgba(7,6,12,.86))'}}/>
+        {onTour && (<span aria-hidden="true" style={{position:'absolute',left:14,top:12,display:'inline-flex',alignItems:'center',gap:6,fontSize:11.5,fontWeight:800,letterSpacing:'.05em',padding:'4px 10px',borderRadius:99,background:'rgba(7,6,12,.5)',border:'1px solid rgba(255,255,255,.18)'}}><i style={{width:7,height:7,borderRadius:'50%',background:'#ff5f6d',boxShadow:'0 0 8px rgba(255,95,109,.8)'}}/>{TW.ui('vid')} · 1:43</span>)}
+        <span style={{position:'relative',flex:1,minWidth:0}}>
+          <span style={{display:'block',fontSize:21*rs,fontWeight:700,lineHeight:1.15}}>{onTour ? TW.ui('t') : (studio ? U.featS : U.featC)}</span>
+          <span style={{display:'block',marginTop:5,fontSize:13*rs,color:'rgba(242,238,232,.78)'}}>{onTour ? TW.ui('sub') : (studio ? U.featSsub : U.featCsub)}</span>
+        </span>
+        <span aria-hidden="true" style={{position:'relative',width:54,height:54,borderRadius:'50%',flexShrink:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px rgba(201,168,76,.45)'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+      </button>
+      {onTour && (<button type="button" className="pf-g2-row" onClick={()=>open(studio ? 'studio' : 'start', 0, true)} style={{marginTop:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'10px 14px',borderRadius:14,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontFamily:'inherit',fontSize:13.5*rs,textAlign:'left',cursor:'pointer'}}><span style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{TW.ui('step')}: {studio ? U.featS : U.featC}</span><span aria-hidden="true" style={{color:'rgba(240,199,94,.9)',fontSize:16}}>›</span></button>)}   {/* the 30-second cards, one by one, as before */}
+  </>);
+  const conceptEl = (
+      <button type="button" className="pf-g2-feat" onClick={()=>open('concept', 0)} style={{flexShrink:0,minHeight:72,borderRadius:20,display:'flex',alignItems:'center',gap:14,padding:'12px 18px',background:'linear-gradient(120deg,rgba(140,92,255,.22),rgba(240,192,64,.10))',border:'1px solid rgba(205,178,255,.25)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+        <span aria-hidden="true" style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:40,lineHeight:1,color:'#f0d78a',width:34,textAlign:'center'}}>φ</span>
+        <span style={{flex:1,minWidth:0}}>
+          <span style={{display:'block',fontSize:16*rs,fontWeight:700}}>{topicName('concept')}</span>
+          <span style={{display:'block',marginTop:2,fontSize:13*rs,color:'rgba(242,238,232,.62)'}}>{U.conceptSub}</span>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{color:'rgba(242,238,232,.4)'}}><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+  );
   const hub = (
     <div className="pf-g2-hub" style={{flex:1,minHeight:0,overflowY:'auto',display:'flex',flexDirection:'column',padding:'calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 18px) max(16px, env(safe-area-inset-left, 0px))'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
@@ -29868,26 +30004,36 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         <div style={{marginTop:12,display:'flex',flexDirection:'column'}}>
           {hits.length===0 && (<div style={{padding:'40px 8px',textAlign:'center',color:'rgba(242,238,232,.5)',fontSize:15*rs}}>{t('noMatches')||'no matches'}</div>)}
           {hits.map((c)=>(
-            <button key={c.id} type="button" className="pf-g2-row" onClick={()=>open(c.cat, all.filter(x=>x.cat===c.cat).indexOf(c))} style={{display:'flex',alignItems:'center',gap:14,padding:'11px 4px',background:'none',border:0,borderTop:'1px solid rgba(242,238,232,.07)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
-              {circle(c.cat, 40, 18)}
+            <button key={c.id} type="button" className="pf-g2-row" onClick={()=>openCard(c)} style={{display:'flex',alignItems:'center',gap:14,padding:'11px 4px',background:'none',border:0,borderTop:'1px solid rgba(242,238,232,.07)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+              {circle(tk(c), 40, 18)}
               <span style={{flex:1,minWidth:0}}>
                 <span style={{display:'block',fontSize:15*rs,fontWeight:700}}>{pfIcons(c.title)}</span>
                 <span style={{display:'block',marginTop:2,fontSize:13*rs,lineHeight:1.35,color:'rgba(242,238,232,.6)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.body}</span>
               </span>
             </button>))}
         </div>
-      ) : (<>
-        <button type="button" className="pf-g2-feat pf-g2-big" onClick={()=> onTour ? onTour('full') : open(studio ? 'studio' : 'start', 0, true)} style={{position:'relative',marginTop:16,minHeight:150,flexShrink:0,borderRadius:24,overflow:'hidden',display:'flex',alignItems:'flex-end',gap:12,padding:'16px 16px 16px 18px',border:0,background:'linear-gradient(135deg,#2a1d48,#13101b 60%,#3a2a12)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
-          {onTour ? (<img src={TOUR_POSTER} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'saturate(1.15)',pointerEvents:'none'}}/>) : artBg('blur(2px) brightness(.62) saturate(1.2)')}
-          <span aria-hidden="true" style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(7,6,12,0) 10%,rgba(7,6,12,.86))'}}/>
-          {onTour && (<span aria-hidden="true" style={{position:'absolute',left:14,top:12,display:'inline-flex',alignItems:'center',gap:6,fontSize:11.5,fontWeight:800,letterSpacing:'.05em',padding:'4px 10px',borderRadius:99,background:'rgba(7,6,12,.5)',border:'1px solid rgba(255,255,255,.18)'}}><i style={{width:7,height:7,borderRadius:'50%',background:'#ff5f6d',boxShadow:'0 0 8px rgba(255,95,109,.8)'}}/>{TW.ui('vid')} · 1:43</span>)}
-          <span style={{position:'relative',flex:1,minWidth:0}}>
-            <span style={{display:'block',fontSize:21*rs,fontWeight:700,lineHeight:1.15}}>{onTour ? TW.ui('t') : (studio ? U.featS : U.featC)}</span>
-            <span style={{display:'block',marginTop:5,fontSize:13*rs,color:'rgba(242,238,232,.78)'}}>{onTour ? TW.ui('sub') : (studio ? U.featSsub : U.featCsub)}</span>
-          </span>
-          <span aria-hidden="true" style={{position:'relative',width:54,height:54,borderRadius:'50%',flexShrink:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px rgba(201,168,76,.45)'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
-        </button>
-        {onTour && (<button type="button" className="pf-g2-row" onClick={()=>open(studio ? 'studio' : 'start', 0, true)} style={{marginTop:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'10px 14px',borderRadius:14,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontFamily:'inherit',fontSize:13.5*rs,textAlign:'left',cursor:'pointer'}}><span style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{TW.ui('step')}: {studio ? U.featS : U.featC}</span><span aria-hidden="true" style={{color:'rgba(240,199,94,.9)',fontSize:16}}>›</span></button>)}   {/* the 30-second cards, one by one, as before */}
+      ) : studio ? (<>
+        <div role="tablist" aria-label={_cap(t('guideTitle')||'Guide')} className="pf-g2-tabs" style={{marginTop:14,flexShrink:0,display:'flex',gap:2,padding:4,borderRadius:16,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)'}}>
+          {[0,1,2,3].map(n=>{ const on=gTab===n, done=n<step; return (
+            <button key={n} type="button" role="tab" aria-selected={on} onClick={()=>setGTab(n)} style={{flex:'1 1 auto',minWidth:0,height:38,border:0,borderRadius:12,padding:'0 7px',fontSize:13*Math.min(rs,1.15),fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',background:on?'linear-gradient(135deg,#f0d78a,#c9a84c)':'none',color:on?'#1a1408':(done?'#e2c477':'rgba(242,238,232,.72)')}}>{stepName(n)}{done ? ' ✓' : ''}</button>); })}
+        </div>
+        {gTab===0 && featEl}
+        <div key={'gt'+gTab} className="pf-g2-in" style={{marginTop:14,display:'flex',flexDirection:'column',gap:8,flexShrink:0}}>
+          {GUIDE_STEPS[gTab].rows.map((ids)=>{ const c=byId[ids[0]]; if(!c) return null; const r=SU.r[ids[0]] || SE.r[ids[0]], k=tk(c); return (
+            <button key={ids[0]} type="button" className="pf-g2-row" onClick={()=>openCard(c)} style={{display:'flex',alignItems:'center',gap:13,padding:'10px 12px',borderRadius:16,background:'rgba(255,255,255,.045)',border:'1px solid rgba(255,255,255,.07)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+              <span aria-hidden="true" style={{width:40,height:40,borderRadius:12,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:T(k).g,color:T(k).dk?'#1a1408':'#fff',fontSize:19,lineHeight:1,textShadow:k==='colors'?'0 1px 3px rgba(0,0,0,.7)':'none'}}>{pfIcons(c.glyph)}</span>
+              <span style={{flex:1,minWidth:0,fontSize:14.5*rs,lineHeight:1.38}}><b style={{color:'#e2c477',fontWeight:700}}>{pfIcons(r ? r[0] : c.title)}</b>{SU.sep || ' — '}{pfIcons(r ? r[1] : c.body)}</span>
+            </button>); })}
+          {(()=>{ const g=GUIDE_STEPS[gTab];
+            if(g.plus){ const ps=g.plus.filter(id=>byId[id]); if(!ps.length) return null; return (
+              <div style={{marginTop:4,textAlign:'center',fontSize:13*rs,lineHeight:1.7,color:'rgba(242,238,232,.6)'}}>{'+ '}{ps.map((id,i)=>(<span key={id}>{i ? ' · ' : ''}<button type="button" onClick={()=>openCard(byId[id])} style={{background:'none',border:0,padding:0,color:'rgba(242,238,232,.82)',fontSize:'inherit',textDecoration:'underline dotted',textUnderlineOffset:3,cursor:'pointer'}}>{(SU.p && SU.p[id]) || byId[id].title}</button></span>))}</div>); }
+            const nx=(SU.nx && SU.nx[gTab]) || SE.nx[gTab]; if(!nx || g.nx==null) return null; const [n0,n1]=nx.split('{s}'); return (
+              <div style={{marginTop:4,textAlign:'center',fontSize:13*rs,lineHeight:1.55,color:'rgba(242,238,232,.6)'}}>{n0}<button type="button" onClick={()=>setGTab(g.nx)} style={{background:'none',border:0,padding:0,color:'#e2c477',fontWeight:700,fontSize:'inherit',cursor:'pointer'}}>{stepName(g.nx)}</button>{n1}</div>); })()}
+        </div>
+        <div style={{flex:1,minHeight:20}}/>
+        {conceptEl}
+      </>) : (<>
+        {featEl}
         <div className="pf-g2-grid" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',rowGap:18,marginTop:22,flexShrink:0}}>
           {((studio && all.some(c=>c.id==='battle')) ? GUIDE_HUB_ST : GUIDE_HUB).map((k)=>(
             <button key={k} type="button" className="pf-g2-tp" onClick={()=>open(k, 0)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,background:'none',border:0,padding:0,color:'rgba(242,238,232,.92)',fontSize:12.5*rs,fontWeight:600,cursor:'pointer',minWidth:0,transition:'transform .12s'}}>
@@ -29895,14 +30041,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
             </button>))}
         </div>
         <div style={{flex:1,minHeight:20}}/>
-        <button type="button" className="pf-g2-feat" onClick={()=>open('concept', 0)} style={{flexShrink:0,minHeight:72,borderRadius:20,display:'flex',alignItems:'center',gap:14,padding:'12px 18px',background:'linear-gradient(120deg,rgba(140,92,255,.22),rgba(240,192,64,.10))',border:'1px solid rgba(205,178,255,.25)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
-          <span aria-hidden="true" style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:40,lineHeight:1,color:'#f0d78a',width:34,textAlign:'center'}}>φ</span>
-          <span style={{flex:1,minWidth:0}}>
-            <span style={{display:'block',fontSize:16*rs,fontWeight:700}}>{topicName('concept')}</span>
-            <span style={{display:'block',marginTop:2,fontSize:13*rs,color:'rgba(242,238,232,.62)'}}>{U.conceptSub}</span>
-          </span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{color:'rgba(242,238,232,.4)'}}><path d="M9 6l6 6-6 6"/></svg>
-        </button>
+        {conceptEl}
       </>)}
     </div>);
 
@@ -29919,7 +30058,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
       </div>
       <div style={{position:'absolute',top:top+'24px)',left:14,right:14,display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:3}}>
         <div style={{display:'flex',alignItems:'center',gap:9,fontSize:14.5*rs,fontWeight:700}}>
-          {circle(story.k==='bsum' ? 'book' : story.k, 30, 14)}{topicName(story.k==='bsum' ? 'book' : story.k)}
+          {circle(story.k==='bsum' ? 'book' : kTop(story.k), 30, 14)}{topicName(story.k==='bsum' ? 'book' : kTop(story.k))}
           {cards.length>1 && (<span style={{fontWeight:500,fontSize:13*rs,color:'rgba(242,238,232,.62)',fontVariantNumeric:'tabular-nums'}}>{(story.i+1)+' / '+cards.length}</span>)}
         </div>
         <button type="button" onClick={(e)=>{ e.stopPropagation(); closeStory(); }} aria-label="close" style={{...glass,width:36,height:36}}>{xIco(15)}</button>
@@ -29950,11 +30089,11 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
             {card.vis==='ges' ? (<GuideGes lang={lang} rs={rs}/>)
               : card.vis==='wheel' ? (<GuideWheel id={card.id} lang={lang}/>)
               : card.vis==='pal5' ? (<GuidePal5 t={t} rs={rs}/>)
-              : (<span aria-hidden="true" style={{width:132,height:132,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:T(card.id==='battle' ? 'battle' : card.cat).g,boxShadow:'0 18px 60px rgba(0,0,0,.45)',fontSize:54,lineHeight:1,color:T(card.id==='battle' ? 'battle' : card.cat).dk?'#1a1408':'#fff'}}>{pfIcons(card.glyph)}</span>)}
+              : (<span aria-hidden="true" style={{width:132,height:132,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:T(tk(card)).g,boxShadow:'0 18px 60px rgba(0,0,0,.45)',fontSize:54,lineHeight:1,color:T(tk(card)).dk?'#1a1408':'#fff'}}>{pfIcons(card.glyph)}</span>)}
           </div>
           <div style={{fontSize:27*rs,fontWeight:700,lineHeight:1.12,textWrap:'balance'}}>{pfIcons(card.title)}</div>
           <div style={{marginTop:10,fontSize:16*rs,lineHeight:1.45,color:'rgba(242,238,232,.8)',maxWidth:340,textWrap:'balance'}}>{pfIcons(card.body)}</div>
-          {card.more && (<button type="button" onClick={(e)=>{ e.stopPropagation(); setSheet(true); }} style={{marginTop:20,height:40,padding:'0 20px',borderRadius:20,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',display:'inline-flex',alignItems:'center',gap:8,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
+          {(card.more || card.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(card.link){ setSheet(false); setStory({k:'lnk:'+card.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{marginTop:20,height:40,padding:'0 20px',borderRadius:20,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',display:'inline-flex',alignItems:'center',gap:8,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
             {(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </button>)}
@@ -29970,7 +30109,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
           {(()=>{ const _rows=_gRows(card.more); const _cut=(!sheetAll && _rows.length>4) ? _rows.slice(0,3) : _rows; return (<>
           {_cut.map((r,i)=>(
             <div key={i} style={{display:'flex',gap:12,padding:'11px 0',borderTop:'1px solid rgba(242,238,232,.07)'}}>
-              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(card.id==='battle' ? 'battle' : card.cat).g}}/>
+              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(tk(card)).g}}/>
               <div style={{minWidth:0}}>
                 {r.h && (<div style={{fontSize:14.5*rs,fontWeight:700,lineHeight:1.3}}>{pfIcons(r.h)}</div>)}
                 <div style={{fontSize:13.5*rs,lineHeight:1.42,color:'rgba(242,238,232,.72)',marginTop:r.h?2:0}}>{pfIcons(r.x)}</div>
@@ -32020,6 +32159,7 @@ function PaintianoApp() {
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [setupReturnTo, setSetupReturnTo] = useState(null);
   const [guideReturnCardId, setGuideReturnCardId] = useState(null);
+  const [guideTab, setGuideTab] = useState(null);   // a step toast's "Show me": the Guide opens on that step's tab
   // Setup-picker fallback effects live further down, AFTER `style`/`setStyle`
   // are declared (around line 930) — referencing them here would hit a
   // temporal dead zone on first render.
@@ -34455,7 +34595,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [guideQuery, setGuideQuery] = useState('');
   // Stable composite-close callback for GuideModal (same memo rationale as
   // closeAbout). Closes the modal and clears the search query in one action.
-  const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');setGuideReturnCardId(null);},[]);
+  const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');setGuideReturnCardId(null);setGuideTab(null);},[]);
   // Setup can be opened from the top menu or from the Guide's "Open Setup" card.
   // Remember the origin so Setup's Done/✕ returns the user where they came from.
   const openSetupFromGuide = useCallback((cardId)=>{ setShowGuide(false); setGuideQuery(''); setSetupReturnTo('guide'); setGuideReturnCardId(cardId||null); setShowSetupModal(true); },[]);
@@ -46430,7 +46570,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           <div style={{color:'#e2c477',fontWeight:700,letterSpacing:'.05em',fontSize:15.5}}>{_stT('stpNext').replace('{s}', _stT('stp'+stepToast.n))}</div>
           <div style={{fontSize:14,marginTop:6,lineHeight:1.45}}>{_stT('stpL'+stepToast.n)}</div>
           <div style={{marginTop:11,display:'flex',alignItems:'center',gap:14}}>
-            <button type="button" onClick={()=>{ setStepToast(null); setGuideReturnCardId(null); setShowGuide(true); }} style={{padding:'8px 18px',borderRadius:999,border:0,background:'linear-gradient(180deg,#f0d78a,#d8b65a)',color:'#1d160a',fontWeight:700,fontSize:14,fontFamily:'inherit',cursor:'pointer'}}>{_stT('stpShow')}</button>
+            <button type="button" onClick={()=>{ setStepToast(null); setGuideReturnCardId(null); setGuideTab(stepToast.n); setShowGuide(true); }} style={{padding:'8px 18px',borderRadius:999,border:0,background:'linear-gradient(180deg,#f0d78a,#d8b65a)',color:'#1d160a',fontWeight:700,fontSize:14,fontFamily:'inherit',cursor:'pointer'}}>{_stT('stpShow')}</button>
             <button type="button" onClick={()=>setStepToast(null)} style={{border:0,background:'none',color:'rgba(242,238,232,.62)',fontSize:13,fontFamily:'inherit',cursor:'pointer',padding:'6px 4px'}}>{_stT('stpLater')}</button>
           </div>
         </div>)}
@@ -50601,6 +50741,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           onOpenSetup={openSetupFromGuide}
           onTour={tourOnline ? openTour : null}
           initialCardId={guideReturnCardId}
+          step={studioOn ? pfStepEff : 3}
+          tab={guideTab}
           t={t}
           ts={ts}
           lang={lang}
