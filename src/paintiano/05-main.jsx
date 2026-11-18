@@ -1179,6 +1179,11 @@ const GUIDE_TOPIC = {
   book:{g:'linear-gradient(135deg,#ffb08a,#ff7a3d)', i:'book'},
   battle:{g:'linear-gradient(135deg,#ff9a62,#e3415e)', i:'battle'},
   concept:{g:'linear-gradient(135deg,#cdb2ff,#8c5cff)', i:'start'},
+  // the Studio Guide's four steps
+  tab0:{g:'linear-gradient(135deg,#f0d78a,#c9a84c)', dk:1, i:'start'},
+  tab1:{g:'linear-gradient(135deg,#7ab3ff,#3f7bff)', i:'music'},
+  tab2:{g:'linear-gradient(135deg,#cdb2ff,#8c5cff)', i:'style'},
+  tab3:{g:'linear-gradient(135deg,#ff5f8f,#a86bff)', i:'save'},
 };
 const GUIDE_HUB = ['start','colors','style','music','tools','save','pro','book'];
 // in the Studio Battle takes the Book's place (the Book is one level up, in the menu); its card also stays in the Studio's 30 seconds
@@ -1191,6 +1196,7 @@ const GUIDE2_CSS = `.pf-g2 *{box-sizing:border-box}
 .pf-g2-sheet{animation:pfG2Up .28s cubic-bezier(.2,.8,.2,1) both}
 @keyframes pfG2Up{from{transform:translateY(100%)}to{transform:none}}
 .pf-g2-tp:active,.pf-g2-feat:active,.pf-g2-row:active{transform:scale(.96)}
+.pf-g2-tabs button{transition:background .15s,color .15s}
 .pf-g2-hub{scrollbar-width:none}.pf-g2-hub::-webkit-scrollbar{display:none}
 .pf-g2-search::placeholder{color:rgba(242,238,232,.62)}
 .pf-g2-search::-webkit-search-cancel-button{display:none}
@@ -1429,7 +1435,7 @@ const TourPlayer = memo(function TourPlayer({kind, lang, onClose, onPlay, onFull
     </div>);
 });
 
-const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, ts, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale, mode='guide', studio=false, art=null, onTour=null}){
+const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, ts, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale, mode='guide', studio=false, art=null, onTour=null, step=3, tab=null}){
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
   const rs = readScale || 1;
@@ -1437,6 +1443,13 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const U = getGuideUI(lang);
   const TW = tourWords(lang);
   const all = useMemo(()=>getGuideCards(lang, studio), [lang, studio]);
+  // the Studio: the Guide in four tabs, one per step — it opens on the visitor's own step (or the one a step toast names)
+  const byId = useMemo(()=>{ const o={}; for(const c of all) o[c.id]=c; return o; }, [all]);
+  const SU = getGuideStepUI(lang), SE = GUIDE_STEP_I18N.EN;
+  const stepName = (n)=>{ const d=STUDIO_I18N[lang]||STUDIO_I18N.EN; return d['stp'+n] || STUDIO_I18N.EN['stp'+n]; };
+  const [gTab, setGTab] = useState(()=> Math.max(0, Math.min(3, (tab!=null ? tab : step)|0)));
+  const tabIds = (n)=>{ const g=GUIDE_STEPS[n]; return g ? g.rows.flat().concat(g.plus||[]).filter(id=>byId[id]) : []; };
+  const tk = (c)=> c.id==='battle' ? 'battle' : (c.tone || c.cat);   // the colour a card wears
   const concept = useMemo(()=>getConceptCards(lang), [lang]);
   const bookCard = useMemo(()=>({id:'book', book:true, title:t('bookTitle')||'The Book', body:ts('bookDesc',''), cta:ts('bookExcerptCta','Book summary')}), [t, ts]);
   // the book summary as story cards (key 'bsum'): the opening, one card per part, the quote — ✕ or the last tap returns to the Book card
@@ -1447,12 +1460,12 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const [sheet, setSheet] = useState(false);
   const [sheetAll, setSheetAll] = useState(false);   // the sheet shows three rows first; "More" opens the rest
   useEffect(()=>{ if(!sheet) setSheetAll(false); },[sheet]);
-  const listOf = (k)=> k==='concept' ? concept : k==='book' ? [bookCard] : k==='bsum' ? bookSum : k==='battle' ? all.filter(c=>c.id==='battle') : all.filter(c=>c.cat===k);
+  const listOf = (k)=> k.indexOf('tab')===0 ? tabIds(+k.slice(3)).map(id=>byId[id]) : k.indexOf('lnk:')===0 ? k.slice(4).split(',').map(id=>byId[id]).filter(Boolean) : k==='concept' ? concept : k==='book' ? [bookCard] : k==='bsum' ? bookSum : k==='battle' ? all.filter(c=>c.id==='battle') : all.filter(c=>c.cat===k);
   const cards = story ? listOf(story.k) : [];
   const card = story ? cards[Math.max(0, Math.min(story.i, cards.length-1))] : null;
   const open = (k, i, auto)=>{ setSheet(false); setStory({k, i:i||0, auto:!!auto}); };   // auto: the ▶ story plays on by itself (Instagram-like)
-  const closeStory = useCallback(()=>{ setSheet(false); if(story && story.k==='bsum'){ setStory({k:'book', i:0}); return; } if(direct) onClose(); else setStory(null); }, [direct, onClose, story]);
-  const go = (d)=>{ if(!story) return; const n=story.i+d; if(n<0) return; if(n>=cards.length){ closeStory(); return; } setSheet(false); setStory({k:story.k, i:n, auto:story.auto}); };
+  const closeStory = useCallback(()=>{ setSheet(false); if(story && story.back){ setStory(story.back); return; } if(story && story.k==='bsum'){ setStory({k:'book', i:0}); return; } if(direct) onClose(); else setStory(null); }, [direct, onClose, story]);
+  const go = (d)=>{ if(!story) return; const n=story.i+d; if(n<0) return; if(n>=cards.length){ closeStory(); return; } setSheet(false); setStory({k:story.k, i:n, auto:story.auto, back:story.back}); };
   // ▶ "in 30 seconds": each card stays as long as its short text needs (4–6 s), its bar fills, then the next comes. Reading the
   // details (the sheet open) or a finger held on the card stops the time; letting go goes on from where it stood.
   const goRef = useRef(go); goRef.current = go;
@@ -1469,8 +1482,11 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
     return ()=>cancelAnimationFrame(raf);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story && story.k, story && story.i, story && story.auto]);
+  const openCard = (c)=>{ if(!c) return; if(!studio){ open(c.cat, all.filter(x=>x.cat===c.cat).indexOf(c)); return; }
+    for(const n of [gTab,0,1,2,3]){ const i=tabIds(n).indexOf(c.id); if(i>=0){ setGTab(n); open('tab'+n, i); return; } }
+    open('lnk:'+c.id, 0); };
   // back from Styles & palettes: straight to the card it was opened from
-  useEffect(()=>{ if(!initialCardId || direct) return; const c=all.find(x=>x.id===initialCardId); if(c) open(c.cat, all.filter(x=>x.cat===c.cat).indexOf(c));
+  useEffect(()=>{ if(!initialCardId || direct) return; const c=all.find(x=>x.id===initialCardId); if(c) openCard(c);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(()=>{
@@ -1494,7 +1510,8 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const q = String(guideQuery||'').trim();
   const hits = useMemo(()=> q ? all.filter(c=>guideCardMatch(c, q)) : [], [all, q]);
   const T = (k)=> GUIDE_TOPIC[k] || GUIDE_TOPIC.start;
-  const topicName = (k)=> k==='studio' ? (STUDIO_I18N[lang] || STUDIO_I18N.EN).studio : k==='concept' ? _cap(t('conceptTitle')||'Concept') : k==='book' ? _cap(ts('gcat_book','Book')) : k==='battle' ? 'Battle' : _cap(t('gcat_'+k)!=='gcat_'+k ? t('gcat_'+k) : k);
+  const kTop = (k)=> k.indexOf('lnk:')===0 ? ((byId[k.slice(4).split(',')[0]]||{}).cat || 'start') : k;   // a linked card's story wears its topic
+  const topicName = (k)=> k.indexOf('tab')===0 ? stepName(+k.slice(3)) : k==='studio' ? (STUDIO_I18N[lang] || STUDIO_I18N.EN).studio : k==='concept' ? _cap(t('conceptTitle')||'Concept') : k==='book' ? _cap(ts('gcat_book','Book')) : k==='battle' ? 'Battle' : _cap(t('gcat_'+k)!=='gcat_'+k ? t('gcat_'+k) : k);
   const circle = (k, z, iz)=>(<span aria-hidden="true" style={{width:z,height:z,borderRadius:'50%',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:T(k).g,color:T(k).dk?'#1a1408':'#fff'}}><GuideIco k={T(k).i} z={iz}/></span>);
   const xIco = (z)=>(<svg width={z} height={z} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>);
   const glass = {borderRadius:'50%',border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.08)',color:'#f2eee8',display:'flex',alignItems:'center',justifyContent:'center',padding:0,cursor:'pointer',flexShrink:0};
@@ -1502,6 +1519,29 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const isArt = story && (story.k==='concept' || story.k==='book' || story.k==='bsum');
 
   // ── the home of the Guide ──
+  const featEl = (<>
+      <button type="button" className="pf-g2-feat pf-g2-big" onClick={()=> onTour ? onTour('full') : open(studio ? 'studio' : 'start', 0, true)} style={{position:'relative',marginTop:16,minHeight:150,flexShrink:0,borderRadius:24,overflow:'hidden',display:'flex',alignItems:'flex-end',gap:12,padding:'16px 16px 16px 18px',border:0,background:'linear-gradient(135deg,#2a1d48,#13101b 60%,#3a2a12)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+        {onTour ? (<img src={TOUR_POSTER} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'saturate(1.15)',pointerEvents:'none'}}/>) : artBg('blur(2px) brightness(.62) saturate(1.2)')}
+        <span aria-hidden="true" style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(7,6,12,0) 10%,rgba(7,6,12,.86))'}}/>
+        {onTour && (<span aria-hidden="true" style={{position:'absolute',left:14,top:12,display:'inline-flex',alignItems:'center',gap:6,fontSize:11.5,fontWeight:800,letterSpacing:'.05em',padding:'4px 10px',borderRadius:99,background:'rgba(7,6,12,.5)',border:'1px solid rgba(255,255,255,.18)'}}><i style={{width:7,height:7,borderRadius:'50%',background:'#ff5f6d',boxShadow:'0 0 8px rgba(255,95,109,.8)'}}/>{TW.ui('vid')} · 1:43</span>)}
+        <span style={{position:'relative',flex:1,minWidth:0}}>
+          <span style={{display:'block',fontSize:21*rs,fontWeight:700,lineHeight:1.15}}>{onTour ? TW.ui('t') : (studio ? U.featS : U.featC)}</span>
+          <span style={{display:'block',marginTop:5,fontSize:13*rs,color:'rgba(242,238,232,.78)'}}>{onTour ? TW.ui('sub') : (studio ? U.featSsub : U.featCsub)}</span>
+        </span>
+        <span aria-hidden="true" style={{position:'relative',width:54,height:54,borderRadius:'50%',flexShrink:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px rgba(201,168,76,.45)'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+      </button>
+      {onTour && (<button type="button" className="pf-g2-row" onClick={()=>open(studio ? 'studio' : 'start', 0, true)} style={{marginTop:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'10px 14px',borderRadius:14,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontFamily:'inherit',fontSize:13.5*rs,textAlign:'left',cursor:'pointer'}}><span style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{TW.ui('step')}: {studio ? U.featS : U.featC}</span><span aria-hidden="true" style={{color:'rgba(240,199,94,.9)',fontSize:16}}>›</span></button>)}   {/* the 30-second cards, one by one, as before */}
+  </>);
+  const conceptEl = (
+      <button type="button" className="pf-g2-feat" onClick={()=>open('concept', 0)} style={{flexShrink:0,minHeight:72,borderRadius:20,display:'flex',alignItems:'center',gap:14,padding:'12px 18px',background:'linear-gradient(120deg,rgba(140,92,255,.22),rgba(240,192,64,.10))',border:'1px solid rgba(205,178,255,.25)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+        <span aria-hidden="true" style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:40,lineHeight:1,color:'#f0d78a',width:34,textAlign:'center'}}>φ</span>
+        <span style={{flex:1,minWidth:0}}>
+          <span style={{display:'block',fontSize:16*rs,fontWeight:700}}>{topicName('concept')}</span>
+          <span style={{display:'block',marginTop:2,fontSize:13*rs,color:'rgba(242,238,232,.62)'}}>{U.conceptSub}</span>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{color:'rgba(242,238,232,.4)'}}><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+  );
   const hub = (
     <div className="pf-g2-hub" style={{flex:1,minHeight:0,overflowY:'auto',display:'flex',flexDirection:'column',padding:'calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 18px) max(16px, env(safe-area-inset-left, 0px))'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
@@ -1521,26 +1561,36 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         <div style={{marginTop:12,display:'flex',flexDirection:'column'}}>
           {hits.length===0 && (<div style={{padding:'40px 8px',textAlign:'center',color:'rgba(242,238,232,.5)',fontSize:15*rs}}>{t('noMatches')||'no matches'}</div>)}
           {hits.map((c)=>(
-            <button key={c.id} type="button" className="pf-g2-row" onClick={()=>open(c.cat, all.filter(x=>x.cat===c.cat).indexOf(c))} style={{display:'flex',alignItems:'center',gap:14,padding:'11px 4px',background:'none',border:0,borderTop:'1px solid rgba(242,238,232,.07)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
-              {circle(c.cat, 40, 18)}
+            <button key={c.id} type="button" className="pf-g2-row" onClick={()=>openCard(c)} style={{display:'flex',alignItems:'center',gap:14,padding:'11px 4px',background:'none',border:0,borderTop:'1px solid rgba(242,238,232,.07)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+              {circle(tk(c), 40, 18)}
               <span style={{flex:1,minWidth:0}}>
                 <span style={{display:'block',fontSize:15*rs,fontWeight:700}}>{pfIcons(c.title)}</span>
                 <span style={{display:'block',marginTop:2,fontSize:13*rs,lineHeight:1.35,color:'rgba(242,238,232,.6)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.body}</span>
               </span>
             </button>))}
         </div>
-      ) : (<>
-        <button type="button" className="pf-g2-feat pf-g2-big" onClick={()=> onTour ? onTour('full') : open(studio ? 'studio' : 'start', 0, true)} style={{position:'relative',marginTop:16,minHeight:150,flexShrink:0,borderRadius:24,overflow:'hidden',display:'flex',alignItems:'flex-end',gap:12,padding:'16px 16px 16px 18px',border:0,background:'linear-gradient(135deg,#2a1d48,#13101b 60%,#3a2a12)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
-          {onTour ? (<img src={TOUR_POSTER} alt="" aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',filter:'saturate(1.15)',pointerEvents:'none'}}/>) : artBg('blur(2px) brightness(.62) saturate(1.2)')}
-          <span aria-hidden="true" style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(7,6,12,0) 10%,rgba(7,6,12,.86))'}}/>
-          {onTour && (<span aria-hidden="true" style={{position:'absolute',left:14,top:12,display:'inline-flex',alignItems:'center',gap:6,fontSize:11.5,fontWeight:800,letterSpacing:'.05em',padding:'4px 10px',borderRadius:99,background:'rgba(7,6,12,.5)',border:'1px solid rgba(255,255,255,.18)'}}><i style={{width:7,height:7,borderRadius:'50%',background:'#ff5f6d',boxShadow:'0 0 8px rgba(255,95,109,.8)'}}/>{TW.ui('vid')} · 1:43</span>)}
-          <span style={{position:'relative',flex:1,minWidth:0}}>
-            <span style={{display:'block',fontSize:21*rs,fontWeight:700,lineHeight:1.15}}>{onTour ? TW.ui('t') : (studio ? U.featS : U.featC)}</span>
-            <span style={{display:'block',marginTop:5,fontSize:13*rs,color:'rgba(242,238,232,.78)'}}>{onTour ? TW.ui('sub') : (studio ? U.featSsub : U.featCsub)}</span>
-          </span>
-          <span aria-hidden="true" style={{position:'relative',width:54,height:54,borderRadius:'50%',flexShrink:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px rgba(201,168,76,.45)'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
-        </button>
-        {onTour && (<button type="button" className="pf-g2-row" onClick={()=>open(studio ? 'studio' : 'start', 0, true)} style={{marginTop:10,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'10px 14px',borderRadius:14,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontFamily:'inherit',fontSize:13.5*rs,textAlign:'left',cursor:'pointer'}}><span style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{TW.ui('step')}: {studio ? U.featS : U.featC}</span><span aria-hidden="true" style={{color:'rgba(240,199,94,.9)',fontSize:16}}>›</span></button>)}   {/* the 30-second cards, one by one, as before */}
+      ) : studio ? (<>
+        <div role="tablist" aria-label={_cap(t('guideTitle')||'Guide')} className="pf-g2-tabs" style={{marginTop:14,flexShrink:0,display:'flex',gap:2,padding:4,borderRadius:16,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)'}}>
+          {[0,1,2,3].map(n=>{ const on=gTab===n, done=n<step; return (
+            <button key={n} type="button" role="tab" aria-selected={on} onClick={()=>setGTab(n)} style={{flex:'1 1 auto',minWidth:0,height:38,border:0,borderRadius:12,padding:'0 7px',fontSize:13*Math.min(rs,1.15),fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',background:on?'linear-gradient(135deg,#f0d78a,#c9a84c)':'none',color:on?'#1a1408':(done?'#e2c477':'rgba(242,238,232,.72)')}}>{stepName(n)}{done ? ' ✓' : ''}</button>); })}
+        </div>
+        {gTab===0 && featEl}
+        <div key={'gt'+gTab} className="pf-g2-in" style={{marginTop:14,display:'flex',flexDirection:'column',gap:8,flexShrink:0}}>
+          {GUIDE_STEPS[gTab].rows.map((ids)=>{ const c=byId[ids[0]]; if(!c) return null; const r=SU.r[ids[0]] || SE.r[ids[0]], k=tk(c); return (
+            <button key={ids[0]} type="button" className="pf-g2-row" onClick={()=>openCard(c)} style={{display:'flex',alignItems:'center',gap:13,padding:'10px 12px',borderRadius:16,background:'rgba(255,255,255,.045)',border:'1px solid rgba(255,255,255,.07)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+              <span aria-hidden="true" style={{width:40,height:40,borderRadius:12,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:T(k).g,color:T(k).dk?'#1a1408':'#fff',fontSize:19,lineHeight:1,textShadow:k==='colors'?'0 1px 3px rgba(0,0,0,.7)':'none'}}>{pfIcons(c.glyph)}</span>
+              <span style={{flex:1,minWidth:0,fontSize:14.5*rs,lineHeight:1.38}}><b style={{color:'#e2c477',fontWeight:700}}>{pfIcons(r ? r[0] : c.title)}</b>{SU.sep || ' — '}{pfIcons(r ? r[1] : c.body)}</span>
+            </button>); })}
+          {(()=>{ const g=GUIDE_STEPS[gTab];
+            if(g.plus){ const ps=g.plus.filter(id=>byId[id]); if(!ps.length) return null; return (
+              <div style={{marginTop:4,textAlign:'center',fontSize:13*rs,lineHeight:1.7,color:'rgba(242,238,232,.6)'}}>{'+ '}{ps.map((id,i)=>(<span key={id}>{i ? ' · ' : ''}<button type="button" onClick={()=>openCard(byId[id])} style={{background:'none',border:0,padding:0,color:'rgba(242,238,232,.82)',fontSize:'inherit',textDecoration:'underline dotted',textUnderlineOffset:3,cursor:'pointer'}}>{(SU.p && SU.p[id]) || byId[id].title}</button></span>))}</div>); }
+            const nx=(SU.nx && SU.nx[gTab]) || SE.nx[gTab]; if(!nx || g.nx==null) return null; const [n0,n1]=nx.split('{s}'); return (
+              <div style={{marginTop:4,textAlign:'center',fontSize:13*rs,lineHeight:1.55,color:'rgba(242,238,232,.6)'}}>{n0}<button type="button" onClick={()=>setGTab(g.nx)} style={{background:'none',border:0,padding:0,color:'#e2c477',fontWeight:700,fontSize:'inherit',cursor:'pointer'}}>{stepName(g.nx)}</button>{n1}</div>); })()}
+        </div>
+        <div style={{flex:1,minHeight:20}}/>
+        {conceptEl}
+      </>) : (<>
+        {featEl}
         <div className="pf-g2-grid" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',rowGap:18,marginTop:22,flexShrink:0}}>
           {((studio && all.some(c=>c.id==='battle')) ? GUIDE_HUB_ST : GUIDE_HUB).map((k)=>(
             <button key={k} type="button" className="pf-g2-tp" onClick={()=>open(k, 0)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,background:'none',border:0,padding:0,color:'rgba(242,238,232,.92)',fontSize:12.5*rs,fontWeight:600,cursor:'pointer',minWidth:0,transition:'transform .12s'}}>
@@ -1548,14 +1598,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
             </button>))}
         </div>
         <div style={{flex:1,minHeight:20}}/>
-        <button type="button" className="pf-g2-feat" onClick={()=>open('concept', 0)} style={{flexShrink:0,minHeight:72,borderRadius:20,display:'flex',alignItems:'center',gap:14,padding:'12px 18px',background:'linear-gradient(120deg,rgba(140,92,255,.22),rgba(240,192,64,.10))',border:'1px solid rgba(205,178,255,.25)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
-          <span aria-hidden="true" style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:40,lineHeight:1,color:'#f0d78a',width:34,textAlign:'center'}}>φ</span>
-          <span style={{flex:1,minWidth:0}}>
-            <span style={{display:'block',fontSize:16*rs,fontWeight:700}}>{topicName('concept')}</span>
-            <span style={{display:'block',marginTop:2,fontSize:13*rs,color:'rgba(242,238,232,.62)'}}>{U.conceptSub}</span>
-          </span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{color:'rgba(242,238,232,.4)'}}><path d="M9 6l6 6-6 6"/></svg>
-        </button>
+        {conceptEl}
       </>)}
     </div>);
 
@@ -1572,7 +1615,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
       </div>
       <div style={{position:'absolute',top:top+'24px)',left:14,right:14,display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:3}}>
         <div style={{display:'flex',alignItems:'center',gap:9,fontSize:14.5*rs,fontWeight:700}}>
-          {circle(story.k==='bsum' ? 'book' : story.k, 30, 14)}{topicName(story.k==='bsum' ? 'book' : story.k)}
+          {circle(story.k==='bsum' ? 'book' : kTop(story.k), 30, 14)}{topicName(story.k==='bsum' ? 'book' : kTop(story.k))}
           {cards.length>1 && (<span style={{fontWeight:500,fontSize:13*rs,color:'rgba(242,238,232,.62)',fontVariantNumeric:'tabular-nums'}}>{(story.i+1)+' / '+cards.length}</span>)}
         </div>
         <button type="button" onClick={(e)=>{ e.stopPropagation(); closeStory(); }} aria-label="close" style={{...glass,width:36,height:36}}>{xIco(15)}</button>
@@ -1603,11 +1646,11 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
             {card.vis==='ges' ? (<GuideGes lang={lang} rs={rs}/>)
               : card.vis==='wheel' ? (<GuideWheel id={card.id} lang={lang}/>)
               : card.vis==='pal5' ? (<GuidePal5 t={t} rs={rs}/>)
-              : (<span aria-hidden="true" style={{width:132,height:132,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:T(card.id==='battle' ? 'battle' : card.cat).g,boxShadow:'0 18px 60px rgba(0,0,0,.45)',fontSize:54,lineHeight:1,color:T(card.id==='battle' ? 'battle' : card.cat).dk?'#1a1408':'#fff'}}>{pfIcons(card.glyph)}</span>)}
+              : (<span aria-hidden="true" style={{width:132,height:132,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:T(tk(card)).g,boxShadow:'0 18px 60px rgba(0,0,0,.45)',fontSize:54,lineHeight:1,color:T(tk(card)).dk?'#1a1408':'#fff'}}>{pfIcons(card.glyph)}</span>)}
           </div>
           <div style={{fontSize:27*rs,fontWeight:700,lineHeight:1.12,textWrap:'balance'}}>{pfIcons(card.title)}</div>
           <div style={{marginTop:10,fontSize:16*rs,lineHeight:1.45,color:'rgba(242,238,232,.8)',maxWidth:340,textWrap:'balance'}}>{pfIcons(card.body)}</div>
-          {card.more && (<button type="button" onClick={(e)=>{ e.stopPropagation(); setSheet(true); }} style={{marginTop:20,height:40,padding:'0 20px',borderRadius:20,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',display:'inline-flex',alignItems:'center',gap:8,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
+          {(card.more || card.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(card.link){ setSheet(false); setStory({k:'lnk:'+card.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{marginTop:20,height:40,padding:'0 20px',borderRadius:20,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',display:'inline-flex',alignItems:'center',gap:8,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
             {(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </button>)}
@@ -1623,7 +1666,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
           {(()=>{ const _rows=_gRows(card.more); const _cut=(!sheetAll && _rows.length>4) ? _rows.slice(0,3) : _rows; return (<>
           {_cut.map((r,i)=>(
             <div key={i} style={{display:'flex',gap:12,padding:'11px 0',borderTop:'1px solid rgba(242,238,232,.07)'}}>
-              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(card.id==='battle' ? 'battle' : card.cat).g}}/>
+              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(tk(card)).g}}/>
               <div style={{minWidth:0}}>
                 {r.h && (<div style={{fontSize:14.5*rs,fontWeight:700,lineHeight:1.3}}>{pfIcons(r.h)}</div>)}
                 <div style={{fontSize:13.5*rs,lineHeight:1.42,color:'rgba(242,238,232,.72)',marginTop:r.h?2:0}}>{pfIcons(r.x)}</div>
@@ -3673,6 +3716,7 @@ function PaintianoApp() {
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [setupReturnTo, setSetupReturnTo] = useState(null);
   const [guideReturnCardId, setGuideReturnCardId] = useState(null);
+  const [guideTab, setGuideTab] = useState(null);   // a step toast's "Show me": the Guide opens on that step's tab
   // Setup-picker fallback effects live further down, AFTER `style`/`setStyle`
   // are declared (around line 930) — referencing them here would hit a
   // temporal dead zone on first render.
@@ -6108,7 +6152,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [guideQuery, setGuideQuery] = useState('');
   // Stable composite-close callback for GuideModal (same memo rationale as
   // closeAbout). Closes the modal and clears the search query in one action.
-  const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');setGuideReturnCardId(null);},[]);
+  const closeGuide = useCallback(()=>{setShowGuide(false);setGuideQuery('');setGuideReturnCardId(null);setGuideTab(null);},[]);
   // Setup can be opened from the top menu or from the Guide's "Open Setup" card.
   // Remember the origin so Setup's Done/✕ returns the user where they came from.
   const openSetupFromGuide = useCallback((cardId)=>{ setShowGuide(false); setGuideQuery(''); setSetupReturnTo('guide'); setGuideReturnCardId(cardId||null); setShowSetupModal(true); },[]);
@@ -18083,7 +18127,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           <div style={{color:'#e2c477',fontWeight:700,letterSpacing:'.05em',fontSize:15.5}}>{_stT('stpNext').replace('{s}', _stT('stp'+stepToast.n))}</div>
           <div style={{fontSize:14,marginTop:6,lineHeight:1.45}}>{_stT('stpL'+stepToast.n)}</div>
           <div style={{marginTop:11,display:'flex',alignItems:'center',gap:14}}>
-            <button type="button" onClick={()=>{ setStepToast(null); setGuideReturnCardId(null); setShowGuide(true); }} style={{padding:'8px 18px',borderRadius:999,border:0,background:'linear-gradient(180deg,#f0d78a,#d8b65a)',color:'#1d160a',fontWeight:700,fontSize:14,fontFamily:'inherit',cursor:'pointer'}}>{_stT('stpShow')}</button>
+            <button type="button" onClick={()=>{ setStepToast(null); setGuideReturnCardId(null); setGuideTab(stepToast.n); setShowGuide(true); }} style={{padding:'8px 18px',borderRadius:999,border:0,background:'linear-gradient(180deg,#f0d78a,#d8b65a)',color:'#1d160a',fontWeight:700,fontSize:14,fontFamily:'inherit',cursor:'pointer'}}>{_stT('stpShow')}</button>
             <button type="button" onClick={()=>setStepToast(null)} style={{border:0,background:'none',color:'rgba(242,238,232,.62)',fontSize:13,fontFamily:'inherit',cursor:'pointer',padding:'6px 4px'}}>{_stT('stpLater')}</button>
           </div>
         </div>)}
@@ -22254,6 +22298,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           onOpenSetup={openSetupFromGuide}
           onTour={tourOnline ? openTour : null}
           initialCardId={guideReturnCardId}
+          step={studioOn ? pfStepEff : 3}
+          tab={guideTab}
           t={t}
           ts={ts}
           lang={lang}
