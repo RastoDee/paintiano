@@ -360,9 +360,21 @@ function _sig4Rank(m, z){
   const V=_sig4Variants();
   if(!V.mean){ V.mean={}; for(const k of V.P){ const rs=V.rows.filter(x=>x.k===k); const mm={}; for(const a of SIG4_AX) mm[a]=rs.reduce((s,x)=>s+x.c[a],0)/rs.length; V.mean[k]=mm; } }
   return V.rows.filter(x=>SIG4_PAINTER[x.k]).map(x=>{ const P=SIG4_PAINTER[x.k], c={}; SIG4_AX.forEach((a,i)=>{ const q=SIG4_PMAP[a]; const p=q[2]+(P[i]-q[0])/q[1]*q[3]; c[a]=Math.max(-1,Math.min(1,p+SIG4_VK*q[3]*(x.c[a]-V.mean[x.k][a]))); });
-      const d=_sig4Dist(m, c); const s = -SIG4_KD*d + (x.v===0 ? SIG4_PB : 0) + (SIG4_FAIR[x.k]||0); return {k:x.k, v:x.v, s, d}; })
+      const d=_sig4Dist(m, c); const s = -SIG4_KD*d + (x.v===0 ? SIG4_PB : 0) + (SIG4_FAIR[x.k]||0); return {k:x.k, v:x.v, s, d, c}; })
     .sort((a,b)=>(b.s-a.s) || (a.k<b.k?-1:a.k>b.k?1:a.v-b.v));
 }
+// A fusion is a candidate like any one painter: two or three of the eight closest painters (each in its closest variant) share
+// the canvas, so the painting has their traits together (their mean) — when that sits closer to the music than the best one
+// alone, the Signature is the fusion (most music is: no one hand has all of it). Two hands that clash never share one.
+const SIG4_NEAR = 8, SIG4_LAM = 0;        // the painters a fusion is formed from · what each extra hand has to earn
+const SIG4_GCT = 0.4, SIG4_AC = 0.35;     // the fusion's style: dense + tense over this → Genesis; stretches this far apart → Collage
+function _sig4Fusion(m, rank){
+  const best=[]; for(const x of rank){ if(!best.some(y=>y.k===x.k)) best.push(x); if(best.length>=SIG4_NEAR) break; }
+  let top=null; const n=best.length;
+  const tryM=(mem)=>{ const c={}; for(const a of SIG4_AX) c[a]=mem.reduce((t,x)=>t+x.c[a],0)/mem.length; const d=_sig4Dist(m,c); const s=-SIG4_KD*d - SIG4_LAM*(mem.length-1); if(!top || s>top.s) top={mem, s, d}; };
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ if(_sigClash(best[i].k,best[j].k)) continue; tryM([best[i],best[j]]);
+    for(let l=j+1;l<n;l++){ if(_sigClash(best[i].k,best[l].k) || _sigClash(best[j].k,best[l].k)) continue; tryM([best[i],best[j],best[l]]); } }
+  return top; }
 function computeSongSignature(events, opts){
   const _audio = !!(opts && opts.audio);
   events=_keyNormOf(events);   // key-free (see _keyD): the ✦ Signature is one for every key
@@ -376,10 +388,10 @@ function computeSongSignature(events, opts){
     // the music's own regimes: ten stretches of time, each with its energy — a piece that moves between calm and driven
     // parts (an Adagio and its Allegro, a theme and its storm) is two characters
     const t0=+ev[0].startMs||0, t1=+ev[ev.length-1].startMs||0, win=[];
-    if(!_audio && ev.length>=60 && t1-t0>30000){ for(let i=0;i<10;i++){ const a=t0+(t1-t0)*i/10, b=t0+(t1-t0)*(i+1)/10; const part=ev.filter(c=>(+c.startMs||0)>=a && ((+c.startMs||0)<b || i===9)); if(part.length>=8){ const F=_sig4Feat(part); win.push({part, E:_sig4Axes(F.z).E}); } } }
+    if(ev.length>=60 && t1-t0>30000){ for(let i=0;i<10;i++){ const a=t0+(t1-t0)*i/10, b=t0+(t1-t0)*(i+1)/10; const part=ev.filter(c=>(+c.startMs||0)>=a && ((+c.startMs||0)<b || i===9)); if(part.length>=8){ const F=_sig4Feat(part); win.push({part, E:_sig4Axes(F.z).E}); } } }
     let contrast=0, pa=null, pb=null;
     if(win.length>=6){ const Es=win.map(w=>w.E).sort((x,y)=>x-y), q=(p)=>Es[Math.round((Es.length-1)*p)]; contrast=q(.85)-q(.15);
-      if(contrast>0.6){ const mid=(q(.85)+q(.15))/2; const lo=[].concat(...win.filter(w=>w.E<mid).map(w=>w.part)), hi=[].concat(...win.filter(w=>w.E>=mid).map(w=>w.part));
+      if(!_audio && contrast>0.6){ const mid=(q(.85)+q(.15))/2; const lo=[].concat(...win.filter(w=>w.E<mid).map(w=>w.part)), hi=[].concat(...win.filter(w=>w.E>=mid).map(w=>w.part));
         if(lo.length>=20 && hi.length>=20){ const FL=_sig4Feat(lo), FH=_sig4Feat(hi); pa={m:_sig4Axes(FL.z), z:FL.z}; pb={m:_sig4Axes(FH.z), z:FH.z}; } } }
     const lead=rank[0]; let keys=[lead.k], phs=[lead.v], fs=null, why='solo';
     const ok=(k, have)=>!have.includes(k) && !have.some(b=>_sigClash(k,b));
@@ -392,15 +404,12 @@ function computeSongSignature(events, opts){
       const B=_sig4Rank(pt.m, pt.z).find(x=>x.k!==lead.k && near.includes(x.k) && ok(x.k,[lead.k]));
       if(B){ keys=[lead.k, B.k]; phs=[lead.v, B.v]; fs='A'; why='sections'; }
     }
-    if(!fs && m.C>0.45 && m.T>0.25){
-      // one dense, tense whole of many voices: a new painter born of the closest hands' genes
-      const mem=[lead]; for(const x of rank){ if(mem.length>=3) break; if(!ok(x.k, mem.map(y=>y.k))) continue; if(lead.s-x.s<0.3) mem.push(x); }
-      if(mem.length>=2){ keys=mem.map(x=>x.k); phs=mem.map(x=>x.v); fs='G'; why='genesis'; }
-    }
-    if(!fs && m.F>0.45){
-      // an even, flowing piece two hands fit equally well: they melt into one shared painting
-      const sec2=rank.find(x=>x.k!==lead.k && ok(x.k,[lead.k]));
-      if(sec2 && lead.s-sec2.s<0.02){ keys=[lead.k, sec2.k]; phs=[lead.v, sec2.v]; fs='E'; why='synthesis'; }
+    const FU = fs ? null : _sig4Fusion(m, rank);
+    if(FU && FU.s>lead.s){
+      // the fusion fits better than any one painter; its style from the music: dense and tense → a new painter born of their genes
+      // (Genesis), stretches that differ → side by side (Collage), one even whole → melted into one painting (Synthesis)
+      const mem=FU.mem.slice().sort((a,b)=>b.s-a.s); keys=mem.map(x=>x.k); phs=mem.map(x=>x.v); why='fusion';
+      fs = (m.C+m.T>SIG4_GCT) ? 'G' : (contrast>SIG4_AC) ? 'A' : 'E';
     }
     const mode = _audio
       ? (W.f.chrom>0.14 ? 'kontra' : W.bestMaj ? (W.f.dens>SIG_AUDIO_DENS_MID ? 'spectral' : 'harmony') : (W.f.dens>SIG_AUDIO_DENS_MID ? 'kontra' : 'phi'))
@@ -428,6 +437,7 @@ const ISIG4_TW = {E:{C:.35,K:.25,oeC:.15,ed:.2,red:.1},B:{L:.6,Wc:.4},O:{S:.4,oe
   T:{K:.35,red:.25,hvC:.2,oeC:.2},C:{R:.3,H:.25,ed:.3,hvC:.15},W:{L:-.6,bh:.4}};
 const ISIG4_AR = {E:[0,.72],B:[-.03,.86],O:[-.01,.63],F:[0,.57],T:[0,.69],C:[0,.73],W:[.03,.64]};
 const ISIG4_AX = ['E','B','O','F','T','C','W'], ISIG4_CON = 0.2;
+const ISIG4_NEAR = 6, ISIG4_LAM = -0.02, ISIG4_GCT = 0.4, ISIG4_AC = 0.1;   // a Jam: from the six closest · its edge in a near tie · its style (see below)
 // what each form sounds like on the same seven: [energy, light, order, flow, tension, richness, weight]
 const ISIG4_FORMS = {
   satie:[[-.9,0,.5,.6,-.3,-.7,-.1],[-.7,-.5,-.1,.3,.3,-.6,.1]],            // Gymnopédie · Gnossienne
@@ -526,25 +536,29 @@ function computeImageSignature(img, title){
       const pm=hs.map((p,i)=>{ const o={}; for(const a of ISIG4_AX) o[a]=m[a]+(p[a]-hs[1-i][a])/2; return o; });
       const far=pm.map(p=>_isig4Dist(m,[...ISIG4_AX.map(a=>p[a])])), pt=pm[far[0]>=far[1]?0:1];
       const B=_isig4Rank(pt).find(x=>x.k!==lead.k && near.includes(x.k) && ok(x.k,[lead.k])); if(B){ keys=[lead.k,B.k]; fs='A'; } }
-    // a rich, tense whole: a new composer born of the closest ones' genes
-    if(!fs && m.C>0.45 && m.T>0.25){ const mem=[lead]; for(const x of rank){ if(mem.length>=3) break; if(!ok(x.k,mem.map(y=>y.k))) continue; if(lead.s-x.s<0.3) mem.push(x); } if(mem.length>=2){ keys=mem.map(x=>x.k); fs='G'; } }
-    // an even, flowing whole two composers fit equally well: they melt into one piece
-    if(!fs && m.F>0.45){ const s2=rank.find(x=>x.k!==lead.k && ok(x.k,[lead.k])); if(s2 && lead.s-s2.s<0.02){ keys=[lead.k,s2.k]; fs='E'; } }
+    // a Jam is a candidate like any one composer: two or three of the six closest (each in his closer form) play together, so the
+    // piece has their traits together (their mean) — when that sits closer to the picture than the best one alone (a Jam wins a
+    // near tie: ISIG4_LAM), it is the picture's piece; its style: rich + tense → Genesis, halves apart → Collage, else Synthesis
+    if(!fs){ const near=rank.slice(0,ISIG4_NEAR); let top=null;
+      const tryM=(mem)=>{ const c={}; ISIG4_AX.forEach((a,i)=>{ c[a]=mem.reduce((t,x)=>t+ISIG4_FORMS[x.k][x.f][i],0)/mem.length; }); const s=-3*_isig4Dist(m, ISIG4_AX.map(a=>c[a]))-ISIG4_LAM*(mem.length-1); if(!top || s>top.s) top={mem, s}; };
+      for(let i=0;i<near.length;i++) for(let j=i+1;j<near.length;j++){ if(!ok(near[j].k,[near[i].k])) continue; tryM([near[i],near[j]]);
+        for(let l=j+1;l<near.length;l++){ if(!ok(near[l].k,[near[i].k,near[j].k])) continue; tryM([near[i],near[j],near[l]]); } }
+      if(top && top.s>lead.s){ keys=top.mem.slice().sort((x,y)=>y.s-x.s).map(x=>x.k); fs=(m.C+m.T>ISIG4_GCT) ? 'G' : (con>ISIG4_AC) ? 'A' : 'E'; } }
     const mode = bw ? 'bw' : (z.K>0.8 || (z.C>0.5 && z.E>0.5)) ? 'kontra' : z.H>0.6 ? 'spectral' : z.S>0.6 ? 'phi' : 'harmony';
     return { keys, fs, mode, h:0, ...(keys.length===1 ? {sf:lead.f} : {}), z, m };
   }catch(_){ return null; }
 }
 // intro = the line over the canvas the first time a Signature plays (what the word means)
 const SIG_I18N = {
-  EN:{label:'Signature',intro:'The one painting this song chose for itself — the same for everyone.',tip:'This song’s signature painting — the painter and the variant that fit the music best on seven traits: energy, light, order, flow, tension, richness, weight. A fusion only when the music itself is several. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'},introImg:'The one piece this picture chose for itself — the same for everyone.',tipImg:'This picture’s signature piece — the composer and his form that fit the picture best on seven traits: energy, light, order, flow, tension, richness, weight. A Jam session only when the picture itself is several. The same for everyone. Tap again to switch it off.'},
-  SK:{label:'Signatúra',intro:'Jediný obraz, ktorý si táto skladba vybrala sama — u každého rovnaký.',tip:'Signatúrna maľba tejto skladby — maliar a variant, ktorý k hudbe sedí najviac v siedmich črtách: energia, svetlo, poriadok, plynutie, napätie, bohatstvo, váha. Fúzia, len keď je skladba sama viacerými. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'},introImg:'Jediná skladba, ktorú si tento obraz vybral sám — u každého rovnaká.',tipImg:'Signatúrna skladba tohto obrazu — skladateľ a jeho forma, ktorá k obrazu sedí najviac v siedmich črtách: energia, svetlo, poriadok, plynutie, napätie, bohatstvo, váha. Jam session, len keď je obraz sám viacerými. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.'},
-  DE:{label:'Signatur',intro:'Das eine Bild, das sich dieses Stück selbst ausgesucht hat — für alle gleich.',tip:'Das Signaturbild dieses Stücks — der Maler und die Variante, die in sieben Zügen am besten zur Musik passen: Energie, Licht, Ordnung, Fluss, Spannung, Fülle, Gewicht. Eine Fusion nur, wenn die Musik selbst mehreres ist. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'},introImg:'Das eine Stück, das sich dieses Bild selbst ausgesucht hat — für alle gleich.',tipImg:'Das Signaturstück dieses Bildes — der Komponist und seine Form, die in sieben Zügen am besten zum Bild passen: Energie, Licht, Ordnung, Fluss, Spannung, Fülle, Gewicht. Eine Jam session nur, wenn das Bild selbst mehreres ist. Für alle gleich. Erneut tippen schaltet es aus.'},
-  FR:{label:'Signature',intro:'Le seul tableau que ce morceau a choisi lui-même — le même pour tous.',tip:'La peinture-signature de ce morceau — le peintre et la variante qui collent le mieux à la musique sur sept traits : énergie, lumière, ordre, fluidité, tension, richesse, poids. Une fusion seulement quand la musique est elle-même plusieurs. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'},introImg:'Le seul morceau que cette image a choisi elle-même — le même pour tous.',tipImg:'Le morceau-signature de cette image — le compositeur et sa forme qui lui vont le mieux sur sept traits : énergie, lumière, ordre, fluidité, tension, richesse, poids. Une Jam session seulement quand l’image est elle-même plusieurs. Le même pour tous. Touche à nouveau pour le désactiver.'},
-  ES:{label:'Firma',intro:'El único cuadro que esta canción eligió por sí misma — el mismo para todos.',tip:'La pintura-firma de esta canción — el pintor y la variante que mejor encajan con la música en siete rasgos: energía, luz, orden, fluidez, tensión, riqueza, peso. Una fusión solo cuando la música misma es varias. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'},introImg:'La única pieza que esta imagen eligió por sí misma — la misma para todos.',tipImg:'La pieza-firma de esta imagen — el compositor y su forma que mejor le encajan en siete rasgos: energía, luz, orden, fluidez, tensión, riqueza, peso. Una Jam session solo cuando la imagen misma es varias. La misma para todos. Toca de nuevo para desactivarla.'},
-  PT:{label:'Assinatura',intro:'O único quadro que esta música escolheu para si — igual para todos.',tip:'A pintura-assinatura desta música — o pintor e a variante que melhor combinam com a música em sete traços: energia, luz, ordem, fluidez, tensão, riqueza, peso. Uma fusão só quando a própria música é várias. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'},introImg:'A única peça que esta imagem escolheu para si — igual para todos.',tipImg:'A peça-assinatura desta imagem — o compositor e a sua forma que melhor lhe combinam em sete traços: energia, luz, ordem, fluidez, tensão, riqueza, peso. Uma Jam session só quando a própria imagem é várias. Igual para todos. Toca de novo para a desligar.'},
-  zh:{label:'签名',intro:'这首曲子为自己选出的唯一一幅画——人人看到的都一样。',tip:'这首曲子的签名画——在七个特质上与音乐最契合的画家和变体：能量、明暗、秩序、流动、张力、丰富、分量。只有音乐本身包含几种性格时才是融合。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'},introImg:'这幅画为自己选出的唯一一首曲子——人人听到的都一样。',tipImg:'这幅画的签名曲——在七个特质上与画最契合的作曲家和他的曲式：能量、明暗、秩序、流动、张力、丰富、分量。只有画本身包含几种性格时才是 Jam session。人人相同。 再点一次即可关闭。'},
-  zhTW:{label:'簽名',intro:'這首曲子為自己選出的唯一一幅畫——人人看到的都一樣。',tip:'這首曲子的簽名畫——在七個特質上與音樂最契合的畫家和變體：能量、明暗、秩序、流動、張力、豐富、分量。只有音樂本身包含幾種性格時才是融合。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'},introImg:'這幅畫為自己選出的唯一一首曲子——人人聽到的都一樣。',tipImg:'這幅畫的簽名曲——在七個特質上與畫最契合的作曲家和他的曲式：能量、明暗、秩序、流動、張力、豐富、分量。只有畫本身包含幾種性格時才是 Jam session。人人相同。 再點一次即可關閉。'},
-  ja:{label:'署名',intro:'この曲が自分で選んだ、ただ一枚の絵——誰にとっても同じ。',tip:'この曲の署名画——七つの特徴（エネルギー、明るさ、秩序、流れ、緊張、豊かさ、重さ）で音楽にいちばん合う画家とバリアント。音楽そのものがいくつもの性格を持つときだけフュージョンに。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'},introImg:'この絵が自分で選んだ、ただ一つの曲——誰にとっても同じ。',tipImg:'この絵の署名曲——七つの特徴（エネルギー、明るさ、秩序、流れ、緊張、豊かさ、重さ）で絵にいちばん合う作曲家とその形式。絵そのものがいくつもの性格を持つときだけ Jam session に。誰にとっても同じ一曲。 もう一度タップでオフ。'},
+  EN:{label:'Signature',intro:'The one painting this song chose for itself — the same for everyone.',tip:'This song’s signature painting — the painter and the variant that fit the music best on seven traits: energy, light, order, flow, tension, richness, weight. Mostly a fusion of 2–3 painters — whenever together they fit closer. The same for everyone. Tap again to switch it off.',of:'Signature of',roles:{structure:'Rhythm',gesture:'Melody',field:'Harmony',ornament:'Brightness',light:'Range'},introImg:'The one piece this picture chose for itself — the same for everyone.',tipImg:'This picture’s signature piece — the composer and his form that fit the picture best on seven traits: energy, light, order, flow, tension, richness, weight. Mostly a Jam session of 2–3 composers — whenever together they fit closer. The same for everyone. Tap again to switch it off.'},
+  SK:{label:'Signatúra',intro:'Jediný obraz, ktorý si táto skladba vybrala sama — u každého rovnaký.',tip:'Signatúrna maľba tejto skladby — maliar a variant, ktorý k hudbe sedí najviac v siedmich črtách: energia, svetlo, poriadok, plynutie, napätie, bohatstvo, váha. Väčšinou fúzia 2–3 maliarov — keď spolu sedia bližšie. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.',of:'Signatúra',roles:{structure:'Rytmus',gesture:'Melódia',field:'Harmónia',ornament:'Jas',light:'Rozsah'},introImg:'Jediná skladba, ktorú si tento obraz vybral sám — u každého rovnaká.',tipImg:'Signatúrna skladba tohto obrazu — skladateľ a jeho forma, ktorá k obrazu sedí najviac v siedmich črtách: energia, svetlo, poriadok, plynutie, napätie, bohatstvo, váha. Väčšinou Jam session 2–3 skladateľov — keď spolu sedia bližšie. Rovnaká pre každého. Ďalším ťuknutím ju vypneš.'},
+  DE:{label:'Signatur',intro:'Das eine Bild, das sich dieses Stück selbst ausgesucht hat — für alle gleich.',tip:'Das Signaturbild dieses Stücks — der Maler und die Variante, die in sieben Zügen am besten zur Musik passen: Energie, Licht, Ordnung, Fluss, Spannung, Fülle, Gewicht. Meist eine Fusion aus 2–3 Malern — wenn sie zusammen näher liegen. Für alle gleich. Erneut tippen schaltet sie aus.',of:'Signatur von',roles:{structure:'Rhythmus',gesture:'Melodie',field:'Harmonie',ornament:'Helligkeit',light:'Tonumfang'},introImg:'Das eine Stück, das sich dieses Bild selbst ausgesucht hat — für alle gleich.',tipImg:'Das Signaturstück dieses Bildes — der Komponist und seine Form, die in sieben Zügen am besten zum Bild passen: Energie, Licht, Ordnung, Fluss, Spannung, Fülle, Gewicht. Meist eine Jam session aus 2–3 Komponisten — wenn sie zusammen näher liegen. Für alle gleich. Erneut tippen schaltet es aus.'},
+  FR:{label:'Signature',intro:'Le seul tableau que ce morceau a choisi lui-même — le même pour tous.',tip:'La peinture-signature de ce morceau — le peintre et la variante qui collent le mieux à la musique sur sept traits : énergie, lumière, ordre, fluidité, tension, richesse, poids. Le plus souvent une fusion de 2–3 peintres — quand ils collent mieux ensemble. La même pour tous. Touche à nouveau pour la désactiver.',of:'Signature de',roles:{structure:'Rythme',gesture:'Mélodie',field:'Harmonie',ornament:'Éclat',light:'Tessiture'},introImg:'Le seul morceau que cette image a choisi elle-même — le même pour tous.',tipImg:'Le morceau-signature de cette image — le compositeur et sa forme qui lui vont le mieux sur sept traits : énergie, lumière, ordre, fluidité, tension, richesse, poids. Le plus souvent une Jam session de 2–3 compositeurs — quand ils collent mieux ensemble. Le même pour tous. Touche à nouveau pour le désactiver.'},
+  ES:{label:'Firma',intro:'El único cuadro que esta canción eligió por sí misma — el mismo para todos.',tip:'La pintura-firma de esta canción — el pintor y la variante que mejor encajan con la música en siete rasgos: energía, luz, orden, fluidez, tensión, riqueza, peso. Casi siempre una fusión de 2–3 pintores — cuando juntos encajan mejor. La misma para todos. Toca de nuevo para desactivarla.',of:'Firma de',roles:{structure:'Ritmo',gesture:'Melodía',field:'Armonía',ornament:'Brillo',light:'Registro'},introImg:'La única pieza que esta imagen eligió por sí misma — la misma para todos.',tipImg:'La pieza-firma de esta imagen — el compositor y su forma que mejor le encajan en siete rasgos: energía, luz, orden, fluidez, tensión, riqueza, peso. Casi siempre una Jam session de 2–3 compositores — cuando juntos encajan mejor. La misma para todos. Toca de nuevo para desactivarla.'},
+  PT:{label:'Assinatura',intro:'O único quadro que esta música escolheu para si — igual para todos.',tip:'A pintura-assinatura desta música — o pintor e a variante que melhor combinam com a música em sete traços: energia, luz, ordem, fluidez, tensão, riqueza, peso. Quase sempre uma fusão de 2–3 pintores — quando juntos combinam melhor. Igual para todos. Toca de novo para a desligar.',of:'Assinatura de',roles:{structure:'Ritmo',gesture:'Melodia',field:'Harmonia',ornament:'Brilho',light:'Registo'},introImg:'A única peça que esta imagem escolheu para si — igual para todos.',tipImg:'A peça-assinatura desta imagem — o compositor e a sua forma que melhor lhe combinam em sete traços: energia, luz, ordem, fluidez, tensão, riqueza, peso. Quase sempre uma Jam session de 2–3 compositores — quando juntos combinam melhor. Igual para todos. Toca de novo para a desligar.'},
+  zh:{label:'签名',intro:'这首曲子为自己选出的唯一一幅画——人人看到的都一样。',tip:'这首曲子的签名画——在七个特质上与音乐最契合的画家和变体：能量、明暗、秩序、流动、张力、丰富、分量。多数时候是 2–3 位画家的融合——只要他们合在一起更契合。人人相同。 再点一次即可关闭。',of:'签名 ·',roles:{structure:'节奏',gesture:'旋律',field:'和声',ornament:'明亮',light:'音域'},introImg:'这幅画为自己选出的唯一一首曲子——人人听到的都一样。',tipImg:'这幅画的签名曲——在七个特质上与画最契合的作曲家和他的曲式：能量、明暗、秩序、流动、张力、丰富、分量。多数时候是 2–3 位作曲家的 Jam session——只要他们合在一起更契合。人人相同。 再点一次即可关闭。'},
+  zhTW:{label:'簽名',intro:'這首曲子為自己選出的唯一一幅畫——人人看到的都一樣。',tip:'這首曲子的簽名畫——在七個特質上與音樂最契合的畫家和變體：能量、明暗、秩序、流動、張力、豐富、分量。多數時候是 2–3 位畫家的融合——只要他們合在一起更契合。人人相同。 再點一次即可關閉。',of:'簽名 ·',roles:{structure:'節奏',gesture:'旋律',field:'和聲',ornament:'明亮',light:'音域'},introImg:'這幅畫為自己選出的唯一一首曲子——人人聽到的都一樣。',tipImg:'這幅畫的簽名曲——在七個特質上與畫最契合的作曲家和他的曲式：能量、明暗、秩序、流動、張力、豐富、分量。多數時候是 2–3 位作曲家的 Jam session——只要他們合在一起更契合。人人相同。 再點一次即可關閉。'},
+  ja:{label:'署名',intro:'この曲が自分で選んだ、ただ一枚の絵——誰にとっても同じ。',tip:'この曲の署名画——七つの特徴（エネルギー、明るさ、秩序、流れ、緊張、豊かさ、重さ）で音楽にいちばん合う画家とバリアント。たいていは 2〜3 人の画家のフュージョン——一緒のほうが近いとき。誰にとっても同じ一枚。 もう一度タップでオフ。',of:'署名 ·',roles:{structure:'リズム',gesture:'旋律',field:'ハーモニー',ornament:'明るさ',light:'音域'},introImg:'この絵が自分で選んだ、ただ一つの曲——誰にとっても同じ。',tipImg:'この絵の署名曲——七つの特徴（エネルギー、明るさ、秩序、流れ、緊張、豊かさ、重さ）で絵にいちばん合う作曲家とその形式。たいていは 2〜3 人の作曲家の Jam session に——一緒のほうが近いとき。誰にとっても同じ一曲。 もう一度タップでオフ。'},
 };
 
 // Lite's opening piece is painted as the MOSAIC (every note that sounds has its own colour): a line over the canvas with a key of the
@@ -5408,49 +5422,54 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; if(!crOnRef.current && !composerDice) setComposerDice(true); }   // ← from the picture's ✦: the latch lets go (as a painting's ✦ on ←) — its composer was the picture's choice, not yours: ↑ still draws the next one
     soloFormRef.current={ k, v:to.v };
     _palTo(to, pal); setJamFlipN(n=>n+1); return true; };
+  // A Fusion's ← → (Nov 2026): its styles are a ladder — Collage · Synthesis · Genesis (of those switched on), the same crossing (the
+  // same painters in the same variants) on every rung, as a tap on the style would show it, the palette staying. It opens on the rung
+  // its draw chose; ← steps down toward Collage and stops there, → steps up toward Genesis, and past the top comes the next round —
+  // new variants of the same painters, on the top rung again. (A Jam's ← → the same: _jamVarStep.) With one style switched on,
+  // ← brings new variants and → goes back, as for one painter.
+  const _fsOrderOf = (on)=> ['A','E','G'].filter(x=>String(on||'').indexOf(x)>=0);
   const _jamVarStep = (d, pal)=>{ try{
       const J=globalThis.__COMP_JAM_STYLE, ks=[imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
       if(ks.length===1) return _soloFormStep(d, pal);
       if(!J || J.h==null || ks.length<2 || J.sig!==ks.join() || imgSigActiveRef.current) return false;
       const nv=Math.max(1,J.nv|0); if(nv<2) return false;
       const VV=globalThis.__JAM_VAR, cur=(VV && VV.sig===J.sig && (VV.h>>>0)===(J.h>>>0)) ? (VV.v|0) : (J.v|0);
-      const H=jamVarHistRef.current, key=J.sig+'|'+(J.h>>>0); if(H.key!==key){ H.key=key; H.st=[]; H.fw=[]; }
-      const curSt=_fsNorm(J.style); const now={ v:cur, md:mode, st:curSt }; let to=null;
-      if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
-      else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
-      else { const nx=_fsAfter('j|'+J.sig+'|'+(J.h>>>0)+'|'+cur, curSt, fuStyleCNow);
-        if(nx) to={ v:cur, md:mode, st:nx };                                                              // the same jam, a style not heard yet
-        else { const o=_fsOrderOf(fuStyleCNow); to={ v:cur+1, md:null, st:o.length>1 ? o[0] : curSt }; }   // after the last: the next variant, from the first style
-        H.st.push(now); }
-      if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift();
+      const curSt=_fsNorm(J.style), L=_fsOrderOf(fuStyleCNow); let to=null;
+      if(L.length>=2){ const i=L.indexOf(curSt);
+        if(d>0){ if(i===0) return false; to={ v:cur, md:mode, st:L[i<0 ? 0 : i-1] }; }          // ← one rung down (Collage: the bottom)
+        else if(i>=0 && i<L.length-1) to={ v:cur, md:mode, st:L[i+1] };                       // → one rung up
+        else to={ v:cur+1, md:null, st:L[L.length-1] }; }                                      // → past the top: the next variant, on the top rung
+      else { const H=jamVarHistRef.current, key=J.sig+'|'+(J.h>>>0); if(H.key!==key){ H.key=key; H.st=[]; H.fw=[]; }
+        const now={ v:cur, md:mode, st:curSt };
+        if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
+        else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
+        else { to={ v:cur+1, md:null, st:curSt }; H.st.push(now); }
+        if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift(); }
       globalThis.__JAM_VAR={ sig:J.sig, h:(J.h>>>0), v:to.v };
       if(to.st){ globalThis.__JAM_STYLE_PIN={ sig:J.sig, h:J.h, style:to.st }; if(to.st!==curSt) globalThis.__COMP_JAM_STYLE={ ...J, style:to.st, roles:null }; }
       _palTo(to, pal); setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
-  // A Fusion's ← (Nov 2026): this very crossing (the same painters in the same variants) in every style that is on and not seen yet,
-  // the nearest first — from Genesis: Synthesis, then Collage; from Synthesis: Collage, then Genesis; from Collage: Synthesis, then
-  // Genesis — as a tap on the style would show it, the palette staying; after the last a new crossing is drawn, and it starts at the
-  // first style (Collage). → goes back through all of them, each as it was. (A Jam's ← the same: _jamVarStep.)
-  const _fsOrderOf = (on)=> ['A','E','G'].filter(x=>String(on||'').indexOf(x)>=0);
-  const FS_NEAR = {A:['E','G'], E:['A','G'], G:['E','A']};
-  const fsSeenRef = useRef({key:null, seen:[]});
-  const _fsAfter = (key, cur, on)=>{ const o=_fsOrderOf(on); if(o.length<2) return null; const R=fsSeenRef.current; if(R.key!==key){ R.key=key; R.seen=[cur]; } else if(!R.seen.includes(cur)) R.seen.push(cur);
-    for(const x of (FS_NEAR[cur]||[])) if(o.includes(x) && !R.seen.includes(x)){ R.seen.push(x); return x; } return null; };   // the nearest style that is on and not yet seen with this crossing, or none
-  const _fuStyleStep = ()=>{ try{
+  // the Fusion's ladder (null: not a Fusion with two styles or more on — the painter's own ← →)
+  const _fuLadder = (d, pal)=>{ try{
       if(viewMode==='image' || sigActiveRef.current || style===null || !painterStage.length || fuStyleNow.length<2) return null;
       const fa=_fusionAddr(_jamStage(), phaseIndexRef.current|0); if(!fa) return null;
-      const nx=_fsAfter('f|'+fa.keys.join()+'|'+fa.phs.join(), _fsNorm(fa.fs), fuStyleNow); if(!nx) return null;
-      return { keys:fa.keys.slice(), phs:fa.phs.slice(), fs:nx };
+      const L=_fsOrderOf(fuStyleNow); if(L.length<2) return null; const i=L.indexOf(_fsNorm(fa.fs));
+      if(d<0){ if(i===0) return false;                                                       // ← Collage: the bottom rung
+        setPhaseIndex(fa.phs[0]|0); _setFuRoll({ keys:fa.keys.slice(), phs:fa.phs.slice(), fs:L[i<0 ? 0 : i-1] }); return true; }
+      if(i>=0 && i<L.length-1){ setPhaseIndex(fa.phs[0]|0); _setFuRoll({ keys:fa.keys.slice(), phs:fa.phs.slice(), fs:L[i+1] }); return true; }
+      if(pal) stUpPalRef.current=Date.now();   // → past the top: the next round, a new crossing on the top rung (and a new palette, unless it is chosen)
+      const ok=_variantRoll(); if(ok && fuRollRef.current) _setFuRoll({ ...fuRollRef.current, fs:L[L.length-1] });
+      if(ok && pal && !palGoldRef.current) _fuRollPal(true); return ok;
     }catch(_){ return null; } };
-  const _variantNextRaw = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal); const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
+  const _variantNextRaw = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal); { const lad=_fuLadder(-1, pal); if(lad!==null) return lad; }
+    const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
     const sig = viewMode!=='image' && !!sigActiveRef.current;
     const snap = sig ? {..._variantSnap(), look:_stLookNow()} : _variantSnap();
     if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); if(v.look){ H.keep=true; _variantLook(v.look); } else { if(sig) H.keep=true; _variantPut(v); } return true; }
     if(pal) stUpPalRef.current=Date.now();   // the Studio rolls the palette itself, once (the Fusion's own roll stands down)
-    const fst=_fuStyleStep(); if(fst){ setPhaseIndex(fst.phs[0]|0); _setFuRoll(fst); }   // the same crossing in the next style
-    const ok=fst ? true : _variantRoll();
-    if(ok && !fst && style!==null && painterStage.length && fuStyleNow.length>1 && fuRollRef.current){ const o=_fsOrderOf(fuStyleNow); _setFuRoll({ ...fuRollRef.current, fs:o[0] }); }   // a new crossing starts at the first style
-    if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current && !fst) _fuRollPal(true); } return ok; };
-  const _variantBack = ()=>{ if(viewMode==='image') return _jamVarStep(-1); const H=varHistRef.current; if((H.key!==_varKey() && !H.keep) || !H.st.length) return false;
+    const ok=_variantRoll();
+    if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current) _fuRollPal(true); } return ok; };
+  const _variantBack = ()=>{ if(viewMode==='image') return _jamVarStep(-1, true); { const lad=_fuLadder(1, true); if(lad!==null) return lad; }
+    const H=varHistRef.current; if((H.key!==_varKey() && !H.keep) || !H.st.length) return false;
     const v=H.st.pop(); (H.fw || (H.fw=[])).push(v.look ? {..._variantSnap(), look:_stLookNow()} : _variantSnap()); if(H.fw.length>30) H.fw.shift();
     if(v.look){ H.keep=true; _variantLook(v.look); } else _variantPut(v); return true; };
   const _variantNext = (pal)=>{ const ok=_variantNextRaw(pal); if(ok) _stepNote('var'); return ok; };   // ← that gave a variant: a Tvor move (the steps' readiness)
