@@ -17413,7 +17413,8 @@ function _jamHash(ks,px){ let h=2166136261; const s=ks.join('+')+'|lr|0';   // '
   for(let i=0;i<px.length;i+=97){ const c=px[i]; h^=(((c.r|0)+(c.g|0)*7+(c.b|0)*13)&0xffff); h=Math.imul(h,16777619); }
   h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return h>>>0; }
 // the Fusion style of a jam: the composers' own Setup switch (__PAINT_JAM_STYLE: 'A' | 'E' | 'AE'; without it the painters' one), AE = a coin on the address
-function _jamStyleOf(h){ const G=(typeof globalThis!=='undefined') ? globalThis : {}; const g=(G.__PAINT_JAM_STYLE!==undefined) ? G.__PAINT_JAM_STYLE : G.__PAINT_FU_STYLE;
+function _jamStyleOf(h){ const G=(typeof globalThis!=='undefined') ? globalThis : {}; const g0=(G.__PAINT_JAM_STYLE!==undefined) ? G.__PAINT_JAM_STYLE : G.__PAINT_FU_STYLE;
+  const g=(typeof g0==='string' && g0.indexOf('G')>=0) ? ((g0.indexOf('A')>=0) ? 'AE' : 'E') : g0;   // a jam has no genes: a Genesis is painted as a Synthesis
   if(g==='E') return 'E'; if(g==='AE') return ((h>>>7)&1) ? 'E' : 'A'; return 'A'; }
 
 // A — the relay
@@ -17825,17 +17826,21 @@ function _fuVariantOf(k, slot, ph){
 //     tosses again.
 // The style of a painting: its own address first (a Favorite: __PAINT_FU_PHS.fs;
 // a poster QR: __PAINT_SIG_PHS.fs — always the resolved A or E), else the Setup
-// switch (__PAINT_FU_STYLE: 'A' | 'E' | 'AE').
+// switch (__PAINT_FU_STYLE: the letters switched on — A Collage, E Synthesis, G Genesis — drawn among when more than one).
 // the coin of an address: Take turns or New painter, the same for the same painters and variants
 function _fuCoin(j, phs){ const s=j+'|'+(phs||[]).join(','); let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return ((h>>>7)&1) ? 'E' : 'A'; }
+// the same coin among any of the styles switched on (AE keeps its own coin above, so no Collage or Synthesis changes its face)
+function _fuCoinOf(j, phs, L){ const s=j+'|'+(phs||[]).join(',')+'|'+L; let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return L[((h>>>7)%L.length)]; }
 function _fuStyleOf(ks, phs){
   const G=(typeof globalThis!=='undefined') ? globalThis : {}; const j=(ks||[]).join();
-  const ur=G.__PAINT_FU_PHS; if(ur && ur.keys && ur.fs && ur.keys.join()===j) return ur.fs==='E' ? 'E' : 'A';
+  if(G.__PAINT_FU_FORCE==='A' || G.__PAINT_FU_FORCE==='E' || G.__PAINT_FU_FORCE==='G') return G.__PAINT_FU_FORCE;   // a style's preview (the Setup's tiles)
+  const ur=G.__PAINT_FU_PHS; if(ur && ur.keys && ur.fs && ur.keys.join()===j) return ur.fs==='E' ? 'E' : ur.fs==='G' ? 'G' : 'A';
   // a Signature is the same for everyone: its pinned style (the built-in pieces, a poster QR), else the coin — never the tier
-  const ov=G.__PAINT_SIG_PHS; if(ov && ov.keys && ov.keys.join()===j){ if(ov.fs) return ov.fs==='E' ? 'E' : 'A'; if(ov.sig) return _fuCoin(j, phs); }
+  const ov=G.__PAINT_SIG_PHS; if(ov && ov.keys && ov.keys.join()===j){ if(ov.fs) return ov.fs==='E' ? 'E' : ov.fs==='G' ? 'G' : 'A'; if(ov.sig) return _fuCoin(j, phs); }
   const g=G.__PAINT_FU_STYLE;
   if(g==='AE') return _fuCoin(j, phs);
-  return g==='E' ? 'E' : 'A';
+  if(typeof g==='string' && g.length>1) return _fuCoinOf(j, phs, g);
+  return g==='E' ? 'E' : g==='G' ? 'G' : 'A';
 }
 // how a painter's hand paints a form — by the artist where the genes alone would mislead
 // (Picasso's glow belongs to his line, not to a veil; Monet's hand is the touch)
@@ -17917,7 +17922,8 @@ function fuseDNA(keys, ph){
   const T=ws.reduce((s,[,w])=>s+w,0);
   const num=(g)=>ws.reduce((s,[d,w])=>s+d[g]*w,0)/T;
   const rv=_fuRules(ks, phs);
-  if(_fuStyleOf(ks, phs)==='E'){ const F1=_fuOnePainter(ks, ph, phs, ws, T, num, rv); F1.rv=rv; if(F1.tr && F1.tr.stack){ F1.layout=Object.assign({},F1.layout); F1.layout.stack=(F1.layout.stack||0)+0.5; } return _fuMusic(F1); }
+  const _st=_fuStyleOf(ks, phs);
+  if(_st==='E' || _st==='G'){ const F1=_fuOnePainter(ks, ph, phs, ws, T, num, rv); F1.rv=rv; if(_st==='G') F1.fs='G'; if(F1.tr && F1.tr.stack){ F1.layout=Object.assign({},F1.layout); F1.layout.stack=(F1.layout.stack||0)+0.5; } return _fuMusic(F1); }
   const dict=(g)=>{ const o={}; ws.forEach(([d,w])=>{ for(const k in d[g]) o[k]=(o[k]||0)+d[g][k]*w; }); const t=Object.values(o).reduce((a,b)=>a+b,0)||1; for(const k in o) o[k]/=t; return o; };
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(ws[0][0].ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
@@ -18512,10 +18518,332 @@ function _fuSnap(rgb, pal){ if(!pal||pal.length<2) return rgb; let best=pal[0], 
 // live canvas, the raster export and the vector (SVG) export.
 const _FU_UNDER=/^(field|stripe|stripes|vstripes|panel|cloud|checker|surface)$/;
 const _FU_NULL=(()=>{ let P; const f=function(){ return P; }; P=new Proxy(f,{ get:(o,p)=> p===Symbol.toPrimitive ? (()=>0) : P, set:()=>true, apply:()=>P }); return P; })();
+// ═══════════════════════════════════════════════════════════════════════════
+// GENESIS · FUSION STYLE G (Nov 2026) — a new painter born of its
+// parents' best genes. Every painter carries four, taken from the best of his
+// own painting: the FORM he paints (Matisse's cut-outs, Hokusai's crest,
+// Kusama's dot…), the HAND that lays the paint (Rothko's veils, Mitchell's
+// impasto, Monet's broken touches, Hokusai's woodblock line…), the
+// COMPOSITION that builds the canvas (Hokusai's great wave, Miró's
+// constellation, Monet's water…) and the COLOUR (Klimt's gold, Matisse's pure
+// hues, Rothko's depths…). The child takes each gene from one parent, every
+// parent gives at least one; Next / Vary deals them out again. The form is
+// drawn as its parent draws it (a silhouette), the hand paints into it with
+// the technique of its own painter.
+// ═══════════════════════════════════════════════════════════════════════════
+const _FG={
+  gold:{form:{klcurl:.55,klrobe:.45}, hand:'mosaic', comp:'columns', col:'gold'},
+  monet:{form:null, hand:'touches', comp:'water', col:'monet'},
+  matisse:{form:{mtbird:.3,mtcoral:.3,mtleaf:.2,mtalgae:.2}, hand:'paper', comp:'air', col:'matisse'},
+  hokusai:{form:{crest:.6,fuji:.4}, hand:'woodblock', comp:'wave', col:'hokusai'},
+  kandinsky:{form:{target:.45,disc:.35,tri:.2}, hand:'crisp', comp:'diagonal', col:'kandinsky'},
+  miro:{form:{miroblob:.4,eye:.3,star:.3}, hand:'line', comp:'constellation', col:'miro'},
+  mondrian:{form:{rect:1}, hand:'outline', comp:'grid', col:'mondrian'},
+  pop:{form:{hgfig:.5,hgpair:.3,hgheart:.2}, hand:'thick', comp:'dance', col:'pop'},
+  rothko:{form:{rect:1}, hand:'veil', comp:'fields', col:'rothko'},
+  spiral:{form:{petal:.5,goldspiral:.5}, hand:'soft', comp:'axis', col:'klint'},
+  picasso:{form:{pcfacet:.6,pcguitar:.4}, hand:'collage', comp:'cubist', col:'picasso'},
+  delaunay:{form:{orphic:1}, hand:'rings', comp:'circles', col:'delaunay'},
+  wave:{form:{wavyline:1}, hand:'precise', comp:'stripes', col:'riley'},
+  kusama:{form:{dot:.6,sphere:.4}, hand:'glow', comp:'infinity', col:'kusama'},
+  pollock:{form:null, hand:'skein', comp:'frieze', col:'pollock'},
+  bloom:{form:{cell:1}, hand:'stain', comp:'membrane', col:'francis'},
+  thomas:{form:null, hand:'dabs', comp:'bands', col:'thomas'},
+  mitchell:{form:null, hand:'impasto', comp:'masses', col:'mitchell'},
+  lichtenstein:{form:{lcmirror:.5,lcboom:.5}, hand:'raster', comp:'panel', col:'lichtenstein'},
+  klee:{form:{cutout:.4,arch:.3,rect:.3}, hand:'wash', comp:'squares', col:'klee'},
+  arcs:{form:{nestpoly:.6,protractor:.4}, hand:'bands', comp:'concentric', col:'stella'},
+  bulge:{form:{disc:1}, hand:'precise', comp:'bulge', col:'vasarely'},
+  bauhaus:{form:{tri:.3,disc:.3,rect:.2,arch:.2}, hand:'crisp', comp:'construct', col:'bauhaus'},
+  raffel:{form:{chain:.4,phiarc:.4,rays:.2}, hand:'goldline', comp:'golden', col:'raffel'}
+};
+const _FG_LINE=/^(goldspiral|wavyline|chain|phiarc|rays)$/;
+// forms of the gene engine's own, where the mark vocabulary has none: Klimt's Tree of Life curl and the robe of The Kiss
+const _FG_FORM={
+  klcurl:(g,s,cA,cB,R)=>{ const T=2.3*6.2832, N=90, L=[], Rr=[]; for(let i=0;i<=N;i++){ const u=i/N, th=u*T, r=s*(0.08+0.92*Math.pow(u,1.15)), w=s*(0.05+0.13*u), x=Math.cos(th)*r, y=Math.sin(th)*r, nx=Math.cos(th), ny=Math.sin(th); L.push([x+nx*w/2,y+ny*w/2]); Rr.push([x-nx*w/2,y-ny*w/2]); }
+    g.fillStyle=cA; g.beginPath(); L.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1])); for(let i=Rr.length-1;i>=0;i--) g.lineTo(Rr[i][0],Rr[i][1]); g.closePath(); g.fill();
+    g.beginPath(); g.arc(0,0,s*0.1,0,6.2832); g.fill(); g.fillStyle=cB; for(let i=6;i<N;i+=7){ const u=i/N, th=u*T, r=s*(0.08+0.92*Math.pow(u,1.15)); g.beginPath(); g.arc(Math.cos(th)*r,Math.sin(th)*r,s*(0.02+0.035*u),0,6.2832); g.fill(); } },
+  klrobe:(g,s,cA,cB,R)=>{ const w=s*0.62, h=s*1.5; g.fillStyle=cA; g.beginPath(); g.moveTo(-w*0.55,-h*0.62); g.quadraticCurveTo(0,-h*1.05,w*0.55,-h*0.62); g.bezierCurveTo(w*1.05,-h*0.1,w*0.9,h*0.5,w*0.75,h);
+    for(let k=0;k<=6;k++){ const x=w*0.75-k/6*w*1.5; g.quadraticCurveTo(x+w*0.12,h*(k%2?1.08:0.94),x,h); } g.bezierCurveTo(-w*0.9,h*0.5,-w*1.05,-h*0.1,-w*0.55,-h*0.62); g.closePath(); g.fill();
+    const sq=R()<0.5; g.fillStyle=cB; for(let k=0;k<14;k++){ const x=(R()-0.5)*w*1.2, y=-h*0.45+R()*h*1.3, q=s*(0.06+0.06*R()); if(sq) g.fillRect(x-q/2,y-q,q,q*2); else { g.beginPath(); g.arc(x,y,q*0.7,0,6.2832); g.fill(); } } }
+};
+// who gives which gene: the form from a parent with a form of his own (a closed one before a line); the hand from the
+// next; composition and colour shared out so that every parent gives one; Next / Vary deals again
+function _fgDeal(keys, ph){
+  const n=keys.length, G=keys.map(k=>_FG[k]||_FG.raffel), ix=[...Array(n).keys()], p=ph|0;
+  const closed=(g)=>g.form && Object.keys(g.form).some(q=>!_FG_LINE.test(q));
+  let cand=ix.filter(i=>closed(G[i])); if(!cand.length) cand=ix.filter(i=>G[i].form);
+  const X=cand.length ? cand[((p>>1)%cand.length)] : -1;
+  if(n===1) return {form:X, hand:0, comp:0, col:0};
+  if(X<0) return {form:-1, hand:p%n, comp:(p+1)%n, col:n>2?(p+2)%n:p%n};
+  const rest=ix.filter(i=>i!==X).map((_,k,a)=>a[(k+p)%a.length]);
+  if(n===2){ const Y=rest[0]; return (p&1) ? {form:X, hand:Y, comp:X, col:Y} : {form:X, hand:Y, comp:Y, col:X}; }
+  return {form:X, hand:rest[0], comp:rest[1], col: n>3 ? rest[2] : ((p&1) ? rest[0] : X)};
+}
+function _fgRng(seed){ let s=seed>>>0; return ()=>{ s=(s+0x6D2B79F5)>>>0; let t=s; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
+const _fgCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+const _fgMix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+const _fgHue=(c)=>{ const r=c[0]/255,g=c[1]/255,b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(d<1e-6) return -1; let h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4; h*=60; return h<0?h+360:h; };
+const _FGC={};
+function _fgCan(k,W){ let c=_FGC[k]; if(!c){ c=(typeof document!=='undefined') ? document.createElement('canvas') : new OffscreenCanvas(W,W); _FGC[k]=c; } c.width=W; c.height=W; return [c,c.getContext('2d')]; }
+// a silhouette in one colour (outline, shadow) and a ring round it (the outline only)
+function _fgTint(M,W,c,a){ const [O,o]=_fgCan('O',W); o.drawImage(M,0,0); o.globalCompositeOperation='source-in'; o.fillStyle=_fgCss(c,a); o.fillRect(0,0,W,W); return O; }
+function _fgRing(M,W,c,d,a){ const O=_fgTint(M,W,c,a==null?1:a); const [Q,q]=_fgCan('Q',W); const K=d>3?16:10; for(let k=0;k<K;k++){ const t=k/K*6.2832; q.drawImage(O,Math.cos(t)*d,Math.sin(t)*d); } q.globalCompositeOperation='destination-out'; q.drawImage(M,0,0); return Q; }
+
+// ── COLOUR genes: the ground, the ink, a light, and how a colour of the piece is turned into the painter's colour ──
+const _FG_SW={
+  matisse:[[34,62,170],[214,62,108],[236,118,38],[18,138,108],[240,194,36],[108,56,150]],
+  kandinsky:[[240,196,40],[40,70,170],[200,50,50],[120,60,160],[30,140,120]],
+  miro:[[214,40,40],[20,60,170],[30,130,70],[240,200,30]],
+  mondrian:[[214,40,40],[30,70,160],[244,200,30]],
+  lichtenstein:[[220,40,40],[30,80,190],[250,210,30]],
+  bauhaus:[[214,48,40],[30,70,160],[244,196,30]],
+  klee:[[212,146,52],[186,74,44],[118,128,52],[204,112,104],[66,98,140],[146,80,128],[232,190,90]],
+  picasso:[[196,140,64],[146,96,56],[104,74,54],[86,98,112],[60,46,40],[176,112,72]],
+  klint:[[226,120,140],[236,160,96],[150,120,196],[96,150,206],[230,196,80],[120,170,130]],
+  gold:[[212,170,70],[190,140,50],[232,200,110]],
+  hokusai:[[28,58,104],[64,104,150],[150,180,200],[206,110,60]],
+  stella:[[255,90,40],[255,200,0],[0,190,170],[230,40,150],[60,90,230]]
+};
+function _fgSnap(c,sw){ const h=_fgHue(c); if(h<0) return sw[0]; let b=sw[0], bd=1e9; for(const s of sw){ const hs=_fgHue(s); const d=Math.min(Math.abs(h-hs),360-Math.abs(h-hs)); if(d<bd){ bd=d; b=s; } } return b; }
+function _fgColour(key,A,bw){
+  const pig=(c,s0,s1,l0,l1)=>_bhxPigment(c,s0,s1,l0,l1,0.03,0.4,null);
+  const tonic=A.pcCol(A.tonic,60);
+  const P={
+    gold:{ground:[178,136,54], ink:[44,30,16], light:[240,214,140], c:(c,r)=> r<0.5 ? _FG_SW.gold[(r*6)|0] : _fgMix(pig(c,0.42,0.66,0.26,0.38),[196,150,60],0.22)},
+    monet:{ground:_fgMix(pig(tonic,0.25,0.4,0.78,0.86),[226,222,232],0.5), ink:[70,70,96], light:[246,240,226], c:(c)=>pig(c,0.35,0.55,0.62,0.78)},
+    matisse:{ground:[242,236,222], ink:[30,30,40], light:[250,246,236], c:(c)=>_fgSnap(c,_FG_SW.matisse)},
+    hokusai:{ground:[232,220,190], ink:[26,40,70], light:[246,240,222], c:(c,r)=> r<0.7 ? _fgSnap(c,_FG_SW.hokusai.slice(0,3)) : _FG_SW.hokusai[3]},
+    kandinsky:{ground:[238,232,214], ink:[20,20,24], light:[250,246,234], c:(c,r)=> r<0.08 ? [24,22,28] : _fgSnap(c,_FG_SW.kandinsky)},
+    miro:{ground:[236,230,214], ink:[16,16,16], light:[248,244,234], c:(c,r)=> r<0.15 ? [16,16,16] : _fgSnap(c,_FG_SW.miro)},
+    mondrian:{ground:[244,242,236], ink:[18,18,18], light:[246,244,238], c:(c,r)=> r<0.18 ? [246,244,238] : _fgSnap(c,_FG_SW.mondrian)},
+    pop:{ground:pig(tonic,0.85,1,0.5,0.56), ink:[18,16,20], light:[250,248,240], c:(c)=>{ const q=pig(c,0.85,1,0.5,0.6), h=_fgHue(q), g=_fgHue(pig(tonic,0.85,1,0.5,0.56)); return (h>=0&&g>=0&&Math.min(Math.abs(h-g),360-Math.abs(h-g))<50) ? [250,214,20] : q; }},
+    rothko:{ground:_fgMix(pig(tonic,0.4,0.6,0.14,0.2),[70,16,30],0.35), ink:[14,9,12], light:[214,110,70], c:(c)=>_fgMix(pig(c,0.42,0.7,0.2,0.36),[112,28,50],0.25)},
+    klint:{ground:[238,228,214], ink:[90,80,100], light:[250,244,236], c:(c)=>_fgSnap(c,_FG_SW.klint)},
+    picasso:{ground:[232,222,200], ink:[44,34,30], light:[244,238,224], c:(c,r)=> r<0.25 ? pig(c,0.4,0.6,0.34,0.46) : _fgSnap(c,_FG_SW.picasso)},
+    delaunay:{ground:[226,224,220], ink:[30,30,40], light:[246,240,226], c:(c)=>pig(c,0.75,0.95,0.45,0.58)},
+    riley:{ground:[244,242,236], ink:[20,20,24], light:[250,250,246], c:(c,r)=> r<0.5 ? pig(tonic,0.6,0.85,0.4,0.55) : pig(c,0.6,0.85,0.45,0.6)},
+    kusama:{ground:[10,8,16], ink:[248,246,240], light:[255,250,240], c:(c)=>pig(c,0.85,1,0.55,0.66)},
+    pollock:{ground:[226,210,172], ink:[24,20,20], light:[244,238,222], c:(c,r)=> r<0.3 ? [24,20,20] : r<0.4 ? [244,238,222] : pig(c,0.45,0.78,0.42,0.6)},
+    francis:{ground:[246,244,238], ink:[30,40,80], light:[250,250,246], c:(c,r)=> r<0.12 ? (r<0.06?[210,50,40]:[240,190,40]) : _frWetN(_fgMix(c,[20,50,190],0.6))},
+    thomas:{ground:[246,242,232], ink:[40,40,50], light:[250,248,242], c:(c)=>pig(c,0.7,0.95,0.42,0.56)},
+    mitchell:{ground:[238,234,224], ink:[30,30,34], light:[248,246,240], c:(c,r)=>_jmOil(c,0.3+0.45*r,false)},
+    lichtenstein:{ground:[248,246,240], ink:[16,16,16], light:[250,250,248], c:(c)=>_fgSnap(c,_FG_SW.lichtenstein)},
+    klee:{ground:[232,216,184], ink:[60,46,40], light:[246,236,214], c:(c)=>_fgSnap(c,_FG_SW.klee)},
+    stella:{ground:[232,226,212], ink:[20,20,24], light:[250,248,240], c:(c)=>_fgSnap(c,_FG_SW.stella)},
+    vasarely:{ground:pig(tonic,0.6,0.85,0.32,0.4), ink:[20,20,24], light:[250,248,240], c:(c,r)=> r<0.5 ? pig(c,0.7,0.95,0.55,0.65) : pig([255-tonic[0],255-tonic[1],255-tonic[2]],0.7,0.95,0.5,0.6)},
+    bauhaus:{ground:[236,230,214], ink:[20,20,24], light:[248,244,234], c:(c,r)=> r<0.12 ? [24,22,28] : _fgSnap(c,_FG_SW.bauhaus)},
+    raffel:{ground:[20,18,26], ink:[214,178,96], light:[244,226,170], c:(c,r)=> r<0.4 ? [214,178,96] : pig(c,0.5,0.75,0.6,0.72)}
+  }[key] || {ground:[240,234,222], ink:[30,30,36], light:[248,246,240], c:(c)=>pig(c,0.55,0.85,0.35,0.55)};
+  if(bw){ const g=(c)=>{ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [l,l,l]; }; const c0=P.c; return {ground:g(P.ground), ink:g(P.ink), light:g(P.light), c:(c,r)=>g(c0(c,r))}; }
+  return P;
+}
+
+// ── HAND genes: how the paint goes into a form. tex paints the texture (clipped to the form afterwards), put lays it ──
+const _FG_HAND={
+  // a hand paints OVER the form as its parent drew it (its inner drawing shows through), then everything is cut to the form
+  flat:{},
+  // Monet: the form broken into loaded touches of its colour and its neighbours, its own drawing glimpsed between them
+  touches:{tex:(t,W,h,s,c,c2,P,R)=>{ const N=Math.min(320,Math.round(W*W/(s*s)*15));
+      for(let i=0;i<N;i++){ const k=R(), q=k<0.4?c:k<0.6?_fgMix(c,[255,255,255],0.32):k<0.76?_fgMix(c,[0,0,0],0.2):k<0.9?c2:P.light; _monDab(t,R()*W,R()*W,s*(0.2+0.2*R()),s*(0.07+0.05*R()),(R()-0.5)*0.5,q,0.85,R,false); } }},
+  // Hokusai: the woodblock — the colour graded from light (bokashi), the grain of the block, a line of Prussian blue round it
+  woodblock:{tex:(t,W,h,s,c)=>{ const g=t.createLinearGradient(0,h-s,0,h+s); g.addColorStop(0,_fgCss([255,255,255],0.45)); g.addColorStop(0.6,_fgCss([255,255,255],0)); t.fillStyle=g; t.fillRect(0,0,W,W);
+      t.strokeStyle=_fgCss(_fgMix(c,[0,0,0],0.3),0.35); t.lineWidth=Math.max(0.7,s*0.016); for(let y=h-s*1.2;y<h+s*1.2;y+=s*0.15){ t.beginPath(); t.moveTo(0,y); t.bezierCurveTo(W*0.3,y-s*0.06,W*0.6,y+s*0.06,W,y); t.stroke(); } },
+    ring:(s,P)=>[P.ink, Math.max(1.4,s*0.05)]},
+  // Miró: the form held by a thin black line, a few ink dots beside it
+  line:{ring:(s)=>[[16,16,16], Math.max(1.1,s*0.026)],
+    after:(ctx,it,s,P,R)=>{ ctx.fillStyle=_fgCss([16,16,16]); const n=1+(R()*2|0); for(let k=0;k<n;k++){ const a=R()*6.2832, d=s*(1.15+0.3*R()); ctx.beginPath(); ctx.arc(it.x+Math.cos(a)*d,it.y+Math.sin(a)*d,s*(0.05+0.04*R()),0,6.2832); ctx.fill(); } }},
+  // Haring: a heavy black line round the form, the strokes of its movement round it
+  thick:{ring:(s)=>[[16,14,18], Math.max(1.8,s*0.075)],
+    after:(ctx,it,s,P,R)=>{ ctx.strokeStyle=_fgCss([16,14,18]); ctx.lineCap='round'; ctx.lineWidth=Math.max(1.6,s*0.06); const n=4+(R()*3|0), a0=R()*6.2832;
+      for(let k=0;k<n;k++){ const a=a0+k/n*3.1-0.8, r0=s*(1.3+0.1*R()), r1=r0+s*(0.24+0.12*R()); ctx.beginPath(); ctx.moveTo(it.x+Math.cos(a)*r0,it.y+Math.sin(a)*r0); ctx.lineTo(it.x+Math.cos(a)*r1,it.y+Math.sin(a)*r1); ctx.stroke(); } }},
+  // af Klint: a quiet even colour lit from inside, a fine line of its own darker colour
+  soft:{tex:(t,W,h,s,c)=>{ const g=t.createRadialGradient(h,h,0,h,h,s*1.3); g.addColorStop(0,_fgCss([255,255,255],0.28)); g.addColorStop(1,_fgCss([255,255,255],0)); t.fillStyle=g; t.fillRect(0,0,W,W); }, ring:(s,P,c)=>[_fgMix(c,[0,0,0],0.4), Math.max(0.9,s*0.016)]},
+  // Delaunay: the form turned into his rings of contrasting colour
+  rings:{tex:(t,W,h,s,c,c2,P)=>{ const L=[c,c2,_fgMix(c,[255,255,255],0.5),_fgMix(c2,[0,0,0],0.25)]; let k=0; t.globalAlpha=0.88; for(let r=s*1.9;r>s*0.08;r-=s*0.22){ t.fillStyle=_fgCss(L[k++%4]); t.beginPath(); t.arc(h,h,r,0,6.2832); t.fill(); } t.globalAlpha=1; }},
+  // Pollock: the form poured — skeins of black and colour flung through it, a few escaping past its edge
+  skein:{tex:(t,W,h,s,c,c2,P,R)=>{ const L=[[24,20,20],c,c2,[244,238,222],_fgMix(c,[0,0,0],0.3)]; const n=10+(R()*6|0);
+      for(let k=0;k<n;k++){ const a=R()*6.2832, x0=h+Math.cos(a)*s*1.5, y0=h+Math.sin(a)*s*1.5, b=a+Math.PI+(R()-0.5)*1.2, x1=h+Math.cos(b)*s*1.5, y1=h+Math.sin(b)*s*1.5, cx=h+(R()-0.5)*s*1.6, cy=h+(R()-0.5)*s*1.6, pts=[];
+        for(let i=0;i<=14;i++){ const u=i/14, x=(1-u)*(1-u)*x0+2*u*(1-u)*cx+u*u*x1, y=(1-u)*(1-u)*y0+2*u*(1-u)*cy+u*u*y1; pts.push([x,y,0.7+0.6*R()]); }
+        _pkRibbon(t,pts,s*(0.07+0.13*R()),L[k%L.length],0.92); } },
+    after:(ctx,it,s,P,R)=>{ for(let k=0;k<2;k++){ const a=R()*6.2832, pts=[]; for(let i=0;i<=10;i++){ const u=i/10, r=s*(0.6+1.1*u); pts.push([it.x+Math.cos(a+u*1.2)*r, it.y+Math.sin(a+u*1.2)*r, 1]); } _pkRibbon(ctx,pts,s*0.045,[24,20,20],0.9); } }},
+  // Alma Thomas: the form laid in her dabs, row after row, its own colour showing between them
+  dabs:{tex:(t,W,h,s,c,c2,P,R)=>{ t.globalCompositeOperation='destination-out'; t.fillStyle='rgba(0,0,0,0.55)'; t.fillRect(0,0,W,W); t.globalCompositeOperation='source-over';
+      const dw=s*0.12, dh=s*0.22; for(let y=0;y<W;y+=dh*1.18) for(let x=(R()*dw);x<W;x+=dw*1.34){ const k=R(), q=k<0.55?c:k<0.75?_fgMix(c,[255,255,255],0.22):k<0.9?_fgMix(c,[0,0,0],0.15):c2;
+      const yy=y+(R()-0.5)*dh*0.2; R(); t.fillStyle=_fgCss(q); t.fillRect(x-dw/2,yy,dw*(0.8+0.25*R()),dh*(0.85+0.2*R())); } }},
+  // Mitchell: the form built of thick oil ribbons, swelling and drying out, a few strokes overshooting
+  impasto:{tex:(t,W,h,s,c,c2,P,R)=>{ const n=10+(R()*5|0);
+      for(let k=0;k<n;k++){ const a=(R()<0.6?-1.1:0.3)+(R()-0.5)*0.8, x=h+(R()-0.5)*s*1.6, y=h+(R()-0.5)*s*1.6, L=s*(1.2+0.8*R()), pts=[]; for(let i=0;i<=7;i++){ const u=i/7-0.5; pts.push([x+Math.cos(a)*L*u+Math.sin(u*3+k)*s*0.08, y+Math.sin(a)*L*u]); }
+        const q=R(), col=q<0.5?c:q<0.68?_fgMix(c,[255,255,255],0.22):q<0.86?c2:q<0.94?[244,240,232]:_fgMix(c,[0,0,0],0.4); _jmBrush(t,pts,s*(0.2+0.14*R()),col,0.96,0.35,R,false); } },
+    after:(ctx,it,s,P,R,c)=>{ for(let k=0;k<2;k++){ const a=R()*6.2832, x=it.x+Math.cos(a)*s*0.8, y=it.y+Math.sin(a)*s*0.8, pts=[]; for(let i=0;i<=5;i++){ const u=i/5; pts.push([x+Math.cos(a)*s*0.5*u, y+Math.sin(a)*s*0.5*u]); } _jmBrush(ctx,pts,s*0.09,c,0.9,0.6,R,true); } }},
+  // RafFel: the form drawn as a fine golden line, its colour only breathed in
+  goldline:{tex:(t,W)=>{ t.globalCompositeOperation='destination-in'; t.fillStyle='rgba(0,0,0,0.3)'; t.fillRect(0,0,W,W); }, ring:(s)=>[[214,178,96], Math.max(1.1,s*0.022)]},
+  // Rothko: the form laid as veils, its edges soft and burning
+  veil:{veil:true},
+  // Kusama: the form as light on the dark
+  glow:{tex:(t,W,h,s)=>{ const g=t.createRadialGradient(h-s*0.3,h-s*0.3,0,h,h,s); g.addColorStop(0,_fgCss([255,255,255],0.55)); g.addColorStop(1,_fgCss([255,255,255],0)); t.fillStyle=g; t.fillRect(0,0,W,W); }, glow:true},
+  // Matisse: gouache-painted paper, cut and laid, its shadow on the sheet
+  paper:{tex:(t,W,h,s,c,c2,P,R)=>{ t.globalAlpha=0.1; for(let k=0;k<7;k++){ t.fillStyle=_fgCss(k%2?[255,255,255]:[0,0,0]); t.fillRect(0,R()*W,W,s*0.1); } t.globalAlpha=1; }, shadow:true},
+  crisp:{ring:(s,P)=>[P.ink, Math.max(0.9,s*0.016)]},
+  outline:{ring:(s)=>[[18,18,18], Math.max(1.6,s*0.055)]},
+  precise:{},
+  collage:{tex:(t,W,h,s,c,c2,P,R)=>{ t.strokeStyle=_fgCss(P.ink,0.22); t.lineWidth=Math.max(0.6,s*0.012); for(let y=R()*s*0.1;y<W;y+=s*0.09){ t.beginPath(); t.moveTo(0,y); t.lineTo(W*(0.6+0.4*R()),y); t.stroke(); } }, shadow:true, ring:(s,P)=>[P.ink, Math.max(0.9,s*0.02)]},
+  raster:{tex:(t,W,h,s,c,c2,P)=>{ t.fillStyle=_fgCss(P.light,0.55); t.fillRect(0,0,W,W); t.fillStyle=_fgCss(c); const g=s*0.14; for(let y=0;y<W;y+=g) for(let x=((y/g)&1)*g/2;x<W;x+=g){ t.beginPath(); t.arc(x,y,g*0.32,0,6.2832); t.fill(); } }, ring:(s)=>[[16,16,16], Math.max(1.6,s*0.055)]},
+  mosaic:{tex:(t,W,h,s,c,c2,P,R)=>{ const g=s*0.17; for(let y=0;y<W;y+=g) for(let x=0;x<W;x+=g){ if(R()<0.22) continue; const k=R(), q=k<0.5?_fgMix([212,170,70],[255,255,255],R()*0.3):k<0.75?c:k<0.88?c2:[240,236,226]; t.fillStyle=_fgCss(q); t.fillRect(x+g*0.1,y+g*0.1,g*0.8,g*0.8); } }, ring:(s)=>[[214,178,96], Math.max(1,s*0.025)]},
+  stain:{tex:(t,W,h,s)=>{ t.globalCompositeOperation='destination-out'; const g=t.createRadialGradient(h,h,s*0.1,h,h,s*1.25); g.addColorStop(0,'rgba(0,0,0,0.38)'); g.addColorStop(0.75,'rgba(0,0,0,0.15)'); g.addColorStop(1,'rgba(0,0,0,0)'); t.fillStyle=g; t.fillRect(0,0,W,W); t.globalCompositeOperation='source-over'; }, multiply:true, ring:(s,P,c)=>[_fgMix(c,[0,0,0],0.3), Math.max(0.8,s*0.02), 0.5]},
+  wash:{tex:(t,W,h,s,c,c2,P,R)=>{ for(let k=0;k<3;k++){ t.fillStyle=_fgCss(k===1?c2:_fgMix(c,[255,255,255],0.3),0.3); t.beginPath(); t.arc(h+(R()-0.5)*s*0.5,h+(R()-0.5)*s*0.5,s*(0.8+0.4*R()),0,6.2832); t.fill(); } }, ring:(s,P,c)=>[_fgMix(c,[0,0,0],0.45), Math.max(0.8,s*0.014)]},
+  bands:{tex:(t,W,h,s,c,c2,P)=>{ const L=[c,P.light,c2,P.light]; let k=0; t.globalAlpha=0.92; for(let r=s*1.9;r>s*0.1;r-=s*0.16){ t.fillStyle=_fgCss(L[k++%4]); t.beginPath(); t.arc(h,h,r,0,6.2832); t.fill(); } t.globalAlpha=1; }}
+};
+
+// ── COMPOSITION genes: where the forms stand, how large, and what is built under them ──
+function _fgLayout(comp, A, CW, CH, D, R){
+  const cn=A.cn, clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), PHI=0.6180339887;
+  const nM={water:22,wave:64,constellation:24,dance:21,axis:12,stripes:36,frieze:60,bands:64,concentric:30,golden:34,grid:16,infinity:110,fields:15,air:12,masses:30,membrane:34,columns:24,diagonal:16,cubist:26,circles:22,panel:12,squares:20,bulge:30,construct:12}[comp]||12;
+  const P=_kd2Phrases(A,nM), vm=P.map(p=>p.vmax).sort((a,b)=>a-b), rk=(p)=>vm.indexOf(p.vmax)/Math.max(1,vm.length-1);
+  const items=P.map((p,k)=>({t:p.t0, u:(p.a+p.b)/2/cn, reg:A.reg(p.top), rk:rk(p), pc:p.pc, pc2:p.pc2, k, main:1}));
+  const Ev=_kd2Events(A,Math.round(nM*1.6)).filter(e=>e.acc).slice(0,Math.round(nM*0.5));
+  Ev.forEach((e,j)=>items.push({t:e.t, u:e.t, reg:A.reg(e.top), rk:0.1, pc:((e.top%12)+12)%12, pc2:((e.top+7)%12), k:P.length+j, main:0}));
+  const N=items.length, under=[];
+  const size=(it,b)=>D*b*(it.main ? 0.55+0.75*it.rk : 0.4)*(0.85+0.3*R());
+  for(const it of items){ it.rot=(R()-0.5)*0.7; }
+  switch(comp){
+    case 'water': { const hy=CH*0.36;   // Monet: a horizon high, the forms afloat on the water, smaller toward it, each with its reflection
+      under.push((ctx,P)=>{ ctx.fillStyle=_fgCss(_fgMix(P.ground,P.light,0.35)); ctx.fillRect(0,0,CW,hy); const g=ctx.createLinearGradient(0,hy,0,CH); g.addColorStop(0,_fgCss(_fgMix(P.ground,P.ink,0.1))); g.addColorStop(1,_fgCss(_fgMix(P.ground,P.ink,0.32))); ctx.fillStyle=g; ctx.fillRect(0,hy,CW,CH-hy);
+        const r=_fgRng(5150); for(let k=0;k<70;k++){ const y=hy+(CH-hy)*Math.pow(r(),0.8), L=CW*(0.04+0.1*r())*(0.5+(y-hy)/(CH-hy)); ctx.fillStyle=_fgCss(r()<0.5?P.light:_fgMix(P.ground,P.ink,0.4),0.35); ctx.fillRect(r()*CW,y,L,Math.max(1,D*0.004)); } });
+      items.forEach(it=>{ const dep=(it.main?0.12+0.82*((it.k*PHI)%1):0.05+0.9*R()); it.y=hy+(CH-hy)*dep; it.x=CW*(0.08+0.84*it.u)+(R()-0.5)*CW*0.08; it.s=size(it,0.13)*(0.5+0.7*dep); it.rot*=0.4; it.refl=it.main; }); break; }
+    case 'wave': {   // Hokusai: the forms lie along a great wave rising from the lower left, cresting and curling over toward the right
+      const bump=(u)=>Math.exp(-Math.pow((u-0.6)/0.3,2)), crest=[CW*0.6,CH*0.26];
+      under.push((ctx,P)=>{ ctx.strokeStyle=_fgCss(P.ink,0.6); ctx.lineWidth=Math.max(1,D*0.003); ctx.beginPath(); ctx.moveTo(0,CH*0.88); ctx.lineTo(CW,CH*0.88); ctx.stroke(); });
+      items.forEach(it=>{ const u=it.u; let x=CW*(0.04+0.92*u), y=CH*(0.86-0.56*bump(u));
+        if(u>0.62){ const a=-Math.PI/2+(u-0.62)/0.38*Math.PI*1.25, rr=CW*0.22; x=crest[0]+Math.cos(a)*rr; y=crest[1]+rr+Math.sin(a)*rr; }
+        const off=(it.reg-0.5)*CH*0.24*(0.5+bump(u)); x+=(R()-0.5)*CW*0.05; y+=-off*0.6+(R()-0.5)*CH*0.04; it.x=x; it.y=y; it.s=size(it,0.1)*(0.65+0.8*bump(u)); it.rot=(u-0.5)*1.2+(R()-0.5)*0.4;
+        if(!it.main){ it.x=CW*(0.03+0.94*u); it.y=CH*(0.8+0.1*R()); it.s=size(it,0.07); }   // the quick notes: the sea at the foot of the wave
+      }); break; }
+    case 'constellation': {   // Miró: the forms strewn over the sky, joined in the order of the piece by a thin black wire
+      items.forEach((it,j)=>{ it.x=CW*(0.08+0.84*((0.5+j*0.7548776662+0.04*R())%1)); it.y=CH*(0.08+0.84*((0.5+j*0.5698402910+0.04*R())%1)); it.s=size(it,0.085); });
+      const main=items.filter(it=>it.main).sort((a,b)=>a.t-b.t); for(let j=1;j<main.length;j++){ const a=main[j-1], b=main[j]; b.wire=[a.x,a.y]; } break; }
+    case 'dance': {   // Haring: a frieze of three rows, the forms side by side, bobbing as they dance
+      const rows=3; items.forEach(it=>{ const f=clamp(it.u,0,0.9999)*rows, row=Math.floor(f); it.x=CW*(0.09+0.82*(f-row)); it.y=CH*((row+0.5)/rows)+Math.sin(it.u*40)*CH*0.035+(R()-0.5)*CH*0.02; it.s=size(it,0.11)*(it.main?1:0.8); it.rot=(R()-0.5)*0.35; }); break; }
+    case 'axis': {   // af Klint: one vertical axis, the forms mirrored across it, the loudest on the axis itself
+      under.push((ctx,P)=>{ ctx.strokeStyle=_fgCss(P.ink,0.35); ctx.lineWidth=Math.max(0.8,D*0.0022); ctx.beginPath(); ctx.moveTo(CW/2,CH*0.04); ctx.lineTo(CW/2,CH*0.96); ctx.stroke(); });
+      const add=[]; items.forEach(it=>{ it.y=CH*(0.08+0.84*it.u); it.s=size(it,0.11); if(it.main && it.rk>0.8){ it.x=CW/2; it.rot=0; } else { const dx=CW*(0.08+0.3*(1-it.reg)); it.x=CW/2-dx; it.rot=-0.3+(R()-0.5)*0.3; add.push(Object.assign({},it,{x:CW/2+dx, flip:1, k:it.k+500})); } }); items.push(...add); break; }
+    case 'stripes': {   // Riley: horizontal stripes, the forms in rows, close and even, as the piece runs
+      const rows=6; under.push((ctx,P)=>{ for(let r=0;r<rows;r++) if(r%2){ ctx.fillStyle=_fgCss(_fgMix(P.ground,P.ink,0.06)); ctx.fillRect(0,CH*r/rows,CW,CH/rows); } });
+      items.forEach(it=>{ const f=clamp(it.u,0,0.9999)*rows, row=Math.floor(f); it.x=CW*(0.05+0.9*(f-row)); it.y=CH*((row+0.5)/rows); it.s=Math.min(CH/rows*0.5, size(it,0.09)); it.rot=0; }); break; }
+    case 'frieze': {   // Pollock: three friezes read like a score, the forms swept along in one rhythm
+      items.forEach(it=>{ const f=clamp(it.u,0,0.9999)*3, row=Math.floor(f); it.x=CW*(0.04+0.92*(f-row)); it.y=CH*((row+0.2+0.6*R())/3); it.s=size(it,0.085); it.rot=(R()-0.5)*0.5; }); break; }
+    case 'bands': {   // Alma Thomas: narrow upright bands, the forms stacked down them as the piece plays
+      const C=8; items.forEach(it=>{ const f=clamp(it.u,0,0.9999)*C, col=Math.floor(f); it.x=CW*((col+0.5)/C)+(R()-0.5)*CW*0.02; it.y=CH*(0.05+0.9*(f-col)); it.s=Math.min(CW/C*0.5, size(it,0.07)); it.rot=(R()-0.5)*0.15; }); break; }
+    case 'concentric': {   // Stella: concentric bands round the middle, the forms ranged on them, the high voice inside
+      const cx=CW/2, cy=CH/2, M=Math.min(CW,CH)*0.46; under.push((ctx,P)=>{ for(let r=M*1.25,k=0;r>M*0.1;r-=M*0.16,k++){ ctx.strokeStyle=_fgCss(k%2?P.ink:_fgMix(P.ground,P.ink,0.2),0.1); ctx.lineWidth=M*0.07; ctx.beginPath(); ctx.arc(cx,cy,r,0,6.2832); ctx.stroke(); } });
+      items.forEach(it=>{ const ring=0.2+0.8*(1-it.reg), a=it.u*6.2832*2.2-Math.PI/2; it.x=cx+Math.cos(a)*M*ring*(CW/Math.min(CW,CH))*0.95; it.y=cy+Math.sin(a)*M*ring*(CH/Math.min(CW,CH))*0.95; it.s=size(it,0.1); it.rot=a+Math.PI/2; }); break; }
+    case 'golden': {   // RafFel: the forms on the golden spiral, the first the largest, winding in to its eye
+      const ex=CW*0.618, ey=CH*0.382, R0=Math.hypot(CW,CH)*0.46, b=Math.log(1.618)/(Math.PI/2);
+      under.push((ctx,P)=>{ ctx.strokeStyle=_fgCss(P.ink,0.4); ctx.lineWidth=Math.max(0.8,D*0.002); ctx.beginPath(); for(let k=0;k<=240;k++){ const th=k/240*Math.PI*5, r=R0*Math.exp(-b*th); const x=ex+Math.cos(th+2.4)*r, y=ey+Math.sin(th+2.4)*r; k?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.stroke(); });
+      items.forEach(it=>{ const th=it.u*Math.PI*5, r=R0*Math.exp(-b*th)*(it.main?0.92:0.6+0.6*R()); it.x=ex+Math.cos(th+2.4+(it.main?0:(R()-0.5)*0.8))*r; it.y=ey+Math.sin(th+2.4+(it.main?0:(R()-0.5)*0.8))*r; it.s=Math.max(D*0.02,D*0.2*Math.exp(-b*th*0.55))*(it.main?0.7+0.5*it.rk:0.4); }); break; }
+    case 'grid': {   // Mondrian: the black grid, a form set in a cell
+      const cols=4, rows=Math.round(cols*CH/CW); under.push((ctx,P)=>{ ctx.strokeStyle=_fgCss(P.ink); ctx.lineWidth=Math.max(2,D*0.012); for(let c=1;c<cols;c++){ ctx.beginPath(); ctx.moveTo(CW*c/cols,0); ctx.lineTo(CW*c/cols,CH); ctx.stroke(); } for(let r=1;r<rows;r++){ ctx.beginPath(); ctx.moveTo(0,CH*r/rows); ctx.lineTo(CW,CH*r/rows); ctx.stroke(); } });
+      items.forEach((it,j)=>{ const cell=Math.floor(clamp(it.u,0,0.9999)*cols*rows); it.x=CW*((cell%cols)+0.5)/cols; it.y=CH*(Math.floor(cell/cols)+0.5)/rows; it.s=Math.min(CW/cols,CH/rows)*(it.main?0.34:0.16); it.rot=0; }); break; }
+    case 'infinity': {   // Kusama: the forms all over, evenly, without end
+      items.forEach((it,j)=>{ it.x=CW*((0.5+j*0.7548776662)%1); it.y=CH*((0.5+j*0.5698402910)%1); it.s=size(it,0.045); }); break; }
+    case 'fields': {   // Rothko: stacked fields, the forms within them
+      under.push((ctx,P)=>{ const r=_fgRng(4410); for(let b=0;b<3;b++){ const c=_fgMix(P.c(A.pcCol((A.tonic+[0,7,4][b])%12,60),r()),P.ground,0.3); ctx.save(); ctx.shadowColor=_fgCss(c,0.9); ctx.shadowBlur=D*0.05; ctx.fillStyle=_fgCss(c,0.92); ctx.fillRect(CW*0.08,CH*(0.06+b*0.3),CW*0.84,CH*0.26); ctx.restore(); } });
+      items.forEach(it=>{ const b=Math.min(2,Math.floor(it.u*3)); it.x=CW*(0.18+0.64*R()); it.y=CH*(0.19+b*0.3)+(R()-0.5)*CH*0.08; it.s=size(it,0.12); it.rot=0; }); break; }
+    case 'columns': {   // Klimt: two or three tall columns of gold, the forms stacked up them, the high voice in the left one
+      const C=CW>CH?4:3, cw=CW/C; under.push((ctx,P)=>{ for(let c=0;c<C;c++){ ctx.fillStyle=_fgCss(_fgMix(P.ground,c%2?P.light:P.ink,0.14)); ctx.fillRect(cw*(c+0.18),0,cw*0.64,CH); ctx.strokeStyle=_fgCss(P.ink,0.35); ctx.lineWidth=Math.max(1,D*0.003); ctx.strokeRect(cw*(c+0.18),-2,cw*0.64,CH+4); } });
+      items.forEach(it=>{ const col=Math.min(C-1,Math.floor((1-it.reg)*C)); it.x=cw*(col+0.5)+(R()-0.5)*cw*0.32; it.y=CH*(0.05+0.9*((it.u+col*0.37)%1)); it.s=Math.min(cw*0.45,size(it,0.13)); it.rot=(R()-0.5)*0.3; }); break; }
+    case 'diagonal': {   // Kandinsky: the forms driven along two crossing diagonals, the loudest a large one on the golden point
+      under.push((ctx,P)=>{ ctx.strokeStyle=_fgCss(P.ink,0.75); ctx.lineWidth=Math.max(1,D*0.0028); ctx.beginPath(); ctx.moveTo(CW*0.04,CH*0.92); ctx.lineTo(CW*0.96,CH*0.1); ctx.moveTo(CW*0.1,CH*0.06); ctx.lineTo(CW*0.9,CH*0.86); ctx.stroke(); });
+      let top=null; items.forEach(it=>{ if(it.main && (!top || it.rk>top.rk)) top=it; });
+      items.forEach(it=>{ const up=it.reg>=0.5, u=it.u; if(up){ it.x=CW*(0.04+0.92*u); it.y=CH*(0.92-0.82*u); } else { it.x=CW*(0.1+0.8*u); it.y=CH*(0.06+0.8*u); } it.x+=(R()-0.5)*CW*0.08; it.y+=(R()-0.5)*CH*0.05; it.s=size(it,0.09); });
+      if(top){ top.x=CW*0.382; top.y=CH*0.3; top.s=D*0.2; } break; }
+    case 'cubist': {   // Picasso: the forms gathered into one faceted pyramid in the middle, overlapping, tilted, the planes of the ground behind
+      under.push((ctx,P)=>{ const r=_fgRng(7310); for(let k=0;k<9;k++){ ctx.fillStyle=_fgCss(_fgMix(P.ground,k%2?P.light:P.ink,0.12+0.1*r())); ctx.beginPath(); const cx=CW*(0.2+0.6*r()), cy=CH*(0.15+0.7*r()); for(let j=0;j<4;j++){ const a=j/4*6.2832+r()*0.8, rr=D*(0.2+0.25*r()); ctx.lineTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr); } ctx.closePath(); ctx.fill(); } });
+      items.forEach(it=>{ const a=it.u*6.2832*3.1, d=Math.pow(1-it.rk*0.7,1.2)*(it.main?0.36:0.46); const yy=0.55+Math.sin(a)*d*0.9; it.x=CW*(0.5+Math.cos(a)*d*(0.4+0.6*(yy))); it.y=CH*clamp(yy,0.08,0.94); it.s=size(it,0.13)*(1.2-0.5*d); it.rot=(R()-0.5)*1.2; }); break; }
+    case 'circles': {   // Delaunay: circular rhythms — the forms on rings round two centres, the high voice inside
+      const C1=[CW*0.36,CH*0.32], C2=[CW*0.64,CH*0.7], M=D*0.42; under.push((ctx,P)=>{ for(const c of [C1,C2]) for(let r=M,k=0;r>M*0.12;r-=M*0.15,k++){ ctx.strokeStyle=_fgCss(k%2?P.ink:P.light,0.12); ctx.lineWidth=M*0.07; ctx.beginPath(); ctx.arc(c[0],c[1],r,0,6.2832); ctx.stroke(); } });
+      items.forEach(it=>{ const c=it.u<0.5?C1:C2, a=(it.u*2%1)*6.2832*1.6, rr=M*(0.18+0.8*(1-it.reg)); it.x=c[0]+Math.cos(a)*rr; it.y=c[1]+Math.sin(a)*rr; it.s=size(it,0.085); it.rot=a; }); break; }
+    case 'membrane': {   // Sam Francis: the piece winds over the white and the forms lie pressed together along it, the white left open beside
+      const nC=3, nR=Math.max(3,Math.round(nC*CH/CW)), path=_md19Gilbert(nC,nR), NP=path.length, way=path.map(([gx,gy])=>[(gx+0.5+(R()-0.5)*0.6)*CW/nC,(gy+0.5+(R()-0.5)*0.6)*CH/nR]);
+      const at=(u)=>{ const f=clamp(u,0,0.9999)*(NP-1), k=Math.floor(f), t=f-k, a=way[k], b=way[Math.min(NP-1,k+1)]; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]; };
+      items.forEach(it=>{ const [x,y]=at(it.u); it.x=x+(R()-0.5)*D*0.14; it.y=y+(R()-0.5)*D*0.14+(it.reg-0.5)*D*0.08; it.s=size(it,0.11); }); break; }
+    case 'masses': {   // Mitchell: the forms crowded into three masses, the canvas breathing between them
+      const Ms=[[0.3,0.28],[0.68,0.52],[0.36,0.78]].map(([a,b])=>[CW*(a+(R()-0.5)*0.08),CH*(b+(R()-0.5)*0.06)]);
+      items.forEach(it=>{ const m=Ms[Math.min(2,Math.floor(it.u*3))], g=()=>(R()+R()+R()-1.5)/1.5; it.x=m[0]+g()*D*0.27; it.y=m[1]+g()*D*0.2; it.s=size(it,0.11); it.rot=-0.9+(R()-0.5)*0.8; }); break; }
+    case 'panel': {   // Lichtenstein: comic panels, heavy borders, the forms inside them as the story runs, one panel in his dots
+      const pan=[[0.04,0.04,0.92,0.44],[0.04,0.51,0.44,0.45],[0.52,0.51,0.44,0.45]];
+      under.push((ctx,P)=>{ pan.forEach(([x,y,w,h],k)=>{ ctx.fillStyle=_fgCss(k===1?_fgMix(P.light,P.ink,0.04):P.light); ctx.fillRect(CW*x,CH*y,CW*w,CH*h); if(k===2){ ctx.fillStyle=_fgCss(_fgMix(P.ground,[220,40,40],0.25)); const g=D*0.022; for(let yy=CH*y;yy<CH*(y+h);yy+=g) for(let xx=CW*x+((yy/g)&1)*g/2;xx<CW*(x+w);xx+=g){ ctx.beginPath(); ctx.arc(xx,yy,g*0.28,0,6.2832); ctx.fill(); } }
+        ctx.strokeStyle=_fgCss([16,16,16]); ctx.lineWidth=Math.max(2,D*0.01); ctx.strokeRect(CW*x,CH*y,CW*w,CH*h); }); });
+      items.forEach(it=>{ const k=it.u<0.45?0:it.u<0.72?1:2, [x,y,w,h]=pan[k]; it.x=CW*(x+w*(0.15+0.7*R())); it.y=CH*(y+h*(0.18+0.64*R())); it.s=Math.min(CW*w,CH*h)*(it.main?0.16+0.12*it.rk:0.08); }); break; }
+    case 'squares': {   // Klee: a ground of magic squares in his earths, the forms set on them
+      const cols=5, rows=Math.round(cols*CH/CW), cw=CW/cols, ch=CH/rows;
+      under.push((ctx,P)=>{ const r=_fgRng(9177); for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){ ctx.fillStyle=_fgCss(_fgMix(P.c(A.pcCol(((x*7+y*5)%12),60),r()),P.ground,0.55+0.25*r())); ctx.fillRect(x*cw,y*ch,cw+1,ch+1); } });
+      items.forEach(it=>{ const cell=Math.floor(clamp(it.u,0,0.9999)*cols*rows); it.x=cw*((cell%cols)+0.5)+(R()-0.5)*cw*0.2; it.y=ch*(Math.floor(cell/cols)+0.5)+(R()-0.5)*ch*0.2; it.s=Math.min(cw,ch)*(it.main?0.3+0.12*it.rk:0.16); }); break; }
+    case 'bulge': {   // Vasarely: a regular grid, every form in its cell, swelling toward the middle as if the canvas breathed out
+      const cols=6, rows=Math.round(cols*CH/CW), cw=CW/cols, ch=CH/rows, cx=CW/2, cy=CH*0.48, mx=Math.hypot(CW/2,CH/2);
+      under.push((ctx,P)=>{ for(let y=0;y<rows;y++) for(let x=0;x<cols;x++) if((x+y)%2){ ctx.fillStyle=_fgCss(_fgMix(P.ground,P.ink,0.1)); ctx.fillRect(x*cw,y*ch,cw,ch); } });
+      items.forEach(it=>{ const cell=Math.floor(clamp(it.u,0,0.9999)*cols*rows), x=cw*((cell%cols)+0.5), y=ch*(Math.floor(cell/cols)+0.5), d=Math.hypot(x-cx,y-cy)/mx; it.x=x; it.y=y; it.s=Math.min(cw,ch)*0.46*(0.45+0.6*(1-d))*(it.main?1:0.6); it.rot=0; }); break; }
+    case 'construct': {   // Bauhaus: the golden construction — its lines drawn, the loud forms where they cross, the others along them
+      const X=[0.382,0.618], Y=[0.382,0.618];
+      under.push((ctx,P)=>{ ctx.strokeStyle=_fgCss(P.ink,0.5); ctx.lineWidth=Math.max(1,D*0.0025); for(const x of X){ ctx.beginPath(); ctx.moveTo(CW*x,0); ctx.lineTo(CW*x,CH); ctx.stroke(); } for(const y of Y){ ctx.beginPath(); ctx.moveTo(0,CH*y); ctx.lineTo(CW,CH*y); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(0,CH); ctx.lineTo(CW,0); ctx.stroke(); });
+      const cross=[[X[0],Y[0]],[X[1],Y[1]],[X[1],Y[0]],[X[0],Y[1]]]; let ci=0; const mains=items.filter(i=>i.main).sort((a,b)=>b.rk-a.rk);
+      items.forEach(it=>{ if(it.main && mains.indexOf(it)<4){ const c=cross[ci++]; it.x=CW*c[0]; it.y=CH*c[1]; it.s=D*(0.17-0.025*ci); return; } const v=R()<0.5, f=it.u; if(v){ it.x=CW*X[(it.k)%2]; it.y=CH*(0.05+0.9*f); } else { it.x=CW*(0.05+0.9*f); it.y=CH*Y[(it.k)%2]; } it.s=size(it,0.06); }); break; }
+    default: {   // the air: few forms, far apart
+      items.forEach((it,j)=>{ it.x=CW*(0.1+0.8*((j*PHI+0.2)%1)); it.y=CH*(0.08+0.84*it.u); it.s=size(it,0.14); }); }
+  }
+  return {items, under};
+}
+
+// a painting is drawn once and kept: as the piece plays only the forms that have come since are added (a seek back or another
+// painting starts it again); masks and textures are made at the canvas's own resolution, so the forms stay sharp
+const _FG_KEEP=[];
+function _fgPaint(ctx,CW,CH,chords,lim,gc,ss,mode,F,ph,noGround){
+  const tr=(ctx.getTransform ? ctx.getTransform() : null), sx=Math.min(3,Math.max(1,tr ? Math.hypot(tr.a,tr.b) : 1)), sy=Math.min(3,Math.max(1,tr ? Math.hypot(tr.c,tr.d) : 1));
+  const key=[F.keys.join(','),ph,ss|0,CW,CH,mode,chords.length,sx.toFixed(3),sy.toFixed(3),noGround?1:0].join('|');
+  let K=_FG_KEEP.find(q=>q.key===key && q.chords===chords);
+  if(!K){
+    const keys=F.keys, D=Math.min(CW,CH), bw=mode==='bw', A=_kd2Analyze(chords,gc,mode); if(!A.cn) return;
+    const deal=_fgDeal(keys,ph), gene=(i)=>_FG[keys[i]]||_FG.raffel;
+    const form=deal.form>=0 ? gene(deal.form).form : null, hand=_FG_HAND[gene(deal.hand).hand]||_FG_HAND.flat, comp=gene(deal.comp).comp, PAL=_fgColour(gene(deal.col).col,A,bw);
+    const L=_fgLayout(comp,A,CW,CH,D,_fgRng((ss|0)^0x5f3759df)), items=L.items.slice().sort((a,b)=>(a.t-b.t)||(a.k-b.k));
+    const big=CW*sx*CH*sy>4.2e6;   // a poster: drawn straight, not kept
+    K={key, chords, A, D, form, hand, PAL, L, items, Fm:Object.assign({},F,{edge:0,alpha:1,layers:1,fs:'A',tr:null,_S:D}), n:0, can:null, cx:null, big, deal:{form:keys[deal.form]||'-',hand:keys[deal.hand],comp:keys[deal.comp],col:keys[deal.col]}};
+    if(!big){ _FG_KEEP.unshift(K); if(_FG_KEEP.length>3) _FG_KEEP.pop(); }
+  }
+  try{ globalThis.__FG={deal:K.deal}; }catch(_){}
+  const cn=K.A.cn, reveal=Math.max(1,Math.min(cn,lim|0))/cn; let want=0; while(want<K.items.length && K.items[want].t<=reveal+1e-9) want++;
+  const start=(g)=>{ if(!noGround){ g.fillStyle=_fgCss(K.PAL.ground); g.fillRect(0,0,CW,CH); } g.save(); for(const u of K.L.under) u(g,K.PAL); g.restore(); };
+  if(K.big){ start(ctx); for(let i=0;i<want;i++) _fgItem(ctx,K,K.items[i],ss,sx); _setCurE(0.5); return; }
+  if(!K.can || want<K.n){ if(!K.can){ K.can=(typeof document!=='undefined') ? document.createElement('canvas') : new OffscreenCanvas(1,1); } K.can.width=Math.ceil(CW*sx); K.can.height=Math.ceil(CH*sy); K.cx=K.can.getContext('2d'); K.cx.setTransform(sx,0,0,sy,0,0); start(K.cx); K.n=0; }
+  for(let i=K.n;i<want;i++) _fgItem(K.cx,K,K.items[i],ss,sx); K.n=want;
+  ctx.drawImage(K.can,0,0,CW,CH); _setCurE(0.5);
+}
+function _fgItem(ctx,K,it,ss,k){
+  const PAL=K.PAL, hand=K.hand, A=K.A, D=K.D, kinds=K.form ? Object.entries(K.form) : [['blob',1]];
+  const r=_fgRng(((ss|0)*31+it.k*7919+1013)>>>0); r(); let a=r()*kinds.reduce((q,e)=>q+e[1],0), kind=kinds[0][0]; for(const [kk,w] of kinds){ a-=w; if(a<=0){ kind=kk; break; } }
+  const s=Math.max(2,it.s)*(/^pc/.test(kind)?1.9:1), line=_FG_LINE.test(kind), c=PAL.c(A.pcCol(it.pc,60),r()), c2=PAL.c(A.pcCol(it.pc2,60),r());
+  if(it.wire){ ctx.strokeStyle=_fgCss(PAL.ink,0.85); ctx.lineWidth=Math.max(0.8,D*0.0022); ctx.beginPath(); ctx.moveTo(it.wire[0],it.wire[1]); ctx.lineTo(it.x,it.y); ctx.stroke(); if(r()<0.5){ ctx.fillStyle=_fgCss(PAL.ink); ctx.beginPath(); ctx.arc((it.wire[0]+it.x)/2,(it.wire[1]+it.y)/2,D*0.006,0,6.2832); ctx.fill(); } }
+  const half=Math.ceil(s*(line?2.4:1.75))+8, W=half*2, Wp=Math.ceil(W*k), x0=it.x-half, y0=it.y-half;
+  const fs=((ss|0)*131+it.k*104729+77)>>>0, draw=(g,cA,cB)=>{ g.setTransform(k,0,0,k,0,0); g.translate(half,half); if(it.flip) g.scale(-1,1); g.fillStyle=cA; g.strokeStyle=cA;
+    try{ if(_FG_FORM[kind]){ g.rotate(it.rot||0); _FG_FORM[kind](g,s,cA,cB,_fgRng(fs)); } else _fuMark(g,kind,s,cA,K.Fm,_fgRng(fs),it.rot||0,cB); }catch(e){ g.beginPath(); g.arc(0,0,s,0,6.2832); g.fill(); }
+    g.setTransform(1,0,0,1,0,0); g.globalAlpha=1; g.globalCompositeOperation='source-over'; };
+  const [M,m]=_fgCan('M',Wp); draw(m,'rgb(0,0,0)','rgb(0,0,0)');
+  const [T,t]=_fgCan('T',Wp); draw(t,_fgCss(c),_fgCss(c2)); if(hand.tex){ t.setTransform(k,0,0,k,0,0); hand.tex(t,W,half,s,c,c2,PAL,r); t.setTransform(1,0,0,1,0,0); t.globalAlpha=1; } t.globalCompositeOperation='destination-in'; t.drawImage(M,0,0);
+  ctx.save();
+  if(hand.veil){ const off=10000; ctx.shadowColor=_fgCss(c,0.7); ctx.shadowBlur=s*0.35*k; ctx.shadowOffsetX=off*k; ctx.drawImage(T,x0-off,y0,W,W); ctx.shadowBlur=s*0.12*k; ctx.globalAlpha=0.75; ctx.drawImage(T,x0-off,y0,W,W); ctx.shadowColor='rgba(0,0,0,0)'; ctx.shadowOffsetX=0; ctx.globalAlpha=0.35; ctx.drawImage(T,x0,y0,W,W); }
+  else if(hand.glow){ ctx.globalCompositeOperation=(PAL.ground[0]+PAL.ground[1]+PAL.ground[2])<300 ? 'lighter' : 'source-over'; ctx.shadowColor=_fgCss(c,0.9); ctx.shadowBlur=s*0.8*k; ctx.drawImage(T,x0,y0,W,W); ctx.shadowBlur=0; ctx.globalCompositeOperation='source-over'; ctx.drawImage(T,x0,y0,W,W); }
+  else { if(hand.shadow){ ctx.shadowColor='rgba(20,16,12,0.32)'; ctx.shadowBlur=s*0.1*k; ctx.shadowOffsetX=s*0.05*k; ctx.shadowOffsetY=s*0.06*k; } if(hand.multiply) ctx.globalCompositeOperation='multiply'; ctx.drawImage(T,x0,y0,W,W); }
+  ctx.restore();
+  if(hand.ring){ const [rc,rd,ra]=hand.ring(s,PAL,c); ctx.drawImage(_fgRing(M,Wp,rc,rd*k,ra),x0,y0,W,W); }
+  if(hand.after){ ctx.save(); hand.after(ctx,it,s,PAL,r,c); ctx.restore(); }
+  if(it.refl){ ctx.save(); ctx.globalAlpha=0.24; ctx.translate(it.x,it.y+s*1.7); ctx.scale(1,-0.55); ctx.drawImage(T,-half,-half,W,W); ctx.restore(); }
+}
+
 function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseIndex, keys, noGround){
   const F = fuseDNA(keys, phaseIndex); if(!F || !chords || !chords.length) return;
   const _E = F.fs==='E';   // one painter (see FUSION STYLE · A / E)
   const ss = (sessionSeed|0) ^ ((phaseIndex|0)*7919);
+  if(F.fs==='G'){ _fgPaint(ctx,CW,CH,chords,lim,gc,ss,mode,F,phaseIndex|0,!!noGround); return; }   // Genesis: a new painter of the parents' best genes (see GENESIS)
   const S = Math.min(CW,CH), n = chords.length; F._S = S;
   // samples of every parent's real engine for this song / seed / variant
   const SM = F.keys.map((k,i)=>_fuSample(k, chords, gc, sessionSeed, mode, F.phs[i]));
