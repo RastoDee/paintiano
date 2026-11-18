@@ -84,7 +84,8 @@ jobs:
 
   build:
     if: ${{ !contains(github.event.head_commit.message, '[metadata]') && !contains(github.event.head_commit.message, '[screens]') && !contains(github.event.head_commit.message, '[asc]') }}
-    runs-on: macos-latest
+    # Xcode 27 / the iOS 27 SDK: App Store Connect requires it for uploads from April 2027 (ITMS-90725); macos-latest still has Xcode 26
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
