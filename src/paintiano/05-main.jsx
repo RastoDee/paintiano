@@ -5180,12 +5180,26 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(to.md){ if(to.md!==mode && !palGoldRef.current && setupPalettes.includes(to.md)){ kontraAutoRef.current=false; setShowColorPalette(false); setCustomArmed(false); setMode(to.md); } }   // the palette it had (a gold palette stays)
       else if(pal && !palGoldRef.current) _fuRollPal(true);
       setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
+  // A Fusion's ← (Nov 2026): first this very crossing — the same painters in the same variants — in the other styles that are on
+  // (Collage → Synthesis → Genesis, as a tap on the style would show it; the palette stays), and only then a new crossing is drawn,
+  // whose style comes as it comes — and from it again the others. → goes back through all of them, each as it was.
+  const fuCycleRef = useRef({sig:'', seen:[]});
+  const _fuStyleStep = ()=>{ try{
+      if(viewMode==='image' || sigActiveRef.current || style===null || !painterStage.length || fuStyleNow.length<2) return null;
+      const fa=_fusionAddr(_jamStage(), phaseIndexRef.current|0); if(!fa) return null;
+      const sig=fa.keys.join()+'|'+fa.phs.join(','), cur=_fsNorm(fa.fs), C=fuCycleRef.current;
+      if(C.sig!==sig){ C.sig=sig; C.seen=[cur]; } else if(C.seen.indexOf(cur)<0) C.seen.push(cur);
+      let nx=null, x=cur; for(let k=0;k<2;k++){ x=_fsNext(x,'art'); if(fuStyleNow.indexOf(x)>=0 && C.seen.indexOf(x)<0){ nx=x; break; } }
+      if(!nx) return null; C.seen.push(nx);
+      return { keys:fa.keys.slice(), phs:fa.phs.slice(), fs:nx };
+    }catch(_){ return null; } };
   const _variantNext = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal); const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
     const sig = viewMode!=='image' && !!sigActiveRef.current;
     const snap = sig ? {..._variantSnap(), look:_stLookNow()} : _variantSnap();
     if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); if(v.look){ H.keep=true; _variantLook(v.look); } else { if(sig) H.keep=true; _variantPut(v); } return true; }
     if(pal) stUpPalRef.current=Date.now();   // the Studio rolls the palette itself, once (the Fusion's own roll stands down)
-    const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current) _fuRollPal(true); } return ok; };
+    const fst=_fuStyleStep(); if(fst){ setPhaseIndex(fst.phs[0]|0); _setFuRoll(fst); }   // the same crossing in the next style
+    const ok=fst ? true : _variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current && !fst) _fuRollPal(true); } return ok; };
   const _variantBack = ()=>{ if(viewMode==='image') return _jamVarStep(-1); const H=varHistRef.current; if((H.key!==_varKey() && !H.keep) || !H.st.length) return false;
     const v=H.st.pop(); (H.fw || (H.fw=[])).push(v.look ? {..._variantSnap(), look:_stLookNow()} : _variantSnap()); if(H.fw.length>30) H.fw.shift();
     if(v.look){ H.keep=true; _variantLook(v.look); } else _variantPut(v); return true; };
@@ -17968,7 +17982,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               return ks.map(nm).join(' × ')+tail;
             }
             const _fa=_fusionAddr(_jamStage(), paintPhase);
-            if(_fa && jamOn && jamAll && jamPins.length) return (<>{_fa.keys.map((k,i)=>(<span key={k}>{i>0?' × ':''}<span style={{color:jamPins.includes(k)?'#c9a84c':'rgba(242,238,232,.85)'}}>{_painterLabel(k)+' v'+_fa.phs[i]}</span></span>))}{' · '+mode}</>);
+            if(_fa && jamOn && jamAll && jamPins.length) return (<>{_fa.keys.map((k,i)=>(<span key={k}>{i>0?' × ':''}<span style={{color:jamPins.includes(k)?'#c9a84c':'rgba(242,238,232,.85)'}}>{_painterLabel(k)+' v'+_fa.phs[i]}</span></span>))}{' · '+mode+((_fa.fs==='E' || _fa.fs==='G') ? ' · '+_fa.fs : '')}</>);
             if(_fa) return _fa.keys.map((k,i)=>_painterLabel(k)+' v'+_fa.phs[i]).join(' × ')+' · '+mode+((_fa.fs==='E' || _fa.fs==='G') ? ' · '+_fa.fs : '');
             const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null);
             return (_k ? (STYLE_INSPIRED[_k]||_k) : '—')+' · v'+(style?(phaseIndex|0):(shufVariant|0))+' · '+mode;
