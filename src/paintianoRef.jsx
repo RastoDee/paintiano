@@ -9900,6 +9900,37 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
 // one before, winding in to the eye — and the piece laid into it in order: its first passage in the largest square, its end in
 // the eye. Each square is its passage tone by tone: rings round the spiral's pivot, from the corner outward as the passage goes,
 // each in its tone's colour, over a wash of the passage's own colour; the gold spiral draws itself through them as it plays.
+// RafFel · Sunflower 137.5° (Nov 2026): every note a seed, each turned the golden angle from the one before and set out by the
+// square root of its number (Vogel) — the head grows from its heart outward as the piece plays, its Fibonacci spirals (21, 34,
+// 55 …) showing by themselves, traced in gold. A seed is its note's colour, as large as the note is long, as bright as it is loud.
+function _rfSunflower(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
+  const prog=Math.max(1,Math.min(lim,chords.length))/chords.length; chords=chords0||chords;   // the seeds are every note of the whole piece, not the thinned-out sample
+  const cn=chords.length, N=Math.max(1,Math.round(prog*cn)), S=Math.min(CW,CH), PHI=(1+Math.sqrt(5))/2, GA=Math.PI*2*(1-1/PHI), GOLD=[214,180,96];
+  const css=(c,a)=>a===undefined?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  // ── the night, tinted by the opening chord
+  const c0=chords[0], n0=(c0&&(c0.n||c0.notes))||[]; let g0=[40,30,50]; if(n0.length){ const m=n0[0].m!==undefined?n0[0].m:n0[0]; g0=gc(m,80); }
+  ctx.fillStyle=`rgb(${(g0[0]*0.08+6)|0},${(g0[1]*0.08+5)|0},${(g0[2]*0.08+12)|0})`; ctx.fillRect(0,0,CW,CH);
+  // ── the seeds: every note of the piece, in order (at most ~1600 — a long piece keeps every n-th)
+  const seeds=[]; for(let i=0;i<cn;i++){ const ch=chords[i], ns=(ch&&(ch.n||ch.notes))||[]; for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt; seeds.push({i, m, v:nt.v!==undefined?nt.v:80, d:nt.durMs||400}); } }
+  let sd; if(seeds.length>=700){ const stepK=Math.max(1,Math.ceil(seeds.length/1600)); sd=seeds.filter((_,k)=>k%stepK===0); }
+  else { const rep=Math.ceil(700/Math.max(1,seeds.length)); sd=[]; for(const q of seeds){ const n=Math.max(1,Math.min(rep*2,Math.round(rep*Math.min(1.6,q.d/900)/0.6))); for(let j=0;j<n;j++) sd.push(q); } }   // a sparse piece: a long note sows more seeds — the head stays full
+  const T=sd.length; if(!T) return;
+  const hx=CW/2, hy=CH*(1-1/PHI)+CH*0.06;   // the heart a little above the middle — the golden section of the height
+  const Rm=Math.hypot(Math.max(hx,CW-hx), Math.max(hy,CH-hy))*1.02, cc=Rm/Math.sqrt(T+0.5);
+  const pos=(k)=>{ const r=cc*Math.sqrt(k+0.5), a=k*GA; return [hx+Math.cos(a)*r, hy+Math.sin(a)*r]; };
+  const shown=sd.filter(q=>q.i<N).length;
+  // ── the parastichies: each seed joined to its 21st and 34th neighbour — the spirals the golden angle makes by itself
+  ctx.lineCap='round'; ctx.lineWidth=Math.max(0.8,S*0.0014);
+  for(const st of [21,34]){ ctx.strokeStyle=css(GOLD,st===21?0.22:0.14); ctx.beginPath(); for(let k=st;k<shown;k++){ const [x0,y0]=pos(k-st), [x1,y1]=pos(k); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); } ctx.stroke(); }
+  // ── the seeds
+  for(let k=0;k<shown;k++){ const q=sd[k], [x,y]=pos(k), c=gc(q.m,q.v), vel=Math.min(1,q.v/110), dur=Math.min(1.6,q.d/900);
+    const grow=0.86+0.28*Math.sqrt(k/T), r=cc*(0.47+0.1*Math.min(1,dur))*grow, b=0.62+0.55*vel, cl=c.map(v=>Math.min(255,v*b)), a=k*GA;
+    ctx.fillStyle=css(cl.map(v=>v*0.42),0.95); ctx.beginPath(); ctx.ellipse(x,y,r*1.08,r*0.86,a,0,7); ctx.fill();   // the seed's rim, a shade darker
+    ctx.fillStyle=css(cl,0.96); ctx.beginPath(); ctx.ellipse(x,y,r*0.86,r*0.66,a,0,7); ctx.fill(); }
+  // ── the heart, gold
+  const hr=cc*1.6; const hg=ctx.createRadialGradient(hx,hy,0,hx,hy,hr); hg.addColorStop(0,css([250,232,170],0.9)); hg.addColorStop(1,css(GOLD,0)); ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(hx,hy,hr,0,7); ctx.fill();
+  _setCurE(0.5);
+}
 function _rfGolden(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const cn=chords.length, N=Math.max(1,Math.min(lim,cn)), S=Math.min(CW,CH), PHI=(1+Math.sqrt(5))/2, GOLD=[214,180,96];
   const chordCol=(i,mul)=>{ const idx=Math.min(cn-1,Math.max(0,i)); const chord=chords[idx]; _setCurE(chord&&chord._E); const notes=chord&&(chord.n||chord.notes); if(!notes||!notes.length) return [200,150,120]; let R=0,G=0,B=0,k=0; for(const note of notes){ const m=note.m!==undefined?note.m:note, v=note.v!==undefined?note.v:80; const c=gc(m,v); R+=c[0]; G+=c[1]; B+=c[2]; k++; } const q=mul===undefined?1:mul; return [Math.min(255,R/k*q),Math.min(255,G/k*q),Math.min(255,B/k*q)]; };
@@ -9917,7 +9948,7 @@ function _rfGolden(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     if(s<S*0.018) break; sq.push(q); }
   // ── the piece shared out by the squares' sides (each passage as long as its square is wide)
   // the loudest tones of the piece (its top ~8 %) are laid in gold — the accents the ear remembers
-  const vs=[]; for(let i=0;i<cn;i+=Math.max(1,(cn/400)|0)) vs.push(meta(i).vel); vs.sort((a,b)=>a-b); const vGold=Math.max(0.62, vs[Math.floor(vs.length*0.92)]||1);
+  const vs=[]; for(let i=0;i<cn;i+=Math.max(1,(cn/400)|0)) vs.push(meta(i).vel); vs.sort((a,b)=>a-b); const vGold=Math.max(0.62, vs[Math.floor(vs.length*0.94)]||1);
   const tot=sq.reduce((a,q)=>a+q.s,0); let acc0=0; for(const q of sq){ q.i0=Math.round(acc0/tot*cn); acc0+=q.s; q.i1=Math.max(q.i0+1,Math.round(acc0/tot*cn)); }
   sq[sq.length-1].i1=cn;
   ctx.lineCap='butt';
@@ -9929,9 +9960,10 @@ function _rfGolden(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const wg=ctx.createRadialGradient(q.cx,q.cy,q.s*0.05,q.cx,q.cy,q.s*1.42); wg.addColorStop(0,css(mc.map(v=>v*0.55),0.55)); wg.addColorStop(0.72,css(mc.map(v=>v*0.28),0.5)); wg.addColorStop(1,css(mc.map(v=>v*0.12),0.45));
     ctx.fillStyle=wg; ctx.fillRect(q.x,q.y,q.s,q.s);
     // the passage tone by tone: rings from the pivot out to the spiral
-    const step=q.s*0.96/len;
+    const step=q.s*0.96/len; let lastG=-9;
     for(let i=q.i0;i<upto;i++){ const u=(i-q.i0+0.5)/len, r=q.s*0.04+u*q.s*0.96, m=meta(i);
-      const gold=m.vel>=vGold; ctx.strokeStyle=gold ? css([240,212,132],0.85) : css(chordCol(i,0.72+0.45*m.vel),0.45+0.45*m.vel); ctx.lineWidth=Math.max(0.8,Math.min(q.s*0.08,step*(0.55+0.7*Math.min(1,m.dur))));
+      const gold=m.vel>=vGold && i-lastG>=3; if(gold) lastG=i;   // a gold line, never a gold block: at most every third ring
+      ctx.strokeStyle=gold ? css([244,218,140],0.9) : css(chordCol(i,0.72+0.45*m.vel),0.45+0.45*m.vel); ctx.lineWidth=Math.max(0.8,Math.min(q.s*0.08,step*(gold ? 0.45 : 0.55+0.7*Math.min(1,m.dur))));
       ctx.beginPath(); ctx.arc(q.cx,q.cy,r,q.a0,q.a0+Math.PI/2); ctx.stroke(); }
     ctx.restore();
     // the square's edge, a gold hairline
@@ -10149,7 +10181,8 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===2){
+  if(pick===2){ _rfSunflower(ctx,CW,CH,chords,lim,gc,ss,mode,_chords0); return; }   // Sunflower 137.5° (the spiral thread parked at 922)
+  if(pick===922){
     // — 3 · NIŤ — clean coloured lines along the golden-angle spiral —
     const C1 = S*0.0135*(0.9+0.35*dnaD);
     ctx.lineCap='round'; ctx.lineJoin='round';
