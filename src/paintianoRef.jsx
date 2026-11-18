@@ -46151,6 +46151,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
   // For You switched off (its lit tab tapped again): back to the first screen — the paintings paint themselves, silent and quick, one after another
   const _feedOff = ()=>{ if(feedAt<0) return; const c=feedCards[feedAt]; feedResumeRef.current=null; setFeedIntro(null); setFeedNeedTap(false);
+    try{ liveOutRef.current=_feedSnap()||null; }catch(_){ liveOutRef.current=null; } if(c && c.piece!=null && c.piece!=='own') livePrevRef.current=c.piece; setLiveHome(h=>({i:h.i+1, k:Date.now()}));   // the painting you leave fades into the next one — not the one you just heard
     if(c && c.piece==='own' && feedLoaded!==null) _feedExit(); else { _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; }
     setHomeSide(null); setLhBack(true); _stBuzz(8); };
   const _feedStart = (want, first)=>{
