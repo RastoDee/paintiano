@@ -3862,6 +3862,18 @@ function PaintianoApp() {
   // proper names — those are not translated.)
   const STYLE_INSPIRED = {raffel:'RafFel',lichtenstein:'Roy Lichtenstein',klee:'Paul Klee',delaunay:'Robert Delaunay',picasso:'Picasso',kusama:'Kusama',pollock:'Pollock',kandinsky:'Kandinsky',miro:'Miró',mondrian:'Mondrian',bauhaus:'Bauhaus',rothko:'Rothko',matisse:'Matisse',bulge:'Vasarely',arcs:'Stella',bloom:'Sam Francis',spiral:'Hilma af Klint',gold:'Gustav Klimt',pop:'Keith Haring',wave:'Bridget Riley',mitchell:'Joan Mitchell',monet:'Claude Monet',hokusai:'Katsushika Hokusai',thomas:'Alma Thomas',mosaic:'Mosaic',notes:'Notes'}
 const COMPOSER_INSPIRED = {glass:'Philip Glass',satie:'Erik Satie',chopin:'Fryderyk Chopin',vine:'Carl Vine',gershwin:'George Gershwin',yiruma:'Yiruma',bach:'J. S. Bach',beethoven:'Ludwig van Beethoven',debussy:'Claude Debussy',rachmaninov:'Sergei Rachmaninov',einaudi:'Ludovico Einaudi',hisaishi:'Joe Hisaishi',mozart:'Wolfgang Amadeus Mozart',schubert:'Franz Schubert',tchaikovsky:'Pyotr Ilyich Tchaikovsky'};
+// the two forms of every composer (Nov 2026): his first, and the second (← → on a picture with him alone) — their names, 9 languages
+const COMPOSER_FORM_NAMES = {
+  EN:{glass:['Étude','Metamorphosis'],satie:['Gymnopédie','Gnossienne'],chopin:['Nocturne','Waltz'],vine:['Toccata','Elegy'],gershwin:['Stride','Blues'],yiruma:['Ballad','Rain'],bach:['Invention','Prelude'],beethoven:['Sonata','Bagatelle'],debussy:['Images','Arabesque'],rachmaninov:['Prelude','Vocalise'],einaudi:['Ostinato','Pulse'],hisaishi:['Waltz','Summer'],mozart:['Sonata','Rondo'],schubert:['Impromptu','Serenade'],tchaikovsky:['Barcarolle','Trepak']},
+  SK:{glass:['Etuda','Metamorfóza'],satie:['Gymnopédia','Gnossienne'],chopin:['Nokturno','Valčík'],vine:['Toccata','Elégia'],gershwin:['Stride','Blues'],yiruma:['Balada','Dážď'],bach:['Invencia','Prelúdium'],beethoven:['Sonáta','Bagatela'],debussy:['Obrazy','Arabeska'],rachmaninov:['Prelúdium','Vokalíza'],einaudi:['Ostinato','Pulz'],hisaishi:['Valčík','Leto'],mozart:['Sonáta','Rondo'],schubert:['Impromptu','Serenáda'],tchaikovsky:['Barkarola','Trepak']},
+  DE:{glass:['Etüde','Metamorphose'],satie:['Gymnopédie','Gnossienne'],chopin:['Nocturne','Walzer'],vine:['Toccata','Elegie'],gershwin:['Stride','Blues'],yiruma:['Ballade','Regen'],bach:['Invention','Präludium'],beethoven:['Sonate','Bagatelle'],debussy:['Images','Arabeske'],rachmaninov:['Präludium','Vocalise'],einaudi:['Ostinato','Puls'],hisaishi:['Walzer','Sommer'],mozart:['Sonate','Rondo'],schubert:['Impromptu','Ständchen'],tchaikovsky:['Barkarole','Trepak']},
+  FR:{glass:['Étude','Métamorphose'],satie:['Gymnopédie','Gnossienne'],chopin:['Nocturne','Valse'],vine:['Toccata','Élégie'],gershwin:['Stride','Blues'],yiruma:['Ballade','Pluie'],bach:['Invention','Prélude'],beethoven:['Sonate','Bagatelle'],debussy:['Images','Arabesque'],rachmaninov:['Prélude','Vocalise'],einaudi:['Ostinato','Pulsation'],hisaishi:['Valse','Été'],mozart:['Sonate','Rondo'],schubert:['Impromptu','Sérénade'],tchaikovsky:['Barcarolle','Trépak']},
+  ES:{glass:['Estudio','Metamorfosis'],satie:['Gymnopédie','Gnossienne'],chopin:['Nocturno','Vals'],vine:['Tocata','Elegía'],gershwin:['Stride','Blues'],yiruma:['Balada','Lluvia'],bach:['Invención','Preludio'],beethoven:['Sonata','Bagatela'],debussy:['Imágenes','Arabesco'],rachmaninov:['Preludio','Vocalise'],einaudi:['Ostinato','Pulso'],hisaishi:['Vals','Verano'],mozart:['Sonata','Rondó'],schubert:['Impromptu','Serenata'],tchaikovsky:['Barcarola','Trepak']},
+  PT:{glass:['Estudo','Metamorfose'],satie:['Gymnopédie','Gnossienne'],chopin:['Noturno','Valsa'],vine:['Tocata','Elegia'],gershwin:['Stride','Blues'],yiruma:['Balada','Chuva'],bach:['Invenção','Prelúdio'],beethoven:['Sonata','Bagatela'],debussy:['Imagens','Arabesco'],rachmaninov:['Prelúdio','Vocalise'],einaudi:['Ostinato','Pulso'],hisaishi:['Valsa','Verão'],mozart:['Sonata','Rondó'],schubert:['Improviso','Serenata'],tchaikovsky:['Barcarola','Trepak']},
+  zh:{glass:['练习曲','变形'],satie:['裸体舞曲','玄秘曲'],chopin:['夜曲','圆舞曲'],vine:['托卡塔','挽歌'],gershwin:['跨步','蓝调'],yiruma:['抒情曲','雨'],bach:['创意曲','前奏曲'],beethoven:['奏鸣曲','小品'],debussy:['意象','阿拉伯风'],rachmaninov:['前奏曲','练声曲'],einaudi:['固定音型','脉动'],hisaishi:['圆舞曲','夏'],mozart:['奏鸣曲','回旋曲'],schubert:['即兴曲','小夜曲'],tchaikovsky:['船歌','特列帕克舞']},
+  zhTW:{glass:['練習曲','變形'],satie:['裸體舞曲','玄祕曲'],chopin:['夜曲','圓舞曲'],vine:['托卡塔','輓歌'],gershwin:['跨步','藍調'],yiruma:['抒情曲','雨'],bach:['創意曲','前奏曲'],beethoven:['奏鳴曲','小品'],debussy:['意象','阿拉伯風'],rachmaninov:['前奏曲','練聲曲'],einaudi:['固定音型','脈動'],hisaishi:['圓舞曲','夏'],mozart:['奏鳴曲','迴旋曲'],schubert:['即興曲','小夜曲'],tchaikovsky:['船歌','特列帕克舞']},
+  ja:{glass:['エチュード','メタモルフォーシス'],satie:['ジムノペディ','グノシエンヌ'],chopin:['ノクターン','ワルツ'],vine:['トッカータ','エレジー'],gershwin:['ストライド','ブルース'],yiruma:['バラード','雨'],bach:['インヴェンション','プレリュード'],beethoven:['ソナタ','バガテル'],debussy:['映像','アラベスク'],rachmaninov:['前奏曲','ヴォカリーズ'],einaudi:['オスティナート','パルス'],hisaishi:['ワルツ','夏'],mozart:['ソナタ','ロンド'],schubert:['即興曲','セレナーデ'],tchaikovsky:['舟歌','トレパーク']},
+};
 // Free-tier composer split: Chopin + Satie + Gershwin ship free — three moods
 // (dense Romantic feeling, sparse calm, jazz energy), one full row of the image
 // grid with SCAN. The other twelve unlock with Pro. Chips stay visible with a
@@ -5163,23 +5175,48 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // → brings the ✦ back exactly, and ← after it goes forward to the same variant again
   const _variantLook = (L)=>{ nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _stLookApply(L); };
   // A Jam's variants step as a painter's (Nov 2026): ← the next one — and, as the painters' ←, a new palette; → back through the ones heard
-  // (each with its own palette), and at the first it stops; ← after → goes forward again to the one you came back from
+  // (each with its own palette), and at the first it stops; ← after → goes forward again to the one you came back from.
+  // As a Fusion's ←: first this very jam in the other styles that are on (the palette stays, as a tap on the style), only then the next variant
+  // (its style drawn among those on). A composer alone: his two forms (COMPOSER_FORMS2) — the first, the second.
   const jamVarHistRef = useRef({key:'', st:[], fw:[]});
+  const jamCycleRef = useRef({sig:'', seen:[]});
+  const soloFormRef = useRef({k:null, v:0});   // the form of the composer playing alone (0 his first, 1 his second) — for this picture
+  const _soloForm = ()=>{ const k=imgComposerRef.current, F=soloFormRef.current; return (k && F && F.k===k && !imgSigActiveRef.current) ? (F.v|0) : 0; };
+  const _soloHas = (k)=> !!(k && typeof COMPOSER_FORMS2!=='undefined' && COMPOSER_FORMS2[k]);
+  const _formName = (k, v)=>{ const d=COMPOSER_FORM_NAMES[lang]||COMPOSER_FORM_NAMES.EN; const a=(d && d[k]) || COMPOSER_FORM_NAMES.EN[k]; return a ? a[v?1:0] : ''; };
+  const _palTo = (to, pal)=>{ if(to.md){ if(to.md!==mode && !palGoldRef.current && setupPalettes.includes(to.md)){ kontraAutoRef.current=false; setShowColorPalette(false); setCustomArmed(false); setMode(to.md); } }   // the palette it had (a gold palette stays)
+    else if(pal && !palGoldRef.current) _fuRollPal(true); };
+  const _soloFormStep = (d, pal)=>{
+    const k=imgComposerRef.current; if(!_soloHas(k) || imgPlayModeRef.current==='compose') return false;
+    const H=jamVarHistRef.current, key='S|'+k+'|'+(imgNameRef.current||''); if(H.key!==key){ H.key=key; H.st=[]; H.fw=[]; }
+    const cur=_soloForm(); const now={ v:cur, md:mode, sig:!!imgSigActiveRef.current }; let to=null;
+    if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
+    else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
+    else { to={ v:cur?0:1, md:null }; H.st.push(now); }
+    if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift();
+    if(to.sig && imgSigRef.current && !imgSigActiveRef.current){ soloFormRef.current={ k, v:0 }; try{ _applyImgSig(); }catch(_){} _palTo(to, false); setJamFlipN(n=>n+1); return true; }   // → back onto the picture's ✦: it comes back exactly
+    if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; if(!crOnRef.current && !composerDice) setComposerDice(true); }   // ← from the picture's ✦: the latch lets go (as a painting's ✦ on ←) — its composer was the picture's choice, not yours: ↑ still draws the next one
+    soloFormRef.current={ k, v:to.v };
+    _palTo(to, pal); setJamFlipN(n=>n+1); return true; };
   const _jamVarStep = (d, pal)=>{ try{
       const J=globalThis.__COMP_JAM_STYLE, ks=[imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
+      if(ks.length===1) return _soloFormStep(d, pal);
       if(!J || J.h==null || ks.length<2 || J.sig!==ks.join() || imgSigActiveRef.current) return false;
       const nv=Math.max(1,J.nv|0); if(nv<2) return false;
       const VV=globalThis.__JAM_VAR, cur=(VV && VV.sig===J.sig && (VV.h>>>0)===(J.h>>>0)) ? (VV.v|0) : (J.v|0);
       const H=jamVarHistRef.current, key=J.sig+'|'+(J.h>>>0); if(H.key!==key){ H.key=key; H.st=[]; H.fw=[]; }
-      const now={ v:cur, md:mode }; let to=null;
+      const curSt=_fsNorm(J.style); const now={ v:cur, md:mode, st:curSt }; let to=null;
       if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
       else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
-      else { to={ v:(cur+1)%nv, md:null }; H.st.push(now); }
+      else { const C=jamCycleRef.current, cs=key+'|'+cur; if(C.sig!==cs){ C.sig=cs; C.seen=[curSt]; } else if(C.seen.indexOf(curSt)<0) C.seen.push(curSt);
+        let nx=null, x=curSt; if(fuStyleCNow.length>1) for(let q=0;q<2;q++){ x=_fsNext(x,'comp'); if(fuStyleCNow.indexOf(x)>=0 && C.seen.indexOf(x)<0){ nx=x; break; } }
+        if(nx){ C.seen.push(nx); to={ v:cur, md:mode, st:nx }; }   // the same jam, the next style
+        else { const L=fuStyleCNow.length>1 ? fuStyleCNow : curSt; to={ v:cur+1, md:null, st:L[Math.floor(Math.random()*L.length)] }; }   // the next variant, its style drawn
+        H.st.push(now); }
       if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift();
       globalThis.__JAM_VAR={ sig:J.sig, h:(J.h>>>0), v:to.v };
-      if(to.md){ if(to.md!==mode && !palGoldRef.current && setupPalettes.includes(to.md)){ kontraAutoRef.current=false; setShowColorPalette(false); setCustomArmed(false); setMode(to.md); } }   // the palette it had (a gold palette stays)
-      else if(pal && !palGoldRef.current) _fuRollPal(true);
-      setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
+      if(to.st){ globalThis.__JAM_STYLE_PIN={ sig:J.sig, h:J.h, style:to.st }; if(to.st!==curSt) globalThis.__COMP_JAM_STYLE={ ...J, style:to.st, roles:null }; }
+      _palTo(to, pal); setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
   // A Fusion's ← (Nov 2026): first this very crossing — the same painters in the same variants — in the other styles that are on
   // (Collage → Synthesis → Genesis, as a tap on the style would show it; the palette stays), and only then a new crossing is drawn,
   // whose style comes as it comes — and from it again the others. → goes back through all of them, each as it was.
@@ -11758,6 +11795,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           imgSigRef.current=_isg; setImgSig(_isg);
           let _isgOpen=false;
           const _isReturn = imgReturnLoadRef.current || !!_fr; imgReturnLoadRef.current = false;
+          if(_fr){ const _k0=((_fr.keys||[]).filter(Boolean)); soloFormRef.current={ k:_k0.length===1 ? _k0[0] : null, v:_k0.length===1 ? (_fr.sf|0) : 0 }; }
+          else if(!_isReturn) soloFormRef.current={ k:null, v:0 };
           if(_fr){
             // ♥ favorite: on ✦ when it was saved on ✦; otherwise its own composer(s) — or Scan — seated before it is composed
             _liteImgNextIsSigRef.current = false;
@@ -11803,8 +11842,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             : COF;                                     // harmony & bw both read via COF
           try{ _setImgForcedBands((_mosRows|0)||0); }catch(_){}
           const _crKeys0 = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
+          const _sf0 = (_crKeys0.length===1 && _soloForm()===1 && _soloHas(_crKeys0[0])) ? COMPOSER_FORMS2[_crKeys0[0]] : null;
           const evts=_composerTimeline((_crKeys0.length>=2)
             ? composeImageCallResponse(px,nc,nr,hueTable,startMode,_crKeys0)
+            : _sf0 ? _sf0(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='glass')
             ? composeImageGlass(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='satie')
@@ -11910,7 +11951,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // the top and the panel folded.
     const _cLead = imgComposerRef.current, _cStage = composerStageRef.current||[], _cSig = imgSigActiveRef.current;
     const _effDir = _cLead ? 'lr' : imgDir;   // composers always read in rows
-    const sig = mode + '|' + _effDir + '|c:' + (_cLead||'scan') + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
+    const _cForm = (_cLead && !_cStage.length && _soloForm()===1) ? '|s1' : '';
+    const sig = mode + '|' + _effDir + '|c:' + (_cLead||'scan') + _cForm + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // playing: the sound dips first (a hard cut of the old notes crackles on a phone), the re-read comes 70 ms later, the sound returns after it
     if(playingRef.current && !imgDipRef.current){ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, 0.05); }catch(_){} setTimeout(()=>{ imgDipRef.current=true; setImgDipTick(x=>x+1); }, 70); setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ imgDipRef.current=false; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); } }catch(_){} }, 650); return; }   // never left quiet (the re-read may not come)
@@ -11926,7 +11968,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // → Debussy at 88%). Map the position by TIME FRACTION instead: where we are
     // in the old piece (0..1) → the event nearest that fraction in the new one.
     const _prevC = pixelRef.current.lastComposer;
-    const _compKey = (_cLead||'scan') + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '');
+    const _compKey = (_cLead||'scan') + _cForm + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '');
     pixelRef.current.lastComposer = _compKey;
     const _compChanged = _prevC !== undefined && _prevC !== _compKey;
     const _mapIdx = (oldArr, oldIdx, newArr)=>{
@@ -11953,8 +11995,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const _atmoBias=(atmoOn&&atmoMood)?{v:atmoMood.v,e:atmoMood.e}:null;
     try{ _setImgForcedBands((pixelRef.current&&pixelRef.current.mosaicBands)||0); }catch(_){}
     const _crKeys = [imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
+    const _sf1 = (_crKeys.length===1 && _soloForm()===1 && _soloHas(_crKeys[0])) ? COMPOSER_FORMS2[_crKeys[0]] : null;
     const _evtsLit = (_crKeys.length>=2)
       ? composeImageCallResponse(px,nc,nr,hueTable,mode,_crKeys)
+      : _sf1 ? _sf1(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='glass')
       ? composeImageGlass(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='satie')
@@ -15382,11 +15426,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     let jam=null;
     try{ const J=globalThis.__COMP_JAM_STYLE; if(keys.length>=2 && J && J.sig===keys.join() && J.h!=null) jam={ sig:J.sig, h:(J.h>>>0), style:_fsNorm(J.style), v:(J.v|0) }; }catch(_){}
     return { kind:'img', pk:'img:'+ih, ih, mode, pal: mode==='custom' ? JSON.parse(JSON.stringify(activePalette||null)) : null,
-             dir: (ai || keys.length) ? null : imgDir, keys, isig: !ai && !!imgSigActive, ai, jam,
+             dir: (ai || keys.length) ? null : imgDir, keys, isig: !ai && !!imgSigActive, ai, jam, sf: (!ai && keys.length===1 && !imgSigActive) ? _soloForm() : 0,
              atmo: (!ai && atmoOn && atmoMood) ? JSON.parse(JSON.stringify(atmoMood)) : null,
              mel: (!ai && melodyOn && melodyData) ? JSON.parse(JSON.stringify(melodyData)) : null };
   };
-  const _favImgKey = (a)=> ['img', a.ih, a.mode, a.pal ? a.pal.join(',') : '', a.dir||'', a.keys.join('+'), a.isig ? 's' : '', a.ai ? 'ai' : '', a.jam ? a.jam.style : '',
+  const _favImgKey = (a)=> ['img', a.ih, a.mode, a.pal ? a.pal.join(',') : '', a.dir||'', a.keys.join('+'), a.isig ? 's' : '', a.ai ? 'ai' : '', a.jam ? a.jam.style : '', a.sf ? 'f'+a.sf : '',
     a.atmo ? (+a.atmo.v||0).toFixed(2)+'_'+(+a.atmo.e||0).toFixed(2) : '', a.mel ? ((a.mel.notes||[]).length+'_'+(a.mel.tempo||0)) : ''].join('|');
   const _favImgCurKey = favReadyImg ? _favImgKey(_favImgAddrNow()) : null;
   const favHitImg = _favImgCurKey ? favs.find(f=>f.ak===_favImgCurKey) : null;
@@ -16168,7 +16212,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:'rgba(201,168,76,.6)',fontStyle:'normal',textTransform:'capitalize',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%'}}>{t(mode)} • {effectiveStyle==='notes'?t('notesStyle'):t('mosaicStyle')}{songSig && !composeMode && !micActive && !moodContext && viewMode!=='image' && (<span onClick={_toggleSig} role="button" tabIndex={0} title={_sigT('tip')} aria-pressed={sigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:sigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.78)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
         {loadedSource==='image' && !moodFromImg && (
-          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _fsNames('comp',0,0,0,true) : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}{imgSig && imgPlayMode==='scan' && (<span onClick={_toggleImgSig} role="button" tabIndex={0} title={_sigT('tipImg')} aria-pressed={imgSigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:imgSigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.78)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
+          <div style={{textAlign:'center',marginTop:-2,marginBottom:2,fontSize:(.52*effScale)+'rem',letterSpacing:'.12em',color:imgPlayMode==='compose'?'rgba(228,178,255,.7)':'rgba(201,168,76,.6)',fontStyle:'italic',textTransform:'none',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:5,width:'100%',flexWrap:'wrap'}}><span style={{textTransform:'capitalize',fontStyle:'normal'}}>{t(mode)}</span>{mode==='bw' && bwAccent && (<><span style={{fontStyle:'normal'}}>·</span><span style={{display:'inline-block',width:7,height:7,borderRadius:'50%',background:`hsl(${bwAccent.hue},85%,55%)`,verticalAlign:'middle'}}/><span style={{fontStyle:'normal'}}>{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</span></>)}<span style={{fontStyle:'normal'}}>•</span>{imgPlayMode==='compose' ? (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('imgCompose')!=='imgCompose'?t('imgCompose'):'AI compose'}</span>) : imgComposer ? (<>{composerDice&&(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{verticalAlign:'middle',opacity:.8}}><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>)}{isDailyComposer(imgComposer) && (<span onClick={openDailyInfo} role="button" tabIndex={0} style={{fontStyle:'normal',color:'rgba(226,196,119,1)',fontWeight:600,marginRight:2,cursor:'pointer',textDecoration:'underline dotted',textUnderlineOffset:3}}>✦ {ts('dailyTitle','Artist of the day')} ·</span>)}{composerStage.length ? _fsNames('comp',0,0,0,true) : t('inspiredBy').replace('{artist}', COMPOSER_INSPIRED[imgComposer]||imgComposer)}{(!composerStage.length && _soloHas(imgComposer)) ? (<span style={{fontStyle:'normal'}}>{' · '+_formName(imgComposer, _soloForm())}</span>) : null}</>) : (<span style={{fontStyle:'normal',textTransform:'capitalize'}}>{t('dir_'+imgDir)}</span>)}{imgSig && imgPlayMode==='scan' && (<span onClick={_toggleImgSig} role="button" tabIndex={0} title={_sigT('tipImg')} aria-pressed={imgSigActive} style={{fontStyle:'normal',fontWeight:600,cursor:'pointer',color:imgSigActive?'rgba(226,196,119,1)':'rgba(201,168,76,.78)',marginLeft:2,whiteSpace:'nowrap'}}>· ✦ {_sigT('label')}</span>)}</div>
         )}
   </>);
   // a built-in picture: its kept Atmosphere / Melody (SAMPLE_IMG_BAKE) — no AI call, no trial, no lock
@@ -16559,12 +16603,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   };
   try{ if(typeof window!=='undefined' && posterMaker){ window.__pfLook = ()=>({ ...(_stLookNow()), fk:_favCurKey||null, fr:!!favReady, pl:!!playing, an:!!anim, hp:!!holdPaused, ssl:structureSeedLock, fsl:!!favSeedLockRef.current, fs:_fusionStyleOf('art'), sigA:!!sigActiveRef.current, disp:disp|0, ss:!!songSigRef.current, vh:{n:(varHistRef.current.st||[]).length, fw:(varHistRef.current.fw||[]).length, ok:varHistRef.current.key===_varKey(), keep:!!varHistRef.current.keep}, hist:{n:(stLookHistRef.current.st||[]).length, fw:(stLookHistRef.current.fw||[]).length, ok:stLookHistRef.current.key===_stHistKey(), last:(stLookHistRef.current.st||[]).slice(-1)[0]} }); } }catch(_){}   // the poster tool: the look on screen (tests)
   // a picture's look: who plays it — the mirror of _stLookNow, so ↓ brings back the composer you came from and ↑ after ↓ goes forward again
-  const _stILookNow = ()=>({ i:true, comp:imgComposerRef.current||null, stage:(composerStageRef.current||[]).slice(), md:mode, cr:!!crOnRef.current, sig:!!imgSigActiveRef.current, dice:!!composerDice, pins:(crPinsRef.current||[]).slice() });
+  const _stILookNow = ()=>({ i:true, comp:imgComposerRef.current||null, form:_soloForm(), stage:(composerStageRef.current||[]).slice(), md:mode, cr:!!crOnRef.current, sig:!!imgSigActiveRef.current, dice:!!composerDice, pins:(crPinsRef.current||[]).slice() });
   const _stILookApply = (L)=>{
     if(L.sig && !imgSigActiveRef.current && imgSigRef.current){ try{ _applyImgSig(); }catch(_){} return; }
     if(imgSigActiveRef.current && !L.sig){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; }
     crOnRef.current=L.cr; setCrOn(L.cr); crPinsRef.current=(L.pins||[]).slice(); setCrPins((L.pins||[]).slice()); setComposerDice(!!L.dice);
     composerStageRef.current=L.stage.slice(); setComposerStage(L.stage.slice());
+    soloFormRef.current={ k:L.comp||null, v:L.form|0 };
     if(L.comp) _lastComposerRef.current=L.comp; imgComposerRef.current=L.comp; setImgComposer(L.comp);
     if(L.md && L.md!==mode) setMode(L.md);
   };
@@ -16903,6 +16948,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _sdCan = (ax, dir)=>{ try{
       if(!((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
       if(ax==='x'){ const J=globalThis.__COMP_JAM_STYLE, ks=[imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
+        if(ks.length===1){ if(!_soloHas(ks[0]) || imgPlayMode==='compose') return false; if(dir>0) return true; const H=jamVarHistRef.current; return H.key==='S|'+ks[0]+'|'+(imgNameRef.current||'') && H.st.length>0; }
         if(!J || J.h==null || ks.length<2 || J.sig!==ks.join() || imgSigActiveRef.current || (J.nv|0)<2) return false;
         if(dir>0) return true; const H=jamVarHistRef.current; return H.key===J.sig+'|'+(J.h>>>0) && H.st.length>0; }
       const H=stLookHistRef.current, k=_stHistKey();
@@ -17975,7 +18021,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               if(imgPlayMode==='compose') return (t('imgCompose')!=='imgCompose' ? t('imgCompose') : 'AI compose')+' · '+mode;   // AI writes it: no composer
               if(!ks.length) return t('dir_'+imgDir)+' · '+mode;   // read off the picture, no composer: the reading's direction (as the caption)
               if(imgSigActive) return ks.map(nm).join(' × ')+' · ✦ · '+mode;
-              if(ks.length<2) return nm(ks[0])+' · '+mode;
+              if(ks.length<2) return nm(ks[0])+' · v'+_soloForm()+' · '+mode;
               let v=0, fs=null; try{ const J=globalThis.__COMP_JAM_STYLE, VV=globalThis.__JAM_VAR; if(J && J.sig===ks.join()){ fs=_fsNorm(J.style); v=(VV && VV.sig===J.sig && (VV.h>>>0)===(J.h>>>0)) ? (VV.v|0) : (J.v|0); } }catch(_){}
               const tail=' · v'+v+' · '+mode+((fs==='E' || fs==='G') ? ' · '+fs : '');
               if(crOn && crPins.length) return (<>{ks.map((k,i)=>(<span key={k}>{i>0?' × ':''}<span style={{color:crPins.includes(k)?'#c9a84c':'rgba(242,238,232,.85)'}}>{nm(k)}</span></span>))}{tail}</>);
@@ -21399,7 +21445,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               // Ensemble: one name per line, a small × / ↔ between — never one long
               // line running off the screen. Size steps down with the stage size.
               const _ens = _ensF;
-              if(!_ens) return (<div>{_fLabel}</div>);
+              const _fmN = (_isImgFlash && imgComposer && imgPlayMode!=='compose' && _soloHas(imgComposer)) ? _formName(imgComposer, _soloForm()) : '';
+              if(!_ens) return (<><div>{_fLabel}</div>{_fmN && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',marginTop:'.75em',fontStyle:'normal',fontSize:'.46em',letterSpacing:'.34em',fontWeight:600,opacity:.95}}><span style={{width:'2.4em',height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>{_fmN}</span><span style={{width:'2.4em',height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>)}</>);   // a composer alone: which of his two forms
               const _sep = _isImgFlash ? '↔' : '×';
               const _fs = _ens.length>=4 ? '.62em' : _ens.length===3 ? '.72em' : '.82em';
               return (<div style={{fontSize:_fs,lineHeight:1.15,whiteSpace:'normal',maxWidth:'86vw'}}>{_ens.map((n,i)=>(<Fragment key={i}>{i>0 && (<div style={{fontStyle:'normal',fontSize:'.6em',opacity:.7,margin:'2px 0'}}>{_sep}</div>)}<div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n}</div></Fragment>))}</div>);
