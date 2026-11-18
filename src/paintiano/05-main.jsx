@@ -5028,6 +5028,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[style, painterStage, phaseIndex]);
   const _jamTap = (k)=>{
     if(k==='mosaic' || k==='notes') return;   // the Mosaic and Notes do not join a Fusion
+    _stepNote('fu');   // a painter tapped into a fusion: the Experimentuj move (the steps' readiness)
     const cur=_jamStage(); const i=cur.indexOf(k);
     if(i>=0){
       if(style!==null && i===0){
@@ -5048,6 +5049,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     setPainterStage(p=>[...p,k]);
   };
   const _crTap = (k)=>{
+    _stepNote('fu');
     const cur=[imgComposerRef.current,...composerStage].filter(Boolean); const i=cur.indexOf(k);
     if(i===0){ if(composerStage.length){ const nx=composerStage[0]; setComposerStage(p=>p.slice(1)); _lastComposerRef.current=nx; imgComposerRef.current=nx; setImgComposer(nx); } return; }
     if(i>0){ setComposerStage(p=>p.filter((_,j)=>j!==i-1)); return; }
@@ -5060,6 +5062,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // a guest until the next draw. The stage is pins first, then guests, max 5.
   const _crPinTap = (k)=>{
     if(!k) return;
+    _stepNote('fu');   // a composer tapped into a jam: the Experimentuj move
     const pins=crPinsRef.current.slice(); const st=[imgComposerRef.current,...composerStageRef.current].filter(Boolean);
     const nextPins = pins.includes(k) ? pins.filter(x=>x!==k) : (pins.length>=STAGE_MAX ? null : pins.concat(k));
     if(!nextPins) return;
@@ -5210,6 +5213,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     jamFixedRef.current=on; setJamFixed(on); _stBuzz(8); if(on) _jamSetStage(pins, true); else _jamAllRoll(); };
   const _jamPinTap = (k)=>{   // a tap pins (gold) or unpins; with the lock on, the stage is the gold ones alone
     if(!k || k==='mosaic' || k==='notes') return;
+    _stepNote('fu');   // a painter tapped into a fusion: the Experimentuj move
     const pins0=jamPinsRef.current.slice(); const pins = pins0.includes(k) ? pins0.filter(x=>x!==k) : (pins0.length>=STAGE_MAX ? null : pins0.concat(k)); if(!pins) return;
     if(jamFixedRef.current && pins.length<2){ jamFixedRef.current=false; setJamFixed(false); }   // unpinned down to one: no longer a pinned fusion — ↑ seats guests again
     jamPinsRef.current=pins; setJamPins(pins); _jamSetStage(pins, jamFixedRef.current && pins.length>1);
@@ -5414,24 +5418,27 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const curSt=_fsNorm(J.style); const now={ v:cur, md:mode, st:curSt }; let to=null;
       if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
       else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
-      else { const nx=_fsAfter(curSt, fuStyleCNow);
-        if(nx) to={ v:cur, md:mode, st:nx };                                                              // the same jam, the next style (Collage → Synthesis → Genesis)
+      else { const nx=_fsAfter('j|'+J.sig+'|'+(J.h>>>0)+'|'+cur, curSt, fuStyleCNow);
+        if(nx) to={ v:cur, md:mode, st:nx };                                                              // the same jam, a style not heard yet
         else { const o=_fsOrderOf(fuStyleCNow); to={ v:cur+1, md:null, st:o.length>1 ? o[0] : curSt }; }   // after the last: the next variant, from the first style
         H.st.push(now); }
       if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift();
       globalThis.__JAM_VAR={ sig:J.sig, h:(J.h>>>0), v:to.v };
       if(to.st){ globalThis.__JAM_STYLE_PIN={ sig:J.sig, h:J.h, style:to.st }; if(to.st!==curSt) globalThis.__COMP_JAM_STYLE={ ...J, style:to.st, roles:null }; }
       _palTo(to, pal); setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
-  // A Fusion's ← (Nov 2026), always in the Setup's order — Collage → Synthesis → Genesis (of the styles that are on): this very crossing
-  // (the same painters in the same variants) in the next style, as a tap on the style would show it, the palette staying; after the last
-  // a new crossing is drawn, and it starts again at the first. Whoever swipes knows where he is: on Genesis, ← brings new variants.
-  // → goes back through all of them, each as it was. (A Jam's ← the same: _jamVarStep.)
+  // A Fusion's ← (Nov 2026): this very crossing (the same painters in the same variants) in every style that is on and not seen yet,
+  // the nearest first — from Genesis: Synthesis, then Collage; from Synthesis: Collage, then Genesis; from Collage: Synthesis, then
+  // Genesis — as a tap on the style would show it, the palette staying; after the last a new crossing is drawn, and it starts at the
+  // first style (Collage). → goes back through all of them, each as it was. (A Jam's ← the same: _jamVarStep.)
   const _fsOrderOf = (on)=> ['A','E','G'].filter(x=>String(on||'').indexOf(x)>=0);
-  const _fsAfter = (cur, on)=>{ const o=_fsOrderOf(on); if(o.length<2) return null; const i=['A','E','G'].indexOf(cur); for(const x of o) if(['A','E','G'].indexOf(x)>i) return x; return null; };   // the next style that is on, or none (the last)
+  const FS_NEAR = {A:['E','G'], E:['A','G'], G:['E','A']};
+  const fsSeenRef = useRef({key:null, seen:[]});
+  const _fsAfter = (key, cur, on)=>{ const o=_fsOrderOf(on); if(o.length<2) return null; const R=fsSeenRef.current; if(R.key!==key){ R.key=key; R.seen=[cur]; } else if(!R.seen.includes(cur)) R.seen.push(cur);
+    for(const x of (FS_NEAR[cur]||[])) if(o.includes(x) && !R.seen.includes(x)){ R.seen.push(x); return x; } return null; };   // the nearest style that is on and not yet seen with this crossing, or none
   const _fuStyleStep = ()=>{ try{
       if(viewMode==='image' || sigActiveRef.current || style===null || !painterStage.length || fuStyleNow.length<2) return null;
       const fa=_fusionAddr(_jamStage(), phaseIndexRef.current|0); if(!fa) return null;
-      const nx=_fsAfter(_fsNorm(fa.fs), fuStyleNow); if(!nx) return null;
+      const nx=_fsAfter('f|'+fa.keys.join()+'|'+fa.phs.join(), _fsNorm(fa.fs), fuStyleNow); if(!nx) return null;
       return { keys:fa.keys.slice(), phs:fa.phs.slice(), fs:nx };
     }catch(_){ return null; } };
   const _variantNextRaw = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal); const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
@@ -17940,11 +17947,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const feedLitRef = useRef(false);
   // Studio lights up (and its whisper comes) only once you have had some For You: 15 s of it in this visit, over any number of paintings
   const feedPlayAccRef = useRef(0);
-  useEffect(()=>{ const on = feedAt>=0 && !!feedCards[feedAt] && feedCards[feedAt].piece!=='own' && playing && !feedIntro; if(!on){ feedLitRef.current=false; if(feedStudioLit) setFeedStudioLit(0); return; } if(feedLitRef.current) return;
+  const _zcLive = (pfStepEff===0 || zcReplay) && zcK>0;   // the first minute's coach is on screen: the whisper waits for it
+  useEffect(()=>{ const on = feedAt>=0 && !!feedCards[feedAt] && feedCards[feedAt].piece!=='own' && playing && !feedIntro && !_zcLive; if(!on){ feedLitRef.current=false; if(feedStudioLit) setFeedStudioLit(0); return; } if(feedLitRef.current) return;
     const t0=Date.now(); let tOff=null;
     const lightUp=()=>{ feedLitRef.current=true; const seen=_tipSeen('studio') || !!tipSessRef.current.studio; if(!seen){ tipSessRef.current.studio=true; _tipCount('studio'); } setFeedStudioLit(seen ? 1 : 2); tOff=setTimeout(()=>setFeedStudioLit(0), seen ? 5000 : 9000); };
     const wait=Math.max(0, 15000-feedPlayAccRef.current); const tOn = wait>0 ? setTimeout(lightUp, wait) : null; if(!tOn) lightUp();
-    return ()=>{ feedPlayAccRef.current += Date.now()-t0; if(tOn) clearTimeout(tOn); if(tOff) clearTimeout(tOff); }; },[feedAt, playing, feedIntro]);
+    return ()=>{ feedPlayAccRef.current += Date.now()-t0; if(tOn) clearTimeout(tOn); if(tOff) clearTimeout(tOff); }; },[feedAt, playing, feedIntro, _zcLive]);
   // the nudge is the motion itself (as in a vertical feed): the card lifts, the next one peeks from below — at most 3× a card, the first after 12 s of the painting (the cue wakes at 4 s, the lift 8 s later — never at once: the painting is only starting), then 14 s apart, never after the first swipe up
   useEffect(()=>{ if(!feedUpCue || feedUpDone || !playing || feedAt<0) return; const id=(feedCards[feedAt]||{}).id, R=feedPeekNRef.current; if(R.id!==id){ R.id=id; R.n=0; }
     let tm=null; const go=()=>{ if(R.n>=3) return; R.n++; if(R.k==null) R.k=Math.floor(Math.random()*6); setFeedPeek(Date.now()); tm=setTimeout(go, 14000); }; tm=setTimeout(go, 8000); return ()=>{ if(tm) clearTimeout(tm); }; },[feedUpCue, feedUpDone, playing, feedAt]);
@@ -20303,7 +20311,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 {studioFs && _rollable && (ensembleActive || proStatus==='free') && (<div className="pf-tray-ctl">{(()=>{   // the composers: the same two switches as the painters
                   const _fr=proStatus==='free', mix=false, sOn=!crOn, fOn=!_fr && crOn;
                   const tapS=(e)=>{ if(_fr || !crOn) return; crMemRef.current=crPinsRef.current.slice(0,STAGE_MAX); _stCrSolo(); const cg=soloCGoldRef.current; if(cg){ setComposerDice(false); _lastComposerRef.current=cg; imgComposerRef.current=cg; setImgComposer(cg); } };
-                  const tapF=(e)=>{ if(!crOn) _stepNote('fu'); if(_fr){ setPaywallReason('settings'); return; } if(crOn){ _crLockTap(e); return; } soloCGoldRef.current = (!composerDice && imgComposerRef.current) ? imgComposerRef.current : null; _stCrFusionOn(); };
+                  const tapF=(e)=>{ const _ask3=!!(lvCardRef.current && lvCardRef.current.n===3 && lvCardRef.current.ph==='ask'); if(!crOn || !_fr) _stepNote('fu'); if(_fr){ setPaywallReason('settings'); return; } if(crOn){ if(_ask3) return; _crLockTap(e); return; } soloCGoldRef.current = (!composerDice && imgComposerRef.current) ? imgComposerRef.current : null; _stCrFusionOn(); };
                   const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('c', false); if(!crOn) _stCrFusionOn(); } else _setMix('c', true); };
                   const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('c', false); if(crOn) _stCrSolo(); } else _setMix('c', true); };
                   return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!crOn?'cur':''} onClick={tapS}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_stT('trJam')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={crOn?'cur':''} onClick={tapF} title={crOn ? (crFixed ? _stT('jamOnly') : _stT('jamGuests')) : undefined}>{_stT('trJam')}{crOn && crFixed ? (<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style={{flexShrink:0}}><path d="M16 3H8l1 2v5l-3 3v2h5v6l1 1 1-1v-6h5v-2l-3-3V5z"/></svg>) : null}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}</div>)}
@@ -20420,7 +20428,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 const _fr=proStatus==='free', mix=false, sOn=!jamOn, fOn=!_fr && jamOn, fDis=!_fr && _artChoiceN()<2;   // two modes only: Solo or Fusion — a tap switches, ↑ draws in the mode that is on
                 // a tap shows it (an off one is turned on first), a hold turns it on or off for the dice; the one playing is filled
                 const tapS=(e)=>{ if(_fr || !jamOn) return; { const gl=(jamAll ? jamPinsRef.current : _jamStage()).filter(k=>k && k!=='mosaic' && k!=='notes'); fuGoldMemRef.current=gl.slice(0,STAGE_MAX); } _toggleJam(); const sg=soloGoldRef.current; if(sg){ setPainterStage([]); setNotesMode(false); setStyle(sg); } };
-                const tapF=(e)=>{ if(!jamOn) _stepNote('fu'); if(_fr){ setPaywallReason('settings'); return; } if(fDis) return; if(jamOn){ _jamLockTap(e); return; } soloGoldRef.current = (style && style!=='notes' && style!=='mosaic') ? style : null; _stFusionOn(); };
+                const tapF=(e)=>{ const _ask3=!!(lvCardRef.current && lvCardRef.current.n===3 && lvCardRef.current.ph==='ask'); if(!jamOn || !_fr) _stepNote('fu'); if(_fr){ setPaywallReason('settings'); return; } if(fDis) return; if(jamOn){ if(_ask3) return; _jamLockTap(e); return; } soloGoldRef.current = (style && style!=='notes' && style!=='mosaic') ? style : null; _stFusionOn(); };
                 const holdS=(e)=>{ if(_fr || (sOn && !fOn)){ _segShake(e); return; } if(sOn){ _setMix('p', false); if(!jamOn) _stFusionOn(); } else _setMix('p', true); };
                 const holdF=(e)=>{ if(_fr){ setPaywallReason('settings'); return; } if(fDis) return; if(fOn && !sOn){ _segShake(e); return; } if(fOn){ _setMix('p', false); if(jamOn) _toggleJam(); } else _setMix('p', true); };
                 return (<div className="pf-tray-seg pf-tray-tg" role="group"><button type="button" aria-pressed={sOn} className={!jamOn?'cur':''} onClick={tapS}>{_stT('trSolo')}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>{_fr ? (<button type="button" className="lk" onClick={tapF}>{_ensT('fusion')}<span aria-hidden="true" className="pf-seg-lk">🔒</span></button>) : (<button type="button" aria-pressed={fOn} className={jamOn?'cur':''} disabled={fDis} onClick={tapF} title={jamOn ? (jamFixed ? _stT('fuOnly') : _stT('fuGuests')) : undefined}>{_ensT('fusion')}{jamOn && jamFixed ? (<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style={{flexShrink:0}}><path d="M16 3H8l1 2v5l-3 3v2h5v6l1 1 1-1v-6h5v-2l-3-3V5z"/></svg>) : null}<svg className="pf-tg-ck" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>)}</div>); })()}   {/* Free: Fusion shows, locked — a tap opens the paywall */}
