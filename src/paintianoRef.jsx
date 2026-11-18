@@ -32915,12 +32915,26 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(to.md){ if(to.md!==mode && !palGoldRef.current && setupPalettes.includes(to.md)){ kontraAutoRef.current=false; setShowColorPalette(false); setCustomArmed(false); setMode(to.md); } }   // the palette it had (a gold palette stays)
       else if(pal && !palGoldRef.current) _fuRollPal(true);
       setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
+  // A Fusion's ← (Nov 2026): first this very crossing — the same painters in the same variants — in the other styles that are on
+  // (Collage → Synthesis → Genesis, as a tap on the style would show it; the palette stays), and only then a new crossing is drawn,
+  // whose style comes as it comes — and from it again the others. → goes back through all of them, each as it was.
+  const fuCycleRef = useRef({sig:'', seen:[]});
+  const _fuStyleStep = ()=>{ try{
+      if(viewMode==='image' || sigActiveRef.current || style===null || !painterStage.length || fuStyleNow.length<2) return null;
+      const fa=_fusionAddr(_jamStage(), phaseIndexRef.current|0); if(!fa) return null;
+      const sig=fa.keys.join()+'|'+fa.phs.join(','), cur=_fsNorm(fa.fs), C=fuCycleRef.current;
+      if(C.sig!==sig){ C.sig=sig; C.seen=[cur]; } else if(C.seen.indexOf(cur)<0) C.seen.push(cur);
+      let nx=null, x=cur; for(let k=0;k<2;k++){ x=_fsNext(x,'art'); if(fuStyleNow.indexOf(x)>=0 && C.seen.indexOf(x)<0){ nx=x; break; } }
+      if(!nx) return null; C.seen.push(nx);
+      return { keys:fa.keys.slice(), phs:fa.phs.slice(), fs:nx };
+    }catch(_){ return null; } };
   const _variantNext = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal); const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
     const sig = viewMode!=='image' && !!sigActiveRef.current;
     const snap = sig ? {..._variantSnap(), look:_stLookNow()} : _variantSnap();
     if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); if(v.look){ H.keep=true; _variantLook(v.look); } else { if(sig) H.keep=true; _variantPut(v); } return true; }
     if(pal) stUpPalRef.current=Date.now();   // the Studio rolls the palette itself, once (the Fusion's own roll stands down)
-    const ok=_variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current) _fuRollPal(true); } return ok; };
+    const fst=_fuStyleStep(); if(fst){ setPhaseIndex(fst.phs[0]|0); _setFuRoll(fst); }   // the same crossing in the next style
+    const ok=fst ? true : _variantRoll(); if(ok){ H.st.push(snap); if(H.st.length>30) H.st.shift(); if(sig) H.keep=true; if(pal && !palGoldRef.current && !fst) _fuRollPal(true); } return ok; };
   const _variantBack = ()=>{ if(viewMode==='image') return _jamVarStep(-1); const H=varHistRef.current; if((H.key!==_varKey() && !H.keep) || !H.st.length) return false;
     const v=H.st.pop(); (H.fw || (H.fw=[])).push(v.look ? {..._variantSnap(), look:_stLookNow()} : _variantSnap()); if(H.fw.length>30) H.fw.shift();
     if(v.look){ H.keep=true; _variantLook(v.look); } else _variantPut(v); return true; };
@@ -44560,7 +44574,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   };
   // one gesture: up = the next painting (everything else is in ✦ Change). True = a swipe.
   _stSwipeRef.current = (dx, dy, dt)=>{
-    const ax=Math.abs(dx), ay=Math.abs(dy); try{ (globalThis.__SWL||(globalThis.__SWL=[])).push('flick '+Math.round(dx)+','+Math.round(dy)+' t'+dt); }catch(_){}
+    const ax=Math.abs(dx), ay=Math.abs(dy);
     if(dt>700) return false;
     if(ax>=60 && ax>ay*1.5){ _stVariant(dx>0); return true; }   // ← the next variant of this painter / Fusion; → back to the one before
     if(ay<50 || ay<ax*1.5) return false;
@@ -44648,7 +44662,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         x.drawImage(k, (q.left-r.left)*dp, (q.top-r.top)*dp, q.width*dp, q.height*dp); }); x.globalAlpha=1; x.globalCompositeOperation='source-over';
       cp.style.cssText='position:absolute;margin:0;width:'+r.width+'px;height:'+r.height+'px;pointer-events:none;z-index:5'; }catch(_){ cp=null; }
     // a picture: nothing changes yet — the copy goes, the same picture comes; who plays it changes when the finger lets go (_sdEnd)
-    if(lazy){ try{ (globalThis.__SWL||(globalThis.__SWL=[])).push('lock '+ax+dir+' can='+_sdCan(ax,dir)+' play='+playing+' disp='+disp+' work='+working+' anim='+anim+' up='+_stUpWorks()); }catch(_){} if(!_sdCan(ax, dir)){ _fdSet(fd, 0); return fd; } const N=stNavRef.current; N.hold(); card.dataset.fdd='1'; fd.mode='pre'; fd.lazy=true; fd.ready=true;
+    if(lazy){ if(!_sdCan(ax, dir)){ _fdSet(fd, 0); return fd; } const N=stNavRef.current; N.hold(); card.dataset.fdd='1'; fd.mode='pre'; fd.lazy=true; fd.ready=true;
       if(cp){ fd.copy=cp; card.appendChild(cp); _sdCopyAt(fd, -dir*L); } _fdSet(fd, 0); return fd; }
     const N=stNavRef.current, sig0=_fdMark(); N.hold(); card.dataset.fdz='1'; card.dataset.fdd='1'; let ok=false;
     try{ ok = ax==='y' ? (dir>0 ? N.next() : N.prev()) : (dir>0 ? N.vn() : N.vb()); }catch(_){ ok=false; }
@@ -44660,7 +44674,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_sdClear(fd)); if(Math.abs(fd.d)>30) N.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)), to = go ? -fd.dir*fd.L : 0;
     if(fd.lazy){   // a picture: let go far enough — now who plays it changes (nothing that way after all: it goes back)
-      let ok=false; if(go){ try{ ok = fd.ax==='y' ? (fd.dir>0 ? N.next() : N.prev()) : (fd.dir>0 ? N.vn() : N.vb()); }catch(_){ ok=false; } } try{ globalThis.__SWL.push('end go='+go+' ok='+ok+' p='+p.toFixed(2)+' fv='+fv.toFixed(2)); }catch(_){}
+      let ok=false; if(go){ try{ ok = fd.ax==='y' ? (fd.dir>0 ? N.next() : N.prev()) : (fd.dir>0 ? N.vn() : N.vb()); }catch(_){ ok=false; } }
       _fdSpring(fd.d, v*1000, ok ? -fd.dir*fd.L : 0, (x)=>_fdSet(fd, x), ()=>{ _sdClear(fd); N.free(); if(ok){ N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); } else if(go) N.buzz(6); });
       return; }
     const hold = go ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
@@ -45703,7 +45717,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               return ks.map(nm).join(' × ')+tail;
             }
             const _fa=_fusionAddr(_jamStage(), paintPhase);
-            if(_fa && jamOn && jamAll && jamPins.length) return (<>{_fa.keys.map((k,i)=>(<span key={k}>{i>0?' × ':''}<span style={{color:jamPins.includes(k)?'#c9a84c':'rgba(242,238,232,.85)'}}>{_painterLabel(k)+' v'+_fa.phs[i]}</span></span>))}{' · '+mode}</>);
+            if(_fa && jamOn && jamAll && jamPins.length) return (<>{_fa.keys.map((k,i)=>(<span key={k}>{i>0?' × ':''}<span style={{color:jamPins.includes(k)?'#c9a84c':'rgba(242,238,232,.85)'}}>{_painterLabel(k)+' v'+_fa.phs[i]}</span></span>))}{' · '+mode+((_fa.fs==='E' || _fa.fs==='G') ? ' · '+_fa.fs : '')}</>);
             if(_fa) return _fa.keys.map((k,i)=>_painterLabel(k)+' v'+_fa.phs[i]).join(' × ')+' · '+mode+((_fa.fs==='E' || _fa.fs==='G') ? ' · '+_fa.fs : '');
             const _k = style || (shuffleStyle && shuffleStyle!=='mosaic' && shuffleStyle!=='notes' ? shuffleStyle : null);
             return (_k ? (STYLE_INSPIRED[_k]||_k) : '—')+' · v'+(style?(phaseIndex|0):(shufVariant|0))+' · '+mode;
