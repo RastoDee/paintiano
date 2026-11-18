@@ -17412,22 +17412,25 @@ function _jamHash(ks,px){ let h=2166136261; const s=ks.join('+')+'|lr|0';   // '
   for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
   for(let i=0;i<px.length;i+=97){ const c=px[i]; h^=(((c.r|0)+(c.g|0)*7+(c.b|0)*13)&0xffff); h=Math.imul(h,16777619); }
   h^=h>>>16; h=Math.imul(h,0x85ebca6b); h^=h>>>13; h=Math.imul(h,0xc2b2ae35); h^=h>>>16; return h>>>0; }
-// the Fusion style of a jam: the composers' own Setup switch (__PAINT_JAM_STYLE: 'A' | 'E' | 'AE'; without it the painters' one), AE = a coin on the address
+// the Fusion style of a jam: the Setup's letters (__PAINT_JAM_STYLE: A Collage · E Synthesis · G Genesis; more than one = a coin on the address)
 function _jamStyleOf(h){ const G=(typeof globalThis!=='undefined') ? globalThis : {}; const g0=(G.__PAINT_JAM_STYLE!==undefined) ? G.__PAINT_JAM_STYLE : G.__PAINT_FU_STYLE;
-  const g=(typeof g0==='string' && g0.indexOf('G')>=0) ? ((g0.indexOf('A')>=0) ? 'AE' : 'E') : g0;   // a jam has no genes: a Genesis is painted as a Synthesis
-  if(g==='E') return 'E'; if(g==='AE') return ((h>>>7)&1) ? 'E' : 'A'; return 'A'; }
+  const g=g0;
+  if(g==='E' || g==='G') return g; if(g==='AE') return ((h>>>7)&1) ? 'E' : 'A';   // AE keeps its own coin, so no jam heard before changes
+  if(typeof g==='string' && g.length>1) return g[((h>>>7)%g.length)]; return 'A'; }
 
 // A — the relay
-function _jamRelay(P){
+function _jamRelay(P,v){
+  v=v|0; const np=P.length; if(v%np) P=P.slice(v%np).concat(P.slice(0,v%np));   // a variant: another composer opens and sets the pulse and the key
+  const bars=(Math.floor(v/np)%2) ? 2 : 4, per=bars*2;                           // … and every other round of them they trade two-bar phrases
   const q0=P[0].bar0/P[0].qpb;
   const R=P.map(p=>{ const q=p.bar0/p.qpb; const w=_jamFold(q,q0)/q; const ev=_jamWarp(p.ev,w); return {k:p.k,ev,bar:p.bar0*w,last:_jamLast(ev)}; });
   const T=_jamLen(R[0].ev); const out=[]; let a=0;
   for(let j=0;j<400;j++){
-    const r=R[j%R.length]; const L=4*r.bar; const fin=(T-a)<=L*1.3;
+    const r=R[j%R.length]; const L=bars*r.bar; const fin=(T-a)<=L*1.3;
     let s0;
-    if(fin) s0=Math.max(0,Math.floor(r.last/r.bar)-3)*r.bar;                       // the last phrase: the end of their own piece
+    if(fin) s0=Math.max(0,Math.floor(r.last/r.bar)-(bars-1))*r.bar;               // the last phrase: the end of their own piece
     else { const par=j%2; const nb=Math.max(1,Math.round(r.last/r.bar));          // call = bars 1–4 of the period, reply = bars 5–8
-      let bi=Math.round(((a/T)*nb-par*4)/8)*8+par*4; bi=Math.min(bi,Math.floor((nb-8-par*4)/8)*8+par*4); bi=Math.max(0,bi); s0=bi*r.bar; }
+      let bi=Math.round(((a/T)*nb-par*bars)/per)*per+par*bars; bi=Math.min(bi,Math.floor((nb-per-par*bars)/per)*per+par*bars); bi=Math.max(0,bi); s0=bi*r.bar; }
     const s1=fin ? Infinity : s0+L;
     for(const e of r.ev){ const s=e.startMs||0; if(s<s0||s>=s1) continue; const rel=s-s0; const cap=fin ? 1e9 : (L-rel+120);   // nothing rings over the handoff
       const n2=e.n.map(o=>(o.durMs>cap) ? Object.assign({},o,{durMs:Math.max(60,Math.round(cap))}) : o);
@@ -17438,8 +17441,9 @@ function _jamRelay(P){
 }
 
 // E — one composer bred from the parents
-function _jamBred(P,h){
-  const n=P.length; const gi=(h>>>11)%n, hi=(gi+1)%n, pi=n>=3 ? (gi+2)%n : -1;
+function _jamBred(P,h,v){
+  const n=P.length; v=v|0; const gi=(((h>>>11)%n)+v)%n, hi=(gi+1+(Math.floor(v/n)%Math.max(1,n-1)))%n;   // a variant: another lends the ground, another the tune
+  let pi=-1; if(n>=3){ for(let s2=1;s2<n;s2++){ const c=(hi+s2)%n; if(c!==gi){ pi=c; break; } } }
   const hands=[hi]; for(let i=0;i<n;i++) if(i!==gi && i!==hi && i!==pi) hands.push(i);
   const qOf=(p)=>p.bar0/p.qpb; const G=P[gi]; const qg=qOf(G);
   const qE = pi>=0 ? _jamNear(qOf(P[pi]),qg) : Math.sqrt(qg*_jamNear(qOf(P[hi]),qg));      // the pulse: the third parent's, else the two parents' mean
@@ -17485,6 +17489,105 @@ function _jamBred(P,h){
   return res;
 }
 
+// G — GENESIS: a new composer born of the parents' best genes (Nov 2026). The Synthesis lays one composer's tune
+// over another's whole accompaniment; a Genesis writes the piece anew from four genes, each from one parent:
+//   MELODY   the line they would sing (re-laid on the new harmony: strong beats on its chords, the rest in its key)
+//   HARMONY  the chords they move through, slot by slot, and the key they live in
+//   TOUCH    how the notes are laid: the accompaniment figure of one of their bars (Glass's arpeggio, a waltz bass,
+//            Bach's running figure, Debussy's held chords…) — every note of it kept as a member of its chord, so it
+//            sounds again on the new chords, in its own register and metre
+//   PULSE    the tempo and the breath of the form: how long the piece runs and how its loudness rises and falls
+// A pair: one gives the melody and its harmony, the other the touch and the pulse (which way round, the picture
+// decides; the next variant turns it); a trio and more deal the genes round, every composer gives at least one — with
+// five, two of them share the melody, phrase by phrase. Every event keeps the picture's reading of the moment it
+// stands for (the scan lights the picture as it plays).
+function _jamGenDeal(n,h,v){
+  if(n===2){ const b=(((h>>>13)&1)+v)&1, r=(h>>>9)%2; return b ? {M:1-r,H:1-r,T:r,F:r,M2:-1} : {M:r,H:r,T:1-r,F:1-r,M2:-1}; }
+  const r=(((h>>>9)%n)+v)%n, pat=Math.floor(v/n)%3, o=[]; for(let i=0;i<n;i++) o.push((r+i)%n);
+  const G=[['M','H','T','F'],['M','T','H','F'],['M','F','T','H']][pat], d={M2:-1}; G.forEach((g,i)=>{ d[g]=o[i%n]; }); if(n>=5) d.M2=o[4]; return d; }
+const _jamGenCount=(n)=> n<2 ? 1 : n===2 ? 2 : n*3;
+function _jamGenesis(P,h,v){
+  const n=P.length; if(n<2) return null;
+  const own=_jamGenDeal(n,h,v|0);
+  const PM=P[own.M], PH=P[own.H], PT=P[own.T], PF=P[own.F], PM2=own.M2>=0 ? P[own.M2] : null;
+  const qOf=(p)=>p.bar0/p.qpb, last=(p)=>_jamLast(p.ev);
+  const qC=qOf(PF);                                    // the pulse
+  const qpb=PT.qpb, bar=qpb*qC;                        // the metre of the touch, at the pulse
+  const NB=Math.max(8,Math.min(110,Math.round(last(PF)/PF.bar0)));   // as many bars as the form that gives the pulse
+  const total=NB*bar;
+  // HARMONY: the parent's chords, two to a bar, read over its whole piece (its accompaniment counts more than its tune)
+  const hs=PH.bar0/2, hn=Math.max(1,Math.ceil(last(PH)/hs)+1), HW=[]; for(let i=0;i<hn;i++) HW.push({w:new Float32Array(12),b:new Float32Array(12)});
+  const tot=new Float32Array(12);
+  for(const e of PH.ev){ const s0=e.startMs||0; for(const o of e.n){ const d=Math.max(60,o.durMs||0), wv=(o.v||60)*(o.mel===true?0.6:1)*(o.bass?1.4:1), pc=((o.m%12)+12)%12; tot[pc]+=wv*Math.min(d,hs*2);
+      for(let si=Math.floor(s0/hs); si<=Math.min(hn-1,Math.floor((s0+d-1)/hs)); si++){ const ov=Math.min(s0+d,(si+1)*hs)-Math.max(s0,si*hs); if(ov>0){ HW[si].w[pc]+=wv*ov/hs; if(o.bass || o.m<55) HW[si].b[pc]+=wv*ov/hs; } } } }
+  let tmax=0; for(let p=0;p<12;p++) tmax=Math.max(tmax,tot[p]); const inKey=new Array(12).fill(false); for(let p=0;p<12;p++) if(tot[p]>=0.06*tmax) inKey[p]=true;
+  let tonic=0; for(let p=1;p<12;p++) if(tot[p]>tot[tonic]) tonic=p;
+  const chordOf=(si)=>{ const S=HW[Math.max(0,Math.min(hn-1,si))]; let mx=0; for(let p=0;p<12;p++) mx=Math.max(mx,S.w[p]); if(mx<=0) return null;
+    const pcs=[]; for(let p=0;p<12;p++) if(S.w[p]>=0.42*mx) pcs.push(p); let root=-1, rb=0; for(let p=0;p<12;p++) if(S.b[p]>rb){ rb=S.b[p]; root=p; } if(root<0) root=pcs[0];
+    return {pcs, root}; };
+  const chords=[]; let prev={pcs:[tonic,(tonic+4)%12,(tonic+7)%12],root:tonic};
+  for(let k=0;k<NB*2;k++){ const si=Math.floor((k+0.5)/(NB*2)*hn); const c=chordOf(si)||prev; chords.push(c); prev=c; }
+  chords[NB*2-1]=chords[NB*2-2]={pcs:(chordOf(hn-1)||prev).pcs.indexOf(tonic)>=0 ? (chordOf(hn-1)||prev).pcs : [tonic,(tonic+4)%12,(tonic+7)%12], root:tonic};   // it closes at home
+  const chordAt=(ms)=>chords[Math.max(0,Math.min(NB*2-1,Math.floor(ms/(bar/2))))];
+  // TOUCH: the accompaniment of a few of the parent's fullest bars, every note as a member of that bar's own chord
+  const keepAll=!!_KEEP_MEL[PT.k], tBar=PT.bar0, tq=qOf(PT), tn=Math.max(1,Math.ceil(last(PT)/tBar));
+  const TB=[]; for(let i=0;i<tn;i++) TB.push([]);
+  for(const e of PT.ev){ const s=e.startMs||0, bi=Math.floor(s/tBar); if(bi<0||bi>=tn) continue; for(const o of e.n){ if(!keepAll && o.mel===true) continue; TB[bi].push({u:(s-bi*tBar)/tq, d:Math.max(0.05,(o.durMs||0)/tq), m:o.m, v:o.v||60}); } }
+  const counts=TB.map(b=>b.length), sorted=counts.filter(c=>c>0).sort((a,b)=>a-b), med=sorted.length ? sorted[sorted.length>>1] : 0;
+  const pickBar=(f)=>{ let best=-1, bd=1e9; for(let i=0;i<tn;i++){ if(counts[i]<Math.max(2,med)) continue; const d=Math.abs(i/tn-f); if(d<bd){ bd=d; best=i; } } return best; };
+  const figs=[]; for(const f of [0.3,0.5,0.7]){ const bi=pickBar(f); if(bi<0) continue; const notes=TB[bi]; const V=[...new Set(notes.map(o=>o.m))].sort((a,b)=>a-b);
+    figs.push({V, notes:notes.map(o=>({u:o.u, d:o.d, i:V.indexOf(o.m), v:o.v})), lo:V[0], hi:V[V.length-1]}); }
+  if(!figs.length) return null;
+  // the touch on a new chord: the bass on the chord's root near the figure's lowest note, the members above it in order
+  const voice=(fig,c)=>{ const k=fig.V.length, out=[]; let b=c.root; while(b<fig.lo-6) b+=12; while(b>fig.lo+6) b-=12; out.push(b);
+    const up=c.pcs.filter(p=>p!==c.root).length ? c.pcs.filter(p=>p!==c.root) : c.pcs; let m=b, j=0;
+    for(let q=1;q<k;q++){ let best=null; for(let s=1;s<=12;s++){ const pc=(((m+s)%12)+12)%12; if(up.indexOf(pc)>=0){ best=m+s; break; } } m=best==null ? m+4 : best; out.push(m); j++; }
+    return out; };
+  // PULSE: the breath of the form — the parent's loudness bar by bar, laid over the new bars
+  const fn=Math.max(1,Math.ceil(last(PF)/PF.bar0)), FV=new Float32Array(fn), FC=new Float32Array(fn);
+  for(const e of PF.ev){ const bi=Math.floor((e.startMs||0)/PF.bar0); if(bi<0||bi>=fn) continue; for(const o of e.n){ FV[bi]+=o.v||60; FC[bi]++; } }
+  let fAvg=0, fK=0; for(let i=0;i<fn;i++) if(FC[i]){ FV[i]/=FC[i]; fAvg+=FV[i]; fK++; } fAvg=fK ? fAvg/fK : 64;
+  const loud=(b)=>{ const i=Math.min(fn-1,Math.floor((b+0.5)/NB*fn)); return FC[i] ? Math.max(0.65,Math.min(1.35,FV[i]/fAvg)) : 1; };
+  // the picture's reading for every moment: the event of the pulse-giver nearest the same point of the picture
+  const ref=PF.ev.slice().sort((a,b)=>(a.startMs||0)-(b.startMs||0)), refL=last(PF)||1;
+  const meta=(ms)=>{ const t=ms/total*refL; let lo=0, hi=ref.length-1; while(lo<hi){ const md=(lo+hi)>>1; if((ref[md].startMs||0)<t) lo=md+1; else hi=md; } const e=ref[lo]||ref[0]||{};
+    return {cg:e.cg, band:e.band, colStep:e.colStep||4, _chroma:e._chroma, _flat:e._flat||0, _domPc:e._domPc, _lum:e._lum}; };
+  const at={}; const put=(ms,o,who)=>{ const k=Math.round(ms); const g=(at[k]=at[k]||{who,ns:[]}); if(o.mel) g.who=who; g.ns.push(o); };   // a moment with a tune note is the tune's
+  for(let b=0;b<NB;b++){ const fig=figs[Math.floor(b/4)%figs.length], L=loud(b);
+    if(b===NB-1){ const c=chords[b*2], vx=voice(fig,c);   // the last bar: the home chord, every member of the touch at once, held
+      vx.forEach((m0,i)=>{ let m=m0; while(m>79 && i>0 && m-12>vx[0]) m-=12; put(b*bar,{m:Math.max(28,Math.min(88,m)), v:Math.max(20,Math.min(100,Math.round(60*L))), durMs:Math.round(bar*1.8), bass:i===0}, PT.k); }); break; }
+    for(let half=0;half<2;half++){ const c=chords[b*2+half], vx=voice(fig,c);
+      for(const o of fig.notes){ const uq=o.u; if(uq>=qpb || (uq<qpb/2)!==(half===0)) continue; const ms=b*bar+uq*qC;
+        let m=vx[Math.max(0,Math.min(vx.length-1,o.i))]; while(m>79 && o.i>0 && m-12>vx[0]) m-=12; m=Math.max(28,Math.min(88,m));   // the touch stays under the tune
+        put(ms,{m, v:Math.max(20,Math.min(110,Math.round(o.v*L))), durMs:Math.round(Math.min(o.d*qC, bar-uq*qC+qC*0.5)), bass:o.i===0}, PT.k); } } }
+  // MELODY: the parent's line (with five, two parents' lines in turn), phrase by phrase at the same point of the picture, brought to the pulse and laid on the new chords
+  const melOf=(p)=>{ const qM=qOf(p), w=_jamFold(qM,qC)/qM, L=[]; for(const e of p.ev){ const ns=e.n.filter(o=>o.mel===true); if(ns.length) L.push({s:(e.startMs||0)*w, n:ns.map(o=>Object.assign({},o,{durMs:Math.max(60,Math.round((o.durMs||0)*w))}))}); } return {k:p.k, L, last:L.length ? L[L.length-1].s : 0}; };
+  const MS=[melOf(PM)].concat(PM2 ? [melOf(PM2)] : []).filter(m=>m.L.length), mel=MS.length ? MS[0].L : [];
+  const near=(m,set,maxd)=>{ if(set[((m%12)+12)%12]) return m; for(let d=1;d<=maxd;d++){ if(set[(((m+d)%12)+12)%12]) return m+d; if(set[(((m-d)%12)+12)%12]) return m-d; } return m; };
+  let vT=0,vTn=0; for(const k in at) for(const o of at[k].ns){ vT+=o.v; vTn++; } let vM=0,vMn=0; for(const m of MS) for(const e of m.L) for(const o of e.n){ vM+=(o.v||60); vMn++; }
+  const vs=vMn ? Math.max(0.8,Math.min(1.35,((vTn ? vT/vTn : 55)+10)/(vM/vMn))) : 1;
+  if(MS.length){ const PH8=8*bar; for(let a=0,bk=0;a<total-bar*0.9;a+=PH8,bk++){ const len=Math.min(PH8,total-a-bar); if(len<=0) break; const MM=MS[bk%MS.length], mLast=MM.last;
+      let s0=Math.round(((a/total)*mLast)/(4*bar))*4*bar; s0=Math.max(0,Math.min(s0,Math.max(0,mLast-len)));
+      for(const e of MM.L){ if(e.s<s0||e.s>=s0+len) continue; const t=a+(e.s-s0), rel=t/qC, onBeat=Math.abs(rel-Math.round(rel))<0.14, c=chordAt(t), cs=new Array(12).fill(false); for(const p of c.pcs) cs[p]=true;
+        for(const o of e.n){ let m=o.m; if(!inKey[((m%12)+12)%12]) m=near(m,inKey,3); if(onBeat || (o.durMs||0)>=0.8*qC) m=near(m,cs,4);
+          put(t,Object.assign({},o,{m:Math.max(55,Math.min(101,m)), v:Math.max(26,Math.min(118,Math.round((o.v||60)*vs*loud(Math.floor(t/bar))))), durMs:Math.max(60,Math.min(o.durMs,Math.round(total-t))), mel:true}), MM.k); } } } }
+  const out=[]; for(const k of Object.keys(at).map(Number).sort((a,b)=>a-b)){ const g=at[k]; out.push(Object.assign({n:g.ns, startMs:k, idx:0, _who:g.who}, meta(k))); }
+  if(!out.length) return null;
+  const res=_jamOrder(out); res._roles={melody:PM.k, melody2:PM2 ? PM2.k : null, harmony:PH.k, touch:PT.k, pulse:PF.k, q:Math.round(qC)};
+  return res;
+}
+
+// the Setup's tiles: one jam on a picture in all three styles, its first variant each
+function composeJamPreview(px,nc,nr,table,colorMode,keys){
+  const ks=(keys||[]).filter(k=>COMPOSER_ENGINES[k]); if(ks.length<2) return null;
+  const prev=_jamCtx; _jamCtx={minor:null}; const P=[];
+  try{ for(const k of ks){ _jamNoteInfo=null; let ev=[]; try{ ev=COMPOSER_ENGINES[k](px,nc,nr,table,colorMode)||[]; }catch(_){ ev=[]; }
+      if(ev.length){ const inf=_jamNoteInfo||{barMs:2000,qpb:4}; P.push({k,ev,bar0:inf.barMs,qpb:inf.qpb}); } } }
+  finally{ _jamCtx=prev; _jamNoteInfo=null; }
+  if(P.length<2) return null; const h=_jamHash(ks,px);
+  const A=_jamRelay(P,0); let E=null, G=null; try{ E=_jamBred(P,h,0); }catch(_){} try{ G=_jamGenesis(P,h,0); }catch(_){}
+  return {keys:P.map(p=>p.k), A, E:E||A, G:G||E||A};
+}
 function composeImageCallResponse(px,nc,nr,table,colorMode,keys){
   const ks=(keys||[]).filter(k=>COMPOSER_ENGINES[k]);
   if(ks.length<2) return ks.length===1 ? COMPOSER_ENGINES[ks[0]](px,nc,nr,table,colorMode) : [];
@@ -17495,13 +17598,17 @@ function composeImageCallResponse(px,nc,nr,table,colorMode,keys){
   if(P.length<2) return P.length ? P[0].ev : [];
   let h=_jamHash(ks,px); let style=_jamStyleOf(h); let out=null;
   // The user tapped the style (strip / fullscreen pill) → this jam on this picture is pinned to the other one (the pin names the ensemble AND the picture's hash)
-  try{ const pin=globalThis.__JAM_STYLE_PIN; if(pin && pin.sig===ks.join() && pin.h===h && (pin.style==='E' || pin.style==='A')) style=pin.style; }catch(_){}
+  try{ const pin=globalThis.__JAM_STYLE_PIN; if(pin && pin.sig===ks.join() && pin.h===h && (pin.style==='E' || pin.style==='A' || pin.style==='G')) style=pin.style; }catch(_){}
   // A picture's ✦ Signature (__IMG_SIG, 05-main) is the same for everyone: its own style, and in a Synthesis its own
   // ground — read from the picture's character, not from this screen's pixels
-  try{ const S=globalThis.__IMG_SIG; if(S && S.keys && S.keys.join()===ks.join() && (S.fs==='E' || S.fs==='A')){ style=S.fs; h=(S.h>>>0); } }catch(_){}
-  if(style==='E') out=_jamBred(P,h);
-  if(!out){ style='A'; out=_jamRelay(P); }
-  try{ globalThis.__COMP_JAM_STYLE={sig:ks.join(),h,style,roles:out._roles||null}; }catch(_){}
+  let sigOn=false; try{ const S=globalThis.__IMG_SIG; if(S && S.keys && S.keys.join()===ks.join() && (S.fs==='E' || S.fs==='A')){ style=S.fs; h=(S.h>>>0); sigOn=true; } }catch(_){}
+  // its variant (← → in the Studio): the same composers on the same picture, the roles or the genes dealt again; 0 is the jam as it always was
+  let v=0; try{ const VV=globalThis.__JAM_VAR; if(!sigOn && VV && VV.sig===ks.join() && (VV.h>>>0)===(h>>>0)) v=Math.max(0,VV.v|0); }catch(_){}
+  if(style==='G') out=_jamGenesis(P,h,v);
+  else if(style==='E') out=_jamBred(P,h,v);
+  if(!out){ style='A'; out=_jamRelay(P,v); }
+  const nv = sigOn ? 1 : style==='G' ? _jamGenCount(P.length) : style==='E' ? (P.length===2 ? 2 : P.length*(P.length-1)) : P.length*2;
+  try{ globalThis.__COMP_JAM_STYLE={sig:ks.join(),h,style,roles:out._roles||null,v:v%Math.max(1,nv),nv}; }catch(_){}
   // tell the UI the style of this jam is known now (captions / fullscreen flash re-read it)
   try{ if(typeof globalThis.__onJamStyle==='function') globalThis.__onJamStyle(); }catch(_){}
   return out;
@@ -18578,7 +18685,7 @@ function _fgDeal(keys, ph){
   if(X<0) return {form:-1, hand:p%n, comp:(p+1)%n, col:n>2?(p+2)%n:p%n};
   const rest=ix.filter(i=>i!==X).map((_,k,a)=>a[(k+p)%a.length]);
   if(n===2){ const Y=rest[0]; return (p&1) ? {form:X, hand:Y, comp:X, col:Y} : {form:X, hand:Y, comp:Y, col:X}; }
-  return {form:X, hand:rest[0], comp:rest[1], col: n>3 ? rest[2] : ((p&1) ? rest[0] : X)};
+  return {form:X, hand:rest[0], comp:rest[1], col: n>3 ? rest[2] : ((p&1) ? rest[0] : X), x2: n>=5 ? rest[3] : -1};   // five: the fifth shares the form, or the hand
 }
 function _fgRng(seed){ let s=seed>>>0; return ()=>{ s=(s+0x6D2B79F5)>>>0; let t=s; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
 const _fgCss=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
@@ -18804,10 +18911,11 @@ function _fgPaint(ctx,CW,CH,chords,lim,gc,ss,mode,F,ph,noGround){
   if(!K){
     const keys=F.keys, D=Math.min(CW,CH), bw=mode==='bw', A=_kd2Analyze(chords,gc,mode); if(!A.cn) return;
     const deal=_fgDeal(keys,ph), gene=(i)=>_FG[keys[i]]||_FG.raffel;
-    const form=deal.form>=0 ? gene(deal.form).form : null, hand=_FG_HAND[gene(deal.hand).hand]||_FG_HAND.flat, comp=gene(deal.comp).comp, PAL=_fgColour(gene(deal.col).col,A,bw);
+    let form=deal.form>=0 ? gene(deal.form).form : null, hand2=null; const hand=_FG_HAND[gene(deal.hand).hand]||_FG_HAND.flat, comp=gene(deal.comp).comp, PAL=_fgColour(gene(deal.col).col,A,bw);
+    if(deal.x2>=0){ const g2=gene(deal.x2); if(form && g2.form){ const f={}; for(const [k,w] of Object.entries(form)) f[k]=(f[k]||0)+w/2; for(const [k,w] of Object.entries(g2.form)) f[k]=(f[k]||0)+w/2; form=f; } else hand2=_FG_HAND[g2.hand]||null; }
     const L=_fgLayout(comp,A,CW,CH,D,_fgRng((ss|0)^0x5f3759df)), items=L.items.slice().sort((a,b)=>(a.t-b.t)||(a.k-b.k));
     const big=CW*sx*CH*sy>4.2e6;   // a poster: drawn straight, not kept
-    K={key, chords, A, D, form, hand, PAL, L, items, Fm:Object.assign({},F,{edge:0,alpha:1,layers:1,fs:'A',tr:null,_S:D}), n:0, can:null, cx:null, big, deal:{form:keys[deal.form]||'-',hand:keys[deal.hand],comp:keys[deal.comp],col:keys[deal.col]}};
+    K={key, chords, A, D, form, hand, hand2, PAL, L, items, Fm:Object.assign({},F,{edge:0,alpha:1,layers:1,fs:'A',tr:null,_S:D}), n:0, can:null, cx:null, big, deal:{form:keys[deal.form]||'-',hand:keys[deal.hand],comp:keys[deal.comp],col:keys[deal.col],x2:deal.x2>=0 ? keys[deal.x2] : null}};
     if(!big){ _FG_KEEP.unshift(K); if(_FG_KEEP.length>3) _FG_KEEP.pop(); }
   }
   try{ globalThis.__FG={deal:K.deal}; }catch(_){}
@@ -18819,7 +18927,7 @@ function _fgPaint(ctx,CW,CH,chords,lim,gc,ss,mode,F,ph,noGround){
   ctx.drawImage(K.can,0,0,CW,CH); _setCurE(0.5);
 }
 function _fgItem(ctx,K,it,ss,k){
-  const PAL=K.PAL, hand=K.hand, A=K.A, D=K.D, kinds=K.form ? Object.entries(K.form) : [['blob',1]];
+  const PAL=K.PAL, hand=(K.hand2 && (it.k&1)) ? K.hand2 : K.hand, A=K.A, D=K.D, kinds=K.form ? Object.entries(K.form) : [['blob',1]];
   const r=_fgRng(((ss|0)*31+it.k*7919+1013)>>>0); r(); let a=r()*kinds.reduce((q,e)=>q+e[1],0), kind=kinds[0][0]; for(const [kk,w] of kinds){ a-=w; if(a<=0){ kind=kk; break; } }
   const s=Math.max(2,it.s)*(/^pc/.test(kind)?1.9:1), line=_FG_LINE.test(kind), c=PAL.c(A.pcCol(it.pc,60),r()), c2=PAL.c(A.pcCol(it.pc2,60),r());
   if(it.wire){ ctx.strokeStyle=_fgCss(PAL.ink,0.85); ctx.lineWidth=Math.max(0.8,D*0.0022); ctx.beginPath(); ctx.moveTo(it.wire[0],it.wire[1]); ctx.lineTo(it.x,it.y); ctx.stroke(); if(r()<0.5){ ctx.fillStyle=_fgCss(PAL.ink); ctx.beginPath(); ctx.arc((it.wire[0]+it.x)/2,(it.wire[1]+it.y)/2,D*0.006,0,6.2832); ctx.fill(); } }
