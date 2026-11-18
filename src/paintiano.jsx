@@ -9903,6 +9903,49 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
 // RafFel · Sunflower 137.5° (Nov 2026): every note a seed, each turned the golden angle from the one before and set out by the
 // square root of its number (Vogel) — the head grows from its heart outward as the piece plays, its Fibonacci spirals (21, 34,
 // 55 …) showing by themselves, traced in gold. A seed is its note's colour, as large as the note is long, as bright as it is loud.
+// RafFel · Circle of fifths (Nov 2026): a rose window of the piece's harmony. Twelve petals in the order of fifths (C at the top,
+// G, D, A … round), each in its tone's colour; rings from the heart out to the rim are the piece in time, its start in the middle,
+// its end at the edge — a pane glows as much as its tone sounds in that stretch, dark glass where it is silent. Lead between the
+// panes, the key's star in gold at the heart, the rim in gold.
+function _rfRose(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
+  const prog=Math.max(1,Math.min(lim,chords.length))/chords.length; chords=chords0||chords;
+  const cn=chords.length, S=Math.min(CW,CH), GOLD=[214,180,96], rnd=_seedRnd(141,sessionSeed|0,0,0);
+  const css=(c,a)=>a===undefined?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const FIF=[0,7,2,9,4,11,6,1,8,3,10,5], col=(pc)=>gc(60+pc,90);
+  // ── the night, and the light coming through the window
+  const c0=chords[0], n0=(c0&&(c0.n||c0.notes))||[]; let g0=[40,30,50]; if(n0.length){ const m=n0[0].m!==undefined?n0[0].m:n0[0]; g0=gc(m,80); }
+  ctx.fillStyle=`rgb(${(g0[0]*0.07+5)|0},${(g0[1]*0.07+4)|0},${(g0[2]*0.07+10)|0})`; ctx.fillRect(0,0,CW,CH);
+  const hx=CW/2, hy=CH/2, R=Math.min(CW*0.47, CH*0.47);
+  const lg=ctx.createRadialGradient(hx,hy,R*0.2,hx,hy,R*1.5); lg.addColorStop(0,css(g0.map(v=>v*0.35+20),0.35)); lg.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=lg; ctx.fillRect(0,0,CW,CH);
+  // ── the piece as rings × twelve tones; the outer rings in two halves (a rose window grows finer toward its rim)
+  const K=Math.max(5,Math.min(11,Math.round(4+Math.sqrt(cn)/2.4))), split=(k)=>k>=Math.floor(K*0.45)?2:1;
+  const W=[], tot=new Float32Array(12); for(let k=0;k<K;k++){ W.push([new Float32Array(12),new Float32Array(12)]); }
+  for(let i=0;i<cn;i++){ const ch=chords[i], ns=(ch&&(ch.n||ch.notes))||[], u=i/cn*K, k=Math.min(K-1,Math.floor(u)), h=(u-k)<0.5?0:1;
+    for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, pc=((Math.round(m)%12)+12)%12, w=(nt.v!==undefined?nt.v:80)/110*Math.min(1.6,(nt.durMs||400)/900+0.25); W[k][h][pc]+=w; tot[pc]+=w; } }
+  const r0=R*0.17, rad=(k)=>r0+(R-r0)*Math.pow(k/K,0.85), reached=prog*K, kShow=Math.min(K,Math.ceil(reached)), seg=Math.PI*2/12, gap=Math.max(1.6,S*0.0055);
+  // ── the panes: each a piece of glass inside its lead, lit as much as its tone sounds there
+  for(let k=0;k<kShow;k++){ const sp=split(k), f=Math.min(1,reached-k), rA=rad(k)+gap*0.5, rB=rad(k)+(rad(k+1)-rad(k))*f-gap*0.5; if(rB<=rA) continue;
+    const mx=Math.max(1e-6,...W[k][0],...W[k][1]);
+    for(let s2=0;s2<12;s2++){ const pc=FIF[s2], c=col(pc);
+      for(let h=0;h<sp;h++){ const w=(sp===2 ? W[k][h][pc] : W[k][0][pc]+W[k][1][pc])/(sp===2?mx:Math.max(1e-6,...W[k][0].map((v,j)=>v+W[k][1][j]))), lit=Math.pow(w,0.65)*(0.9+0.2*rnd());
+        const aw=seg/sp, a0=-Math.PI/2+(s2-0.5)*seg+h*aw, ga=gap*0.5/Math.max(rA,1), b0=a0+ga, b1=a0+aw-ga;
+        const g=ctx.createRadialGradient(hx,hy,rA,hx,hy,rB); g.addColorStop(0,css(c.map(v=>v*(0.08+0.8*lit)))); g.addColorStop(0.6,css(c.map(v=>Math.min(255,v*(0.12+1.0*lit)+22*lit)))); g.addColorStop(1,css(c.map(v=>v*(0.1+0.78*lit))));
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(hx,hy,rB,b0,b1); ctx.arc(hx,hy,rA,b1,b0,true); ctx.closePath(); ctx.fill();
+        if(lit>0.55){ ctx.fillStyle=css([255,255,255],0.06+0.08*lit); ctx.beginPath(); ctx.arc(hx,hy,rA+(rB-rA)*0.55,b0+aw*0.12,b0+aw*0.34); ctx.arc(hx,hy,rA+(rB-rA)*0.25,b0+aw*0.34,b0+aw*0.12,true); ctx.closePath(); ctx.fill(); }   // the glint of the glass
+      } } }
+  const rEnd=kShow>0 ? rad(kShow-1)+(rad(kShow)-rad(kShow-1))*Math.min(1,reached-(kShow-1)) : r0;
+  // ── the tracery: twelve small gold rings on the rim, where the petals meet
+  if(prog>0.98){ for(let s2=0;s2<12;s2++){ const a=-Math.PI/2+(s2-0.5)*seg, x=hx+Math.cos(a)*(R+gap*2.2), y=hy+Math.sin(a)*(R+gap*2.2); ctx.strokeStyle=css(GOLD,0.75); ctx.lineWidth=Math.max(1,S*0.0022); ctx.beginPath(); ctx.arc(x,y,Math.max(2,S*0.011),0,7); ctx.stroke(); } }
+  // ── the rim, gold, as far as the piece has come
+  ctx.strokeStyle=css(GOLD,0.85); ctx.lineWidth=Math.max(2,S*0.005); ctx.beginPath(); ctx.arc(hx,hy,rEnd+gap*0.8,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,prog*1.0001)); ctx.stroke();
+  // ── the heart: a gold rosette, the piece's own tones on it as gold seeds, its keynote the largest
+  ctx.fillStyle=css([12,10,16]); ctx.beginPath(); ctx.arc(hx,hy,r0-gap*0.3,0,7); ctx.fill();
+  ctx.strokeStyle=css(GOLD,0.85); ctx.lineWidth=Math.max(1.2,S*0.0028); ctx.beginPath(); ctx.arc(hx,hy,r0*0.62,0,7); ctx.stroke();
+  const order=[...Array(12).keys()].sort((a,b)=>tot[b]-tot[a]), keyN=order[0], used=new Set(order.slice(0,7));
+  for(let s2=0;s2<12;s2++){ const pc=FIF[s2], a=-Math.PI/2+s2*seg, x=hx+Math.cos(a)*r0*0.62, y=hy+Math.sin(a)*r0*0.62;
+    if(!used.has(pc)) continue; ctx.fillStyle=css(pc===keyN?[250,230,160]:GOLD,0.95); ctx.beginPath(); ctx.arc(x,y,Math.max(1.6,S*(pc===keyN?0.012:0.007)),0,7); ctx.fill(); }
+  _setCurE(0.5);
+}
 function _rfSunflower(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
   const prog=Math.max(1,Math.min(lim,chords.length))/chords.length; chords=chords0||chords;   // the seeds are every note of the whole piece, not the thinned-out sample
   const cn=chords.length, N=Math.max(1,Math.round(prog*cn)), S=Math.min(CW,CH), PHI=(1+Math.sqrt(5))/2, GA=Math.PI*2*(1-1/PHI), GOLD=[214,180,96];
@@ -10202,7 +10245,8 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
     return;
   }
 
-  if(pick===3){
+  if(pick===3){ _rfRose(ctx,CW,CH,chords,lim,gc,ss,mode,_chords0); return; }   // Circle of fifths (the Wave parked at 923)
+  if(pick===923){
     // — 4 · VLNA — quiet soundwave: vertical bars on a baseline —
     // a calm piece is one line of the wave; a dense one is written in up to four lines, like the systems of a score
     const nRows=1+Math.round(dnaDF*3), per=Math.ceil(cn/nRows), rowH=CH*0.7/nRows;
