@@ -3414,7 +3414,8 @@ function PaintianoApp() {
           justUpgraded, clearJustUpgraded, aiUntil, aiExpired, refundUntil, recheckLicense, licenseKey: _licKeyRf,
           trialUsedMap, modeExhausted, consumeTrial, gateAI } = useEntitlements();
   const [pfStep, setPfStep] = useState(_pfStepInit);
-  const _stepFloor = (proStatus && proStatus!=='free' && proStatus!=='loading') ? 2 : 0;   // Pro: at least Tvor
+  const [stepPick, setStepPick] = useState(()=>{ try{ return localStorage.getItem('paintiano_step_pick')==='1'; }catch(_){ return false; } });   // a step picked by hand in Setup
+  const _stepFloor = (!stepPick && proStatus && proStatus!=='free' && proStatus!=='loading') ? 2 : 0;   // Pro: at least Tvor, until a step is picked by hand
   const pfStepEff = Math.max(_stepFloor, pfStep);
   const pfStepRef = useRef(pfStepEff); pfStepRef.current = pfStepEff;
   const _stepAt = (n)=> pfStepEff>=n;
@@ -3422,7 +3423,8 @@ function PaintianoApp() {
   const zcKRef = useRef(zcK); zcKRef.current = zcK;
   const [stepToast, setStepToast] = useState(null);   // {n}: the step that has just come
   const stepToastTmRef = useRef(0);
-  const _stepSet = (n)=>{ n=Math.max(0,Math.min(3,n|0)); pfStepRef.current=Math.max(_stepFloor, n); setPfStep(n); try{ localStorage.setItem('paintiano_step', String(n)); }catch(_){} try{ window.posthog && window.posthog.capture('step_set',{step:n}); }catch(_){} if(n===0){ zcKRef.current=1; setZcK(1); } else if(zcKRef.current){ zcKRef.current=0; setZcK(0); } };   // Začni picked in Setup: its first minute again
+  const _stepSet = (n, fl)=>{ n=Math.max(0,Math.min(3,n|0)); pfStepRef.current=Math.max(fl==null ? _stepFloor : fl, n); setPfStep(n); try{ localStorage.setItem('paintiano_step', String(n)); }catch(_){} try{ window.posthog && window.posthog.capture('step_set',{step:n}); }catch(_){} if(n===0){ zcKRef.current=1; setZcK(1); } else if(zcKRef.current){ zcKRef.current=0; setZcK(0); } };   // Začni picked in Setup: its first minute again
+  const _stepPick = (n)=>{ setStepPick(true); try{ localStorage.setItem('paintiano_step_pick','1'); }catch(_){} _stepSet(n, 0); };   // Setup: any step, Pro too
   // the next step comes by itself — Tvor after the first ♥ on Hraj sa (or six paintings swiped or made), Experimentuj after the first Fusion or Jam — and says so
   const _stepUp = (n)=>{ if(pfStepRef.current>=n) return; _stepSet(n); if(n>=2){ setStepToast({n}); clearTimeout(stepToastTmRef.current); stepToastTmRef.current=setTimeout(()=>setStepToast(null), 11000); } };
   const _stepNote = (kind)=>{ try{ const st=pfStepRef.current;
@@ -23441,8 +23443,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 <div role="heading" aria-level={2} style={_hStyle}>{_stT('stepT')}</div>
                 <div style={{marginTop:4,fontSize:_px(12.5),lineHeight:1.4,color:'rgba(230,222,196,.68)'}}>{_stT('stepS')}</div>
                 <div role="group" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7,marginTop:12}}>
-                  {[0,1,2,3].map(n=>{ const on=pfStepEff===n, below=n<_stepFloor; return (
-                    <button key={n} type="button" aria-pressed={on} disabled={below} onClick={()=>_stepSet(n)} style={{padding:'11px 6px',border:0,borderRadius:13,fontFamily:'inherit',fontSize:_px(14),fontWeight:700,cursor:below?'default':'pointer',opacity:below?.4:1,background:on?'linear-gradient(135deg,#f0d78a,#c9a84c)':'rgba(255,255,255,.08)',color:on?'#1a1408':'rgba(242,238,232,.72)'}}>{_stT('stp'+n)}</button>); })}
+                  {[0,1,2,3].map(n=>{ const on=pfStepEff===n; return (
+                    <button key={n} type="button" aria-pressed={on} onClick={()=>_stepPick(n)} style={{padding:'11px 6px',border:0,borderRadius:13,fontFamily:'inherit',fontSize:_px(14),fontWeight:700,cursor:'pointer',background:on?'linear-gradient(135deg,#f0d78a,#c9a84c)':'rgba(255,255,255,.08)',color:on?'#1a1408':'rgba(242,238,232,.72)'}}>{_stT('stp'+n)}</button>); })}
                 </div>
               </div>)}
               {proStatus==='free' && (
