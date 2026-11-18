@@ -31382,8 +31382,8 @@ const STUDIO_HOME_CSS = `
 .pf-lh-out{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:pfLhOut .6s cubic-bezier(.2,.8,.2,1) both;z-index:1;pointer-events:none}
 @keyframes pfLhOut{from{transform:none}to{transform:translateY(-100%)}}
 .pf-lh canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.pf-lh-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 22px;pointer-events:none;z-index:3;animation:pfLhCard 2.4s ease both;background:radial-gradient(ellipse 70% 38% at 50% 50%,rgba(6,6,12,.62),rgba(6,6,12,.35) 55%,rgba(6,6,12,0) 100%)}   /* a dark veil under the words: readable on a white painting too */
-@keyframes pfLhCard{0%{opacity:0;transform:scale(1.06)}12%{opacity:1;transform:scale(1.03)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-40px) scale(.98)}}
+.pf-lh-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 22px;pointer-events:none;z-index:3;animation:pfLhCard 3.8s ease both;background:radial-gradient(ellipse 70% 38% at 50% 50%,rgba(6,6,12,.62),rgba(6,6,12,.35) 55%,rgba(6,6,12,0) 100%)}   /* a dark veil under the words: readable on a white painting too */
+@keyframes pfLhCard{0%{opacity:0;transform:scale(1.06)}10%{opacity:1;transform:scale(1.03)}80%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-40px) scale(.98)}}
 .pf-lh-card small{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.85);text-shadow:0 2px 12px rgba(0,0,0,.9)}
 .pf-lh-card b{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:46px;line-height:1.02;color:#fff;margin:8px 0;text-shadow:0 4px 30px rgba(0,0,0,.95)}
 .pf-lh-card i{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;color:#f0c75e;text-shadow:0 2px 16px rgba(0,0,0,.95)}
@@ -46470,7 +46470,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(feedClean) return;
     let tf=null;
     const iv=setInterval(()=>{ if(tf) return; const now=Date.now(), into=now-lhStartRef.current;
-      if(feedCleanRef.current || now-lhIdleRef.current<_LH_IDLE || into<3100 || into>5000) return;   // its title card gone (2.3 s), done at 7 s: the fade (1.6 s) ends well inside the painting
+      if(feedCleanRef.current || now-lhIdleRef.current<_LH_IDLE || into<4300 || into>5200) return;   // its title card gone (3.8 s), done at 7 s: the fade (1.6 s) ends inside the painting
       if(navMenuOpenRef.current || document.querySelector('[role="dialog"]') || document.querySelector('.pf-chg, .pf-st-sheet')) return;
       const t0=lhIdleRef.current; setLhFade(true);
       tf=setTimeout(()=>{ tf=null; setLhFade(false); if(lhIdleRef.current!==t0 || feedCleanRef.current || !lhOnRef.current) return; lhAutoRef.current=true; feedCleanRef.current=true; setFeedClean(true); }, 1600); }, 250);
@@ -46521,7 +46521,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       tm=setTimeout(step, Math.max(70, cost*1.5)); };
     setLivePhase('card');
     if(reduce){ paint(cn); setLivePhase('done'); return; }   // no motion asked for: the finished painting, still
-    tm=setTimeout(step, 200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, 2300); };
+    tm=setTimeout(step, 200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, 3800); };   // the title card: 3.8 s (long enough to read the piece and its painter)
     if(got && typeof got.then==='function') got.then(run).catch(()=>{ run(null); }); else run(got);
     return ()=>{ alive=false; clearTimeout(tm); clearTimeout(tc); };
   }, [liveHomeOn, liveHome.i, tone]);
