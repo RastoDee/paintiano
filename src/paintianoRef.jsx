@@ -9903,43 +9903,89 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
 // RafFel · Sunflower 137.5° (Nov 2026): every note a seed, each turned the golden angle from the one before and set out by the
 // square root of its number (Vogel) — the head grows from its heart outward as the piece plays, its Fibonacci spirals (21, 34,
 // 55 …) showing by themselves, traced in gold. A seed is its note's colour, as large as the note is long, as bright as it is loud.
+// RafFel · Chladni figures (Nov 2026): the canvas a plate the piece sets ringing. Each passage drives it at its own pitch — a
+// higher passage a finer mode (n, m) — and sand gathers on the lines that stay still: cos nπx·cos mπy ± cos mπx·cos nπy = 0.
+// The sand is the passage's colour; when the next passage comes the figure changes and the old sand stays as a fainter ghost
+// beneath, so the end shows the whole piece, its last figure brightest. Hudba zviditeľnená fyzikou.
+const _RF_CH_MODES=(()=>{ const L=[]; for(let n=1;n<=9;n++) for(let m=n+1;m<=10;m++) L.push([n,m,n*n+m*m]); return L.sort((a,b)=>a[2]-b[2]); })();
+let _rfChCache=null;
+function _rfChladni(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
+  const prog=Math.max(1,Math.min(lim,chords.length))/chords.length; chords=chords0||chords;
+  const cn=chords.length, S=Math.min(CW,CH);
+  const css=(c,a)=>a===undefined?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  // ── the plate: dark metal, a faint sheen
+  const c0=chords[0], n0=(c0&&(c0.n||c0.notes))||[]; let g0=[40,30,50]; if(n0.length){ const m=n0[0].m!==undefined?n0[0].m:n0[0]; g0=gc(m,80); }
+  ctx.fillStyle=`rgb(${(g0[0]*0.06+8)|0},${(g0[1]*0.06+7)|0},${(g0[2]*0.06+12)|0})`; ctx.fillRect(0,0,CW,CH);
+  const sh=ctx.createLinearGradient(0,0,CW,CH); sh.addColorStop(0,'rgba(255,255,255,0.035)'); sh.addColorStop(0.5,'rgba(255,255,255,0)'); sh.addColorStop(1,'rgba(255,255,255,0.025)'); ctx.fillStyle=sh; ctx.fillRect(0,0,CW,CH);
+  // ── the passages and their sand (computed once per piece and size)
+  const key=cn+'|'+CW+'|'+CH+'|'+(sessionSeed|0)+'|'+mode+'|'+(chords[0]&&chords[0].t)+'|'+(chords[cn-1]&&chords[cn-1].t);
+  if(!_rfChCache || _rfChCache.key!==key){
+    const P=Math.max(4,Math.min(9,Math.round(3+Math.sqrt(cn)/4))), pass=[]; const rnd=_seedRnd(149,sessionSeed|0,0,0);
+    let lo=127,hi=0; for(let i=0;i<cn;i+=Math.max(1,(cn/300)|0)){ const ns=(chords[i]&&(chords[i].n||chords[i].notes))||[]; for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt; if(m<lo) lo=m; if(m>hi) hi=m; } }
+    const cell=Math.max(1.5,Math.min(CW,CH)/330), gx=Math.ceil(CW/cell), gy=Math.ceil(CH/cell), PI=Math.PI;
+    for(let p=0;p<P;p++){ const i0=Math.floor(p/P*cn), i1=Math.max(i0+1,Math.floor((p+1)/P*cn)); let sm=0,k=0; const wpc=new Float32Array(12);
+      for(let i=i0;i<i1;i++){ const ns=(chords[i]&&(chords[i].n||chords[i].notes))||[]; for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, v=nt.v!==undefined?nt.v:80; sm+=m; k++; wpc[((Math.round(m)%12)+12)%12]+=v/110*Math.min(1.6,(nt.durMs||400)/900+0.25); } }
+      const pm=k?sm/k:60, reg=Math.max(0,Math.min(1,(pm-lo)/Math.max(6,hi-lo))), md=_RF_CH_MODES[Math.min(_RF_CH_MODES.length-1, 2+Math.round(reg*14)+(p%2))], sg=(p%3===1)?-1:1, n=md[0], mm=md[1];
+      let wt=0; for(let q=0;q<12;q++) wt+=wpc[q]; const cum=[]; let acc=0; for(let q=0;q<12;q++){ acc+=wpc[q]/Math.max(1e-6,wt); cum.push(acc); }
+      const B=[...Array(12)].map(()=>[]);   // the sand by tone (one colour each), in the order it falls
+      for(let yy=0;yy<gy;yy++){ const y=(yy+0.5)/gy, cy1=Math.cos(n*PI*y), cy2=Math.cos(mm*PI*y);
+        for(let xx=0;xx<gx;xx++){ const x=(xx+0.5)/gx, f=Math.cos(n*PI*x)*cy2+sg*Math.cos(mm*PI*x)*cy1, af=Math.abs(f);
+          if(af<0.07 && rnd()<(1-af/0.07)*0.85){ const r=rnd(); let q=0; while(q<11 && cum[q]<r) q++; B[q].push((xx+rnd())*cell, (yy+rnd())*cell); } } }
+      for(const b of B){ for(let i=b.length/2-1;i>0;i--){ const j=(rnd()*(i+1))|0; const tx=b[i*2], ty=b[i*2+1]; b[i*2]=b[j*2]; b[i*2+1]=b[j*2+1]; b[j*2]=tx; b[j*2+1]=ty; } }   // fallen in any order: a passage half heard shows half its sand all over its figure
+      pass.push({B, i0, i1}); }
+    _rfChCache={key, pass, layer:null, upto:-1};
+  }
+  const C=_rfChCache, P=C.pass.length, at=prog*P, cur=Math.min(P-1,Math.floor(at)), fr=Math.min(1,at-cur);
+  const gs=Math.max(1,S*0.0028);
+  const grains=(c2,p,a,frac)=>{ const q=C.pass[p]; for(let pc=0;pc<12;pc++){ const b=q.B[pc], n=Math.floor(b.length/2*frac); if(!n) continue; const cl=gc(60+pc,90).map(v=>Math.min(255,v*1.1+30)); c2.fillStyle=css(cl,a); for(let g=0;g<n;g++){ c2.fillRect(b[g*2]-gs/2, b[g*2+1]-gs/2, gs, gs); } } };
+  // the passages before: ghosts, the older the fainter (kept as one picture until the next passage comes)
+  if(cur>0){ if(!C.layer || C.upto!==cur || C.layer.width!==CW || C.layer.height!==CH){ const L=(typeof document!=='undefined') ? document.createElement('canvas') : new OffscreenCanvas(CW,CH); L.width=CW; L.height=CH; const lc=L.getContext('2d');
+      for(let p=0;p<cur;p++){ const age=cur-p; grains(lc,p,Math.max(0.14,0.6-age*0.1),1); } C.layer=L; C.upto=cur; }
+    ctx.drawImage(C.layer,0,0); }
+  grains(ctx,cur,0.95,fr);   // the passage playing now: its sand gathering
+  _setCurE(0.5);
+}
 // RafFel · Circle of fifths (Nov 2026): a rose window of the piece's harmony. Twelve petals in the order of fifths (C at the top,
 // G, D, A … round), each in its tone's colour; rings from the heart out to the rim are the piece in time, its start in the middle,
 // its end at the edge — a pane glows as much as its tone sounds in that stretch, dark glass where it is silent. Lead between the
 // panes, the key's star in gold at the heart, the rim in gold.
 function _rfRose(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
   const prog=Math.max(1,Math.min(lim,chords.length))/chords.length; chords=chords0||chords;
-  const cn=chords.length, S=Math.min(CW,CH), PHI=(1+Math.sqrt(5))/2, GOLD=[214,180,96];
+  const cn=chords.length, S=Math.min(CW,CH), GOLD=[214,180,96], rnd=_seedRnd(141,sessionSeed|0,0,0);
   const css=(c,a)=>a===undefined?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
-  const FIF=[0,7,2,9,4,11,6,1,8,3,10,5];
-  const col=(pc,v)=>{ const c=gc(60+pc, v||90); return c; };
-  // ── the night
+  const FIF=[0,7,2,9,4,11,6,1,8,3,10,5], col=(pc)=>gc(60+pc,90);
+  // ── the night, and the light coming through the window
   const c0=chords[0], n0=(c0&&(c0.n||c0.notes))||[]; let g0=[40,30,50]; if(n0.length){ const m=n0[0].m!==undefined?n0[0].m:n0[0]; g0=gc(m,80); }
-  ctx.fillStyle=`rgb(${(g0[0]*0.08+6)|0},${(g0[1]*0.08+5)|0},${(g0[2]*0.08+12)|0})`; ctx.fillRect(0,0,CW,CH);
-  // ── the piece as rings × twelve tones: how much each tone sounds in each stretch (velocity × length)
-  const K=Math.max(5,Math.min(13,Math.round(4+Math.sqrt(cn)/2))), W=[...Array(K)].map(()=>new Float32Array(12)), tot=new Float32Array(12);
-  for(let i=0;i<cn;i++){ const ch=chords[i], ns=(ch&&(ch.n||ch.notes))||[], k=Math.min(K-1,Math.floor(i/cn*K));
-    for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, pc=((Math.round(m)%12)+12)%12, w=(nt.v!==undefined?nt.v:80)/110*Math.min(1.6,(nt.durMs||400)/900+0.25); W[k][pc]+=w; tot[pc]+=w; } }
-  const hx=CW/2, hy=CH/2, R=Math.min(CW*0.47, CH*0.47), r0=R*0.14, rad=(k)=>r0+(R-r0)*Math.pow(k/K,0.85);
-  const reached=prog*K, kShow=Math.min(K,Math.ceil(reached)), LEAD=Math.max(1.5,S*0.006), seg=Math.PI*2/12;
-  // ── the panes
-  for(let k=0;k<kShow;k++){ const mx=Math.max(1e-6,...W[k]); const rA=rad(k), rB=rad(k+1), f=Math.min(1,reached-k);
-    for(let s2=0;s2<12;s2++){ const pc=FIF[s2], w=W[k][pc]/mx, a0=-Math.PI/2+(s2-0.5)*seg, a1=a0+seg;
-      const c=col(pc), lit=Math.pow(w,0.7), rr=rA+(rB-rA)*f;
-      const g=ctx.createRadialGradient(hx,hy,rA,hx,hy,Math.max(rA+1,rr)); g.addColorStop(0,css(c.map(v=>v*(0.1+0.85*lit)),0.98)); g.addColorStop(1,css(c.map(v=>Math.min(255,v*(0.14+1.0*lit)+18*lit)),0.98));
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(hx,hy,rr,a0,a1); ctx.arc(hx,hy,rA,a1,a0,true); ctx.closePath(); ctx.fill(); } }
-  // ── the lead: rings and spokes
-  ctx.strokeStyle='rgba(6,5,10,0.95)'; ctx.lineWidth=LEAD; ctx.lineCap='round';
-  for(let k=0;k<=kShow;k++){ const rr=k<kShow ? rad(k) : rad(k-1)+(rad(k)-rad(k-1))*Math.min(1,reached-(k-1)); ctx.beginPath(); ctx.arc(hx,hy,rr,0,7); ctx.stroke(); }
-  const rEnd=rad(kShow-1)+(rad(kShow)-rad(kShow-1))*Math.min(1,reached-(kShow-1));
-  for(let s2=0;s2<12;s2++){ const a=-Math.PI/2+(s2-0.5)*seg; ctx.beginPath(); ctx.moveTo(hx+Math.cos(a)*r0,hy+Math.sin(a)*r0); ctx.lineTo(hx+Math.cos(a)*rEnd,hy+Math.sin(a)*rEnd); ctx.stroke(); }
-  // ── the key's star at the heart: the seven tones the piece uses most, joined in the order of fifths, in gold
-  const top=[...Array(12).keys()].sort((a,b)=>tot[b]-tot[a]).slice(0,7).map(pc=>FIF.indexOf(pc)).sort((a,b)=>a-b);
-  ctx.fillStyle=css([16,13,20]); ctx.beginPath(); ctx.arc(hx,hy,r0,0,7); ctx.fill();
-  ctx.strokeStyle=css(GOLD,0.9); ctx.lineWidth=Math.max(1.2,S*0.0028); ctx.beginPath();
-  for(let j=0;j<=top.length;j++){ const s2=top[(j*3)%top.length], a=-Math.PI/2+s2*seg, x=hx+Math.cos(a)*r0*0.82, y=hy+Math.sin(a)*r0*0.82; j?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.stroke();
+  ctx.fillStyle=`rgb(${(g0[0]*0.07+5)|0},${(g0[1]*0.07+4)|0},${(g0[2]*0.07+10)|0})`; ctx.fillRect(0,0,CW,CH);
+  const hx=CW/2, hy=CH/2, R=Math.min(CW*0.47, CH*0.47);
+  const lg=ctx.createRadialGradient(hx,hy,R*0.2,hx,hy,R*1.5); lg.addColorStop(0,css(g0.map(v=>v*0.35+20),0.35)); lg.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=lg; ctx.fillRect(0,0,CW,CH);
+  // ── the piece as rings × twelve tones; the outer rings in two halves (a rose window grows finer toward its rim)
+  const K=Math.max(5,Math.min(11,Math.round(4+Math.sqrt(cn)/2.4))), split=(k)=>k>=Math.floor(K*0.45)?2:1;
+  const W=[], tot=new Float32Array(12); for(let k=0;k<K;k++){ W.push([new Float32Array(12),new Float32Array(12)]); }
+  for(let i=0;i<cn;i++){ const ch=chords[i], ns=(ch&&(ch.n||ch.notes))||[], u=i/cn*K, k=Math.min(K-1,Math.floor(u)), h=(u-k)<0.5?0:1;
+    for(const nt of ns){ const m=nt.m!==undefined?nt.m:nt, pc=((Math.round(m)%12)+12)%12, w=(nt.v!==undefined?nt.v:80)/110*Math.min(1.6,(nt.durMs||400)/900+0.25); W[k][h][pc]+=w; tot[pc]+=w; } }
+  const r0=R*0.17, rad=(k)=>r0+(R-r0)*Math.pow(k/K,0.85), reached=prog*K, kShow=Math.min(K,Math.ceil(reached)), seg=Math.PI*2/12, gap=Math.max(1.6,S*0.0055);
+  // ── the panes: each a piece of glass inside its lead, lit as much as its tone sounds there
+  for(let k=0;k<kShow;k++){ const sp=split(k), f=Math.min(1,reached-k), rA=rad(k)+gap*0.5, rB=rad(k)+(rad(k+1)-rad(k))*f-gap*0.5; if(rB<=rA) continue;
+    const mx=Math.max(1e-6,...W[k][0],...W[k][1]);
+    for(let s2=0;s2<12;s2++){ const pc=FIF[s2], c=col(pc);
+      for(let h=0;h<sp;h++){ const w=(sp===2 ? W[k][h][pc] : W[k][0][pc]+W[k][1][pc])/(sp===2?mx:Math.max(1e-6,...W[k][0].map((v,j)=>v+W[k][1][j]))), lit=Math.pow(w,0.65)*(0.9+0.2*rnd());
+        const aw=seg/sp, a0=-Math.PI/2+(s2-0.5)*seg+h*aw, ga=gap*0.5/Math.max(rA,1), b0=a0+ga, b1=a0+aw-ga;
+        const g=ctx.createRadialGradient(hx,hy,rA,hx,hy,rB); g.addColorStop(0,css(c.map(v=>v*(0.08+0.8*lit)))); g.addColorStop(0.6,css(c.map(v=>Math.min(255,v*(0.12+1.0*lit)+22*lit)))); g.addColorStop(1,css(c.map(v=>v*(0.1+0.78*lit))));
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(hx,hy,rB,b0,b1); ctx.arc(hx,hy,rA,b1,b0,true); ctx.closePath(); ctx.fill();
+        if(lit>0.55){ ctx.fillStyle=css([255,255,255],0.06+0.08*lit); ctx.beginPath(); ctx.arc(hx,hy,rA+(rB-rA)*0.55,b0+aw*0.12,b0+aw*0.34); ctx.arc(hx,hy,rA+(rB-rA)*0.25,b0+aw*0.34,b0+aw*0.12,true); ctx.closePath(); ctx.fill(); }   // the glint of the glass
+      } } }
+  const rEnd=kShow>0 ? rad(kShow-1)+(rad(kShow)-rad(kShow-1))*Math.min(1,reached-(kShow-1)) : r0;
+  // ── the tracery: twelve small gold rings on the rim, where the petals meet
+  if(prog>0.98){ for(let s2=0;s2<12;s2++){ const a=-Math.PI/2+(s2-0.5)*seg, x=hx+Math.cos(a)*(R+gap*2.2), y=hy+Math.sin(a)*(R+gap*2.2); ctx.strokeStyle=css(GOLD,0.75); ctx.lineWidth=Math.max(1,S*0.0022); ctx.beginPath(); ctx.arc(x,y,Math.max(2,S*0.011),0,7); ctx.stroke(); } }
   // ── the rim, gold, as far as the piece has come
-  ctx.strokeStyle=css(GOLD,0.85); ctx.lineWidth=Math.max(2,S*0.006); ctx.beginPath(); ctx.arc(hx,hy,rEnd+LEAD*0.6,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,prog*1.0001)); ctx.stroke();
+  ctx.strokeStyle=css(GOLD,0.85); ctx.lineWidth=Math.max(2,S*0.005); ctx.beginPath(); ctx.arc(hx,hy,rEnd+gap*0.8,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,prog*1.0001)); ctx.stroke();
+  // ── the heart: a gold rosette, the piece's own tones on it as gold seeds, its keynote the largest
+  ctx.fillStyle=css([12,10,16]); ctx.beginPath(); ctx.arc(hx,hy,r0-gap*0.3,0,7); ctx.fill();
+  ctx.strokeStyle=css(GOLD,0.85); ctx.lineWidth=Math.max(1.2,S*0.0028); ctx.beginPath(); ctx.arc(hx,hy,r0*0.62,0,7); ctx.stroke();
+  const order=[...Array(12).keys()].sort((a,b)=>tot[b]-tot[a]), keyN=order[0], used=new Set(order.slice(0,7));
+  for(let s2=0;s2<12;s2++){ const pc=FIF[s2], a=-Math.PI/2+s2*seg, x=hx+Math.cos(a)*r0*0.62, y=hy+Math.sin(a)*r0*0.62;
+    if(!used.has(pc)) continue; ctx.fillStyle=css(pc===keyN?[250,230,160]:GOLD,0.95); ctx.beginPath(); ctx.arc(x,y,Math.max(1.6,S*(pc===keyN?0.012:0.007)),0,7); ctx.fill(); }
   _setCurE(0.5);
 }
 function _rfSunflower(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
@@ -10311,7 +10357,8 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   }
 
 
-  if(pick===5){
+  if(pick===5){ _rfChladni(ctx,CW,CH,chords,lim,gc,ss,mode,_chords0); return; }   // Chladni figures (the Composition parked at 925)
+  if(pick===925){
     // — 6 · KOMPOZÍCIA — scattered points joined into a coloured graph —
     // Deterministic scatter seeded from the piece, so it's stable per song.
     const rnd2=_seedRnd(137, ss, 1, 0);
