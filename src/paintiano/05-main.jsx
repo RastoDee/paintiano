@@ -5162,14 +5162,25 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // ✦ Signature is a whole look, not a variant: ← leaves it, so the step keeps the look itself (H.keep: the painter's key may change with it) —
   // → brings the ✦ back exactly, and ← after it goes forward to the same variant again
   const _variantLook = (L)=>{ nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600); _stLookApply(L); };
-  const _jamVarStep = (d)=>{ try{
+  // A Jam's variants step as a painter's (Nov 2026): ← the next one — and, as the painters' ←, a new palette; → back through the ones heard
+  // (each with its own palette), and at the first it stops; ← after → goes forward again to the one you came back from
+  const jamVarHistRef = useRef({key:'', st:[], fw:[]});
+  const _jamVarStep = (d, pal)=>{ try{
       const J=globalThis.__COMP_JAM_STYLE, ks=[imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
       if(!J || J.h==null || ks.length<2 || J.sig!==ks.join() || imgSigActiveRef.current) return false;
       const nv=Math.max(1,J.nv|0); if(nv<2) return false;
-      const VV=globalThis.__JAM_VAR, cur=(VV && VV.sig===J.sig && (VV.h>>>0)===(J.h>>>0)) ? (VV.v|0) : 0;
-      globalThis.__JAM_VAR={ sig:J.sig, h:(J.h>>>0), v:((cur+d)%nv+nv)%nv };
+      const VV=globalThis.__JAM_VAR, cur=(VV && VV.sig===J.sig && (VV.h>>>0)===(J.h>>>0)) ? (VV.v|0) : (J.v|0);
+      const H=jamVarHistRef.current, key=J.sig+'|'+(J.h>>>0); if(H.key!==key){ H.key=key; H.st=[]; H.fw=[]; }
+      const now={ v:cur, md:mode }; let to=null;
+      if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
+      else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
+      else { to={ v:(cur+1)%nv, md:null }; H.st.push(now); }
+      if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift();
+      globalThis.__JAM_VAR={ sig:J.sig, h:(J.h>>>0), v:to.v };
+      if(to.md){ if(to.md!==mode && !palGoldRef.current && setupPalettes.includes(to.md)){ kontraAutoRef.current=false; setShowColorPalette(false); setCustomArmed(false); setMode(to.md); } }   // the palette it had (a gold palette stays)
+      else if(pal && !palGoldRef.current) _fuRollPal(true);
       setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
-  const _variantNext = (pal)=>{ if(viewMode==='image') return _jamVarStep(1); const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
+  const _variantNext = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal); const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;
     const sig = viewMode!=='image' && !!sigActiveRef.current;
     const snap = sig ? {..._variantSnap(), look:_stLookNow()} : _variantSnap();
     if(H.fw && H.fw.length){ const v=H.fw.pop(); H.st.push(snap); if(H.st.length>30) H.st.shift(); if(v.look){ H.keep=true; _variantLook(v.look); } else { if(sig) H.keep=true; _variantPut(v); } return true; }
@@ -16552,7 +16563,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   };
   // What you hold is never changed by going back or forward through the looks (Nov 2026): a gold painter, a fusion's gold painters (a locked
   // fusion: exactly them) and a gold palette stay — a look from before that has others is not stepped to, and that way is forgotten.
-  const _stHoldOk = (L)=>{ if(!L || L.i || viewMode==='image') return true;
+  const _stHoldOk = (L)=>{ if(!L) return true;
+    if(L.i || viewMode==='image'){ if(!L.i || viewMode!=='image') return true;   // a picture: the same, for the composers
+      if(palGoldRef.current && L.md!==mode) return false;
+      if(imgSigActiveRef.current) return true;   // the picture's own ✦: not a choice of yours
+      const mem=[L.comp].concat(L.stage||[]).filter(Boolean);
+      if(crOnRef.current){ const pins=(crPinsRef.current||[]).filter(Boolean); if(!pins.length) return true; if(!L.cr || pins.some(k=>!mem.includes(k))) return false; return !(crFixedRef.current && mem.length!==pins.length); }
+      if(imgComposerRef.current && !composerDice) return L.comp===imgComposerRef.current && !(L.stage||[]).length && !L.cr && !L.sig;   // a gold composer in Solo
+      return true; }
     const ok=(k)=>k && k!=='mosaic' && k!=='notes', mem=[L.st].concat(L.sg||[]).filter(ok);
     if(palGoldRef.current && L.md!==mode) return false;
     if(stTakenRef.current || sigActiveRef.current) return true;   // not chosen: the piece's own ✦, or a look still to be taken
@@ -16607,14 +16625,16 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           else if(_mixC==='fu'){ if(!crOn) _stCrFusionOn(true); else { crPinsRef.current=[]; setCrPins([]); if(!composerDice) setComposerDice(true); if(playing) _imgDip(()=>_composerRoll()); else _composerRoll(); } rolled = true; }
           else if(_mixC==='solo'){ if(crOn) _stCrSolo(); setComposerDice(true);   // nobody gold: a new composer, drawn
             setTimeout(()=>{ const go=()=>{ try{ composerRollRef.current && composerRollRef.current(); }catch(_){} }; if(playingRef.current) _imgDip(go); else go(); }, 60); rolled = true; }
-          else if(crOn && crFixedRef.current){ rolled = _fuRollPal(true)!==false; }   // a pinned Jam: ↑ brings a new palette (← → its variants), as a pinned Fusion
+          else if(crOn && crFixedRef.current){ rolled = !palGoldRef.current && _fuRollPal(true)===true; }   // a pinned Jam: ↑ brings a new palette (← → its variants), as a pinned Fusion
           else if(!_soloKept){
             if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; if(!crOnRef.current && composerStageRef.current.length){ composerStageRef.current=[]; setComposerStage([]); } }   // ↑ from the picture's ✦: the latch lets go (as a painting's ✦ does) — its guests leave with it, the next composer is drawn, the ✦ word goes
             if(!crOn && !composerDice) setComposerDice(true);
             if(crOn && !composerDice) _stCrPinStage();   // a Fusion (e.g. ✦'s ensemble): its gold composers stay, ↑ seats white guests — as for the painters
             if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
             else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
+            if(rolled && !palGoldRef.current) _fuRollPal(true);   // … and a new palette, as on a painting
           }
+          else if(!palGoldRef.current){ rolled = _fuRollPal(true)===true; }   // a gold composer in Solo stays: ↑ = a new palette, as for a chosen painter
         }
       } else if((disp>0||playing||holdPaused||composeMode||_stPosterOn) && !anim && !working && !demoReelOn && !recording && !micActive){
         stUpPalRef.current = Date.now();
@@ -16864,7 +16884,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(ay>=ax) _stKeySwipe(0, e.deltaY>0 ? -260 : 260); else _stKeySwipe(e.deltaX>0 ? -220 : 220, 0); };
   useEffect(()=>{ if(!_pfInFrame()) return; _pfMouseFinger(); const wh=(e)=>{ if(stWheelRef.current) stWheelRef.current(e); };
     window.addEventListener('wheel', wh, {passive:false}); return ()=>window.removeEventListener('wheel', wh); },[]);
-  const _sdOk = ()=> studioFs && stFill && !stripOpen && !studioLive && viewMode!=='image' && !demoReelOn && !recording && !stVidRec;
+  const _sdOk = ()=> studioFs && stFill && !stripOpen && !studioLive && !demoReelOn && !recording && !stVidRec;
+  // a picture: is there anything that way? (as the painting's own steps would answer — nothing: the picture only gives)
+  const _sdCan = (ax, dir)=>{ try{
+      if(!((disp>0||playing||holdPaused) && !anim && !working && !demoReelOn && !recording && !micActive)) return false;
+      if(ax==='x'){ const J=globalThis.__COMP_JAM_STYLE, ks=[imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
+        if(!J || J.h==null || ks.length<2 || J.sig!==ks.join() || imgSigActiveRef.current || (J.nv|0)<2) return false;
+        if(dir>0) return true; const H=jamVarHistRef.current; return H.key===J.sig+'|'+(J.h>>>0) && H.st.length>0; }
+      const H=stLookHistRef.current, k=_stHistKey();
+      if(dir<0) return H.key===k && H.st.length>0 && _stHoldOk(H.st[H.st.length-1]);
+      return imgPlayMode!=='compose' && ((H.key===k && !!H.fw && H.fw.length>0 && _stHoldOk(H.fw[H.fw.length-1])) || _stUpWorks());
+    }catch(_){ return false; } };
   const _sdCss = ()=>{ try{ if(document.getElementById('pf-fd-css')) return; const el=document.createElement('style'); el.id='pf-fd-css'; el.textContent='[data-fdz] canvas:not(.pf-fd-copy){opacity:0!important;transition:none!important} [data-fdd] canvas:not(.pf-fd-copy){transition:none!important}'; document.head.appendChild(el); }catch(_){} };
   const _sdCopyAt = (fd, off)=>{ const c=fd.copy; if(!c) return; c.style.left=(fd.bx + (fd.ax==='x' ? off : 0))+'px'; c.style.top=(fd.by + (fd.ax==='y' ? off : 0))+'px'; };
   const _sdClear = (fd)=>{ try{ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; delete fd.card.dataset.fdz; delete fd.card.dataset.fdd; }catch(_){} };
@@ -16875,10 +16905,16 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     _trSet(card, '');   // nothing eases the translate: the painting is exactly under the finger
     _sdCss(); try{ card.querySelectorAll('.pf-fd-copy').forEach(n=>n.remove()); }catch(_){}
     // the copy: every canvas of the painting, as it is on screen now
+    const lazy = viewMode==='image';   // a picture: the picture itself is in the copy too
     let cp=null; try{ const dp=Math.min(1.5, window.devicePixelRatio||1); cp=_fdCopyCv(Math.round(r.width*dp), Math.round(r.height*dp));
-      const x=cp.getContext('2d'); card.querySelectorAll('canvas').forEach(k=>{ if(k.classList.contains('pf-fd-copy') || !k.width || !k.height) return; const q=k.getBoundingClientRect(); if(!q.width || !q.height) return;
-        const cs=getComputedStyle(k); if(cs.display==='none' || cs.visibility==='hidden' || +cs.opacity===0) return; x.drawImage(k, (q.left-r.left)*dp, (q.top-r.top)*dp, q.width*dp, q.height*dp); });
+      const x=cp.getContext('2d'); card.querySelectorAll(lazy ? 'canvas, img' : 'canvas').forEach(k=>{ if(k.classList.contains('pf-fd-copy') || k.classList.contains('pf-st-peek') || !(k.tagName==='IMG' ? (k.complete && k.naturalWidth) : (k.width && k.height))) return; const q=k.getBoundingClientRect(); if(!q.width || !q.height) return;
+        const cs=getComputedStyle(k); if(cs.display==='none' || cs.visibility==='hidden' || +cs.opacity===0) return;
+        if(lazy){ x.globalAlpha=Math.max(0, Math.min(1, +cs.opacity||1)); x.globalCompositeOperation=(cs.mixBlendMode && cs.mixBlendMode!=='normal') ? cs.mixBlendMode : 'source-over'; }   // a picture's lights lie on it in 'screen' (and the dim one at .7): the copy as the eye sees it
+        x.drawImage(k, (q.left-r.left)*dp, (q.top-r.top)*dp, q.width*dp, q.height*dp); }); x.globalAlpha=1; x.globalCompositeOperation='source-over';
       cp.style.cssText='position:absolute;margin:0;width:'+r.width+'px;height:'+r.height+'px;pointer-events:none;z-index:5'; }catch(_){ cp=null; }
+    // a picture: nothing changes yet — the copy goes, the same picture comes; who plays it changes when the finger lets go (_sdEnd)
+    if(lazy){ if(!_sdCan(ax, dir)){ _fdSet(fd, 0); return fd; } const N=stNavRef.current; N.hold(); card.dataset.fdd='1'; fd.mode='pre'; fd.lazy=true; fd.ready=true;
+      if(cp){ fd.copy=cp; card.appendChild(cp); _sdCopyAt(fd, -dir*L); } _fdSet(fd, 0); return fd; }
     const N=stNavRef.current, sig0=_fdMark(); N.hold(); card.dataset.fdz='1'; card.dataset.fdd='1'; let ok=false;
     try{ ok = ax==='y' ? (dir>0 ? N.next() : N.prev()) : (dir>0 ? N.vn() : N.vb()); }catch(_){ ok=false; }
     if(!ok){ delete card.dataset.fdz; delete card.dataset.fdd; N.free(); _fdSet(fd, 0); return fd; }   // nothing that way: the painting only gives
@@ -16888,6 +16924,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _sdEnd = (fd, v, back)=>{ v=v||0; const N=stNavRef.current;   // back: the phone took the touch — the painting goes back, never on
     if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_sdClear(fd)); if(Math.abs(fd.d)>30) N.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)), to = go ? -fd.dir*fd.L : 0;
+    if(fd.lazy){   // a picture: let go far enough — now who plays it changes (nothing that way after all: it goes back)
+      let ok=false; if(go){ try{ ok = fd.ax==='y' ? (fd.dir>0 ? N.next() : N.prev()) : (fd.dir>0 ? N.vn() : N.vb()); }catch(_){ ok=false; } }
+      _fdSpring(fd.d, v*1000, ok ? -fd.dir*fd.L : 0, (x)=>_fdSet(fd, x), ()=>{ _sdClear(fd); N.free(); if(ok){ N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); } else if(go) N.buzz(6); });
+      return; }
     const hold = go ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{
       if(go){ if(fd.copy){ _fdCopyFree(); fd.copy=null; } fd.card.style.translate=''; delete fd.card.dataset.fdd; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 12 : 10); return; }
@@ -16958,7 +16998,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _tipShown = (k)=>{ _tipCount(k); setStTip(x=> x===k ? null : x); };
   const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn || _stGuideOn.current;
   // ⌃ only where ↑ does something: a painter you chose (gold) stays — there the hint would be wrong
-  const _stUpWorks = ()=> viewMode==='image' ? (crOn || composerDice || !imgComposer || imgSigActive) : (!palGold || !!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0));   // a picture: a gold composer in Solo stays
+  const _stUpWorks = ()=> viewMode==='image' ? (crOn || composerDice || !imgComposer || imgSigActive || !palGold) : (!palGold || !!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0));   // a picture: a gold composer in Solo stays
   useEffect(()=>{ if(stTip || _tipQuiet || !playing) return;
     let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
     if(studioFs && !up && !_tipSeen('up') && !tipSessRef.current.up && _stUpWorks()) k='up'; else if(!_tipSeen('chg') && !tipSessRef.current.chg) k='chg';   // at home ⌃ is the card's own cue
