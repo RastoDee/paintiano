@@ -29144,14 +29144,6 @@ function _pfIsIOS(){ try{ const ua=navigator.userAgent||''; return /iP(hone|ad|o
 function _pfSilentWav(){ const n=8000, b=new ArrayBuffer(44+n), v=new DataView(b), w=(o,t)=>{ for(let i=0;i<t.length;i++) v.setUint8(o+i, t.charCodeAt(i)); };
   w(0,'RIFF'); v.setUint32(4,36+n,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,8000,true); v.setUint32(28,8000,true); v.setUint16(32,1,true); v.setUint16(34,8,true); w(36,'data'); v.setUint32(40,n,true);
   for(let i=0;i<n;i++) v.setUint8(44+i,128); return URL.createObjectURL(new Blob([b], {type:'audio/wav'})); }
-// a song of yours, by its file's name: "Artist - Title", or "Artist (∆) Title" (an empty or symbols-only bracket between them) → its title,
-// and the artist apart, in small letters above it as a built-in piece's composer; the downloaders' extras ((Official Video), [Audio] …) go
-function _pfSongParts(name){ try{ let s=String(name||'').replace(/\.[a-z0-9]{2,4}$/i,'').replace(/_/g,' ');
-  s=s.replace(/\s*[\(\[](?:official\s*)?(?:music\s*|lyric\s*)?(?:video|audio|lyrics?|visuali[sz]er|hd|hq|4k|remaster(?:ed)?(?:\s*\d{4})?)[\)\]]/gi,'').replace(/\s+/g,' ').trim();
-  let m=s.match(/^(.+?)\s+[-–—|]\s+(.+)$/); if(m) return {by:m[1].trim(), t:m[2].trim()};
-  m=s.match(/^(.+?)\s*([\(\[][^\p{L}\p{N}]*[\)\]])\s+(.+)$/u); if(m){ const sym=m[2].replace(/[\(\)\[\]\s]/g,''); return {by:(m[1]+(sym ? ' ('+sym+')' : '')).trim(), t:m[3].trim()}; }
-  return {by:'', t:s}; }catch(_){ return {by:'', t:String(name||'')}; } }
-const _pfSongLine = (name)=>{ const P=_pfSongParts(name); return P.by ? P.t+' — '+P.by : P.t; };   // as the built-in pieces read: Title — Artist
 function _pfKeepAlive(on){ try{ if(!_pfIsIOS()) return;
   if(!on){ if(_pfKeepEl && !_pfKeepEl.paused) _pfKeepEl.pause(); return; }
   if(document.visibilityState==='hidden') return;
@@ -31454,9 +31446,9 @@ const STUDIO_HOME_CSS = `
 .pf-sh-paused svg{margin-left:4px}
 .pf-sh-mutefl{position:absolute;left:50%;top:50%;z-index:7;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);color:#fff;pointer-events:none;animation:pfShMuteFl 1s ease-out both}
 @keyframes pfShMuteFl{0%{opacity:0;transform:scale(.72)}16%{opacity:1;transform:scale(1.07)}28%{transform:scale(1)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
-.pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-flash,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-card,.pf-fy-clean .pf-lh-foot{display:none!important}
+.pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-flash,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-foot{display:none!important}
 .pf-fy-clean .pf-sh-stage::after{display:none!important}
-.pf-fy-fade .pf-topbar,.pf-fy-fade .pf-st-bar,.pf-fy-fade .pf-sh-prog,.pf-fy-fade .pf-sh-mute,.pf-fy-fade .pf-sh-paused,.pf-fy-fade .pf-sh-flash,.pf-fy-fade .pf-sh-intro,.pf-fy-fade .pf-sh-up,.pf-fy-fade .pf-sh-next,.pf-fy-fade .pf-sh-nextx,.pf-fy-fade .pf-sh-tap,.pf-fy-fade .pf-sh-cap,.pf-fy-fade .pf-lh-card,.pf-fy-fade .pf-lh-foot{opacity:0!important;transition:opacity 1.6s ease-in-out!important;pointer-events:none!important}
+.pf-fy-fade .pf-topbar,.pf-fy-fade .pf-st-bar,.pf-fy-fade .pf-sh-prog,.pf-fy-fade .pf-sh-mute,.pf-fy-fade .pf-sh-paused,.pf-fy-fade .pf-sh-flash,.pf-fy-fade .pf-sh-intro,.pf-fy-fade .pf-sh-up,.pf-fy-fade .pf-sh-next,.pf-fy-fade .pf-sh-nextx,.pf-fy-fade .pf-sh-tap,.pf-fy-fade .pf-sh-cap,.pf-fy-fade .pf-lh-foot{opacity:0!important;transition:opacity 1.6s ease-in-out!important;pointer-events:none!important}
 .pf-fy-cleanhint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);z-index:20;transform:translateX(-50%);white-space:nowrap;padding:9px 16px;border-radius:999px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);color:#f2eee8;font-size:13px;font-weight:600;letter-spacing:.01em;pointer-events:none;animation:pfFyHint 2.6s ease both}
 @keyframes pfFyHint{0%{opacity:0;transform:translate(-50%,8px)}12%{opacity:1;transform:translate(-50%,0)}80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,0)}}
 @keyframes pfShPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
@@ -46049,7 +46041,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return ()=>{ c=true; }; },[studioHome, myMusicSlots, myImgSlots]);
   const _feedMine = (kind, piece)=> typeof piece==='string' ? ((kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).find(x=>'m'+x.id===piece) || null) : null;
   const feedOwnTtlRef = useRef('');   // the title of your own painting, brought along to For You
-  const _feedTitle = (c)=> c ? (c.piece==='own' ? feedOwnTtlRef.current : typeof c.piece==='string' ? (c.kind==='img' ? ((_feedMine(c.kind, c.piece)||{}).n || '') : _pfSongLine((_feedMine(c.kind, c.piece)||{}).n || '')) : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
+  const _feedTitle = (c)=> c ? (c.piece==='own' ? feedOwnTtlRef.current : typeof c.piece==='string' ? ((_feedMine(c.kind, c.piece)||{}).n || '') : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
   const feedImgElRef = useRef({u:null, el:null});   // the picture under a feed picture's scan, for the card
   // the painting on the canvas, small, for a card that is left
   const feedDrawRef = useRef(()=>{});   // the interval draws with today's picture, not the one it started with
@@ -46518,7 +46510,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const lay=_favLayout(fv, cs); if(!lay) return;
     try{ const box=cv.parentElement; const bw=box ? box.clientWidth : 0, bh=box ? box.clientHeight : 0; if(bw>40 && bh>40){ lay.CW=bw; lay.CH=bh; } }catch(_){}   // painted in the card's own frame, as the Studio paints (a painter's picture, not the mosaic grid)
     liveHomeRef.current={ piece:it.piece, sel:{style:st, phase:it.phase|0, mode:'harmony', notes:false, stage:[], sig:false}, snap:()=>{ try{ return cv.toDataURL('image/jpeg',0.8); }catch(_){ return null; } } };
-    try{ const nm=_liveName(it.piece); const q = typeof it.piece==='string' ? (()=>{ const P=_pfSongParts(nm); return [P.t, P.by]; })() : nm.split(' — '); setLiveMeta({t:q[0]||nm, by:q[1]||'', p:t('inspiredBy').replace('{artist}', STYLE_INSPIRED[st]||st)}); }catch(_){ setLiveMeta(null); }   // yours: the title big, the artist small above it
+    try{ const nm=_liveName(it.piece); const q=nm.split(' — '); setLiveMeta({t:q[0]||nm, by:q[1]||'', p:t('inspiredBy').replace('{artist}', STYLE_INSPIRED[st]||st)}); }catch(_){ setLiveMeta(null); }
     try{ const cn0=cs.length, bars=[]; for(let j=0;j<36;j++){ const c=cs[Math.min(cn0-1, Math.floor(j/36*cn0))]; const ns=(c && (c.n||c.notes))||[]; let top=60, vel=100; ns.forEach(x=>{ const m=(x && x.m!==undefined) ? x.m : (x && x.midi!==undefined ? x.midi : x); if(+m>top) top=+m; if(x && x.v) vel=x.v; }); const k=gc(top, vel); bars.push('rgb('+(k[0]|0)+','+(k[1]|0)+','+(k[2]|0)+')'); } setLiveBars(bars); }catch(_){ setLiveBars(null); }
     const reduce=(()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(_){ return false; } })();
     const cn=cs.length, t0=performance.now(); let last=-1; const S=Math.min(1.5, window.devicePixelRatio||1);
