@@ -9896,6 +9896,55 @@ function drawDelaunayOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, ph
 //   the signs        an accent is a bright node with a halo · the climax passage drawn in gold · a faint golden spiral
 //                    under everything when the piece is even · the thread thicker as the piece is loud
 // ═══════════════════════════════════════════════════════════════════════════
+// RafFel · Golden music (his Listens, Nov 2026): the canvas tiled as the golden rectangle — square after square, each 1/φ of the
+// one before, winding in to the eye — and the piece laid into it in order: its first passage in the largest square, its end in
+// the eye. Each square is its passage tone by tone: rings round the spiral's pivot, from the corner outward as the passage goes,
+// each in its tone's colour, over a wash of the passage's own colour; the gold spiral draws itself through them as it plays.
+function _rfGolden(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const cn=chords.length, N=Math.max(1,Math.min(lim,cn)), S=Math.min(CW,CH), PHI=(1+Math.sqrt(5))/2, GOLD=[214,180,96];
+  const chordCol=(i,mul)=>{ const idx=Math.min(cn-1,Math.max(0,i)); const chord=chords[idx]; _setCurE(chord&&chord._E); const notes=chord&&(chord.n||chord.notes); if(!notes||!notes.length) return [200,150,120]; let R=0,G=0,B=0,k=0; for(const note of notes){ const m=note.m!==undefined?note.m:note, v=note.v!==undefined?note.v:80; const c=gc(m,v); R+=c[0]; G+=c[1]; B+=c[2]; k++; } const q=mul===undefined?1:mul; return [Math.min(255,R/k*q),Math.min(255,G/k*q),Math.min(255,B/k*q)]; };
+  const css=(c,a)=>a===undefined?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const meta=(i)=>{ const chord=chords[Math.min(cn-1,i)]; const notes=chord&&(chord.n||chord.notes)||[]; let d=0,v=0,k=0; for(const n of notes){ d+=(n.durMs||400); v+=(n.v!==undefined?n.v:80); k++; } return {dur:Math.min(1.6,k?(d/k)/900:0.5), vel:Math.min(1,k?(v/k)/110:0.7)}; };
+  // ── the night, tinted by the opening chord (RafFel's dark)
+  const g0=chordCol(0,0.16); ctx.fillStyle=`rgb(${(g0[0]*0.5+6)|0},${(g0[1]*0.5+5)|0},${(g0[2]*0.5+12)|0})`; ctx.fillRect(0,0,CW,CH);
+  // ── the golden rectangle, full height (its sides run off the canvas a little: the painting fills it edge to edge)
+  const Wg=CH/PHI; let R={x:(CW-Wg)/2, y:0, w:Wg, h:CH}; const sq=[];
+  for(let k=0;k<16;k++){ const d=k%4; let s, q;
+    if(d===0){ s=R.w; q={x:R.x,y:R.y,s,cx:R.x,cy:R.y+s,a0:Math.PI*1.5}; R={x:R.x,y:R.y+s,w:R.w,h:R.h-s}; }
+    else if(d===1){ s=R.h; q={x:R.x+R.w-s,y:R.y,s,cx:R.x+R.w-s,cy:R.y,a0:0}; R={x:R.x,y:R.y,w:R.w-s,h:R.h}; }
+    else if(d===2){ s=R.w; q={x:R.x,y:R.y+R.h-s,s,cx:R.x+s,cy:R.y+R.h-s,a0:Math.PI*0.5}; R={x:R.x,y:R.y,w:R.w,h:R.h-s}; }
+    else { s=R.h; q={x:R.x,y:R.y,s,cx:R.x+s,cy:R.y+s,a0:Math.PI}; R={x:R.x+s,y:R.y,w:R.w-s,h:R.h}; }
+    if(s<S*0.018) break; sq.push(q); }
+  // ── the piece shared out by the squares' sides (each passage as long as its square is wide)
+  // the loudest tones of the piece (its top ~8 %) are laid in gold — the accents the ear remembers
+  const vs=[]; for(let i=0;i<cn;i+=Math.max(1,(cn/400)|0)) vs.push(meta(i).vel); vs.sort((a,b)=>a-b); const vGold=Math.max(0.62, vs[Math.floor(vs.length*0.94)]||1);
+  const tot=sq.reduce((a,q)=>a+q.s,0); let acc0=0; for(const q of sq){ q.i0=Math.round(acc0/tot*cn); acc0+=q.s; q.i1=Math.max(q.i0+1,Math.round(acc0/tot*cn)); }
+  sq[sq.length-1].i1=cn;
+  ctx.lineCap='butt';
+  for(const q of sq){ if(N<=q.i0) break;
+    const len=Math.max(1,q.i1-q.i0), upto=Math.min(N,q.i1);
+    // the wash: the passage's colour, deeper toward the outer corner
+    let mR=0,mG=0,mB=0,k=0; for(let i=q.i0;i<q.i1;i+=Math.max(1,(len/24)|0)){ const c=chordCol(i); mR+=c[0]; mG+=c[1]; mB+=c[2]; k++; } const mc=[mR/k,mG/k,mB/k];
+    ctx.save(); ctx.beginPath(); ctx.rect(q.x,q.y,q.s,q.s); ctx.clip();
+    const wg=ctx.createRadialGradient(q.cx,q.cy,q.s*0.05,q.cx,q.cy,q.s*1.42); wg.addColorStop(0,css(mc.map(v=>v*0.55),0.55)); wg.addColorStop(0.72,css(mc.map(v=>v*0.28),0.5)); wg.addColorStop(1,css(mc.map(v=>v*0.12),0.45));
+    ctx.fillStyle=wg; ctx.fillRect(q.x,q.y,q.s,q.s);
+    // the passage tone by tone: rings from the pivot out to the spiral
+    const step=q.s*0.96/len; let lastG=-9;
+    for(let i=q.i0;i<upto;i++){ const u=(i-q.i0+0.5)/len, r=q.s*0.04+u*q.s*0.96, m=meta(i);
+      const gold=m.vel>=vGold && i-lastG>=3; if(gold) lastG=i;   // a gold line, never a gold block: at most every third ring
+      ctx.strokeStyle=gold ? css([244,218,140],0.9) : css(chordCol(i,0.72+0.45*m.vel),0.45+0.45*m.vel); ctx.lineWidth=Math.max(0.8,Math.min(q.s*0.08,step*(gold ? 0.45 : 0.55+0.7*Math.min(1,m.dur))));
+      ctx.beginPath(); ctx.arc(q.cx,q.cy,r,q.a0,q.a0+Math.PI/2); ctx.stroke(); }
+    ctx.restore();
+    // the square's edge, a gold hairline
+    ctx.strokeStyle=css(GOLD,0.28); ctx.lineWidth=Math.max(1,S*0.0016); ctx.strokeRect(q.x,q.y,q.s,q.s);
+  }
+  // ── the gold spiral, drawn as far as the piece has come
+  ctx.lineCap='round'; const prog=N/cn;
+  for(let pass=0;pass<2;pass++){ ctx.strokeStyle=pass?css([248,226,160],0.95):css(GOLD,0.22); ctx.lineWidth=pass?Math.max(1.6,S*0.0045):Math.max(5,S*0.018);
+    for(const q of sq){ const f=Math.max(0,Math.min(1,(prog*cn-q.i0)/Math.max(1,q.i1-q.i0))); if(f<=0) break;
+      ctx.beginPath(); ctx.arc(q.cx,q.cy,q.s,q.a0,q.a0+Math.PI/2*f); ctx.stroke(); } }
+  _setCurE(0.5);
+}
 function _rfListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,chords0){
   const ss=sessionSeed|0, cn=chords.length, N=Math.max(1,Math.min(lim,cn)), S=Math.min(CW,CH), PHI=(1+Math.sqrt(5))/2, GA=Math.PI*2*(1-1/PHI);
   const A=_kd2Analyze(chords0||chords,gc,mode); const X=_hear(chords0||chords,A); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A.ch?A.ch.register:0.5, dens=A.ch?A.ch.density:0.3;
@@ -9996,7 +10045,7 @@ function drawRaffelOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
 
   // VARIANT: 0 What it heard (_rfListen, generative) · 1 Niť (Lissajous) · 2 Súhvezdie · 3 Niť (spiral) · 4 Vlna · 5 Vejár · 6 Kompozícia. Free: 0 and 1.
   const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
-  if(pick0===0){ _rfListen(ctx,CW,CH,chords,lim,gc,ss,mode,_chords0); return; }
+  if(pick0===0){ _rfGolden(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   const pick=pick0-1;
   const cx=CW/2, cy=CH*(0.44+0.14*dnaR);               // register pulls the heart
 
