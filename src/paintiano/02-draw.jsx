@@ -18441,9 +18441,9 @@ ARTIST_DNA.notes = ARTIST_DNA.mosaic;
 // variants). Each entry overrides the artist's base genes.
 const ARTIST_VARIANTS = {
   raffel: [   // slot order = solo variants: Golden music, Lissajous, Constellation, Sunflower 137.5°, Circle of fifths, Fan, Chladni figures
-    {ground:'#0e0816',mark:{rfring:.6,goldspiral:.4},size:[.12,.42],layout:{radial:.6,scatter:.4},density:.18,lines:0},   // What it heard: Golden music — its rings (a quarter round from a pivot, gold threads among them) and his gold spirals
+    {ground:'#0e0816',mark:{goldspiral:.4,rays:.32,rfring:.28},size:[.12,.42],layout:{radial:.6,scatter:.4},density:.18,lines:0},   // What it heard: Golden music — his gold spirals, his rays (a ringed heart with fine rays, the sparkle he always lent), its rings (a quarter round from a pivot)
     {ground:'#0e0816',mark:{rflissa:1},size:[.12,.3],layout:{radial:.5,scatter:.5},density:.08,lines:0},   // Lissajous: the thread, one closed knot
-    {ground:'#0b0712',mark:{chain:.65,dot:.35},size:[.04,.12],layout:{scatter:1},density:.25,lines:.6},   // Constellation: the piece's stars, joined by gold threads
+    {ground:'#0b0712',mark:{chain:.6,rays:.25,dot:.15},size:[.04,.12],layout:{scatter:1},density:.25,lines:.6},   // Constellation: the piece's stars, joined by gold threads, a few rayed
     {ground:'#0e0816',mark:{rfseed:.85,dot:.15},size:[.12,.4],layout:{radial:1},density:.18},   // Sunflower 137.5°: seeds at the golden angle
     {ground:'#0a0712',mark:{rfrose:.85,ring:.15},size:[.14,.42],layout:{radial:1},density:.15},   // Circle of fifths: the rose window
     {ground:'#0e0816',mark:{rays:.8,dot:.2},size:[.15,.45],layout:{radial:1},density:.15,lines:0},   // Fan: rays from the heart
