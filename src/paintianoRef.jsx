@@ -21544,7 +21544,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'splat': { for(let j=0;j<7;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr*2.2; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*(.1+R()*.5),0,6.2832); ctx.fill(); } break; }
       // ── signature motifs — each artist's own, so the parent stays recognisable ──
       case 'orphic': { // Delaunay: concentric disc, quartered, two colours alternating
-        const rings=3+(R()*2|0); for(let q=rings;q>=1;q--){ const rq=rr*q/rings; for(let sgm=0;sgm<4;sgm++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,rq,sgm*1.5708,(sgm+1)*1.5708); ctx.closePath(); ctx.fillStyle=((q+sgm)%2)?col:col2; ctx.fill(); } } break; }
+        const rings=3+(R()*2|0), c2=_fuApart(col, col2||col); for(let q=rings;q>=1;q--){ const rq=rr*q/rings; for(let sgm=0;sgm<4;sgm++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,rq,sgm*1.5708,(sgm+1)*1.5708); ctx.closePath(); ctx.fillStyle=((q+sgm)%2)?col:c2; ctx.fill(); } } break; }   // the two colours must read apart, or the wheel is a plain disc
       case 'facet': { // Picasso: angular shard with a hard contour
         const k=4+(R()*3|0); const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.55+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.08); ctx.stroke(); break; }
       case 'cutout': { // Matisse: an algue — rounded fronds fanning up from one stem, as in his scissor cut-outs; never a symmetric blob
@@ -21834,7 +21834,7 @@ const _FG={
   spiral:{form:{petal:.5,goldspiral:.5}, hand:'soft', comp:'axis', col:'klint'},
   picasso:{form:{pcfacet:.6,pcguitar:.4}, hand:'collage', comp:'cubist', col:'picasso'},
   delaunay:{form:{orphic:1}, hand:'rings', comp:'circles', col:'delaunay'},
-  wave:{form:{wavyline:1}, hand:'precise', comp:'stripes', col:'riley'},
+  wave:{form:{wavyline:1}, hand:'opwave', comp:'stripes', col:'riley'},
   kusama:{form:{dot:.6,sphere:.4}, hand:'glow', comp:'infinity', col:'kusama'},
   pollock:{form:null, hand:'skein', comp:'frieze', col:'pollock'},
   bloom:{form:{cell:1}, hand:'stain', comp:'membrane', col:'francis'},
@@ -21843,7 +21843,7 @@ const _FG={
   lichtenstein:{form:{lcmirror:.5,lcboom:.5}, hand:'raster', comp:'panel', col:'lichtenstein'},
   klee:{form:{cutout:.4,arch:.3,rect:.3}, hand:'wash', comp:'squares', col:'klee'},
   arcs:{form:{nestpoly:.6,protractor:.4}, hand:'bands', comp:'concentric', col:'stella'},
-  bulge:{form:{disc:1}, hand:'precise', comp:'bulge', col:'vasarely'},
+  bulge:{form:{disc:1}, hand:'opgrid', comp:'bulge', col:'vasarely'},
   bauhaus:{form:{tri:.3,disc:.3,rect:.2,arch:.2}, hand:'crisp', comp:'construct', col:'bauhaus'},
   raffel:{form:{rfseed:.5,rfrose:.5}, hand:'goldrings', comp:'golden', col:'raffel'}   // his forms of today: the Sunflower and the rose window (Golden music lives in his hand and composition)
 };
@@ -21981,6 +21981,12 @@ const _FG_HAND={
   crisp:{ring:(s,P)=>[P.ink, Math.max(0.9,s*0.016)]},
   outline:{ring:(s)=>[[18,18,18], Math.max(1.6,s*0.055)]},
   precise:{},
+  // Riley: the form filled with her fine waves — bands of the colour and of white running across it, each a hair out of phase with the last
+  opwave:{tex:(t,W,h,s,c,c2,P,R)=>{ const st=Math.max(2,s*0.1), A=s*0.07, fq=Math.PI*2/(s*0.9), ph=R()*6.28, L=[c,P.light,c2,P.light], dx=Math.max(2,s*0.04); t.lineWidth=st*0.56;
+      for(let y=-st,k=0;y<W+st;y+=st*0.5,k++){ t.strokeStyle=_fgCss(L[k%4]); t.beginPath(); for(let x=0;x<=W+dx;x+=dx){ const yy=y+Math.sin(x*fq+ph+k*0.3)*A; x?t.lineTo(x,yy):t.moveTo(x,yy); } t.stroke(); } }},
+  // Vasarely: the form a grid of small cells in its two colours, a disc of the other in each, the discs swelling toward its heart as in his Vega
+  opgrid:{tex:(t,W,h,s,c,c2,P,R)=>{ const g=Math.max(3,s*0.2);
+      for(let y=g/2;y<W;y+=g) for(let x=g/2;x<W;x+=g){ const o=((x/g|0)+(y/g|0))%2, k=Math.max(0.18,1-Math.hypot(x-h,y-h)/s*0.8); t.fillStyle=_fgCss(o?c:c2); t.fillRect(x-g/2,y-g/2,g+0.5,g+0.5); t.fillStyle=_fgCss(o?c2:c); t.beginPath(); t.arc(x,y,g*0.46*k,0,6.2832); t.fill(); } }},
   collage:{tex:(t,W,h,s,c,c2,P,R)=>{ t.strokeStyle=_fgCss(P.ink,0.22); t.lineWidth=Math.max(0.6,s*0.012); for(let y=R()*s*0.1;y<W;y+=s*0.09){ t.beginPath(); t.moveTo(0,y); t.lineTo(W*(0.6+0.4*R()),y); t.stroke(); } }, shadow:true, ring:(s,P)=>[P.ink, Math.max(0.9,s*0.02)]},
   raster:{tex:(t,W,h,s,c,c2,P)=>{ t.fillStyle=_fgCss(P.light,0.55); t.fillRect(0,0,W,W); t.fillStyle=_fgCss(c); const g=s*0.14; for(let y=0;y<W;y+=g) for(let x=((y/g)&1)*g/2;x<W;x+=g){ t.beginPath(); t.arc(x,y,g*0.32,0,6.2832); t.fill(); } }, ring:(s)=>[[16,16,16], Math.max(1.6,s*0.055)]},
   mosaic:{tex:(t,W,h,s,c,c2,P,R)=>{ const g=s*0.17; for(let y=0;y<W;y+=g) for(let x=0;x<W;x+=g){ if(R()<0.22) continue; const k=R(), q=k<0.5?_fgMix([212,170,70],[255,255,255],R()*0.3):k<0.75?c:k<0.88?c2:[240,236,226]; t.fillStyle=_fgCss(q); t.fillRect(x+g*0.1,y+g*0.1,g*0.8,g*0.8); } }, ring:(s)=>[[214,178,96], Math.max(1,s*0.025)]},
@@ -22002,7 +22008,9 @@ function _fgLayout(comp, A, CW, CH, D, R){
   for(const it of items){ it.rot=(R()-0.5)*0.7; }
   switch(comp){
     case 'water': { const hy=CH*0.36;   // Monet: a horizon high, the forms afloat on the water, smaller toward it, each with its reflection
-      under.push((ctx,P)=>{ ctx.fillStyle=_fgCss(_fgMix(P.ground,P.light,0.35)); ctx.fillRect(0,0,CW,hy); const g=ctx.createLinearGradient(0,hy,0,CH); g.addColorStop(0,_fgCss(_fgMix(P.ground,P.ink,0.1))); g.addColorStop(1,_fgCss(_fgMix(P.ground,P.ink,0.32))); ctx.fillStyle=g; ctx.fillRect(0,hy,CW,CH-hy);
+      under.push((ctx,P)=>{ const sk=ctx.createLinearGradient(0,0,0,hy); sk.addColorStop(0,_fgCss(_fgMix(P.ground,P.ink,0.12))); sk.addColorStop(1,_fgCss(_fgMix(P.ground,P.light,0.45))); ctx.fillStyle=sk; ctx.fillRect(0,0,CW,hy);
+        const rs=_fgRng(5151); for(let k=0;k<46;k++){ const y=hy*Math.pow(rs(),0.7), L=CW*(0.05+0.12*rs()); ctx.fillStyle=_fgCss(rs()<0.55?P.light:_fgMix(P.ground,P.ink,0.22),0.3); ctx.fillRect(rs()*CW-L*0.3,y,L,Math.max(1.5,D*0.006)); }   // his sky is touched too, never a flat band
+        const g=ctx.createLinearGradient(0,hy,0,CH); g.addColorStop(0,_fgCss(_fgMix(P.ground,P.ink,0.1))); g.addColorStop(1,_fgCss(_fgMix(P.ground,P.ink,0.32))); ctx.fillStyle=g; ctx.fillRect(0,hy,CW,CH-hy);
         const r=_fgRng(5150); for(let k=0;k<70;k++){ const y=hy+(CH-hy)*Math.pow(r(),0.8), L=CW*(0.04+0.1*r())*(0.5+(y-hy)/(CH-hy)); ctx.fillStyle=_fgCss(r()<0.5?P.light:_fgMix(P.ground,P.ink,0.4),0.35); ctx.fillRect(r()*CW,y,L,Math.max(1,D*0.004)); } });
       items.forEach(it=>{ const dep=(it.main?0.12+0.82*((it.k*PHI)%1):0.05+0.9*R()); it.y=hy+(CH-hy)*dep; it.x=CW*(0.08+0.84*it.u)+(R()-0.5)*CW*0.08; it.s=size(it,0.13)*(0.5+0.7*dep); it.rot*=0.4; it.refl=it.main; }); break; }
     case 'wave': {   // Hokusai: the forms lie along a great wave rising from the lower left, cresting and curling over toward the right
@@ -22285,7 +22293,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
           // so a long piece is not a soup of a hundred overlapping translucent discs
           // Delaunay's rhythms / Bauhaus targets are a few big forms, not a wall of them: a smaller area budget and sparser echoes
           const _disc=/^(orphic|arch|fan|target|protractor)$/.test(kind);
-          if(r > (_disc?S*0.06:S*0.09)){ const B=Math.max(6, Math.min(80, Math.round((_disc?0.8:1.6)/(Math.PI*(r/S)*(r/S))))); const sl='A'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)){ if(_disc && R()<0.6) continue; r*=0.35; } else _spanUsed.add(sl); }
+          if(r > (_disc?S*0.06:S*0.09)){ const B=Math.max(6, Math.min(80, Math.round((_disc?0.8:1.6)/(Math.PI*(r/S)*(r/S))))); const sl='A'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)){ if(_disc && R()<0.6 && (_E || kind!=='orphic')) continue; r*=0.35; } else _spanUsed.add(sl); }   // in a Collage Delaunay's wheels come smaller, not fewer — they are all he brings
         }
         const [cr,cg,cb]=gc(m,v);
         // Monet's touches are the song's own colours, broken — never snapped to a sampled palette
