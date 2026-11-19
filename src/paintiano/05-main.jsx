@@ -5427,6 +5427,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const S=globalThis.__IMG_SIG, px=pixelRef.current && pixelRef.current.px; if(!px || !S || !S.keys || S.keys.join()!==ks.join()) return false;
         const sig=ks.join(), h=_jamHash(ks, px)>>>0, st=_fsNorm(S.fs || (J && J.style));
         imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; _imgSigRelease();
+        if(crOnRef.current) setComposerDice(true);   // ✦'s composers stay, white — the picture chose them, not you (↑ then draws a new jam, as for the painters)
         globalThis.__JAM_STYLE_PIN=null; globalThis.__JAM_VAR={ sig, h, v:1 };   // its style drawn anew among the Setup's, as for the painters
         { const H=jamVarHistRef.current; H.key=sig+'|'+h; H.st=[{ v:0, md:mode, st, sig:true }]; H.fw=[]; }
         _palTo({ v:1, md:null, st }, pal); setJamFlipN(n=>n+1); return true; }
@@ -6633,6 +6634,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     imgSigActiveRef.current = false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current = null;
     // a stage only ✦ put up (no Jam session behind it) leaves with the latch
     if(!crOnRef.current && composerStage.length && composerStage.join('+')===rest){ composerStageRef.current=[]; setComposerStage(p=>p.length?[]:p); }
+    else if(crOnRef.current && s && imgComposer===s.keys[0] && composerStage.join('+')===rest && !composerDice) setComposerDice(true);   // ✦'s jam stays on screen white: the picture chose it, not you (as a painting's ✦ fusion)
     _imgSigRelease();
   },[imgSigActive, imgComposer, composerStage, mode, composerDice, imgPlayMode, viewMode, basicMode, liteImageMode]);
   const [imgDipTick, setImgDipTick] = useState(0);   // a re-read of a playing picture waits for the sound to dip first
@@ -16913,9 +16915,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             setTimeout(()=>{ const go=()=>{ try{ composerRollRef.current && composerRollRef.current(); }catch(_){} }; if(playingRef.current) _imgDip(go); else go(); }, 60); rolled = true; }
           else if(crOn && crFixedRef.current){ rolled = !palGoldRef.current && _fuRollPal(true)===true; }   // a pinned Jam: ↑ brings a new palette (← → its variants), as a pinned Fusion
           else if(!_soloKept){
+            const _sigCast = imgSigActiveRef.current;
             if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; if(!crOnRef.current && composerStageRef.current.length){ composerStageRef.current=[]; setComposerStage([]); } }   // ↑ from the picture's ✦: the latch lets go (as a painting's ✦ does) — its guests leave with it, the next composer is drawn, the ✦ word goes
             if(!crOn && !composerDice) setComposerDice(true);
-            if(crOn && !composerDice) _stCrPinStage();   // a Fusion (e.g. ✦'s ensemble): its gold composers stay, ↑ seats white guests — as for the painters
+            if(crOn && _sigCast){ crPinsRef.current=[]; setCrPins([]); if(!composerDice) setComposerDice(true); }   // ✦'s ensemble was the picture's choice, not yours: ↑ draws a whole new jam, as a painting's ✦ fusion does
+            else if(crOn && !composerDice) _stCrPinStage();   // a Jam you chose: its gold composers stay, ↑ seats white guests — as for the painters
             if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
             else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
             if(rolled && !palGoldRef.current) _fuRollPal(true);   // … and a new palette, as on a painting
