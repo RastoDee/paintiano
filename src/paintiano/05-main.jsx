@@ -12098,7 +12098,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             ? composeImageSchubert(px,nc,nr,hueTable,startMode)
             : (imgComposerRef.current==='tchaikovsky')
             ? composeImageTchaikovsky(px,nc,nr,hueTable,startMode)
-            : pixelsToImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current));
+            : scanImageEvents(px,nc,nr,hueTable,startMode,imgDirRef.current));
           try{ _setImgForcedBands(0); }catch(_){}
           if(loadTokenRef.current!==myToken)return; // user left during processing — abandon
           if(!evts || !evts.length){setErr(t('errs').imgNoNotes);setErrInfo(false);setPickMode(null);return;}
@@ -12251,7 +12251,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       ? composeImageSchubert(px,nc,nr,hueTable,mode)
       : (imgComposerRef.current==='tchaikovsky')
       ? composeImageTchaikovsky(px,nc,nr,hueTable,mode)
-      : pixelsToImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
+      : scanImageEvents(px,nc,nr,hueTable,mode,imgDirRef.current,_atmoBias);
     try{ _setImgForcedBands(0); }catch(_){}
     const _evtsT=_composerTimeline(_evtsLit);
     const _evtsAtmo=(atmoOn&&atmoMood)?_atmoTransform(_evtsT,atmoMood,true):_evtsT;

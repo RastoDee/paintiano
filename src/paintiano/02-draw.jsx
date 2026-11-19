@@ -16416,6 +16416,207 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   return evts;
 }
 
+// ── SCAN — the picture played as it is ──────────────────────────────────────
+// Every cell of the reading path is a moment of the piece. Two layers:
+//   the LINE — the cell's leading colour: its height is the light (dark low,
+//     bright high, a step of the scale per shade), the colour's own note wins
+//     whenever it lies near that height, its loudness is the saturation; a flat
+//     stretch holds the note, a busy one moves on a pulse of two cells, an edge
+//     is an accent, a second colour in a busy cell sounds as a quick touch;
+//   the GROUND — the colour field the line moves through: its two or three
+//     strongest colours, low and soft, struck again only when the field changes.
+// To stay listenable it keeps to the picture's own scale (the pentatonic or
+// diatonic set that holds most of its colours, the strongest colour as home),
+// never grinds a semitone against the ground, and breathes at every row's end.
+// The composers and ✦ still read the picture through pixelsToImageEvents.
+function scanImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
+  const atmoV = atmoBias && typeof atmoBias.v==='number' ? Math.max(-1,Math.min(1,atmoBias.v)) : 0;
+  const atmoE = atmoBias && typeof atmoBias.e==='number' ? Math.max(0,Math.min(1,atmoBias.e)) : null;
+  const COL_STEP=4, CH=4;
+  const _fb = (_imgForcedBands>0) ? Math.min(_imgForcedBands, nr) : 0;
+  const nB = _fb ? _fb : Math.floor(nr/CH);
+  const r0 = (b)=> _fb ? Math.floor(b*nr/_fb) : b*CH;
+  const r1 = (b)=> _fb ? Math.floor((b+1)*nr/_fb) : Math.min(nr, b*CH+CH);
+  const eC = Math.ceil(nc/COL_STEP);
+  const isBW = colorMode==='bw', isCustom = colorMode==='custom', isSpec = colorMode==='spectral';
+  const TL = table.length || 12;
+  const pcOfHue = (h)=>{ let pc=0,md=1e9; for(let i=0;i<TL;i++){ const d=Math.min(Math.abs(h-table[i]),360-Math.abs(h-table[i])); if(d<md){md=d;pc=i;} } return {pc:pc%12,d:md}; };
+  const sats = table.__sats;
+  const inPalette = (h,s)=>{                       // Custom: only the palette's colours sound
+    if(!isCustom) return true;
+    if(s<12) return !!table.__hasNeutral;
+    let md=1e9; for(let i=0;i<TL;i++){ if(sats && sats[i]<12) continue; const d=Math.min(Math.abs(h-table[i]),360-Math.abs(h-table[i])); if(d<md) md=d; }
+    return md<=25;
+  };
+  // ── 0. the picture's own colours: the hues it is made of (a gold that sits between two
+  // table hues is still one gold — one note, not a flicker between two) ─────────────
+  const HB=72, hh=new Float32Array(HB);
+  for(let i=0;i<px.length;i++){ const p=px[i], q=toHsl(p.r,p.g,p.b); const ch=q[1]*Math.min(q[2],100-q[2])/50; if(q[1]<10||ch<7||q[2]<7) continue; hh[Math.floor(q[0]/5)%HB]+=ch; }
+  const hs=new Float32Array(HB); for(let b=0;b<HB;b++){ let a=0; for(let k=-2;k<=2;k++) a+=hh[(b+k+HB)%HB]*[0.4,0.8,1,0.8,0.4][k+2]; hs[b]=a; }
+  const hTot=hs.reduce((a,b)=>a+b,0)||1;
+  const peaks=[]; for(let b=0;b<HB;b++){ const a=hs[b]; if(a>=hs[(b+1)%HB] && a>hs[(b+HB-1)%HB] && a>=hTot*0.012) peaks.push(b*5+2.5); }
+  const hueDist=(a,b)=>Math.min(Math.abs(a-b),360-Math.abs(a-b));
+  const toPeak = (h)=>{ if(isCustom || !peaks.length) return h; let best=h,bd=46; for(const pk of peaks){ const d=hueDist(h,pk); if(d<bd){bd=d;best=pk;} } return best; };
+  // ── 1. read every cell: its colour groups, lightness, saturation, texture ──
+  const order = buildTraversal(nB, eC, dir);
+  const W = new Float32Array(12);                 // the picture's colours, by pitch class (chroma-weighted)
+  let lAll=0, nAll=0, cAll=0, eSum=0, eN=0;
+  const cells = order.map(({band,cg})=>{
+    const g = new Map();                          // pc → {w, l, n}
+    let ls=0, lq=0, cs=0, n=0, grey=0, greyL=0, black=0, acc=0, hMin=361, hMax=-1;
+    for(let sk=0;sk<COL_STEP;sk++){ const col=cg*COL_STEP+sk; if(col>=nc) break;
+      let prevL=null;
+      for(let row=r0(band); row<r1(band) && row<nr; row++){
+        const p=px[row*nc+col], q=toHsl(p.r,p.g,p.b), h=q[0], s=q[1], l=q[2];
+        const ch=s*Math.min(l,100-l)/50;
+        ls+=l; lq+=l*l; cs+=ch; n++;
+        if(prevL!=null){ eSum+=Math.abs(l-prevL); eN++; } prevL=l;
+        if(l<7){ black++; continue; }
+        const accentHit = isBW && _imgAccent && s>25 && ch>18 && Math.min(Math.abs(h-_imgAccent.hue),360-Math.abs(h-_imgAccent.hue))<=25;
+        if(accentHit) acc++;
+        if((isBW && !accentHit) || s<10 || ch<7){ if(inPalette(h,0)){ grey++; greyL+=l; } continue; }
+        if(!inPalette(h,s)) continue;
+        if(h<hMin) hMin=h; if(h>hMax) hMax=h;
+        const pc=pcOfHue(toPeak(h)).pc;
+        const o=g.get(pc)||{w:0,l:0,n:0}; o.w+=ch; o.l+=l; o.n++; g.set(pc,o);
+        W[pc]+=ch;
+      }
+    }
+    lAll+=ls; nAll+=n; cAll+=cs;
+    const L=n?ls/n:0, C=n?cs/n:0, V=n?Math.max(0,lq/n-L*L):0;
+    const groups=[...g.entries()].map(([pc,o])=>({pc, w:o.w, l:o.l/o.n, n:o.n})).sort((a,b)=>b.w-a.w);
+    return {band,cg,L,C,V,groups,grey,greyL:grey?greyL/grey:L,black,n,acc,
+      flat:1-Math.min(1,(Math.min(1,V/100)*0.65 + Math.min(1,(hMax>=0?hMax-hMin:0)/60)*0.35))};
+  });
+  const avgL=nAll?lAll/nAll:50, avgC=nAll?cAll/nAll:0, busy=eN?eSum/eN:0;
+  // ── 2. the picture's scale: the set that holds most of its colours ─────────
+  const DIA=[0,2,4,5,7,9,11], PEN=[0,2,4,7,9], WHT=[0,2,4,6,8,10];
+  const tot=W.reduce((a,b)=>a+b,0);
+  let scale=PEN, root=0;
+  const cover=(set,r)=>set.reduce((a,o)=>a+W[(o+r)%12],0);
+  if(tot>1){
+    let best=-1;
+    const cands = isSpec ? [ (avgC<32||avgL>66 || (atmoE!=null&&atmoE<0.3)) && !(atmoE!=null&&atmoE>0.7) ? PEN : WHT ] : [PEN, DIA];
+    for(const set of cands) for(let r=0;r<12;r++){ const sc=cover(set,r)/tot + (set===PEN?0.08:0); if(sc>best+1e-9){ best=sc; scale=set; root=r; } }
+  } else { root = 0; scale=PEN; }
+  const SC = scale.map(o=>(o+root)%12).sort((a,b)=>a-b);
+  // home = the strongest colour inside the scale (a grey picture: bright → major, dark → its minor)
+  let home = SC[0];
+  if(tot>1){ let bw=-1; for(const p of SC) if(W[p]>bw){ bw=W[p]; home=p; } }
+  else home = avgL>=50 ? root : (root+9)%12;
+  const inSc = new Set(SC);
+  const snapPc = (pc)=>{ if(inSc.has(pc)) return pc; let best=SC[0],bd=99,bw=-1;
+    for(const s of SC){ const d=Math.min(Math.abs(pc-s),12-Math.abs(pc-s)); if(d<bd || (d===bd && W[s]>bw)){ bd=d; best=s; bw=W[s]; } } return best; };
+  const nearestOf = (pc, tgt)=>{ const b=Math.floor(tgt/12)*12+pc; return [b-12,b,b+12].reduce((a,c)=>Math.abs(c-tgt)<Math.abs(a-tgt)?c:a); };
+  // lightness → height: dark low, bright high (atmo valence lifts or lowers it a little)
+  const height = (l)=> 45 + l*0.36 + atmoV*3;
+  // a grey (or a B/W picture): its lightness alone is the note — a step of the scale per shade
+  const SCL = SC.length;
+  const LAD=[]; for(let m=33;m<=88;m++) if(inSc.has(m%12)) LAD.push(m);
+  const nearLad = (tg)=> LAD.reduce((a,x)=>Math.abs(x-tg)<Math.abs(a-tg)?x:a, LAD[0]);
+  // the LINE: its height is the light (a step of the scale per shade); the colour's own
+  // note wins whenever it lies close to that height
+  const lineNote = (l, pc)=>{ const tg=height(l); if(pc!=null){ let m=null,bd=3.6; for(const x of LAD){ const d=Math.abs(x-tg); if(x%12===pc && d<bd){bd=d;m=x;} } if(m!=null) return m; } return nearLad(tg); };
+  const greyNote = (l)=> lineNote(l, null);
+  // ── 3. tempo: a reading pace, brisker for a lively picture, slower for a calm one ──
+  const energy = Math.max(0,Math.min(1, 0.45*Math.min(1,avgC/45) + 0.55*Math.min(1,busy/14)));
+  let target = Math.max(80000, Math.min(180000, cells.length*(125 - 30*energy)));
+  if(atmoE!=null) target *= (1.18 - 0.36*atmoE);
+  const step0 = Math.max(70, Math.min(220, target/Math.max(1,cells.length)));
+  // ── 4. play: the line and the ground ──────────────────────────────────────
+  const evts=[]; let t=0;
+  let mel=null;           // the sounding line note {m,v,at,ev}
+  let gnd=null;           // the sounding ground chord {pcs:'..', at, notes, ev}
+  const F=new Float32Array(12); let fL=avgL, fC=avgC;    // the colour field (a slow running mix)
+  const EMA=0.16;
+  let prevL=null, prevC=null, lastMelAt=-1e9, lastGndAt=-1e9, lineL=null, rowAt=0;
+  const close = (o, at)=>{ if(!o) return; for(const n of o.notes) n.durMs=Math.max(160, Math.min(o.max, Math.round(at - o.at + 60))); };
+  for(let i=0;i<cells.length;i++){
+    const c=cells[i];
+    const newRow = i>0 && (dir==='vert' ? c.cg!==cells[i-1].cg : c.band!==cells[i-1].band);
+    let stepMs = step0;
+    if(newRow) rowAt=i;
+    // the field drifts toward this cell's colours
+    for(let p=0;p<12;p++) F[p]*=1-EMA;
+    for(const gr of c.groups) F[snapPc(gr.pc)] += EMA*gr.w/Math.max(1,c.n);
+    fL += EMA*(c.L-fL); fC += EMA*(c.C-fC);
+    const edge = prevL==null ? 0 : Math.max(Math.abs(c.L-prevL), Math.abs(c.C-prevC)*0.8);
+    prevL=c.L; prevC=c.C;
+    const ns=[]; let onset=false;
+    // the line: the cell's leading colour (a grey cell: its shade), black = silence
+    const top=c.groups[0];
+    const greyLead = !top || (c.grey*6 + Math.abs(c.greyL-50)*0.1*c.grey > top.w*1.0);
+    let cand=null;
+    const leadL = (greyLead && c.grey) ? c.greyL : (top ? top.l : c.L);
+    lineL = lineL==null ? leadL : lineL + (Math.abs(leadL-lineL)>28 ? 0.8 : 0.45)*(leadL-lineL);
+    if(c.black > c.n*0.6){ cand=null; }
+    else if(greyLead && c.grey){ const m=greyNote(lineL); cand={m, v:Math.round(33+Math.abs(c.greyL-50)*0.3), pc:((m%12)+12)%12, grey:true, l:lineL}; }
+    else if(top){ cand={ m:lineNote(lineL, snapPc(top.pc)), v:Math.round(38+0.68*Math.min(80,top.w/Math.max(1,top.n))), pc:top.pc, l:lineL }; }
+    if(cand){
+      if(c.acc>=2) cand.v=Math.min(110,Math.round(cand.v*1.3));
+      cand.v=Math.max(26,Math.min(104, cand.v + (edge>18 ? Math.min(16,Math.round((edge-18)*0.6)) : 0)));
+      if(mel && Math.abs(cand.m-mel.m)>9 && edge<30){ const up=cand.m>mel.m; const lim=mel.m+(up?7:-7); cand.m=nearLad(lim); }
+      // a 7-note scale has two semitones: the line never grinds a semitone (or a tritone) against
+      // the held ground — it takes the neighbouring step, or (its colour's own note) the clashing
+      // ground tone stops
+      if(gnd && SCL===7){ const clash=(m)=>gnd.notes.some(g=>{ const d=Math.abs(m-g.m)%12, ic=Math.min(d,12-d); return ic===1||ic===6; });
+        if(clash(cand.m)){ const own = top && !cand.grey && (cand.m%12)===snapPc(top.pc);
+          const alt = own ? null : [cand.m+1,cand.m-1,cand.m+2,cand.m-2].find(x=>inSc.has(x%12) && !clash(x));
+          if(alt!=null) cand.m=alt;
+          else { const keep=[]; for(const g of gnd.notes){ const d=Math.abs(cand.m-g.m)%12, ic=Math.min(d,12-d); if(ic===1||ic===6) g.durMs=Math.max(160,Math.round(t-gnd.at+60)); else keep.push(g); } gnd.notes=keep; } } }
+      const same = mel && (cand.m===mel.m || (Math.abs(height(cand.l)-mel.m)<=1.6 && edge<12));
+      const longHeld = mel && (t-mel.at) > 2400;
+      // the line walks on a pulse of two cells (an edge may cut in between)
+      const tooSoon = (((i-rowAt)&1)===1 || (t-lastMelAt) < 150) && edge < 24;
+      if(!same && !tooSoon || (same && longHeld)){
+        close(mel, t);
+        const n={m:same?mel.m:cand.m, v:same?Math.round(Math.max(24,cand.v*0.72)):cand.v, durMs:400, _melody:true, _paintPc:cand.pc};
+        mel={m:n.m, pc:cand.pc, at:t, notes:[n], max:2600}; ns.push(n); lastMelAt=t; onset=true;
+        // a busy cell shows a second colour: it sounds as a quick touch after the line note
+        const sec=c.groups[1];
+        if(sec && top && !greyLead && sec.w>=top.w*0.4 && c.V>60 && snapPc(sec.pc)!==snapPc(top.pc)){
+          const m2=Math.max(36,Math.min(91,nearestOf(snapPc(sec.pc), height(sec.l))));
+          if(Math.abs(m2-n.m)>2) ns.push({m:m2, v:Math.max(24,Math.round(n.v*0.7)), durMs:Math.max(160,Math.round(stepMs*1.6)), offsetMs: stepMs>=120 ? Math.round(stepMs*0.5) : 0, _paintPc:sec.pc});
+        }
+      }
+    } else if(mel && (t-mel.at)>300){ close(mel,t); mel=null; }
+    // the ground: the field's two or three strongest colours, low and soft, moving when the field does
+    const fs=[...SC].sort((a,b)=>F[b]-F[a]);
+    const pcs=[];
+    for(const p of fs){ if(F[p] < F[fs[0]]*0.35) break; if(pcs.some(q=>{ const d=Math.abs(q-p)%12; const ic=Math.min(d,12-d); return ic===1||ic===6; })) continue; pcs.push(p); if(pcs.length>=3) break; }
+    const darkField = fL < 9;
+    const fieldGrey = F[fs[0]] < 0.8;               // hardly any colour in the field: its shade is the ground
+    let gpcs = darkField ? [] : fieldGrey ? ((isCustom && !table.__hasNeutral) ? [] : [nearLad(height(fL)-15)%12]) : pcs;
+    if(gpcs.length===1){ const f5=(gpcs[0]+7)%12; if(inSc.has(f5)) gpcs=[gpcs[0],f5]; }
+    const gkey=gpcs.slice().sort((a,b)=>a-b).join(',');
+    const gChange = gkey !== (gnd?gnd.key:'');
+    const gLong = gnd && (t-gnd.at) > 4200;
+    if((gChange && (t-lastGndAt)>900) || (gLong && gkey) || (newRow && gChange)){
+      close(gnd,t); gnd=null;
+      if(gkey){
+        const rootM = Math.max(31, Math.min(52, nearestOf(gpcs[0], height(fL)-15)));
+        const v = Math.max(24, Math.min(70, Math.round(27 + fC*0.6 - (gLong&&!gChange?6:0))));
+        const notes=[{m:rootM, v, durMs:600, bass:true, _paintPc:gpcs[0]}];
+        let last=rootM;
+        for(const p of gpcs.slice(1)){ let m=last+((p-last%12+12)%12); if(m-last<3) m+=12; if(m>64) m-=12; notes.push({m, v:Math.round(v*0.85), durMs:600, _paintPc:p}); last=m; }
+        const melM = mel ? mel.m : 99;
+        for(const n of notes){ while(n.m>=melM-2 && n.m-12>=28) n.m-=12; }
+        gnd={key:gkey, at:t, notes, max:4600}; ns.push(...notes); lastGndAt=t; onset=true;
+      }
+    } else if(gChange && !gkey && gnd){ close(gnd,t); gnd=null; }
+    // a row's end breathes a little — the eye goes back to the start of the line
+    const rowEnd = i<cells.length-1 && (dir==='vert' ? cells[i+1].cg!==c.cg : (dir==='lr' && cells[i+1].band!==c.band));
+    if(rowEnd) stepMs*=2;
+    const ev={ n: onset ? ns : [...(mel?mel.notes:[]), ...(gnd?gnd.notes:[])].map(n=>({...n})), startMs:Math.round(t), idx:i, cg:c.cg, band:c.band, colStep:COL_STEP,
+      _chroma:c.C, _flat:c.flat, _domPc: top ? top.pc : null, _lum:Math.max(0,Math.min(1,c.L/100)), _acc:c.acc>=2, _stepMs:Math.round(stepMs), _runLen:1 };
+    if(!onset) ev._playable=false;
+    evts.push(ev);
+    t+=stepMs;
+  }
+  close(mel,t+400); close(gnd,t+1200);
+  return evts;
+}
+
 const BKS=new Set([1,3,6,8,10]);
 const{w:WKEYS,b:BKEYS}=(()=>{const w=[],b=[];let wi=0;for(let m=21;m<=108;m++){const pc=m%12;if(!BKS.has(pc))w.push({midi:m,wi:wi++});else b.push({midi:m,lw:wi-1});}return{w,b};})();
 // Keyboard dimensions, used by both the parent layout and the memo'd key
