@@ -3348,12 +3348,15 @@ function PaintianoApp() {
     try{
       const host=el.parentElement; if(!host) return; const r=host.getBoundingClientRect(); const vh=window.innerHeight||document.documentElement.clientHeight||0;
       const vTop=Math.max(0, -r.top), vBot=Math.min(r.height, vh - r.top), vis=vBot - vTop;
-      if(r.height<=0 || vis<=0 || (vTop<=1 && vBot>=r.height-1)){ setOvBand(null); return; }   // all of it on screen: the usual place
-      setOvBand({ top: Math.round(vTop + vis*0.12), bottom: Math.round((r.height - vBot) + vis*0.06) });
+      // and across: a painting filling the screen (its edges cropped) is wider than the screen — the line keeps to what is seen
+      const vw=window.innerWidth||document.documentElement.clientWidth||0, hL=Math.max(0, -r.left), hR=Math.min(r.width, vw - r.left), hvis=hR - hL;
+      const vOk=(vTop<=1 && vBot>=r.height-1), hOk=(hL<=1 && hR>=r.width-1);
+      if(r.height<=0 || vis<=0 || hvis<=0 || (vOk && hOk)){ setOvBand(null); return; }   // all of it on screen: the usual place
+      setOvBand({ top: vOk ? null : Math.round(vTop + vis*0.12), bottom: vOk ? null : Math.round((r.height - vBot) + vis*0.06), left: hOk ? 0 : Math.round(hL), right: hOk ? 0 : Math.round(r.width - hR) });
     }catch(_){}
   };
   const _ovRef = useCallback((el)=>{ _ovElRef.current = el; if(!el){ setOvBand(null); return; } _ovMeasure(el); },[]);
-  const _ovPos = ovBand ? { top: ovBand.top+'px', bottom: ovBand.bottom+'px' } : { top:'26%', bottom:'6%' };
+  const _ovPos = ovBand ? { top: ovBand.top!=null ? ovBand.top+'px' : '26%', bottom: ovBand.bottom!=null ? ovBand.bottom+'px' : '6%', left:(ovBand.left|0)+'px', right:(ovBand.right|0)+'px' } : { top:'26%', bottom:'6%' };
   const [painterIntroShow, setPainterIntroShow] = useState(false);  // Lite's first painter: the same notes in a painter's hand — and who it is, up top (once)
   const painterIntroDoneRef = useRef(false); const _piTimersRef = useRef([]);
   const [sigIntroShow, setSigIntroShow] = useState(false);          // ✦ Signature: what it is, over the canvas — the first time one plays
@@ -22151,7 +22154,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         )}
         {/* the first Fusion: what it is — the same overlay as ✦ Signature's line */}
         {fuIntroShow && painterStage.length>0 && !sigActive && !((sigIntroShow && sigActive) || (isigIntroShow && imgSigActive)) && (
-          <div role="status" style={{position:'absolute',left:0,right:0,..._ovPos,zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(10px, 3%, 16px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
+          <div ref={_ovRef} role="status" style={{position:'absolute',left:0,right:0,..._ovPos,zIndex:6,pointerEvents:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'clamp(10px, 3%, 16px)',padding:'0 6%',background:'radial-gradient(ellipse at center, rgba(8,6,14,.82) 0%, rgba(8,6,14,.55) 55%, rgba(8,6,14,0) 78%)',animation:'pfMosaicIntro 5.6s ease forwards'}}>
             <div style={{fontSize:(.64*effScale)+'rem',letterSpacing:'.3em',fontWeight:600,textTransform:'uppercase',color:'rgba(226,196,119,1)',textShadow:'0 1px 10px rgba(0,0,0,.85)'}}>{_ensT('fusion')}</div>
             <div style={{maxWidth:'88%',textAlign:'center',fontFamily:'"Cormorant Garamond", Georgia, serif',fontStyle:(/^(zh|zhTW|ja)$/.test(lang)?'normal':'italic'),fontWeight:600,fontSize:((/^(zh|zhTW|ja)$/.test(lang)?1.2:1.5)*effScale)+'rem',lineHeight:1.3,color:'#f4e7c6',textShadow:'0 1px 14px rgba(0,0,0,.85)'}}>{_stT('fuTip')}</div>
           </div>
