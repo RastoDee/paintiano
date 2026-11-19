@@ -1,9 +1,5 @@
-Nouveautés de la version 1.1
-• Battle — un nouvel onglet. Vote pour des peintures, envoie la tienne. La première manche commence le 1er décembre.
-• Les favoris jouent maintenant : touche-en un et il se repeint, avec sa musique.
-• Composer : touche pour arrêter où tu veux, ajoute ou retire des notes sur place, glisse la ligne pour parcourir ton morceau.
-• Studio : écarte deux doigts deux fois pour ne garder que la peinture.
-• Mes créations : tout supprimer d’un geste, avec annulation.
-• Micro : commandes plus claires ; « Ouvrir comme morceau » garde toute la prise.
-• Plus de morceaux intégrés et de peintures d’exemple, de nombreux peintres retravaillés.
-• Corrections et finitions.
+Nouveautés de la 1.2
+• Nouveau guide : chaque astuce sur le vrai écran, avec des visites « Montre-moi ».
+• Nouveau menu : ton tableau le plus récent, ta progression dans le guide et le livre en un coup d’œil.
+• Les images sonnent plus riches : prairies et jardins jouent leurs couleurs en accords.
+• Corrections et améliorations.

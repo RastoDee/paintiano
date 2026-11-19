@@ -1,9 +1,5 @@
-Novidades da versão 1.1
-• Battle — um separador novo. Vota em pinturas, envia a tua. A primeira ronda começa a 1 de dezembro.
-• Os favoritos agora tocam: toca num e ele pinta-se de novo, com a sua música.
-• Compor: toca para parar onde quiseres, junta ou tira notas ali mesmo, arrasta a linha para andar pela tua peça.
-• Estúdio: afasta dois dedos duas vezes e fica só a pintura.
-• Meus: apagar tudo com um toque, com anular.
-• Mic: controlos mais arrumados; «Abrir como música» fica com a gravação inteira.
-• Mais peças incluídas e pinturas de exemplo, muitos pintores retrabalhados.
-• Correções e acabamentos.
+Novidades da 1.2
+• Novo guia: cada dica no ecrã real, com visitas «Mostra-me».
+• Novo menu: a tua pintura mais recente, o teu progresso no guia e o livro num relance.
+• As imagens soam mais cheias: prados e jardins tocam as suas cores em acordes.
+• Correções e melhorias.

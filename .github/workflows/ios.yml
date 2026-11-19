@@ -40,7 +40,7 @@ jobs:
           KEY="$RUNNER_TEMP/asc.json"
           ruby -rjson -e 'File.write(ARGV[0], {key_id: ENV["ASC_KEY_ID"], issuer_id: ENV["ASC_ISSUER_ID"], key: ENV["ASC_KEY_P8"], in_house: false}.to_json)' "$KEY"
           cd ios
-          fastlane deliver --api_key_path "$KEY" --app_identifier app.paintiano --app_version 1.1 \
+          fastlane deliver --api_key_path "$KEY" --app_identifier app.paintiano --app_version 1.2 \
             --metadata_path fastlane/metadata --skip_binary_upload true --skip_screenshots true \
             --force true --run_precheck_before_submit false --submit_for_review false 2>&1 | tail -60
           rm -f "$KEY"
@@ -59,7 +59,7 @@ jobs:
           MSG: ${{ github.event.head_commit.message }}
         run: |
           pip install --quiet pyjwt cryptography
-          if echo "$MSG" | grep -q "\[asc-header\]"; then python3 ios/asc/asc_header.py; elif echo "$MSG" | grep -q "\[asc-cancel\]"; then python3 ios/asc/asc_cancel.py; elif echo "$MSG" | grep -q "\[asc-submit11\]"; then python3 ios/asc/asc_submit11.py; elif echo "$MSG" | grep -q "\[asc-v11-attach\]"; then PF_ATTACH=1 python3 ios/asc/asc_v11.py; elif echo "$MSG" | grep -q "\[asc-v11\]"; then python3 ios/asc/asc_v11.py; elif echo "$MSG" | grep -q "\[asc-beta\]"; then python3 ios/asc/asc_beta.py; elif echo "$MSG" | grep -q "\[asc-where\]"; then python3 ios/asc/asc_where.py; elif echo "$MSG" | grep -q "\[asc-release\]"; then python3 ios/asc/asc_release.py; elif echo "$MSG" | grep -q "\[asc-submit\]"; then python3 ios/asc/asc_submit.py; elif echo "$MSG" | grep -q "\[asc-swap\]"; then python3 ios/asc/asc_swap.py; elif echo "$MSG" | grep -q "\[asc-iap\]"; then python3 ios/asc/asc_iapsubmit.py; elif echo "$MSG" | grep -q "\[asc-final\]"; then python3 ios/asc/asc_final.py; elif echo "$MSG" | grep -q "\[asc-fill\]"; then python3 ios/asc/asc_fill.py; elif echo "$MSG" | grep -q "\[asc-check\]"; then python3 ios/asc/asc_check.py; elif echo "$MSG" | grep -q "\[asc-pass\]"; then python3 ios/asc/asc_pass.py; else python3 ios/asc/asc.py; fi
+          if echo "$MSG" | grep -q "\[asc-header\]"; then python3 ios/asc/asc_header.py; elif echo "$MSG" | grep -q "\[asc-cancel\]"; then python3 ios/asc/asc_cancel.py; elif echo "$MSG" | grep -q "\[asc-submit11\]"; then python3 ios/asc/asc_submit11.py; elif echo "$MSG" | grep -q "\[asc-v11-attach\]"; then PF_ATTACH=1 python3 ios/asc/asc_v11.py; elif echo "$MSG" | grep -q "\[asc-v12\]"; then python3 ios/asc/asc_v12.py; elif echo "$MSG" | grep -q "\[asc-v11\]"; then python3 ios/asc/asc_v11.py; elif echo "$MSG" | grep -q "\[asc-beta\]"; then python3 ios/asc/asc_beta.py; elif echo "$MSG" | grep -q "\[asc-where\]"; then python3 ios/asc/asc_where.py; elif echo "$MSG" | grep -q "\[asc-release\]"; then python3 ios/asc/asc_release.py; elif echo "$MSG" | grep -q "\[asc-submit\]"; then python3 ios/asc/asc_submit.py; elif echo "$MSG" | grep -q "\[asc-swap\]"; then python3 ios/asc/asc_swap.py; elif echo "$MSG" | grep -q "\[asc-iap\]"; then python3 ios/asc/asc_iapsubmit.py; elif echo "$MSG" | grep -q "\[asc-final\]"; then python3 ios/asc/asc_final.py; elif echo "$MSG" | grep -q "\[asc-fill\]"; then python3 ios/asc/asc_fill.py; elif echo "$MSG" | grep -q "\[asc-check\]"; then python3 ios/asc/asc_check.py; elif echo "$MSG" | grep -q "\[asc-pass\]"; then python3 ios/asc/asc_pass.py; else python3 ios/asc/asc.py; fi
 
   store_shots:
     if: ${{ contains(github.event.head_commit.message, '[screens]') }}
@@ -77,7 +77,7 @@ jobs:
           KEY="$RUNNER_TEMP/asc.json"
           ruby -rjson -e 'File.write(ARGV[0], {key_id: ENV["ASC_KEY_ID"], issuer_id: ENV["ASC_ISSUER_ID"], key: ENV["ASC_KEY_P8"], in_house: false}.to_json)' "$KEY"
           cd ios
-          fastlane deliver --api_key_path "$KEY" --app_identifier app.paintiano --app_version 1.1 \
+          fastlane deliver --api_key_path "$KEY" --app_identifier app.paintiano --app_version 1.2 \
             --screenshots_path fastlane/screenshots --skip_binary_upload true --skip_metadata true \
             --overwrite_screenshots true --force true --run_precheck_before_submit false --submit_for_review false 2>&1 | tail -80
           rm -f "$KEY"

@@ -1,9 +1,5 @@
-New in 1.1
-• Battle — a new tab. Vote on paintings, send your own. First round starts December 1.
-• Favorites now play: tap one and it paints itself again, with its music.
-• Compose: tap to stop anywhere, add or take out notes right there, drag the line to move through your piece.
-• Studio: spread two fingers twice for just the painting.
-• Mine: delete all in one tap, with undo.
-• Mic: tidier controls; "Open as a song" keeps the whole take.
-• More built-in pieces and sample paintings, many painters reworked.
+New in 1.2
+• A new Guide: every tip on the real screen, with "Show me" walkthroughs.
+• A fresh menu: your newest painting, your Guide progress and the book at a glance.
+• Pictures sound fuller: meadows and gardens play their own colours in chords.
 • Fixes and polish.

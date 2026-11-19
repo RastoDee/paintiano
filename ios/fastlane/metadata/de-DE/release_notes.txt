@@ -1,9 +1,5 @@
-Neu in 1.1
-• Battle — ein neuer Tab. Stimme für Bilder ab, schick dein eigenes. Die erste Runde startet am 1. Dezember.
-• Favoriten spielen jetzt: Tippe auf einen und er malt sich noch einmal, mit seiner Musik.
-• Komponieren: Tippe zum Anhalten, füge Töne genau dort ein oder nimm sie heraus, zieh die Linie durch dein Stück.
-• Studio: Zwei Finger zweimal spreizen — nur noch das Bild.
-• Meine: alles mit einem Tipp löschen, mit Rückgängig.
-• Mikro: aufgeräumte Bedienung; „Als Song öffnen“ nimmt die ganze Aufnahme.
-• Mehr eingebaute Stücke und Beispielbilder, viele Maler überarbeitet.
+Neu in 1.2
+• Neue Anleitung: jeder Tipp auf dem echten Bildschirm, mit „Zeig’s mir“-Rundgängen.
+• Neues Menü: dein neuestes Bild, dein Fortschritt in der Anleitung und das Buch auf einen Blick.
+• Bilder klingen voller: Wiesen und Gärten spielen ihre Farben in Akkorden.
 • Korrekturen und Feinschliff.

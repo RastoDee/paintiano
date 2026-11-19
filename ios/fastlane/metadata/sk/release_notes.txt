@@ -1,9 +1,5 @@
-Novinky vo verzii 1.1
-• Battle — nová karta. Hlasuj za obrazy, pošli vlastný. Prvé kolo štartuje 1. decembra.
-• Obľúbené teraz hrajú: ťukni na obraz a namaľuje sa znova, aj s hudbou.
-• Komponovanie: ťuknutím zastavíš kdekoľvek, tóny pridáš alebo uberieš priamo tam, čiarou sa posúvaš skladbou.
-• Štúdio: roztiahni dva prsty dvakrát a ostane len maľba.
-• Moje: vymazať všetko jedným ťuknutím, s možnosťou vrátiť.
-• Mikro: prehľadnejšie ovládanie; „Otvoriť ako skladbu“ vezme celú nahrávku.
-• Viac vstavaných skladieb a ukážkových obrazov, mnohí maliari prepracovaní.
-• Opravy a doladenia.
+Novinky v 1.2
+• Nová Príručka: každý tip na skutočnej obrazovke, s prehliadkami „Ukáž mi to“.
+• Nové menu: tvoja najnovšia maľba, postup v Príručke a kniha na prvý pohľad.
+• Obrázky znejú plnšie: lúky a záhrady hrajú svoje farby v akordoch.
+• Opravy a vylepšenia.
