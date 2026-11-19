@@ -1283,6 +1283,7 @@ const GUIDE2_CSS = `.pf-g2 *{box-sizing:border-box}
 .pf-g2-sheet{animation:pfG2Up .28s cubic-bezier(.2,.8,.2,1) both}
 @keyframes pfG2Up{from{transform:translateY(100%)}to{transform:none}}
 .pf-g2-tp:active,.pf-g2-feat:active,.pf-g2-row:active{transform:scale(.96)}
+.pf-g2-chips::-webkit-scrollbar{display:none}
 .pf-g2-tabs button{transition:background .15s,color .15s}
 .pf-g2-hub{scrollbar-width:none}.pf-g2-hub::-webkit-scrollbar{display:none}
 .pf-g2-search::placeholder{color:rgba(242,238,232,.62)}
@@ -1662,17 +1663,37 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
             <button key={n} type="button" role="tab" aria-selected={on} onClick={()=>setGTab(n)} style={{flex:'1 1 auto',minWidth:0,height:38,border:0,borderRadius:12,padding:'0 7px',fontSize:13*Math.min(rs,1.15),fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',background:on?'linear-gradient(135deg,#f0d78a,#c9a84c)':'none',color:on?'#1a1408':(done?'#e2c477':'rgba(242,238,232,.72)')}}>{stepName(n)}{done ? ' ✓' : ''}</button>); })}
         </div>
         {gTab===0 && featEl}
-        <div key={'gt'+gTab} className="pf-g2-in" style={{marginTop:14,display:'flex',flexDirection:'column',gap:8,flexShrink:0}}>
-          {GUIDE_STEPS[gTab].rows.map((ids)=>{ const c=byId[ids[0]]; if(!c) return null; const r=SU.r[ids[0]] || SE.r[ids[0]], k=tk(c); return (
-            <button key={ids[0]} type="button" className="pf-g2-row" onClick={()=>openCard(c)} style={{display:'flex',alignItems:'center',gap:13,padding:'10px 12px',borderRadius:16,background:'rgba(255,255,255,.045)',border:'1px solid rgba(255,255,255,.07)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
-              <span aria-hidden="true" style={{width:40,height:40,borderRadius:12,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:T(k).g,color:T(k).dk?'#1a1408':'#fff',fontSize:19,lineHeight:1,textShadow:k==='colors'?'0 1px 3px rgba(0,0,0,.7)':'none'}}>{pfIcons(c.glyph)}</span>
-              <span style={{flex:1,minWidth:0,fontSize:14.5*rs,lineHeight:1.38}}><b style={{color:'#e2c477',fontWeight:700}}>{pfIcons(r ? r[0] : c.title)}</b>{SU.sep || ' — '}{pfIcons(r ? r[1] : c.body)}</span>
-            </button>); })}
+        <div key={'gt'+gTab} className="pf-g2-in" style={{marginTop:14,display:'grid',gridTemplateColumns:'1fr 1fr',gap:9,flexShrink:0}}>
+          {/* the step's cards as tiles: two to a line, `wide` ones across, `thin` ones a slim line — each wears a painting Paintiano made (GUIDE_TILE_ART) */}
+          {GUIDE_STEPS[gTab].rows.map((ids)=>{ const g=GUIDE_STEPS[gTab], id=ids[0], c=byId[id]; if(!c) return null; const r=SU.r[id] || SE.r[id], k=tk(c), ttl=pfIcons(r ? r[0] : c.title), ln=pfIcons(r ? r[1] : c.body);
+            if((g.thin||[]).indexOf(id)>=0) return (
+              <button key={id} type="button" className="pf-g2-row" onClick={()=>openCard(c)} style={{gridColumn:'span 2',display:'flex',alignItems:'center',gap:12,padding:'9px 12px',borderRadius:16,background:'rgba(255,255,255,.045)',border:'1px solid rgba(255,255,255,.07)',color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
+                <span aria-hidden="true" style={{width:34,height:34,borderRadius:11,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:T(k).g,color:T(k).dk?'#1a1408':'#fff',fontSize:17,lineHeight:1}}>{pfIcons(c.glyph)}</span>
+                <span style={{flex:1,minWidth:0,fontSize:14.5*rs,lineHeight:1.3}}><b style={{color:'#e2c477',fontWeight:700}}>{ttl}</b><span style={{color:'rgba(242,238,232,.72)'}}>{'\u2003'}{ln}</span></span>
+              </button>);
+            const wide=(g.wide||[]).indexOf(id)>=0, a=GUIDE_TILE_ART[id], fill={position:'absolute',inset:0,width:'100%',height:'100%'};
+            const art = Array.isArray(a) ? (<span aria-hidden="true" style={{...fill,display:'flex'}}>{a.map((x,i)=>(<img key={i} src={'/guide/'+x+'.webp'} alt="" loading="lazy" style={{flex:1,minWidth:0,height:'100%',objectFit:'cover'}}/>))}</span>)
+              : a==='@ges' ? (<span aria-hidden="true" style={{...fill,background:GUIDE_TOPIC.studio.g,display:'flex',alignItems:'flex-start',justifyContent:'flex-end',padding:'14px 16px',fontSize:30,fontWeight:800,letterSpacing:'.08em',color:'rgba(255,255,255,.9)'}}>← → ↓</span>)
+              : a==='@vs' ? (<span aria-hidden="true" style={{...fill,background:GUIDE_TOPIC.battle.g,display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:16,fontSize:46,fontWeight:800,color:'rgba(255,255,255,.92)'}}>VS</span>)
+              : a==='@heart' ? (<span aria-hidden="true" style={{...fill,background:GUIDE_TOPIC.save.g,display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:14,fontSize:54,lineHeight:1,color:'rgba(255,255,255,.92)'}}>♥</span>)
+              : a==='@mos' ? (<span aria-hidden="true" style={{...fill,background:'#efe6d2'}}>{[[0,0,61.8,100,'#d8452f'],[61.8,0,38.2,61.8,'#f2c84b'],[61.8,61.8,23.6,38.2,'#3557b7'],[85.4,61.8,14.6,23.6,'#efe6d2'],[85.4,85.4,14.6,14.6,'#1a1408']].map(([x,y,w,h,cl],i)=>(<i key={i} style={{position:'absolute',left:x+'%',top:y+'%',width:w+'%',height:h+'%',background:cl,boxShadow:'inset 0 0 0 2px #1a1408'}}/>))}
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{position:'absolute',inset:0,width:'100%',height:'100%'}}><path d="M8 12H54M8 30H54M8 48H54" stroke="#fff" strokeWidth="1.6" strokeDasharray="2 3" fill="none" opacity=".9"/></svg></span>)
+              : a ? (<img aria-hidden="true" src={'/guide/'+a+'.webp'} alt="" loading="lazy" style={{...fill,objectFit:'cover'}}/>) : null;
+            return (
+              <button key={id} type="button" className="pf-g2-row" onClick={()=>openCard(c)} style={{position:'relative',gridColumn:wide?'span 2':'auto',height:Math.round((wide?116:136)*Math.max(1,rs)),borderRadius:22,overflow:'hidden',border:0,padding:0,background:T(k).g,color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s',isolation:'isolate'}}>
+                {art}
+                <span aria-hidden="true" style={{position:'absolute',inset:0,background:'linear-gradient(180deg,rgba(7,6,12,0) 30%,rgba(7,6,12,.88))'}}/>
+                <span aria-hidden="true" style={{position:'absolute',top:10,left:10,height:28,minWidth:28,padding:'0 7px',borderRadius:10,background:'rgba(7,6,12,.45)',border:'1px solid rgba(255,255,255,.18)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#f0d78a',lineHeight:1}}>{pfIcons(c.glyph)}</span>
+                <span style={{position:'absolute',left:13,right:12,bottom:11}}>
+                  <b style={{display:'block',fontSize:18*rs,fontWeight:800,letterSpacing:'-.01em',lineHeight:1.1,textShadow:'0 1px 6px rgba(0,0,0,.45)'}}>{ttl}</b>
+                  <span style={{display:'block',marginTop:3,fontSize:12.5*rs,lineHeight:1.25,color:'rgba(242,238,232,.82)'}}>{ln}</span>
+                </span>
+              </button>); })}
           {(()=>{ const g=GUIDE_STEPS[gTab];
             if(g.plus){ const ps=g.plus.filter(id=>byId[id]); if(!ps.length) return null; return (
-              <div style={{marginTop:4,textAlign:'center',fontSize:13*rs,lineHeight:1.7,color:'rgba(242,238,232,.6)'}}>{'+ '}{ps.map((id,i)=>(<span key={id}>{i ? ' · ' : ''}<button type="button" onClick={()=>openCard(byId[id])} style={{background:'none',border:0,padding:0,color:'rgba(242,238,232,.82)',fontSize:'inherit',textDecoration:'underline dotted',textUnderlineOffset:3,cursor:'pointer'}}>{(SU.p && SU.p[id]) || byId[id].title}</button></span>))}</div>); }
+              <div className="pf-g2-chips" style={{gridColumn:'span 2',marginTop:2,display:'flex',alignItems:'center',gap:6,overflowX:'auto',whiteSpace:'nowrap',scrollbarWidth:'none',WebkitOverflowScrolling:'touch'}}><span aria-hidden="true" style={{fontSize:13*rs,color:'rgba(242,238,232,.55)',flexShrink:0}}>+</span>{ps.map((id)=>(<button key={id} type="button" onClick={()=>openCard(byId[id])} style={{flexShrink:0,fontFamily:'inherit',fontSize:12.5*rs,padding:'6px 11px',borderRadius:99,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.09)',color:'rgba(242,238,232,.85)',cursor:'pointer'}}>{(SU.p && SU.p[id]) || pfIcons(byId[id].title)}</button>))}</div>); }
             const nx=(SU.nx && SU.nx[gTab]) || SE.nx[gTab]; if(!nx || g.nx==null) return null; const [n0,n1]=nx.split('{s}'); return (
-              <div style={{marginTop:4,textAlign:'center',fontSize:13*rs,lineHeight:1.55,color:'rgba(242,238,232,.6)'}}>{n0}<button type="button" onClick={()=>setGTab(g.nx)} style={{background:'none',border:0,padding:0,color:'#e2c477',fontWeight:700,fontSize:'inherit',cursor:'pointer'}}>{stepName(g.nx)}</button>{n1}</div>); })()}
+              <div style={{gridColumn:'span 2',marginTop:4,textAlign:'center',fontSize:13*rs,lineHeight:1.55,color:'rgba(242,238,232,.6)'}}>{n0}<button type="button" onClick={()=>setGTab(g.nx)} style={{background:'none',border:0,padding:0,color:'#e2c477',fontWeight:700,fontSize:'inherit',cursor:'pointer'}}>{stepName(g.nx)}</button>{n1}</div>); })()}
         </div>
         <div style={{flex:1,minHeight:20}}/>
         {(()=>{ const X=SU.x || SE.x, row=(ic, tx, gold, fn)=>(<button type="button" className="pf-g2-row" onClick={fn} style={{display:'flex',alignItems:'center',gap:13,padding:'10px 14px',borderRadius:16,background:gold?'linear-gradient(120deg,rgba(240,215,138,.16),rgba(240,215,138,.05))':'rgba(255,255,255,.045)',border:'1px solid '+(gold?'rgba(226,196,119,.45)':'rgba(255,255,255,.08)'),color:'#f2eee8',textAlign:'left',cursor:'pointer',transition:'transform .12s'}}>
