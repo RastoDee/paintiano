@@ -26266,14 +26266,29 @@ const GUIDE_TILE_ART = { z_up:'swipe', z_fav:'heart', z_you:'change',
   h_song:'song', h_photo:'photo', h_play:'play', h_swipe:'painter', h_share:'share',
   st_gestures:'@ges', st_look:'look', style:'painters', modes:'palettes', composers:'composers', moods:'mood', fujam:['fu1','fu2','fu3'], battle:'@vs', favorites:'@heart',
   ensemble:['en1','en2','en3'], signature:'signature', shuffle:'shuffle', harmony:'wheel', mosaic:'@mos' };
-// A screen card can be walked through on the real screen, story by story: each frame is a screenshot the app made of itself
-// in that language (public/guide/shots/<lang>/: the images, and m.json with where each control sits on them — made by a script
-// that opens the app headless and finds the controls, so a new layout is a new run of it); one control lit at a time, a line under it
+// A card can be shown on the real screen: the app's own screenshots in the viewer's language (public/guide/shots/<lang>/, with m.json
+// saying where each control sits — made by a script that opens the app headless and finds the controls, so a new layout is a new
+// run of it). GUIDE_SHOT_CARDS: the card itself wears one (s = the shot, r = the control lit, g = a gesture drawn on it); GUIDE_TOURS:
+// ▶ Show me walks through the screen frame by frame, one control lit at a time and a line beside it
+const GUIDE_SHOT_CARDS = {
+  z_up:{s:'p_hokusai', g:'up'}, z_fav:{s:'p_gold', r:'fav', g:'dtap'}, z_you:{s:'p_delaunay', r:'change'},
+  h_song:{s:'panelM', r:'song'}, h_photo:{s:'panelI', r:'picture'}, h_play:{s:'panelM', r:'play'}, h_swipe:{s:'p_hokusai', g:'up'}, h_share:{s:'p_gold', r:'share'},
+  st_canvas:{s:'studio'}, st_gestures:{s:'p_hokusai', g:'lr'}, st_home:{s:'home', g:'up'}, st_share:{s:'share', r:'all'}, st_menu:{s:'menu'}, st_look:{s:'look', r:'painters'},
+  music:{s:'panelM', r:'tiles'}, image:{s:'panelI', r:'picture'}, compose:{s:'panelM', r:'compose'}, mic:{s:'panelM', r:'mic'}, moods:{s:'panelM', r:'mood'}, mfi:{s:'panelI', r:'mfi'},
+  style:{s:'look', r:'painters'}, modes:{s:'look', r:'pal'}, signature:{s:'look', r:'sig'}, fujam:{s:'look', r:'solofu'}, ensemble:{s:'look', r:'solofu'}, composers:{s:'panel', r:'tiles'},
+  favorites:{s:'p_gold', r:'fav', g:'dtap'}, save:{s:'share', r:'save'}, scan:{s:'studio', r:'canvas'}, overview:{s:'p_delaunay'}, daily:{s:'home'}, pro:{s:'menu', r:'ai'}, setup:{s:'menu', r:'settings'}, tools:{s:'panel', r:'bottom'}, battle:{s:'p_gold', g:'dtap'}, appmodes:{s:'studio'},
+};
 const GUIDE_TOURS = {
   st_canvas: [['studio','home'],['studio','tabs'],['studio','canvas'],['studio','title'],['studio','row'],['panel','tiles'],['panel','bottom']],
+  st_gestures: [['p_hokusai','canvas','up'],['p_hokusai','canvas','down'],['p_hokusai','canvas','lr'],['p_hokusai','canvas','tap'],['p_hokusai','canvas','dtap'],['p_hokusai','canvas','hold'],['p_hokusai','canvas','pinch'],['p_hokusai','line']],
+  st_home: [['home','canvas','up'],['home','tabs'],['home','title'],['home','change'],['home','brand'],['home','canvas','hold']],
+  st_share: [['share','video'],['share','clip'],['share','link'],['share','story'],['share','save'],['p_gold','fav','dtap']],
+  st_menu: [['menu','tiles'],['menu','ai'],['menu','lang'],['menu','settings'],['menu','size'],['menu','legal']],
+  st_look: [['look','pal'],['look','pal','hold'],['look','painters'],['look','solofu'],['look','sig'],['look','painters','hold']],
 };
 const GUIDE_TOUR_I18N = {
-  EN:{ go:'Show me', st_canvas:[
+  EN:{ go:'Show me',
+    st_canvas:[
       ['⌄  Home','Tap and you’re back on the start screen.'],
       ['For You | Studio','For You plays your painting on. Swipe ↑ = the same piece, another painter.'],
       ['The painting','Tap = pause / play. Double tap = ♥.'],
@@ -26281,8 +26296,15 @@ const GUIDE_TOUR_I18N = {
       ['♥ · ✦ Change · share','♥ saves it. ✦ Change swaps the music, the image or the painter. Share = video, Story or PNG.'],
       ['What do you want to change?','Music, image or painter (for a photo: the composer). Tap one.'],
       ['Bottom of the panel','Mine = your stuff · Sound · Clear (tap twice) · Home.']
-    ] },
-  SK:{ go:'Ukáž mi to', st_canvas:[
+    ],
+    st_gestures:[['Up','The same piece, another painter.'], ['Down','Back to the painting before.'], ['← →','Another variant of the same painter. → goes back.'], ['Tap','Pause / play.'], ['Double tap','The painting goes into ♥ Favorites.'], ['Hold','Shows the piece and who paints it.'], ['Two fingers','Spread = just the painting. Pinch = everything back.'], ['Line at the bottom','Drag and jump anywhere. Far left = from the start.']],
+    st_home:[['For You','Paintings picked for you. Swipe ↑ = the next one.'], ['For You | Studio','Tap Studio and the painting is yours.'], ['What’s playing','The piece and who paints it.'], ['✦ Change','Your song, a photo or a mood.'], ['Paintiano ⌄','The menu: Mine, Guide, language, settings.'], ['Hold','Sound off / on.']],
+    st_share:[['Video 9:16','Paints itself to the music. For TikTok, Reels, Stories.'], ['Clip · 15 s','The next 15 seconds, from now.'], ['Link to this painting','Opens exactly this painting for anyone.'], ['Story picture','The painting as it is right now.'], ['Save · print','Sizes, files and print, once it’s painted.'], ['♥ Favorites','Double tap the painting. You’ll find them in Mine.']],
+    st_menu:[['Mine · Guide · Concept · Book','All in one place.'], ['Paintiano Pro AI','Composing with AI.'], ['Language','Nine languages.'], ['Settings','Which painters, palettes and composers show.'], ['Text size','Three sizes.'], ['Reset','Start over. Next to it: prices and terms.']],
+    st_look:[['Palettes','Tap = picked (gold). Tap again = white: ↑ and ← bring new colours too.'], ['Hold a palette','See its colours. ✎ copies them into your own palette.'], ['Painters','Tap = they paint (gold).'], ['Solo | Fusion','Solo = one painter. Fusion = 2–4 at once.'], ['✦ Signature','The piece picks its own painters.'], ['Don’t like one?','In Fusion, hold their face (⊘). A tap brings them back.']],
+  },
+  SK:{ go:'Ukáž mi to',
+    st_canvas:[
       ['⌄  Domov','Ťukni a si späť na úvode.'],
       ['Pre teba | Štúdio','Pre teba hrá tvoju maľbu ďalej. Potiahni ↑ = tá istá skladba, iný maliar.'],
       ['Maľba','Ťuk = pauza / hraj. Dvakrát ťuk = ♥.'],
@@ -26290,8 +26312,15 @@ const GUIDE_TOUR_I18N = {
       ['♥ · ✦ Zmeň · zdieľaj','♥ ju uloží. ✦ Zmeň vymení hudbu, obraz alebo maliara. Zdieľaj = video, Story alebo PNG.'],
       ['Čo chceš zmeniť?','Hudba, obraz alebo maliar (pri fotke skladateľ). Ťukni na jedno.'],
       ['Spodok panela','Moje = tvoje veci · Zvuk · Vyčistiť (ťukni 2×) · Domov.']
-    ] },
-  DE:{ go:'Zeig’s mir', st_canvas:[
+    ],
+    st_gestures:[['Hore','Tá istá skladba, iný maliar.'], ['Dole','Späť na maľbu predtým.'], ['← →','Ďalší variant toho istého maliara. → späť na predošlý.'], ['Ťuk','Pauza / hraj.'], ['Dvakrát ťuk','Maľba ide do ♥ Obľúbených.'], ['Podrž','Ukáže skladbu a kto ju maľuje.'], ['Dva prsty','Roztiahni = len maľba. Stiahni = všetko späť.'], ['Čiara dole','Potiahni a skoč kamkoľvek. Úplne vľavo = od začiatku.']],
+    st_home:[['Pre teba','Maľby vybrané pre teba. Swipni ↑ = ďalšia.'], ['Pre teba | Štúdio','Ťukni na Štúdio a maľba je tvoja.'], ['Čo hrá','Skladba a kto ju maľuje.'], ['✦ Zmeň','Tvoja pieseň, fotka alebo nálada.'], ['Paintiano ⌄','Menu: Moje, Príručka, jazyk, nastavenia.'], ['Podrž','Zvuk vyp / zap.']],
+    st_share:[['Video 9:16','Maľuje sa do hudby. Na TikTok, Reels, Stories.'], ['Klip · 15 s','Ďalších 15 sekúnd, odteraz.'], ['Odkaz na túto maľbu','Komukoľvek otvorí presne túto maľbu.'], ['Obrázok do Story','Maľba tak, ako je práve teraz.'], ['Uložiť · tlač','Veľkosti, súbory a tlač, keď sa maľba domaľuje.'], ['♥ Obľúbené','Dvakrát ťuk na maľbu. Nájdeš ich v Moje.']],
+    st_menu:[['Moje · Príručka · Koncept · Kniha','Všetko na jednom mieste.'], ['Paintiano Pro AI','Skladanie s AI.'], ['Jazyk','Deväť jazykov.'], ['Nastavenia','Ktorí maliari, palety a skladatelia sa ukazujú.'], ['Veľkosť textu','Tri veľkosti.'], ['Reset','Začneš odznova. Vedľa cenník a podmienky.']],
+    st_look:[['Palety','Ťuk = vybraná (zlatá). Ešte ťuk = biela: ↑ a ← prinesú aj nové farby.'], ['Podrž paletu','Uvidíš jej farby. ✎ ich skopíruje do tvojej vlastnej palety.'], ['Maliari','Ťuk = maľuje on (zlatý).'], ['Sólo | Fúzia','Sólo = jeden maliar. Fúzia = 2–4 naraz.'], ['✦ Signatúra','Skladba si sama vyberie maliarov.'], ['Nechceš maliara?','Vo Fúzii podrž jeho tvár (⊘). Ťuk ho vráti.']],
+  },
+  DE:{ go:'Zeig’s mir',
+    st_canvas:[
       ['⌄  Start','Tippen und du bist wieder am Anfang.'],
       ['Für dich | Studio','Für dich spielt dein Bild weiter. Wisch ↑ = dasselbe Stück, ein anderer Maler.'],
       ['Das Bild','Tippen = Pause / Play. Doppeltippen = ♥.'],
@@ -26299,8 +26328,15 @@ const GUIDE_TOUR_I18N = {
       ['♥ · ✦ Ändern · teilen','♥ speichert es. ✦ Ändern tauscht Musik, Bild oder Maler. Teilen = Video, Story oder PNG.'],
       ['Was willst du ändern?','Musik, Bild oder Maler (bei einem Foto: der Komponist). Tipp eins an.'],
       ['Unten im Panel','Meins = deine Sachen · Klang · Löschen (2× tippen) · Start.']
-    ] },
-  FR:{ go:'Montre-moi', st_canvas:[
+    ],
+    st_gestures:[['Nach oben','Dasselbe Stück, ein anderer Maler.'], ['Nach unten','Zurück zum Bild davor.'], ['← →','Eine andere Variante desselben Malers. → zurück.'], ['Tippen','Pause / Play.'], ['Doppelt tippen','Das Bild kommt in ♥ Favoriten.'], ['Gedrückt halten','Zeigt das Stück und wer es malt.'], ['Zwei Finger','Auseinander = nur das Bild. Zusammen = alles zurück.'], ['Linie unten','Ziehen und überall hinspringen. Ganz links = von vorn.']],
+    st_home:[['Für dich','Bilder, für dich ausgesucht. Wisch ↑ = das nächste.'], ['Für dich | Studio','Tipp auf Studio und das Bild gehört dir.'], ['Was läuft','Das Stück und wer es malt.'], ['✦ Ändern','Dein Song, ein Foto oder eine Stimmung.'], ['Paintiano ⌄','Das Menü: Meins, Anleitung, Sprache, Einstellungen.'], ['Gedrückt halten','Ton aus / an.']],
+    st_share:[['Video 9:16','Malt sich zur Musik. Für TikTok, Reels, Stories.'], ['Clip · 15 s','Die nächsten 15 Sekunden, ab jetzt.'], ['Link zu diesem Bild','Öffnet für jeden genau dieses Bild.'], ['Story-Bild','Das Bild, wie es gerade ist.'], ['Speichern · Druck','Größen, Dateien und Druck, sobald es fertig gemalt ist.'], ['♥ Favoriten','Doppelt aufs Bild tippen. Du findest sie in Meins.']],
+    st_menu:[['Meins · Anleitung · Konzept · Buch','Alles an einem Ort.'], ['Paintiano Pro AI','Komponieren mit KI.'], ['Sprache','Neun Sprachen.'], ['Einstellungen','Welche Maler, Paletten und Komponisten erscheinen.'], ['Schriftgröße','Drei Größen.'], ['Zurücksetzen','Fang neu an. Daneben: Preise und Bedingungen.']],
+    st_look:[['Paletten','Tippen = gewählt (gold). Noch mal = weiß: ↑ und ← bringen auch neue Farben.'], ['Palette halten','Zeigt ihre Farben. ✎ kopiert sie in deine eigene Palette.'], ['Maler','Tippen = er malt (gold).'], ['Solo | Fusion','Solo = ein Maler. Fusion = 2–4 auf einmal.'], ['✦ Signatur','Das Stück wählt seine Maler selbst.'], ['Einer gefällt dir nicht?','In der Fusion sein Gesicht halten (⊘). Tippen holt ihn zurück.']],
+  },
+  FR:{ go:'Montre-moi',
+    st_canvas:[
       ['⌄  Accueil','Touche et te revoilà au début.'],
       ['Pour toi | Studio','Pour toi continue de jouer ta peinture. Glisse ↑ = le même morceau, un autre peintre.'],
       ['La peinture','Touche = pause / lecture. Double touche = ♥.'],
@@ -26308,8 +26344,15 @@ const GUIDE_TOUR_I18N = {
       ['♥ · ✦ Changer · partager','♥ l’enregistre. ✦ Changer remplace la musique, l’image ou le peintre. Partager = vidéo, Story ou PNG.'],
       ['Que veux-tu changer ?','Musique, image ou peintre (pour une photo : le compositeur). Touche-en un.'],
       ['En bas du panneau','À moi = tes trucs · Son · Effacer (touche 2×) · Accueil.']
-    ] },
-  ES:{ go:'Enséñamelo', st_canvas:[
+    ],
+    st_gestures:[['Vers le haut','Le même morceau, un autre peintre.'], ['Vers le bas','Retour à la peinture d’avant.'], ['← →','Une autre variante du même peintre. → revient.'], ['Toucher','Pause / lecture.'], ['Toucher deux fois','La peinture va dans ♥ Favoris.'], ['Maintenir','Montre le morceau et qui le peint.'], ['Deux doigts','Écarte = juste la peinture. Pince = tout revient.'], ['Ligne en bas','Glisse et saute où tu veux. Tout à gauche = du début.']],
+    st_home:[['Pour toi','Des peintures choisies pour toi. Glisse ↑ = la suivante.'], ['Pour toi | Studio','Touche Studio et la peinture est à toi.'], ['Ce qui joue','Le morceau et qui le peint.'], ['✦ Changer','Ta chanson, une photo ou une humeur.'], ['Paintiano ⌄','Le menu : À moi, Guide, langue, réglages.'], ['Maintenir','Son coupé / remis.']],
+    st_share:[['Vidéo 9:16','Elle se peint en musique. Pour TikTok, Reels, Stories.'], ['Clip · 15 s','Les 15 prochaines secondes, dès maintenant.'], ['Lien vers ce tableau','Ouvre exactement cette peinture pour n’importe qui.'], ['Image Story','La peinture telle qu’elle est maintenant.'], ['Enregistrer · imprimer','Tailles, fichiers et impression, une fois peinte.'], ['♥ Favoris','Touche deux fois la peinture. Tu les retrouves dans À moi.']],
+    st_menu:[['À moi · Guide · Concept · Livre','Tout au même endroit.'], ['Paintiano Pro AI','Composer avec l’IA.'], ['Langue','Neuf langues.'], ['Réglages','Quels peintres, palettes et compositeurs s’affichent.'], ['Taille du texte','Trois tailles.'], ['Réinitialiser','Tu recommences à zéro. À côté : prix et conditions.']],
+    st_look:[['Palettes','Touche = choisie (dorée). Encore = blanche : ↑ et ← apportent aussi de nouvelles couleurs.'], ['Maintiens une palette','Tu vois ses couleurs. ✎ les copie dans ta propre palette.'], ['Peintres','Touche = il peint (doré).'], ['Solo | Fusion','Solo = un peintre. Fusion = 2 à 4 à la fois.'], ['✦ Signature','Le morceau choisit lui-même ses peintres.'], ['Un peintre te déplaît ?','En Fusion, maintiens son visage (⊘). Une touche le ramène.']],
+  },
+  ES:{ go:'Enséñamelo',
+    st_canvas:[
       ['⌄  Inicio','Toca y vuelves al principio.'],
       ['Para ti | Estudio','Para ti sigue tocando tu pintura. Desliza ↑ = la misma pieza, otro pintor.'],
       ['La pintura','Toque = pausa / play. Doble toque = ♥.'],
@@ -26317,8 +26360,15 @@ const GUIDE_TOUR_I18N = {
       ['♥ · ✦ Cambiar · compartir','♥ la guarda. ✦ Cambiar cambia la música, la imagen o el pintor. Compartir = vídeo, Story o PNG.'],
       ['¿Qué quieres cambiar?','Música, imagen o pintor (con una foto: el compositor). Toca uno.'],
       ['Abajo del panel','Lo mío = tus cosas · Sonido · Borrar (toca 2×) · Inicio.']
-    ] },
-  PT:{ go:'Mostra-me', st_canvas:[
+    ],
+    st_gestures:[['Arriba','La misma pieza, otro pintor.'], ['Abajo','Vuelve a la pintura de antes.'], ['← →','Otra variante del mismo pintor. → vuelve.'], ['Toca','Pausa / play.'], ['Toca dos veces','La pintura va a ♥ Favoritos.'], ['Mantén pulsado','Muestra la pieza y quién la pinta.'], ['Dos dedos','Separa = solo la pintura. Junta = todo vuelve.'], ['Línea de abajo','Arrastra y salta a donde quieras. Del todo a la izquierda = desde el principio.']],
+    st_home:[['Para ti','Pinturas elegidas para ti. Desliza ↑ = la siguiente.'], ['Para ti | Estudio','Toca Estudio y la pintura es tuya.'], ['Lo que suena','La pieza y quién la pinta.'], ['✦ Cambiar','Tu canción, una foto o un estado de ánimo.'], ['Paintiano ⌄','El menú: Lo mío, Guía, idioma, ajustes.'], ['Mantén pulsado','Sonido off / on.']],
+    st_share:[['Vídeo 9:16','Se pinta al ritmo de la música. Para TikTok, Reels, Stories.'], ['Clip · 15 s','Los próximos 15 segundos, desde ahora.'], ['Enlace a esta pintura','Abre exactamente esta pintura a cualquiera.'], ['Imagen para Story','La pintura tal como está ahora.'], ['Guardar · imprimir','Tamaños, archivos e impresión, cuando esté pintada.'], ['♥ Favoritos','Toca dos veces la pintura. Están en Lo mío.']],
+    st_menu:[['Lo mío · Guía · Concepto · Libro','Todo en un sitio.'], ['Paintiano Pro AI','Componer con IA.'], ['Idioma','Nueve idiomas.'], ['Ajustes','Qué pintores, paletas y compositores se muestran.'], ['Tamaño del texto','Tres tamaños.'], ['Restablecer','Empiezas de cero. Al lado: precios y condiciones.']],
+    st_look:[['Paletas','Toque = elegida (dorada). Otro toque = blanca: ↑ y ← traen también colores nuevos.'], ['Mantén una paleta','Ves sus colores. ✎ los copia en tu propia paleta.'], ['Pintores','Toque = pinta él (dorado).'], ['Solo | Fusión','Solo = un pintor. Fusión = 2–4 a la vez.'], ['✦ Firma','La pieza elige sola a sus pintores.'], ['¿No te gusta uno?','En Fusión, mantén su cara (⊘). Un toque lo devuelve.']],
+  },
+  PT:{ go:'Mostra-me',
+    st_canvas:[
       ['⌄  Início','Toca e voltas ao início.'],
       ['Para ti | Estúdio','Para ti continua a tocar a tua pintura. Desliza ↑ = a mesma peça, outro pintor.'],
       ['A pintura','Toque = pausa / play. Duplo toque = ♥.'],
@@ -26326,8 +26376,15 @@ const GUIDE_TOUR_I18N = {
       ['♥ · ✦ Mudar · partilhar','♥ guarda-a. ✦ Mudar troca a música, a imagem ou o pintor. Partilhar = vídeo, Story ou PNG.'],
       ['O que queres mudar?','Música, imagem ou pintor (numa foto: o compositor). Toca num.'],
       ['Fundo do painel','O meu = as tuas coisas · Som · Limpar (toca 2×) · Início.']
-    ] },
-  zh:{ go:'带我看看', st_canvas:[
+    ],
+    st_gestures:[['Para cima','A mesma peça, outro pintor.'], ['Para baixo','Volta à pintura de antes.'], ['← →','Outra variante do mesmo pintor. → volta.'], ['Toca','Pausa / play.'], ['Toca duas vezes','A pintura vai para ♥ Favoritos.'], ['Mantém premido','Mostra a peça e quem a pinta.'], ['Dois dedos','Afasta = só a pintura. Junta = tudo volta.'], ['Linha em baixo','Arrasta e salta para onde quiseres. Tudo à esquerda = do início.']],
+    st_home:[['Para ti','Pinturas escolhidas para ti. Desliza ↑ = a seguinte.'], ['Para ti | Estúdio','Toca em Estúdio e a pintura é tua.'], ['O que está a tocar','A peça e quem a pinta.'], ['✦ Mudar','A tua canção, uma foto ou um estado de espírito.'], ['Paintiano ⌄','O menu: O meu, Guia, idioma, definições.'], ['Mantém premido','Som off / on.']],
+    st_share:[['Vídeo 9:16','Pinta-se ao som da música. Para TikTok, Reels, Stories.'], ['Clip · 15 s','Os próximos 15 segundos, a partir de agora.'], ['Ligação para esta pintura','Abre exatamente esta pintura a qualquer pessoa.'], ['Imagem para Story','A pintura tal como está agora.'], ['Guardar · imprimir','Tamanhos, ficheiros e impressão, quando estiver pintada.'], ['♥ Favoritos','Toca duas vezes na pintura. Estão em O meu.']],
+    st_menu:[['O meu · Guia · Conceito · Livro','Tudo num só sítio.'], ['Paintiano Pro AI','Compor com IA.'], ['Idioma','Nove idiomas.'], ['Definições','Que pintores, paletas e compositores aparecem.'], ['Tamanho do texto','Três tamanhos.'], ['Redefinir','Começas do zero. Ao lado: preços e termos.']],
+    st_look:[['Paletas','Toque = escolhida (dourada). Outro toque = branca: ↑ e ← trazem também cores novas.'], ['Mantém uma paleta','Vês as cores dela. ✎ copia-as para a tua própria paleta.'], ['Pintores','Toque = ele pinta (dourado).'], ['Solo | Fusão','Solo = um pintor. Fusão = 2–4 de uma vez.'], ['✦ Assinatura','A peça escolhe sozinha os seus pintores.'], ['Não gostas de um?','Na Fusão, mantém premido o rosto dele (⊘). Um toque trá-lo de volta.']],
+  },
+  zh:{ go:'带我看看',
+    st_canvas:[
       ['⌄ 首页','点一下，回到开始页。'],
       ['推荐 | 工作室','推荐会继续播放你的画。上滑 ↑ = 同一首曲子，换一位画家。'],
       ['这幅画','点一下 = 暂停 / 播放。点两下 = ♥。'],
@@ -26335,8 +26392,15 @@ const GUIDE_TOUR_I18N = {
       ['♥ · ✦ 更换 · 分享','♥ 收藏它。✦ 更换音乐、图片或画家。分享 = 视频、Story 或 PNG。'],
       ['想换点什么？','音乐、图片或画家（照片则是作曲家）。点一个。'],
       ['面板底部','我的 = 你的作品 · 声音 · 清除（点两下）· 首页。']
-    ] },
-  zhTW:{ go:'帶我看看', st_canvas:[
+    ],
+    st_gestures:[['上滑','同一首曲子，换一位画家。'], ['下滑','回到上一幅画。'], ['← →','同一位画家的另一个变体。→ 返回。'], ['轻点','暂停 / 播放。'], ['双击','这幅画进入 ♥ 收藏。'], ['长按','显示曲子和画它的画家。'], ['两指','张开 = 只看画。捏合 = 全部回来。'], ['底部的线','拖动，跳到任意位置。最左 = 从头开始。']],
+    st_home:[['推荐','为你挑选的画。上滑 ↑ = 下一幅。'], ['推荐 | 工作室','点工作室，这幅画就是你的。'], ['正在播放','曲子和画它的画家。'], ['✦ 更换','你的歌、一张照片或一种心情。'], ['Paintiano ⌄','菜单：我的、指南、语言、设置。'], ['长按','声音 关 / 开。']],
+    st_share:[['视频 9:16','随音乐画出来。适合 TikTok、Reels、Stories。'], ['短片 · 15 秒','接下来的 15 秒，从现在开始。'], ['这幅画的链接','任何人打开的都是这幅画。'], ['快拍图片','这幅画此刻的样子。'], ['保存 · 打印','画完后：尺寸、文件和打印。'], ['♥ 收藏','双击这幅画。在“我的”里找到它们。']],
+    st_menu:[['我的 · 指南 · 理念 · 书','一处找齐。'], ['Paintiano Pro AI','用 AI 作曲。'], ['语言','九种语言。'], ['设置','显示哪些画家、调色板和作曲家。'], ['字号','三种大小。'], ['重置','从头开始。旁边：价格和条款。']],
+    st_look:[['调色板','点一下 = 选中（金色）。再点 = 白色：↑ 和 ← 也会换新颜色。'], ['长按调色板','看它的颜色。✎ 把颜色复制到你自己的调色板。'], ['画家','点一下 = 由他来画（金色）。'], ['单人 | 融合','单人 = 一位画家。融合 = 2–4 位同时。'], ['✦ 签名','曲子自己选画家。'], ['不喜欢某位？','在融合里长按他的头像（⊘）。点一下就回来。']],
+  },
+  zhTW:{ go:'帶我看看',
+    st_canvas:[
       ['⌄ 首頁','點一下，回到開始頁。'],
       ['推薦 | 工作室','推薦會繼續播放你的畫。上滑 ↑ = 同一首曲子，換一位畫家。'],
       ['這幅畫','點一下 = 暫停 / 播放。點兩下 = ♥。'],
@@ -26344,8 +26408,15 @@ const GUIDE_TOUR_I18N = {
       ['♥ · ✦ 更換 · 分享','♥ 收藏它。✦ 更換音樂、圖片或畫家。分享 = 影片、Story 或 PNG。'],
       ['想換點什麼？','音樂、圖片或畫家（照片則是作曲家）。點一個。'],
       ['面板底部','我的 = 你的作品 · 聲音 · 清除（點兩下）· 首頁。']
-    ] },
-  ja:{ go:'見せて', st_canvas:[
+    ],
+    st_gestures:[['上滑','同一首曲子，換一位畫家。'], ['下滑','回到上一幅畫。'], ['← →','同一位畫家的另一個變體。→ 返回。'], ['輕點','暫停 / 播放。'], ['雙擊','這幅畫進入 ♥ 收藏。'], ['長按','顯示曲子和畫它的畫家。'], ['兩指','張開 = 只看畫。捏合 = 全部回來。'], ['底部的線','拖動，跳到任意位置。最左 = 從頭開始。']],
+    st_home:[['推薦','為你挑選的畫。上滑 ↑ = 下一幅。'], ['推薦 | 工作室','點工作室，這幅畫就是你的。'], ['正在播放','曲子和畫它的畫家。'], ['✦ 更換','你的歌、一張照片或一種心情。'], ['Paintiano ⌄','選單：我的、指南、語言、設定。'], ['長按','聲音 關 / 開。']],
+    st_share:[['影片 9:16','隨音樂畫出來。適合 TikTok、Reels、Stories。'], ['短片 · 15 秒','接下來的 15 秒，從現在開始。'], ['這幅畫的連結','任何人打開的都是這幅畫。'], ['限動圖片','這幅畫此刻的樣子。'], ['儲存 · 列印','畫完後：尺寸、檔案和列印。'], ['♥ 收藏','雙擊這幅畫。在「我的」裡找到它們。']],
+    st_menu:[['我的 · 指南 · 理念 · 書','一次找齊。'], ['Paintiano Pro AI','用 AI 作曲。'], ['語言','九種語言。'], ['設定','顯示哪些畫家、調色盤和作曲家。'], ['字級','三種大小。'], ['重置','從頭開始。旁邊：價格和條款。']],
+    st_look:[['調色盤','點一下 = 選中（金色）。再點 = 白色：↑ 和 ← 也會換新顏色。'], ['長按調色盤','看它的顏色。✎ 把顏色複製到你自己的調色盤。'], ['畫家','點一下 = 由他來畫（金色）。'], ['單人 | 融合','單人 = 一位畫家。融合 = 2–4 位同時。'], ['✦ 簽名','曲子自己選畫家。'], ['不喜歡某位？','在融合裡長按他的頭像（⊘）。點一下就回來。']],
+  },
+  ja:{ go:'見せて',
+    st_canvas:[
       ['⌄ ホーム','タップでスタート画面に戻る。'],
       ['おすすめ | スタジオ','おすすめは君の絵をそのまま流し続ける。上にスワイプ ↑ = 同じ曲を別の画家で。'],
       ['絵','タップ = 一時停止 / 再生。ダブルタップ = ♥。'],
@@ -26353,7 +26424,13 @@ const GUIDE_TOUR_I18N = {
       ['♥ · ✦ 変える · シェア','♥ で保存。✦ 変えるで音楽・画像・画家を入れ替え。シェア = 動画、ストーリー、PNG。'],
       ['何を変える？','音楽、画像、画家（写真なら作曲家）。どれかをタップ。'],
       ['パネルの下','マイ = 君の作品 · サウンド · クリア（2回タップ）· ホーム。']
-    ] },
+    ],
+    st_gestures:[['上へ','同じ曲を別の画家で。'], ['下へ','ひとつ前の絵に戻る。'], ['← →','同じ画家の別バリアント。→ で戻る。'], ['タップ','一時停止 / 再生。'], ['ダブルタップ','絵が ♥ お気に入りへ。'], ['長押し','曲と、それを描く画家を表示。'], ['2本指','広げる = 絵だけ。つまむ = 全部戻る。'], ['下のライン','ドラッグでどこへでも。いちばん左 = 最初から。']],
+    st_home:[['おすすめ','君のために選んだ絵。上にスワイプ ↑ = 次の絵。'], ['おすすめ | スタジオ','スタジオをタップすると絵は君のもの。'], ['いま流れているもの','曲と、それを描く画家。'], ['✦ 変える','君の曲、写真、気分。'], ['Paintiano ⌄','メニュー：マイ、ガイド、言語、設定。'], ['長押し','サウンド オフ / オン。']],
+    st_share:[['動画 9:16','音楽に合わせて描かれる。TikTok、Reels、ストーリーに。'], ['クリップ · 15 秒','いまから 15 秒。'], ['この絵へのリンク','誰が開いてもこの絵そのもの。'], ['ストーリー画像','いまのままの絵。'], ['保存 · 印刷','描き終わったら：サイズ、ファイル、印刷。'], ['♥ お気に入り','絵をダブルタップ。マイに入る。']],
+    st_menu:[['マイ · ガイド · コンセプト · 本','全部ここに。'], ['Paintiano Pro AI','AI で作曲。'], ['言語','9つの言語。'], ['設定','どの画家・パレット・作曲家を出すか。'], ['文字サイズ','3つのサイズ。'], ['リセット','最初からやり直す。隣に料金と規約。']],
+    st_look:[['パレット','タップ = 選択（金色）。もう一度 = 白：↑ と ← で色も新しく。'], ['パレットを長押し','その色が見える。✎ で自分のパレットにコピー。'], ['画家','タップ = その画家が描く（金色）。'], ['ソロ | フュージョン','ソロ = 画家ひとり。フュージョン = 2〜4人同時。'], ['✦ 署名','曲が自分で画家を選ぶ。'], ['苦手な画家？','フュージョンで顔を長押し（⊘）。タップで戻る。']],
+  },
 };
 // per language: nx = the "next step" lines ({s} = the step's name), r = a row's name and its one line, c = the step cards, p = a short name in the "+" line
 const GUIDE_STEP_I18N = {
@@ -30308,9 +30385,27 @@ const GUIDE2_CSS = `.pf-g2 *{box-sizing:border-box}
 .pf-g2-search::placeholder{color:rgba(242,238,232,.62)}
 .pf-g2-search::-webkit-search-cancel-button{display:none}
 @media (max-height:600px){.pf-g2-big{min-height:112px!important;margin-top:12px!important}.pf-g2-grid{margin-top:14px!important;row-gap:12px!important}.pf-g2-grid .pf-g2-tp>span:first-child{width:52px!important;height:52px!important}}
+.pf-g2-stage{position:absolute;inset:0;z-index:1;overflow:hidden;container-type:size}
+.pf-g2-cov{position:absolute;left:50%;top:50%;width:min(100cqw,calc(100cqh * 390 / 844));aspect-ratio:390 / 844;transform:translate(-50%,-50%)}
+@container (max-aspect-ratio: 3/5){.pf-g2-cov{width:max(100cqw,calc(100cqh * 390 / 844))}}
+.pf-g2-gs{position:absolute;width:0;height:0;pointer-events:none}
+.pf-g2-gs i,.pf-g2-gs b{position:absolute;display:block;font-style:normal}
+.pf-g2-gs .f{left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.98) 0 36%,rgba(255,255,255,.4) 37% 64%,rgba(255,255,255,0) 65%);box-shadow:0 0 0 2px rgba(255,255,255,.55),0 0 0 9px rgba(7,6,12,.28),0 8px 26px rgba(0,0,0,.55)}
+.pf-g2-gs.up .f{animation:pfGsUp 1.7s ease-in-out infinite}.pf-g2-gs.down .f{animation:pfGsDn 1.7s ease-in-out infinite}.pf-g2-gs.lr .f{animation:pfGsLr 2.2s ease-in-out infinite}
+@keyframes pfGsUp{0%{transform:translateY(70px);opacity:0}15%{opacity:1}75%{transform:translateY(-70px);opacity:1}100%{transform:translateY(-90px);opacity:0}}
+@keyframes pfGsDn{0%{transform:translateY(-70px);opacity:0}15%{opacity:1}75%{transform:translateY(70px);opacity:1}100%{transform:translateY(90px);opacity:0}}
+@keyframes pfGsLr{0%,100%{transform:translateX(-75px)}50%{transform:translateX(75px)}}
+.pf-g2-gs.tap .f,.pf-g2-gs.dtap .f{animation:pfGsTap 1.5s ease-in-out infinite}@keyframes pfGsTap{0%,30%,100%{transform:scale(1)}15%{transform:scale(.82)}}
+.pf-g2-gs .rp{left:-32px;top:-32px;width:64px;height:64px;border-radius:50%;border:2.5px solid rgba(255,255,255,.9);animation:pfGsRp 1.5s ease-out infinite}.pf-g2-gs .rp.r2{animation-delay:.22s}
+@keyframes pfGsRp{0%{transform:scale(.6);opacity:0}12%{opacity:.95}100%{transform:scale(2.3);opacity:0}}
+.pf-g2-gs .hrt{left:-17px;top:-90px;font-size:40px;line-height:1;color:#ff5f8f;text-shadow:0 4px 18px rgba(0,0,0,.5);animation:pfGsHrt 1.5s ease-out infinite}@keyframes pfGsHrt{0%,20%{transform:scale(.4);opacity:0}45%{transform:scale(1.15);opacity:1}100%{transform:scale(1) translateY(-14px);opacity:0}}
+.pf-g2-gs .x2{left:34px;top:-44px;font-size:15px;font-weight:800;color:#fff;background:rgba(14,12,20,.82);border-radius:9px;padding:2px 7px}
+.pf-g2-gs .hl{left:-36px;top:-36px;width:72px;height:72px;border-radius:50%;border:3px solid rgba(240,215,138,.22);border-top-color:#f0d78a;animation:pfGsSpin 1.1s linear infinite}@keyframes pfGsSpin{to{transform:rotate(360deg)}}
+.pf-g2-gs.pinch .f.a{animation:pfGsPa 1.9s ease-in-out infinite}.pf-g2-gs.pinch .f.b{animation:pfGsPb 1.9s ease-in-out infinite}
+@keyframes pfGsPa{0%,100%{transform:translate(-16px,16px)}50%{transform:translate(-78px,78px)}}@keyframes pfGsPb{0%,100%{transform:translate(16px,-16px)}50%{transform:translate(78px,-78px)}}
 .pf-g2-ring{animation:pfG2Ring 1.8s ease-in-out infinite}
 @keyframes pfG2Ring{0%,100%{box-shadow:0 0 0 6px rgba(240,215,138,.16),0 0 26px rgba(240,215,138,.5)}50%{box-shadow:0 0 0 10px rgba(240,215,138,.07),0 0 40px rgba(240,215,138,.72)}}
-@media (prefers-reduced-motion:reduce){.pf-g2-in,.pf-g2-ln,.pf-g2-sheet,.pf-g2-ring{animation:none}}`;
+@media (prefers-reduced-motion:reduce){.pf-g2-in,.pf-g2-ln,.pf-g2-sheet,.pf-g2-ring,.pf-g2-gs *{animation:none}}`;
 const GuideIco = ({k, z=24})=>{
   if(k==='colors') return (<span style={{width:z*1.1,height:z*1.1,borderRadius:'50%',background:'#0b0912',display:'block'}}/>);
   if(k==='pro') return (<span style={{fontSize:z*.92,fontWeight:700,lineHeight:1}}>✦</span>);
@@ -30573,17 +30668,22 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   // control sits on them (public/guide/shots/<lang>/m.json, fetched the first time such a card shows; without it the card keeps its sheet)
   const [tourM, setTourM] = useState({});
   const tourOf = (id)=>{ const M=tourM[lang], f=GUIDE_TOURS[id]; if(!f || !M || !M.s) return null; const X=(GUIDE_TOUR_I18N[lang]||{})[id] || GUIDE_TOUR_I18N.EN[id] || [], c=byId[id];
-    const out=f.map(([s,r],i)=>{ const S=M.s[s], R=S && S.r && S.r[r]; return R ? {id:'tr_'+id+i, tour:{src:'/guide/shots/'+lang+'/'+S.f, w:M.w||390, h:M.h||844, r:R}, title:(X[i]||[])[0]||'', body:(X[i]||[])[1]||'', cat:c?c.cat:'start'} : null; }).filter(Boolean);
+    const out=f.map(([s,r],i)=>{ const S=M.s[s], R=S && S.r && S.r[r]; return R ? {id:'tr_'+id+i, tour:{src:'/guide/shots/'+lang+'/'+S.f, w:M.w||390, h:M.h||844, r:R, g:f[i][2]||null}, title:(X[i]||[])[0]||'', body:(X[i]||[])[1]||'', cat:c?c.cat:'start'} : null; }).filter(Boolean);
     return out.length ? out : null; };
+  // the screen a card wears (GUIDE_SHOT_CARDS) — or a tour frame's — with the control lit and the gesture drawn on it
+  const shotOf = (c)=>{ if(!c) return null; if(c.tour) return c.tour; const sp=GUIDE_SHOT_CARDS[c.id], M=tourM[lang], S=sp && M && M.s && M.s[sp.s]; if(!S) return null;
+    return {src:'/guide/shots/'+lang+'/'+S.f, w:M.w||390, h:M.h||844, r:(sp.r && S.r && S.r[sp.r]) || null, g:sp.g||null}; };
   const listOf = (k)=> k.indexOf('tour:')===0 ? (tourOf(k.slice(5))||[]) : k.indexOf('tab')===0 ? tabIds(+k.slice(3)).map(id=>byId[id]) : k.indexOf('lnk:')===0 ? k.slice(4).split(',').map(id=>byId[id]).filter(Boolean) : k==='concept' ? concept : k==='book' ? [bookCard] : k==='bsum' ? bookSum : k==='battle' ? all.filter(c=>c.id==='battle') : all.filter(c=>c.cat===k);
   const cards = story ? listOf(story.k) : [];
   const card = story ? cards[Math.max(0, Math.min(story.i, cards.length-1))] : null;
-  useEffect(()=>{ if(!card || !GUIDE_TOURS[card.id] || tourM[lang]!==undefined) return; let dead=false;
-    fetch('/guide/shots/'+lang+'/m.json').then(r=>r.json()).catch(()=>null).then(m=>{ if(dead) return; setTourM(o=>({...o, [lang]: (m && m.s) ? m : false}));
-      if(m && m.s) for(const k in m.s){ try{ const im=new Image(); im.src='/guide/shots/'+lang+'/'+m.s[k].f; }catch(_){} } });   // the frames are there before the first tap
+  useEffect(()=>{ if(tourM[lang]!==undefined) return; let dead=false;
+    fetch('/guide/shots/'+lang+'/m.json').then(r=>r.json()).catch(()=>null).then(m=>{ if(dead) return; setTourM(o=>({...o, [lang]: (m && m.s) ? m : false})); });
     return ()=>{ dead=true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card && card.id, lang]);
+  }, [lang]);
+  useEffect(()=>{ if(!story) return; for(const c of [card, cards[story.i+1]]){ const s=c && shotOf(c); if(s && s.src){ try{ const im=new Image(); im.src=s.src; }catch(_){} } }   // this card's screen and the next one's, before the tap
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story && story.k, story && story.i, tourM[lang]]);
   const open = (k, i, auto)=>{ setSheet(false); setStory({k, i:i||0, auto:!!auto}); };   // auto: the ▶ story plays on by itself (Instagram-like)
   const closeStory = useCallback(()=>{ setSheet(false); if(story && story.back){ setStory(story.back); return; } if(story && story.k==='bsum'){ setStory({k:'book', i:0}); return; } if(direct) onClose(); else setStory(null); }, [direct, onClose, story]);
   const go = (d)=>{ if(!story) return; const n=story.i+d; if(n<0) return; if(n>=cards.length){ closeStory(); return; } setSheet(false); setStory({k:story.k, i:n, auto:story.auto, back:story.back}); };
@@ -30753,20 +30853,43 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
 
   // ── a story ──
   const top = 'calc(env(safe-area-inset-top, 0px) + ';
-  // one frame of a tour: the screenshot, dimmed but for the lit control (a breathing gold ring round it), its line beside it —
-  // above the control when it sits low, below when high; a tap goes on, the left third goes back (as every story)
-  const tourView = (c)=>{ const R=c.tour.r, W=c.tour.w, H=c.tour.h, pd=7, cy=(R[1]+R[3]/2)/H*100, low=cy>50, pc=(v,d)=>(v/d*100)+'%';
-    return (<div key={story.k+story.i} className="pf-g2-in" style={{position:'absolute',left:0,right:0,top:'calc(env(safe-area-inset-top, 0px) + 70px)',bottom:'calc(env(safe-area-inset-bottom, 0px) + 16px)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{position:'relative',height:'100%',maxWidth:'calc(100% - 36px)',aspectRatio:W+' / '+H,borderRadius:26,overflow:'hidden',border:'1px solid rgba(255,255,255,.12)',boxShadow:'0 18px 40px rgba(0,0,0,.6)',background:'#07060c'}}>
-        <img src={c.tour.src} alt="" draggable={false} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',pointerEvents:'none'}}/>
-        <span aria-hidden="true" style={{position:'absolute',inset:0,background:'radial-gradient(ellipse '+pc(R[2]*0.75,W)+' '+pc(R[3]*0.85,H)+' at '+pc(R[0]+R[2]/2,W)+' '+pc(R[1]+R[3]/2,H)+', rgba(4,4,10,0) 0 92%, rgba(4,4,10,.74) 100%)'}}/>
-        <span aria-hidden="true" className="pf-g2-ring" style={{position:'absolute',left:'calc('+pc(R[0],W)+' - '+pd+'px)',top:'calc('+pc(R[1],H)+' - '+pd+'px)',width:'calc('+pc(R[2],W)+' + '+(pd*2)+'px)',height:'calc('+pc(R[3],H)+' + '+(pd*2)+'px)',borderRadius:R[3]>80?22:999,border:'2px solid #f0d78a'}}/>
-        <div className="pf-g2-ln" style={{position:'absolute',left:12,right:12,...(low ? {bottom:'calc('+pc(H-R[1],H)+' + '+(pd+14)+'px)'} : {top:'calc('+pc(R[1]+R[3],H)+' + '+(pd+14)+'px)'}),padding:'13px 15px 14px',borderRadius:20,background:'rgba(18,15,26,.94)',border:'1px solid rgba(255,255,255,.14)',boxShadow:'0 12px 30px rgba(0,0,0,.55)',textAlign:'left'}}>
-          <div style={{fontSize:18*rs,fontWeight:800,lineHeight:1.2,letterSpacing:'-.01em'}}>{pfIcons(c.title)}</div>
-          <div style={{marginTop:4,fontSize:14.5*rs,lineHeight:1.38,color:'rgba(242,238,232,.8)'}}>{pfIcons(c.body)}</div>
-        </div>
+  // a card on the real screen: the screenshot over the whole stage (its own top bar fades under the story's header), dimmed but
+  // for the lit control (a breathing gold ring round it), the gesture drawn where it is made, and the words in a card beside it —
+  // above a control that sits low, below one that sits high, else low on the screen; a tap goes on, the left third goes back
+  const gestView = (g, x, y, W, H)=>(<span aria-hidden="true" className={'pf-g2-gs '+g} style={{left:(x/W*100)+'%',top:(y/H*100)+'%'}}>
+      {g==='pinch' ? (<><i className="f a"/><i className="f b"/></>) : (<i className="f"/>)}
+      {(g==='tap' || g==='dtap') && (<i className="rp"/>)}{g==='dtap' && (<><i className="rp r2"/><b className="hrt">♥</b><b className="x2">2×</b></>)}
+      {g==='hold' && (<i className="hl"/>)}
+    </span>);
+  const stageView = (sh, cap)=>{ const W=sh.w||390, H=sh.h||844, R0=sh.r, R=(R0 && sh.g && R0[3]>H*0.4) ? null : R0, pd=7, pc=(v,d)=>(v/d*100)+'%';   // a gesture on the whole painting needs no ring round it
+    const cx = R ? R[0]+R[2]/2 : W/2, cy = R ? R[1]+R[3]/2 : H*0.42, big = !!(R && R[3]>H*0.4);
+    const capAt = (!R || big) ? {bottom:'12.5%'} : (cy > H*0.5) ? {bottom:'calc('+pc(H-R[1],H)+' + '+(pd+14)+'px)'} : {top:'calc('+pc(R[1]+R[3],H)+' + '+(pd+14)+'px)'};
+    const low = R && R[1] < 90;   // a control at the very top: the screen slides down from under the story's header
+    return (<div key={story.k+story.i} className="pf-g2-stage pf-g2-in">
+      <div className="pf-g2-cov" style={low ? {transform:'translate(-50%,-50%) translateY(calc(env(safe-area-inset-top, 0px) + 62px))'} : undefined}>
+        <img src={sh.src} alt="" draggable={false} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',pointerEvents:'none'}}/>
+        <span aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:'19%',background:'linear-gradient(180deg,rgba(7,6,12,.97) 0,rgba(7,6,12,.9) 48%,rgba(7,6,12,0))'}}/>
+        {R && (<span aria-hidden="true" style={{position:'absolute',inset:0,background:'radial-gradient(ellipse '+pc(R[2]*0.75,W)+' '+pc(R[3]*0.85,H)+' at '+pc(cx,W)+' '+pc(cy,H)+', rgba(4,4,10,0) 0 92%, rgba(4,4,10,'+(big?'.35':'.62')+') 100%)'}}/>)}
+        {R && (<span aria-hidden="true" className="pf-g2-ring" style={{position:'absolute',left:'calc('+pc(R[0],W)+' - '+pd+'px)',top:'calc('+pc(R[1],H)+' - '+pd+'px)',width:'calc('+pc(R[2],W)+' + '+(pd*2)+'px)',height:'calc('+pc(R[3],H)+' + '+(pd*2)+'px)',borderRadius:R[3]>80?22:999,border:'2px solid #f0d78a'}}/>)}
+        {sh.g && gestView(sh.g, cx, big ? H*0.4 : cy, W, H)}
+        <div className="pf-g2-ln" style={{position:'absolute',left:'4%',right:'4%',...capAt,padding:'15px 17px 16px',borderRadius:22,background:'rgba(14,12,20,.9)',border:'1px solid rgba(255,255,255,.14)',boxShadow:'0 14px 34px rgba(0,0,0,.55)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',textAlign:'left'}}>{cap}</div>
       </div>
     </div>); };
+  const tourView = (c)=> stageView(c.tour, (<>
+    <div style={{fontSize:18*rs,fontWeight:800,lineHeight:1.2,letterSpacing:'-.01em'}}>{pfIcons(c.title)}</div>
+    <div style={{marginTop:4,fontSize:14.5*rs,lineHeight:1.38,color:'rgba(242,238,232,.8)'}}>{pfIcons(c.body)}</div></>));
+  // a card that wears its screen: its name and line in the card, ▶ Show me (a tour) and More (the full text) under them
+  const cardShotView = (c)=>{ const tr = GUIDE_TOURS[c.id] && tourOf(c.id);
+    return stageView(shotOf(c), (<>
+      <div style={{fontSize:24*rs,fontWeight:800,lineHeight:1.12,letterSpacing:'-.015em'}}>{pfIcons(c.title)}</div>
+      <div style={{marginTop:6,fontSize:15.5*rs,lineHeight:1.4,color:'rgba(242,238,232,.82)'}}>{pfIcons(c.body)}</div>
+      {(tr || c.more || c.link) && (<div style={{marginTop:12,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
+        {tr && (<button type="button" onClick={(e)=>{ e.stopPropagation(); setSheet(false); setStory({k:'tour:'+c.id, i:0, back:{k:story.k, i:story.i}}); }} style={{height:40,padding:'0 18px',borderRadius:20,border:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:7,fontSize:14*rs,fontWeight:700,cursor:'pointer'}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>{(GUIDE_TOUR_I18N[lang]||GUIDE_TOUR_I18N.EN).go}</button>)}
+        {(c.more || c.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(c.link){ setSheet(false); setStory({k:'lnk:'+c.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{height:40,padding:'0 4px',border:0,background:'none',color:'rgba(242,238,232,.72)',display:'inline-flex',alignItems:'center',gap:6,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
+          {(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
+      </div>)}</>)); };
   const storyView = card && (<>
     <div className="pf-g2-story" onTouchStart={tStart} onTouchEnd={tEnd} onTouchCancel={()=>{ autoHoldRef.current=false; }} onMouseDown={()=>{ autoHoldRef.current=true; }} onMouseUp={()=>{ autoHoldRef.current=false; }} onMouseLeave={()=>{ autoHoldRef.current=false; }} onClick={stageTap} style={{position:'absolute',inset:0,overflow:'hidden',cursor:'pointer',WebkitTapHighlightColor:'transparent',userSelect:'none',WebkitUserSelect:'none'}}>
       {isArt && artBg('blur(38px) brightness(.36) saturate(1.3)')}
@@ -30783,7 +30906,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         </div>
         <button type="button" onClick={(e)=>{ e.stopPropagation(); closeStory(); }} aria-label="close" style={{...glass,width:36,height:36}}>{xIco(15)}</button>
       </div>
-      {card.tour ? tourView(card) : isArt ? (
+      {card.tour ? tourView(card) : (!isArt && shotOf(card)) ? cardShotView(card) : isArt ? (
         <div key={story.k+story.i} className="pf-g2-in" style={{position:'absolute',left:0,right:0,top:top+'70px)',bottom:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 26px calc(env(safe-area-inset-bottom, 0px) + 56px)',textAlign:'center'}}>
           {card.sum && (<div style={{maxHeight:'100%',overflowY:'auto',width:'100%',maxWidth:420}}>
             {card.quote ? (<>

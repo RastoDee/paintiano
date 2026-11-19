@@ -1289,9 +1289,27 @@ const GUIDE2_CSS = `.pf-g2 *{box-sizing:border-box}
 .pf-g2-search::placeholder{color:rgba(242,238,232,.62)}
 .pf-g2-search::-webkit-search-cancel-button{display:none}
 @media (max-height:600px){.pf-g2-big{min-height:112px!important;margin-top:12px!important}.pf-g2-grid{margin-top:14px!important;row-gap:12px!important}.pf-g2-grid .pf-g2-tp>span:first-child{width:52px!important;height:52px!important}}
+.pf-g2-stage{position:absolute;inset:0;z-index:1;overflow:hidden;container-type:size}
+.pf-g2-cov{position:absolute;left:50%;top:50%;width:min(100cqw,calc(100cqh * 390 / 844));aspect-ratio:390 / 844;transform:translate(-50%,-50%)}
+@container (max-aspect-ratio: 3/5){.pf-g2-cov{width:max(100cqw,calc(100cqh * 390 / 844))}}
+.pf-g2-gs{position:absolute;width:0;height:0;pointer-events:none}
+.pf-g2-gs i,.pf-g2-gs b{position:absolute;display:block;font-style:normal}
+.pf-g2-gs .f{left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.98) 0 36%,rgba(255,255,255,.4) 37% 64%,rgba(255,255,255,0) 65%);box-shadow:0 0 0 2px rgba(255,255,255,.55),0 0 0 9px rgba(7,6,12,.28),0 8px 26px rgba(0,0,0,.55)}
+.pf-g2-gs.up .f{animation:pfGsUp 1.7s ease-in-out infinite}.pf-g2-gs.down .f{animation:pfGsDn 1.7s ease-in-out infinite}.pf-g2-gs.lr .f{animation:pfGsLr 2.2s ease-in-out infinite}
+@keyframes pfGsUp{0%{transform:translateY(70px);opacity:0}15%{opacity:1}75%{transform:translateY(-70px);opacity:1}100%{transform:translateY(-90px);opacity:0}}
+@keyframes pfGsDn{0%{transform:translateY(-70px);opacity:0}15%{opacity:1}75%{transform:translateY(70px);opacity:1}100%{transform:translateY(90px);opacity:0}}
+@keyframes pfGsLr{0%,100%{transform:translateX(-75px)}50%{transform:translateX(75px)}}
+.pf-g2-gs.tap .f,.pf-g2-gs.dtap .f{animation:pfGsTap 1.5s ease-in-out infinite}@keyframes pfGsTap{0%,30%,100%{transform:scale(1)}15%{transform:scale(.82)}}
+.pf-g2-gs .rp{left:-32px;top:-32px;width:64px;height:64px;border-radius:50%;border:2.5px solid rgba(255,255,255,.9);animation:pfGsRp 1.5s ease-out infinite}.pf-g2-gs .rp.r2{animation-delay:.22s}
+@keyframes pfGsRp{0%{transform:scale(.6);opacity:0}12%{opacity:.95}100%{transform:scale(2.3);opacity:0}}
+.pf-g2-gs .hrt{left:-17px;top:-90px;font-size:40px;line-height:1;color:#ff5f8f;text-shadow:0 4px 18px rgba(0,0,0,.5);animation:pfGsHrt 1.5s ease-out infinite}@keyframes pfGsHrt{0%,20%{transform:scale(.4);opacity:0}45%{transform:scale(1.15);opacity:1}100%{transform:scale(1) translateY(-14px);opacity:0}}
+.pf-g2-gs .x2{left:34px;top:-44px;font-size:15px;font-weight:800;color:#fff;background:rgba(14,12,20,.82);border-radius:9px;padding:2px 7px}
+.pf-g2-gs .hl{left:-36px;top:-36px;width:72px;height:72px;border-radius:50%;border:3px solid rgba(240,215,138,.22);border-top-color:#f0d78a;animation:pfGsSpin 1.1s linear infinite}@keyframes pfGsSpin{to{transform:rotate(360deg)}}
+.pf-g2-gs.pinch .f.a{animation:pfGsPa 1.9s ease-in-out infinite}.pf-g2-gs.pinch .f.b{animation:pfGsPb 1.9s ease-in-out infinite}
+@keyframes pfGsPa{0%,100%{transform:translate(-16px,16px)}50%{transform:translate(-78px,78px)}}@keyframes pfGsPb{0%,100%{transform:translate(16px,-16px)}50%{transform:translate(78px,-78px)}}
 .pf-g2-ring{animation:pfG2Ring 1.8s ease-in-out infinite}
 @keyframes pfG2Ring{0%,100%{box-shadow:0 0 0 6px rgba(240,215,138,.16),0 0 26px rgba(240,215,138,.5)}50%{box-shadow:0 0 0 10px rgba(240,215,138,.07),0 0 40px rgba(240,215,138,.72)}}
-@media (prefers-reduced-motion:reduce){.pf-g2-in,.pf-g2-ln,.pf-g2-sheet,.pf-g2-ring{animation:none}}`;
+@media (prefers-reduced-motion:reduce){.pf-g2-in,.pf-g2-ln,.pf-g2-sheet,.pf-g2-ring,.pf-g2-gs *{animation:none}}`;
 const GuideIco = ({k, z=24})=>{
   if(k==='colors') return (<span style={{width:z*1.1,height:z*1.1,borderRadius:'50%',background:'#0b0912',display:'block'}}/>);
   if(k==='pro') return (<span style={{fontSize:z*.92,fontWeight:700,lineHeight:1}}>✦</span>);
@@ -1554,17 +1572,22 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   // control sits on them (public/guide/shots/<lang>/m.json, fetched the first time such a card shows; without it the card keeps its sheet)
   const [tourM, setTourM] = useState({});
   const tourOf = (id)=>{ const M=tourM[lang], f=GUIDE_TOURS[id]; if(!f || !M || !M.s) return null; const X=(GUIDE_TOUR_I18N[lang]||{})[id] || GUIDE_TOUR_I18N.EN[id] || [], c=byId[id];
-    const out=f.map(([s,r],i)=>{ const S=M.s[s], R=S && S.r && S.r[r]; return R ? {id:'tr_'+id+i, tour:{src:'/guide/shots/'+lang+'/'+S.f, w:M.w||390, h:M.h||844, r:R}, title:(X[i]||[])[0]||'', body:(X[i]||[])[1]||'', cat:c?c.cat:'start'} : null; }).filter(Boolean);
+    const out=f.map(([s,r],i)=>{ const S=M.s[s], R=S && S.r && S.r[r]; return R ? {id:'tr_'+id+i, tour:{src:'/guide/shots/'+lang+'/'+S.f, w:M.w||390, h:M.h||844, r:R, g:f[i][2]||null}, title:(X[i]||[])[0]||'', body:(X[i]||[])[1]||'', cat:c?c.cat:'start'} : null; }).filter(Boolean);
     return out.length ? out : null; };
+  // the screen a card wears (GUIDE_SHOT_CARDS) — or a tour frame's — with the control lit and the gesture drawn on it
+  const shotOf = (c)=>{ if(!c) return null; if(c.tour) return c.tour; const sp=GUIDE_SHOT_CARDS[c.id], M=tourM[lang], S=sp && M && M.s && M.s[sp.s]; if(!S) return null;
+    return {src:'/guide/shots/'+lang+'/'+S.f, w:M.w||390, h:M.h||844, r:(sp.r && S.r && S.r[sp.r]) || null, g:sp.g||null}; };
   const listOf = (k)=> k.indexOf('tour:')===0 ? (tourOf(k.slice(5))||[]) : k.indexOf('tab')===0 ? tabIds(+k.slice(3)).map(id=>byId[id]) : k.indexOf('lnk:')===0 ? k.slice(4).split(',').map(id=>byId[id]).filter(Boolean) : k==='concept' ? concept : k==='book' ? [bookCard] : k==='bsum' ? bookSum : k==='battle' ? all.filter(c=>c.id==='battle') : all.filter(c=>c.cat===k);
   const cards = story ? listOf(story.k) : [];
   const card = story ? cards[Math.max(0, Math.min(story.i, cards.length-1))] : null;
-  useEffect(()=>{ if(!card || !GUIDE_TOURS[card.id] || tourM[lang]!==undefined) return; let dead=false;
-    fetch('/guide/shots/'+lang+'/m.json').then(r=>r.json()).catch(()=>null).then(m=>{ if(dead) return; setTourM(o=>({...o, [lang]: (m && m.s) ? m : false}));
-      if(m && m.s) for(const k in m.s){ try{ const im=new Image(); im.src='/guide/shots/'+lang+'/'+m.s[k].f; }catch(_){} } });   // the frames are there before the first tap
+  useEffect(()=>{ if(tourM[lang]!==undefined) return; let dead=false;
+    fetch('/guide/shots/'+lang+'/m.json').then(r=>r.json()).catch(()=>null).then(m=>{ if(dead) return; setTourM(o=>({...o, [lang]: (m && m.s) ? m : false})); });
     return ()=>{ dead=true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card && card.id, lang]);
+  }, [lang]);
+  useEffect(()=>{ if(!story) return; for(const c of [card, cards[story.i+1]]){ const s=c && shotOf(c); if(s && s.src){ try{ const im=new Image(); im.src=s.src; }catch(_){} } }   // this card's screen and the next one's, before the tap
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story && story.k, story && story.i, tourM[lang]]);
   const open = (k, i, auto)=>{ setSheet(false); setStory({k, i:i||0, auto:!!auto}); };   // auto: the ▶ story plays on by itself (Instagram-like)
   const closeStory = useCallback(()=>{ setSheet(false); if(story && story.back){ setStory(story.back); return; } if(story && story.k==='bsum'){ setStory({k:'book', i:0}); return; } if(direct) onClose(); else setStory(null); }, [direct, onClose, story]);
   const go = (d)=>{ if(!story) return; const n=story.i+d; if(n<0) return; if(n>=cards.length){ closeStory(); return; } setSheet(false); setStory({k:story.k, i:n, auto:story.auto, back:story.back}); };
@@ -1734,20 +1757,43 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
 
   // ── a story ──
   const top = 'calc(env(safe-area-inset-top, 0px) + ';
-  // one frame of a tour: the screenshot, dimmed but for the lit control (a breathing gold ring round it), its line beside it —
-  // above the control when it sits low, below when high; a tap goes on, the left third goes back (as every story)
-  const tourView = (c)=>{ const R=c.tour.r, W=c.tour.w, H=c.tour.h, pd=7, cy=(R[1]+R[3]/2)/H*100, low=cy>50, pc=(v,d)=>(v/d*100)+'%';
-    return (<div key={story.k+story.i} className="pf-g2-in" style={{position:'absolute',left:0,right:0,top:'calc(env(safe-area-inset-top, 0px) + 70px)',bottom:'calc(env(safe-area-inset-bottom, 0px) + 16px)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{position:'relative',height:'100%',maxWidth:'calc(100% - 36px)',aspectRatio:W+' / '+H,borderRadius:26,overflow:'hidden',border:'1px solid rgba(255,255,255,.12)',boxShadow:'0 18px 40px rgba(0,0,0,.6)',background:'#07060c'}}>
-        <img src={c.tour.src} alt="" draggable={false} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',pointerEvents:'none'}}/>
-        <span aria-hidden="true" style={{position:'absolute',inset:0,background:'radial-gradient(ellipse '+pc(R[2]*0.75,W)+' '+pc(R[3]*0.85,H)+' at '+pc(R[0]+R[2]/2,W)+' '+pc(R[1]+R[3]/2,H)+', rgba(4,4,10,0) 0 92%, rgba(4,4,10,.74) 100%)'}}/>
-        <span aria-hidden="true" className="pf-g2-ring" style={{position:'absolute',left:'calc('+pc(R[0],W)+' - '+pd+'px)',top:'calc('+pc(R[1],H)+' - '+pd+'px)',width:'calc('+pc(R[2],W)+' + '+(pd*2)+'px)',height:'calc('+pc(R[3],H)+' + '+(pd*2)+'px)',borderRadius:R[3]>80?22:999,border:'2px solid #f0d78a'}}/>
-        <div className="pf-g2-ln" style={{position:'absolute',left:12,right:12,...(low ? {bottom:'calc('+pc(H-R[1],H)+' + '+(pd+14)+'px)'} : {top:'calc('+pc(R[1]+R[3],H)+' + '+(pd+14)+'px)'}),padding:'13px 15px 14px',borderRadius:20,background:'rgba(18,15,26,.94)',border:'1px solid rgba(255,255,255,.14)',boxShadow:'0 12px 30px rgba(0,0,0,.55)',textAlign:'left'}}>
-          <div style={{fontSize:18*rs,fontWeight:800,lineHeight:1.2,letterSpacing:'-.01em'}}>{pfIcons(c.title)}</div>
-          <div style={{marginTop:4,fontSize:14.5*rs,lineHeight:1.38,color:'rgba(242,238,232,.8)'}}>{pfIcons(c.body)}</div>
-        </div>
+  // a card on the real screen: the screenshot over the whole stage (its own top bar fades under the story's header), dimmed but
+  // for the lit control (a breathing gold ring round it), the gesture drawn where it is made, and the words in a card beside it —
+  // above a control that sits low, below one that sits high, else low on the screen; a tap goes on, the left third goes back
+  const gestView = (g, x, y, W, H)=>(<span aria-hidden="true" className={'pf-g2-gs '+g} style={{left:(x/W*100)+'%',top:(y/H*100)+'%'}}>
+      {g==='pinch' ? (<><i className="f a"/><i className="f b"/></>) : (<i className="f"/>)}
+      {(g==='tap' || g==='dtap') && (<i className="rp"/>)}{g==='dtap' && (<><i className="rp r2"/><b className="hrt">♥</b><b className="x2">2×</b></>)}
+      {g==='hold' && (<i className="hl"/>)}
+    </span>);
+  const stageView = (sh, cap)=>{ const W=sh.w||390, H=sh.h||844, R0=sh.r, R=(R0 && sh.g && R0[3]>H*0.4) ? null : R0, pd=7, pc=(v,d)=>(v/d*100)+'%';   // a gesture on the whole painting needs no ring round it
+    const cx = R ? R[0]+R[2]/2 : W/2, cy = R ? R[1]+R[3]/2 : H*0.42, big = !!(R && R[3]>H*0.4);
+    const capAt = (!R || big) ? {bottom:'12.5%'} : (cy > H*0.5) ? {bottom:'calc('+pc(H-R[1],H)+' + '+(pd+14)+'px)'} : {top:'calc('+pc(R[1]+R[3],H)+' + '+(pd+14)+'px)'};
+    const low = R && R[1] < 90;   // a control at the very top: the screen slides down from under the story's header
+    return (<div key={story.k+story.i} className="pf-g2-stage pf-g2-in">
+      <div className="pf-g2-cov" style={low ? {transform:'translate(-50%,-50%) translateY(calc(env(safe-area-inset-top, 0px) + 62px))'} : undefined}>
+        <img src={sh.src} alt="" draggable={false} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',pointerEvents:'none'}}/>
+        <span aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:'19%',background:'linear-gradient(180deg,rgba(7,6,12,.97) 0,rgba(7,6,12,.9) 48%,rgba(7,6,12,0))'}}/>
+        {R && (<span aria-hidden="true" style={{position:'absolute',inset:0,background:'radial-gradient(ellipse '+pc(R[2]*0.75,W)+' '+pc(R[3]*0.85,H)+' at '+pc(cx,W)+' '+pc(cy,H)+', rgba(4,4,10,0) 0 92%, rgba(4,4,10,'+(big?'.35':'.62')+') 100%)'}}/>)}
+        {R && (<span aria-hidden="true" className="pf-g2-ring" style={{position:'absolute',left:'calc('+pc(R[0],W)+' - '+pd+'px)',top:'calc('+pc(R[1],H)+' - '+pd+'px)',width:'calc('+pc(R[2],W)+' + '+(pd*2)+'px)',height:'calc('+pc(R[3],H)+' + '+(pd*2)+'px)',borderRadius:R[3]>80?22:999,border:'2px solid #f0d78a'}}/>)}
+        {sh.g && gestView(sh.g, cx, big ? H*0.4 : cy, W, H)}
+        <div className="pf-g2-ln" style={{position:'absolute',left:'4%',right:'4%',...capAt,padding:'15px 17px 16px',borderRadius:22,background:'rgba(14,12,20,.9)',border:'1px solid rgba(255,255,255,.14)',boxShadow:'0 14px 34px rgba(0,0,0,.55)',WebkitBackdropFilter:'blur(12px)',backdropFilter:'blur(12px)',textAlign:'left'}}>{cap}</div>
       </div>
     </div>); };
+  const tourView = (c)=> stageView(c.tour, (<>
+    <div style={{fontSize:18*rs,fontWeight:800,lineHeight:1.2,letterSpacing:'-.01em'}}>{pfIcons(c.title)}</div>
+    <div style={{marginTop:4,fontSize:14.5*rs,lineHeight:1.38,color:'rgba(242,238,232,.8)'}}>{pfIcons(c.body)}</div></>));
+  // a card that wears its screen: its name and line in the card, ▶ Show me (a tour) and More (the full text) under them
+  const cardShotView = (c)=>{ const tr = GUIDE_TOURS[c.id] && tourOf(c.id);
+    return stageView(shotOf(c), (<>
+      <div style={{fontSize:24*rs,fontWeight:800,lineHeight:1.12,letterSpacing:'-.015em'}}>{pfIcons(c.title)}</div>
+      <div style={{marginTop:6,fontSize:15.5*rs,lineHeight:1.4,color:'rgba(242,238,232,.82)'}}>{pfIcons(c.body)}</div>
+      {(tr || c.more || c.link) && (<div style={{marginTop:12,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
+        {tr && (<button type="button" onClick={(e)=>{ e.stopPropagation(); setSheet(false); setStory({k:'tour:'+c.id, i:0, back:{k:story.k, i:story.i}}); }} style={{height:40,padding:'0 18px',borderRadius:20,border:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:7,fontSize:14*rs,fontWeight:700,cursor:'pointer'}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>{(GUIDE_TOUR_I18N[lang]||GUIDE_TOUR_I18N.EN).go}</button>)}
+        {(c.more || c.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(c.link){ setSheet(false); setStory({k:'lnk:'+c.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{height:40,padding:'0 4px',border:0,background:'none',color:'rgba(242,238,232,.72)',display:'inline-flex',alignItems:'center',gap:6,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
+          {(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
+      </div>)}</>)); };
   const storyView = card && (<>
     <div className="pf-g2-story" onTouchStart={tStart} onTouchEnd={tEnd} onTouchCancel={()=>{ autoHoldRef.current=false; }} onMouseDown={()=>{ autoHoldRef.current=true; }} onMouseUp={()=>{ autoHoldRef.current=false; }} onMouseLeave={()=>{ autoHoldRef.current=false; }} onClick={stageTap} style={{position:'absolute',inset:0,overflow:'hidden',cursor:'pointer',WebkitTapHighlightColor:'transparent',userSelect:'none',WebkitUserSelect:'none'}}>
       {isArt && artBg('blur(38px) brightness(.36) saturate(1.3)')}
@@ -1764,7 +1810,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
         </div>
         <button type="button" onClick={(e)=>{ e.stopPropagation(); closeStory(); }} aria-label="close" style={{...glass,width:36,height:36}}>{xIco(15)}</button>
       </div>
-      {card.tour ? tourView(card) : isArt ? (
+      {card.tour ? tourView(card) : (!isArt && shotOf(card)) ? cardShotView(card) : isArt ? (
         <div key={story.k+story.i} className="pf-g2-in" style={{position:'absolute',left:0,right:0,top:top+'70px)',bottom:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'0 26px calc(env(safe-area-inset-bottom, 0px) + 56px)',textAlign:'center'}}>
           {card.sum && (<div style={{maxHeight:'100%',overflowY:'auto',width:'100%',maxWidth:420}}>
             {card.quote ? (<>
