@@ -18812,7 +18812,9 @@ function scanImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   const hTot=hs.reduce((a,b)=>a+b,0)||1;
   const peaks=[]; for(let b=0;b<HB;b++){ const a=hs[b]; if(a>=hs[(b+1)%HB] && a>hs[(b+HB-1)%HB] && a>=hTot*0.012) peaks.push(b*5+2.5); }
   const hueDist=(a,b)=>Math.min(Math.abs(a-b),360-Math.abs(a-b));
-  const toPeak = (h)=>{ if(isCustom || !peaks.length) return h; let best=h,bd=46; for(const pk of peaks){ const d=hueDist(h,pk); if(d<bd){bd=d;best=pk;} } return best; };
+  // a hue near one of the picture's own hues IS that hue (a gold between two table hues stays one gold) — but only near: a green
+  // 30° off the gold is a colour of its own (a meadow under a gold robe was heard as more gold, so it hardly played)
+  const toPeak = (h)=>{ if(isCustom || !peaks.length) return h; let best=h,bd=24; for(const pk of peaks){ const d=hueDist(h,pk); if(d<bd){bd=d;best=pk;} } return best; };
   // ── 1. read every cell: its colour groups, lightness, saturation, texture ──
   const order = buildTraversal(nB, eC, dir);
   const W = new Float32Array(12);                 // the picture's colours, by pitch class (chroma-weighted)
@@ -18960,17 +18962,21 @@ function scanImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         gnd={key:gkey, at:t, notes, max:4600}; ns.push(...notes); lastGndAt=t; onset=true;
       }
     } else if(gChange && !gkey && gnd){ close(gnd,t); gnd=null; }
-    // the COLOURS: a cell of several colours sounds them together, as one soft chord beside the line (not a run of quick notes) —
-    // the more colours, the more often; a field of one colour (a gold, a sky) stays calm. Each colour its own note at the height
-    // of its own lightness, never a note the line already holds, never a semitone grinding on the line or the ground
-    if(c.groups.length>1 && (t-lastTchAt)>=320){
-      const tot=c.groups.reduce((a,g)=>a+g.w,0), used=new Set();
-      if(mel) used.add(((mel.m%12)+12)%12); if(top) used.add(snapPc(top.pc));
-      const rub=(m)=>{ const near=[...(mel?[mel.m]:[]), ...(gnd?gnd.notes.map(x=>x.m):[]), ...ns.map(x=>x.m)]; return near.some(o=>{ const d=Math.abs(m-o)%12, ic=Math.min(d,12-d); return ic===1||ic===6||(d===0 && m===o); }); };
-      const tc=[]; for(const gr of c.groups.slice(1)){ if(gr.w < tot*0.1) continue; const pc=snapPc(gr.pc); if(used.has(pc)) continue;
-        const m=Math.max(48,Math.min(86,nearestOf(pc, height(gr.l)))); if(rub(m) || tc.some(x=>{ const d=Math.abs(x.m-m)%12, ic=Math.min(d,12-d); return ic<=2||ic===6; })) continue; used.add(pc); tc.push({m, gr}); if(tc.length>=2) break; }
-      tc.forEach((x)=>{ const v=Math.max(24,Math.min(76,Math.round((32+0.6*Math.min(80,x.gr.w/Math.max(1,x.gr.n)))*0.85)));
-        ns.push({m:x.m, v, durMs:Math.max(420,Math.round(stepMs*5)), offsetMs: onset && ns.some(n=>n._melody) ? Math.round(stepMs*0.5) : 0, _paintPc:x.gr.pc}); });
+    // the COLOURS: a cell of several colours sounds them together as one soft open chord beside the line, ringing on —
+    // a meadow of many colours gives full chords, a field of one colour (a gold, a sky) stays calm. Each colour its own note at
+    // the height of its own lightness (the line's own colour an octave away from the line note); never the line's note, never a
+    // semitone (or a second, or a tritone) grinding inside the chord, on the line or on the ground
+    const _tot=c.groups.reduce((a,g)=>a+g.w,0), _cg=c.groups.filter(g=>g.w>=_tot*0.08);
+    if(_cg.length>=2 && (t-lastTchAt)>=300){
+      const rub=(m)=>{ const near=[...(mel?[mel.m]:[]), ...(gnd?gnd.notes.map(x=>x.m):[]), ...ns.map(x=>x.m)]; return near.some(o=>{ const d=Math.abs(m-o)%12, ic=Math.min(d,12-d); return ic===1||ic===6||(d===0 && Math.abs(m-o)<7); }); };
+      const tc=[], used=new Set();
+      for(const gr of _cg){ const pc=snapPc(gr.pc); if(used.has(pc)) continue;
+        let m=Math.max(48,Math.min(86,nearestOf(pc, height(gr.l))));
+        if(mel && pc===((mel.m%12)+12)%12 && Math.abs(m-mel.m)<7){ const o=m+12<=86 ? m+12 : m-12; if(o<48) continue; m=o; }
+        if(rub(m) || tc.some(x=>{ const d=Math.abs(x.m-m)%12, ic=Math.min(d,12-d); return ic<=2||ic===6; })) continue;
+        used.add(pc); tc.push({m, gr}); if(tc.length>=3) break; }
+      tc.forEach((x)=>{ const v=Math.max(22,Math.min(74,Math.round((30+0.6*Math.min(80,x.gr.w/Math.max(1,x.gr.n)))*0.85)));
+        ns.push({m:x.m, v, durMs:Math.max(600,Math.round(stepMs*6)), offsetMs: onset && ns.some(n=>n._melody) ? Math.round(stepMs*0.5) : 0, _paintPc:x.gr.pc}); });
       if(tc.length){ lastTchAt=t; onset=true; }
     }
     // a row's end breathes a little — the eye goes back to the start of the line
