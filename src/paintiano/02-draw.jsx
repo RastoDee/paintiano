@@ -18441,7 +18441,7 @@ ARTIST_DNA.notes = ARTIST_DNA.mosaic;
 // variants). Each entry overrides the artist's base genes.
 const ARTIST_VARIANTS = {
   raffel: [   // slot order = solo variants: Golden music, Lissajous, Constellation, Sunflower 137.5°, Circle of fifths, Fan, Chladni figures
-    {ground:'#0e0816',mark:{rfring:.85,dot:.15},size:[.14,.42],layout:{radial:.6,scatter:.4},density:.16,lines:0},   // What it heard: Golden music — only its rings (quarter rounds from a pivot, gold threads among them), no squares or spiral as an object
+    {ground:'#0e0816',mark:{rfring:.6,goldspiral:.4},size:[.12,.42],layout:{radial:.6,scatter:.4},density:.18,lines:0},   // What it heard: Golden music — its rings (a quarter round from a pivot, gold threads among them) and his gold spirals
     {ground:'#0e0816',mark:{rflissa:1},size:[.12,.3],layout:{radial:.5,scatter:.5},density:.08,lines:0},   // Lissajous: the thread, one closed knot
     {ground:'#0b0712',mark:{chain:.65,dot:.35},size:[.04,.12],layout:{scatter:1},density:.25,lines:.6},   // Constellation: the piece's stars, joined by gold threads
     {ground:'#0e0816',mark:{rfseed:.85,dot:.15},size:[.12,.4],layout:{radial:1},density:.18},   // Sunflower 137.5°: seeds at the golden angle
@@ -18745,13 +18745,15 @@ const _FU_HAND={rothko:'veil',klee:'veil',bloom:'veil',monet:'touches',pollock:'
 // Version 1 is everything painted before: the Signatures, Favorites saved and
 // posters printed until now, and the landing page's Ensemble painting repaint
 // exactly as they were (see _fuRules).
-const _FU_SYN_MAP={hgfig:'disc',hgchalk:'disc',hgpair:'disc',hgtv:'panel',hgsaucer:'disc',hgheart:'disc',rdog:'rect',mtleaf:'disc',mtalgae:'disc',mtcoral:'disc',mtbird:'disc',mtfish:'disc',mtburst:'star',mtlobed:'disc',mtsheet:'panel',pcfacet:'trap',pcpaper:'panel',pcguitar:'arch',lcbrush:'band',lcboom:'star',lcmirror:'disc',lcwave:'wave',lcridge:'wave',figure:'disc',dog:'rect',heart:'disc',starburst:'star',poly:'trap',facet:'trap',arrow:'tri',speech:'panel',tvbox:'panel',fuji:'arch',crest:'wave',eye:'disc',cutout:'disc',leaf:'disc',petal:'disc',net:'dotcluster',miroblob:'blob'};
+const _FU_SYN_MAP={rfring:'disc',rfseed:'disc',rfrose:'disc',rflissa:'phiarc',rfsand:'dotline',hgfig:'disc',hgchalk:'disc',hgpair:'disc',hgtv:'panel',hgsaucer:'disc',hgheart:'disc',rdog:'rect',mtleaf:'disc',mtalgae:'disc',mtcoral:'disc',mtbird:'disc',mtfish:'disc',mtburst:'star',mtlobed:'disc',mtsheet:'panel',pcfacet:'trap',pcpaper:'panel',pcguitar:'arch',lcbrush:'band',lcboom:'star',lcmirror:'disc',lcwave:'wave',lcridge:'wave',figure:'disc',dog:'rect',heart:'disc',starburst:'star',poly:'trap',facet:'trap',arrow:'tri',speech:'panel',tvbox:'panel',fuji:'arch',crest:'wave',eye:'disc',cutout:'disc',leaf:'disc',petal:'disc',net:'dotcluster',miroblob:'blob'};
 // what a painter lends the new painter: a way of drawing, never a picture
 //   outline: an ink contour (pop: on every form, the same width; hokusai: a brush line, thick and thin)
 //   ticks: Haring's motion marks · pack: forms pressed together · echo: Hokusai's wave — an arc repeated smaller, and the field in layers
 //   cut: Matisse's scissor edge, and air around fewer forms · wire: Miró's thin line joining the forms, ink dots with a coloured heart
 //   raster: Lichtenstein's dot screen on half the forms · gold: Klimt's mosaic inside the forms · grounddots: Kusama's dots on everything, the ground too
-const _FU_SYN_TRAIT={pop:{outline:1,ticks:.3,pack:1},hokusai:{outline:.7,taper:1,echo:1,stack:1},matisse:{cut:1,air:1},miro:{wire:1,inkdots:1},lichtenstein:{outline:.9,raster:.5},gold:{gold:.45},kusama:{grounddots:1},mondrian:{outline:.8},raffel:{ticks:.1}};
+//   rings: RafFel's rings of Golden music through some forms · goldrim: his gold hairline round the forms (his own forms — the Sunflower, the rose window,
+//   the quarter of rings — are pictures, so in a Synthesis they come as plain forms, the thread as his golden arc, Chladni's sand as a line of dots)
+const _FU_SYN_TRAIT={pop:{outline:1,ticks:.3,pack:1},hokusai:{outline:.7,taper:1,echo:1,stack:1},matisse:{cut:1,air:1},miro:{wire:1,inkdots:1},lichtenstein:{outline:.9,raster:.5},gold:{gold:.45},kusama:{grounddots:1},mondrian:{outline:.8},raffel:{rings:.45,goldrim:.55}};
 // addresses painted under version 1 wherever they come from (the landing page's Ensemble painting)
 const _FU_LEGACY=new Set(['raffel,pollock,lichtenstein,delaunay|4,0,2,5']);
 // which rules paint this address: a pinned address carries its own (rv), a fresh crossing takes the current ones
@@ -18782,7 +18784,7 @@ function _fuOnePainter(ks, ph, phs, ws, T, num, rv){
   const R=_fuRolesOf(phs, ks), hi=R.hand, gi=R.ground, li=R.layout;
   const H=ws[hi][0], G=ws[gi][0], Lp=ws[li][0];
   const v2=(rv|0)>=2;
-  const mark={}; ws.forEach(([d,w])=>{ const top=Object.keys(d.mark).sort((a,b)=>d.mark[b]-d.mark[a]).slice(0,2); const t=top.reduce((s,k)=>s+d.mark[k],0)||1; top.forEach(k=>{ const q=v2 ? (_FU_SYN_MAP[k]||k) : k; mark[q]=(mark[q]||0)+d.mark[k]/t*w/T; }); });
+  const mark={}; ws.forEach(([d,w])=>{ const top=Object.keys(d.mark).sort((a,b)=>d.mark[b]-d.mark[a]).slice(0,2); const t=top.reduce((s,k)=>s+d.mark[k],0)||1; top.forEach(k=>{ const q=(v2 || /^rf/.test(k)) ? (_FU_SYN_MAP[k]||k) : k; mark[q]=(mark[q]||0)+d.mark[k]/t*w/T; }); });
   let _ol=0, _tk=0; const tr={}; if(v2) ks.forEach(k=>{ const t=_FU_SYN_TRAIT[k]; if(t){ _ol=Math.max(_ol,t.outline||0); _tk=Math.max(_tk,t.ticks||0); for(const q in t) tr[q]=Math.max(tr[q]||0,t[q]); } });
   let gr=[0,0,0]; ws.forEach(([d,w])=>{ const c=_fuHex(d.ground); gr[0]+=c[0]*w; gr[1]+=c[1]*w; gr[2]+=c[2]*w; });
   { const l=_fuHex(G.ground); gr=[ (l[0]*.8+gr[0]/T*.2)*T, (l[1]*.8+gr[1]/T*.2)*T, (l[2]*.8+gr[2]/T*.2)*T ]; }
@@ -18981,6 +18983,10 @@ function _fuFill(ctx, fill, rr, w, h, col, col2, R, F, a0, path){
     case 'skein': { // Pollock: thrown threads wandering across the form, beads where they landed
       const dark=F.groundLum>128?'#1a1612':'#f2ead8'; ctx.lineCap='round'; const n=5+(R()*4|0); for(let j=0;j<n;j++){ ctx.strokeStyle=(j%3===2)?dark:col2; ctx.lineWidth=Math.max(0.8, rr*(0.025+R()*0.05)); let x=(R()-.5)*W2*2, y=(R()-.5)*W2*2; const a=R()*6.28; const ux=Math.cos(a)*W2*0.35, uy=Math.sin(a)*W2*0.35; ctx.beginPath(); ctx.moveTo(x,y); for(let s=0;s<7;s++){ const nx=x+ux+(R()-.5)*W2*.5, ny=y+uy+(R()-.5)*W2*.5; ctx.quadraticCurveTo(x+ux*.5+(R()-.5)*W2*.4, y+uy*.5+(R()-.5)*W2*.4, nx, ny); x=nx; y=ny; } ctx.stroke(); }
       for(let j=0;j<4;j++){ ctx.fillStyle=(j%2)?dark:col2; ctx.beginPath(); ctx.arc((R()-.5)*W2*1.6,(R()-.5)*W2*1.6,rr*(0.03+R()*0.05),0,6.2832); ctx.fill(); } break; }
+    case 'rfrings': { // RafFel: Golden music's rings through the form, from a pivot on its rim, the second colour in turn with the first, every fifth a thread of gold
+      const a=R()*6.2832, px=Math.cos(a)*W2, py=Math.sin(a)*W2, st=Math.max(2, W2*0.11); ctx.lineCap='butt';
+      for(let r=st*0.5,k=0;r<W2*2.2;r+=st,k++){ const g=k%5===4; ctx.strokeStyle=g?'rgb(214,180,96)':(k%2?col2:col); ctx.lineWidth=st*(g?0.32:0.56); ctx.beginPath(); ctx.arc(px,py,r,0,6.2832); ctx.stroke(); }
+      break; }
     case 'gold': { // Klimt: small spirals and squares of the second colour scattered through the form
       ctx.strokeStyle=col2; ctx.lineWidth=Math.max(1,rr*0.04); const n=3+(R()*3|0); for(let j=0;j<n;j++){ const cx=(R()-.5)*w*1.4, cy=(R()-.5)*h*1.4, q0=rr*(0.14+R()*0.14); ctx.beginPath(); for(let s=0;s<=30;s++){ const t=s/30*6.2832*2, q=q0*s/30; s?ctx.lineTo(cx+Math.cos(t)*q,cy+Math.sin(t)*q):ctx.moveTo(cx,cy); } ctx.stroke(); }
       ctx.fillStyle=col2; ctx.globalAlpha=a0*0.7; for(let j=0;j<10;j++){ const s=rr*(0.05+R()*0.06); ctx.fillRect((R()-.5)*w*1.8,(R()-.5)*h*1.8,s,s); } ctx.globalAlpha=a0; break; }
@@ -18993,7 +18999,8 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
   const S=F._S||600, rr=r;
   let sv=null, qi=0; const path=()=>{ if(!sv){ sv=[]; _fuSil(ctx,kind,rr,()=>{ const v=R(); sv.push(v); return v; },F); } else { qi=0; _fuSil(ctx,kind,rr,()=>sv[qi++],F); } };
   const [w,h]=_fuExt(kind,rr); const _tr=(F.fs==='E' && (F.rv|0)>=2 && F.tr) ? F.tr : null;
-  const own=(_tr && _tr.gold && (_FU_FILL[kind]||'flat')==='flat' && kind!=='field' && R()<_tr.gold) ? 'gold' : (_FU_FILL[kind]||'flat');
+  const own=(_tr && _tr.gold && (_FU_FILL[kind]||'flat')==='flat' && kind!=='field' && R()<_tr.gold) ? 'gold'
+    : (_tr && _tr.rings && (_FU_FILL[kind]||'flat')==='flat' && kind!=='field' && R()<_tr.rings) ? 'rfrings' : (_FU_FILL[kind]||'flat');
   if(_tr && _tr.cut && kind!=='field'){ ctx.save(); ctx.rotate((R()-.5)*0.08); ctx.scale(1+(R()-.5)*0.07, 1+(R()-.5)*0.07); ctx.globalAlpha=F.alpha; ctx.fillStyle=col; path(); ctx.fill(); ctx.restore(); }   // the scissor edge: a second cut of the same form, a hair off
   const a0=(F.alpha>=0.85 && F.edge<=0.2) ? F.alpha : F.alpha/Math.sqrt(F.layers);
   ctx.lineJoin='round'; ctx.lineCap='round';
@@ -19029,6 +19036,7 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
       if(F.outline>0 && R()<F.outline){ ctx.globalAlpha=1; ctx.strokeStyle=F.groundLum>128?'#141414':'#f4efe4'; ctx.lineWidth=Math.max(1.4, Math.min(rr*.09, S*0.008)); path(); ctx.stroke(); }
     }
   }
+  if(_tr && _tr.goldrim && kind!=='field' && R()<_tr.goldrim){ ctx.globalAlpha=0.9; ctx.strokeStyle='rgb(214,180,96)'; ctx.lineWidth=Math.max(0.8, Math.min(rr*0.03, S*0.0028)); path(); ctx.stroke(); }   // RafFel: a gold hairline round the form
   ctx.globalAlpha=a0; _fuSilDetail(ctx, kind, rr, col, col2, F, R);
   if(F.fs==='E' && (F.rv|0)>=2){ const ink=F.groundLum>128?'#141414':'#f4efe4';   // the painter's traits: an ink contour on every hand, Haring's motion ticks
     const _t=F.tr||{}; const _always=_t.outline>=1;
@@ -19041,7 +19049,7 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
 // geometry (_fuMark), whatever the hand; every other mark is a closed form the hand paints (_fuForm)
 // Haring's cast keeps his own hand in a crossing too: as a silhouette in the fused hand it reads as a pictogram
 const _FU_HRC=/^(figure|dog|hgfig|hgchalk|hgpair|hgtv|rdog)$/;
-const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest|dab|rfring|rfseed|rfrose|rflissa|rfsand)$/;
+const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest|dab)$/;
 // ── the signs of the painters we reworked, in a Collage drawn by their own engines (Haring's figures, pairs, TV heads,
 // saucers, hearts and our round dog; Matisse's cut papers; Picasso's planes, pasted papers and charcoal guitar;
 // Lichtenstein's brushstroke, explosion, mirror, wave and ridge). In a Synthesis they become plain forms (_FU_SYN_MAP).
