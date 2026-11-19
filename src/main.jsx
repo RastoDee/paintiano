@@ -50,17 +50,22 @@ async function hardUpdate() {
 // Minimal localized strings (falls back to EN). Reads the language the app saved.
 function _updLang() {
   try {
-    const l = (localStorage.getItem('paintiano_lang') || navigator.language || 'en')
-      .slice(0, 2).toLowerCase();
-    return ['en', 'de', 'fr', 'es', 'sk'].includes(l) ? l : 'en';
+    const s = (localStorage.getItem('paintiano_lang') || '').toLowerCase();
+    const n = (navigator.language || 'en').toLowerCase();
+    const k = s || (n.startsWith('zh') ? (/tw|hk|mo|hant/.test(n) ? 'zhtw' : 'zh') : n.slice(0, 2));
+    return _UPD_T[k] ? k : 'en';
   } catch (_) { return 'en'; }
 }
 const _UPD_T = {
   en: { msg: 'New version available', cta: 'Refresh' },
+  sk: { msg: 'Nová verzia k dispozícii', cta: 'Obnoviť' },
   de: { msg: 'Neue Version verfügbar', cta: 'Aktualisieren' },
   fr: { msg: 'Nouvelle version disponible', cta: 'Actualiser' },
   es: { msg: 'Nueva versión disponible', cta: 'Actualizar' },
-  sk: { msg: 'Nová verzia k dispozícii', cta: 'Obnoviť' },
+  pt: { msg: 'Nova versão disponível', cta: 'Atualizar' },
+  zh: { msg: '有新版本', cta: '刷新' },
+  zhtw: { msg: '有新版本', cta: '重新整理' },
+  ja: { msg: '新しいバージョンがあります', cta: '更新' },
 };
 
 function showUpdateToast(onApply) {
