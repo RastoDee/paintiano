@@ -20764,7 +20764,7 @@ function composeImageCallResponse(px,nc,nr,table,colorMode,keys){
 // ─────────────────────────────────────────────────────────────────────────────
 const ARTIST_DNA = {
   mosaic:       {ground:'#04040a',mark:{rect:1},                          size:[.03,.08],edge:0,  alpha:1,  layout:{grid:1},                 outline:0, tone:'pure',    wobble:0,  lines:0, layers:1,density:1,  halftone:0},
-  raffel:       {ground:'#0e0816',mark:{rfgold:.5,rfseed:.25,rfrose:.25}, size:[.12,.4], edge:0,  alpha:1,  layout:{radial:.6,scatter:.4},   outline:0, tone:'pure',    wobble:0,  lines:.2,layers:1,density:.15,halftone:0},
+  raffel:       {ground:'#0e0816',mark:{rfring:.4,rfseed:.3,rfrose:.3},  size:[.12,.4], edge:0,  alpha:1,  layout:{radial:.6,scatter:.4},   outline:0, tone:'pure',    wobble:0,  lines:.2,layers:1,density:.15,halftone:0},
   picasso:      {ground:'#c8b090',mark:{pcfacet:.45,pcpaper:.3,pcguitar:.25},size:[.06,.22],edge:0, alpha:.95,layout:{scatter:.7,flow:.3},     outline:.4,tone:'pure',    wobble:.3, lines:.2,layers:1,density:.4, halftone:0},
   matisse:      {ground:'#f6f2e9',mark:{mtleaf:.35,mtalgae:.25,mtsheet:.2,mtburst:.2},size:[.06,.2],edge:0,alpha:1,layout:{scatter:.8,grid:.2},     outline:0, tone:'pure',    wobble:.3, lines:0, layers:1,density:.45,halftone:0},
   pollock:      {ground:'#f2ede0',mark:{drip:.75,splat:.25},              size:[.006,.03],edge:.1,alpha:.9, layout:{flow:.8,scatter:.2},     outline:0, tone:'pure',    wobble:.9, lines:.6,layers:2,density:.6, halftone:0},
@@ -20795,7 +20795,7 @@ ARTIST_DNA.notes = ARTIST_DNA.mosaic;
 // variants). Each entry overrides the artist's base genes.
 const ARTIST_VARIANTS = {
   raffel: [   // slot order = solo variants: Golden music, Lissajous, Constellation, Sunflower 137.5°, Circle of fifths, Fan, Chladni figures
-    {ground:'#0e0816',mark:{rfgold:.75,goldspiral:.25},size:[.12,.4],layout:{radial:.6,scatter:.4},density:.2,lines:.2},   // What it heard: Golden music, the golden rectangle's squares in rings, the spiral in gold
+    {ground:'#0e0816',mark:{rfring:.85,dot:.15},size:[.14,.42],layout:{radial:.6,scatter:.4},density:.16,lines:0},   // What it heard: Golden music — only its rings (quarter rounds from a pivot, gold threads among them), no squares or spiral as an object
     {ground:'#0e0816',mark:{rflissa:1},size:[.12,.3],layout:{radial:.5,scatter:.5},density:.08,lines:0},   // Lissajous: the thread, one closed knot
     {ground:'#0b0712',mark:{chain:.65,dot:.35},size:[.04,.12],layout:{scatter:1},density:.25,lines:.6},   // Constellation: the piece's stars, joined by gold threads
     {ground:'#0e0816',mark:{rfseed:.85,dot:.15},size:[.12,.4],layout:{radial:1},density:.18},   // Sunflower 137.5°: seeds at the golden angle
@@ -21395,34 +21395,23 @@ function _fuForm(ctx, kind, r, col, col2, R, F){
 // geometry (_fuMark), whatever the hand; every other mark is a closed form the hand paints (_fuForm)
 // Haring's cast keeps his own hand in a crossing too: as a silhouette in the fused hand it reads as a pictogram
 const _FU_HRC=/^(figure|dog|hgfig|hgchalk|hgpair|hgtv|rdog)$/;
-const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest|dab|rfgold|rfseed|rfrose|rflissa|rfsand)$/;
+const _FU_GEST=/^(drip|splat|brush|neon|rays|beam|shortbeam|stripes|vstripes|stripe|gridline|gridstub|rain|vdrip|chain|dotline|net|hatch|arrow|wave|wavyline|band|vband|radiant|cross|asterisk|step|zigzag|scallop|stem|spiral|goldspiral|arc|phiarc|dotcluster|surface|phi|crest|dab|rfring|rfseed|rfrose|rflissa|rfsand)$/;
 // ── the signs of the painters we reworked, in a Collage drawn by their own engines (Haring's figures, pairs, TV heads,
 // saucers, hearts and our round dog; Matisse's cut papers; Picasso's planes, pasted papers and charcoal guitar;
 // Lichtenstein's brushstroke, explosion, mirror, wave and ridge). In a Synthesis they become plain forms (_FU_SYN_MAP).
 // ── RafFel's forms for the fusions (Nov 2026): each a small copy of one of his paintings, in the piece's two colours and his gold —
-// rfgold Golden music (the golden rectangle cut into its squares, each in rings from its pivot, the spiral through them), rfseed the
+// rfring Golden music's rings (a quarter round of rings from its pivot, no square, no spiral — never a literal object), rfseed the
 // Sunflower 137.5° (seeds at the golden angle, the spirals of 13 and 21 showing), rfrose the Circle of fifths (a rose window, lead
 // between the panes), rflissa Lissajous' thread (one closed knot), rfsand Chladni's figure (sand on the lines that stay still) ──
 const _RF_GOLD=[214,180,96];
 function _rfMark(ctx,kind,rr,c,c2,R){
-  const css=(q,a)=>`rgba(${q[0]|0},${q[1]|0},${q[2]|0},${a==null?1:a})`, G=_RF_GOLD, PHI=1.6180339887;
+  const css=(q,a)=>`rgba(${q[0]|0},${q[1]|0},${q[2]|0},${a==null?1:a})`, G=_RF_GOLD;
   const lt=(q,t)=>q.map(v=>v+(255-v)*t), dk=(q,t)=>q.map(v=>v*(1-t));
   if(Math.abs(c[0]-c2[0])+Math.abs(c[1]-c2[1])+Math.abs(c[2]-c2[2])<40) c2=lt(c,0.4);
   ctx.save(); ctx.globalAlpha=1; ctx.lineCap='butt'; ctx.lineJoin='round';
   switch(kind){
-    case 'rfgold': { const W=rr*1.9, H=W/PHI; let Q={x:-W/2,y:-H/2,w:W,h:H}; const sq=[];
-      for(let k=0,d=3;k<9;k++,d=(d+1)%4){ let s, q;
-        if(d===0){ s=Q.w; q={x:Q.x,y:Q.y,s,cx:Q.x,cy:Q.y+s,a0:Math.PI*1.5}; Q={x:Q.x,y:Q.y+s,w:Q.w,h:Q.h-s}; }
-        else if(d===1){ s=Q.h; q={x:Q.x+Q.w-s,y:Q.y,s,cx:Q.x+Q.w-s,cy:Q.y,a0:0}; Q={x:Q.x,y:Q.y,w:Q.w-s,h:Q.h}; }
-        else if(d===2){ s=Q.w; q={x:Q.x,y:Q.y+Q.h-s,s,cx:Q.x+s,cy:Q.y+Q.h-s,a0:Math.PI*0.5}; Q={x:Q.x,y:Q.y,w:Q.w,h:Q.h-s}; }
-        else { s=Q.h; q={x:Q.x,y:Q.y,s,cx:Q.x+s,cy:Q.y+s,a0:Math.PI}; Q={x:Q.x+s,y:Q.y,w:Q.w-s,h:Q.h}; }
-        if(s<rr*0.07) break; sq.push(q); }
-      sq.forEach((q,j)=>{ const A=j%2?c2:c, B=j%2?c:c2; ctx.save(); ctx.beginPath(); ctx.rect(q.x,q.y,q.s,q.s); ctx.clip(); ctx.fillStyle=css(dk(A,0.7)); ctx.fillRect(q.x,q.y,q.s,q.s);
-        const n=Math.max(3,Math.round(q.s/(rr*0.08))), st=q.s/n; ctx.lineWidth=st*0.64;
-        for(let i=0;i<n;i++){ const t=R(); ctx.strokeStyle=css(t<0.55?A:t<0.85?B:lt(A,0.35)); ctx.beginPath(); ctx.arc(q.cx,q.cy,st*(i+0.5),q.a0,q.a0+Math.PI/2); ctx.stroke(); }
-        ctx.restore(); });
-      ctx.strokeStyle=css(G,0.85); ctx.lineWidth=Math.max(0.6,rr*0.012); sq.forEach(q=>ctx.strokeRect(q.x,q.y,q.s,q.s));
-      ctx.strokeStyle=css(lt(G,0.2)); ctx.lineWidth=Math.max(0.9,rr*0.03); ctx.lineCap='round'; ctx.beginPath(); sq.forEach(q=>ctx.arc(q.cx,q.cy,q.s,q.a0,q.a0+Math.PI/2)); ctx.stroke(); break; }
+    case 'rfring': { const n=12, st=rr*1.6/n, px=-rr*0.8, py=rr*0.8;   // the rings lie close, as painted, so it reads as a quarter round of colour, not a sign
+      for(let i=0;i<n;i++){ const g=i%5===4, t=R(); ctx.strokeStyle=css(g?G:(t<0.5?c:t<0.82?c2:lt(c,0.32))); ctx.lineWidth=st*(g?0.3:0.94); ctx.beginPath(); ctx.arc(px,py,st*(i+0.5),-Math.PI/2,0); ctx.stroke(); } break; }
     case 'rfseed': { const N=144, GA=2.399963229728653, cc=rr/Math.sqrt(N+0.5);
       ctx.fillStyle=css(dk(c,0.8)); ctx.beginPath(); ctx.arc(0,0,rr*1.03,0,6.2832); ctx.fill();
       for(let k=N-1;k>=0;k--){ const r=cc*Math.sqrt(k+0.5), a=k*GA, x=Math.cos(a)*r, y=Math.sin(a)*r, f=0.62+0.38*Math.sqrt(k/N), q=(k%13)<6 ? c : ((k%21)<10 ? c2 : lt(c,0.3));
@@ -21449,7 +21438,7 @@ function _rfMark(ctx,kind,rr,c,c2,R){
   }
   ctx.restore();
 }
-const _FU_SIGN=/^(hgfig|hgchalk|hgpair|hgtv|hgsaucer|hgheart|rdog|mtleaf|mtalgae|mtcoral|mtbird|mtfish|mtburst|mtlobed|mtsheet|pcfacet|pcpaper|pcguitar|lcbrush|lcboom|lcmirror|lcwave|lcridge|rfgold|rfseed|rfrose|rflissa|rfsand)$/;
+const _FU_SIGN=/^(hgfig|hgchalk|hgpair|hgtv|hgsaucer|hgheart|rdog|mtleaf|mtalgae|mtcoral|mtbird|mtfish|mtburst|mtlobed|mtsheet|pcfacet|pcpaper|pcguitar|lcbrush|lcboom|lcmirror|lcwave|lcridge|rfring|rfseed|rfrose|rflissa|rfsand)$/;
 function _fuSign(ctx,kind,rr,col,col2,F,R){
   if(/^rf/.test(kind)){ _rfMark(ctx,kind,rr,_fuRgb(col),_fuRgb(col2||col),R); return; }   // RafFel's forms keep the piece's own two colours
   let c=_fuRgb(col), c2=_fuRgb(col2||col); const seed=(R()*1e9)|0, K=_HG_BLK, D=F._S||rr*6, dir=R()<0.5?1:-1;
@@ -21848,7 +21837,7 @@ const _FG={
   arcs:{form:{nestpoly:.6,protractor:.4}, hand:'bands', comp:'concentric', col:'stella'},
   bulge:{form:{disc:1}, hand:'precise', comp:'bulge', col:'vasarely'},
   bauhaus:{form:{tri:.3,disc:.3,rect:.2,arch:.2}, hand:'crisp', comp:'construct', col:'bauhaus'},
-  raffel:{form:{rfgold:.36,rfseed:.34,rfrose:.3}, hand:'goldrings', comp:'golden', col:'raffel'}   // his forms of today: Golden music's rectangle, the Sunflower, the rose window
+  raffel:{form:{rfseed:.5,rfrose:.5}, hand:'goldrings', comp:'golden', col:'raffel'}   // his forms of today: the Sunflower and the rose window (Golden music lives in his hand and composition)
 };
 const _FG_LINE=/^(goldspiral|wavyline|chain|phiarc|rays|rflissa|rfsand)$/;
 // forms of the gene engine's own, where the mark vocabulary has none: Klimt's Tree of Life curl and the robe of The Kiss
