@@ -1310,6 +1310,8 @@ const GUIDE_SHOT_CARDS = {
   music:{s:'panelM', r:'tiles'}, image:{s:'panelI', r:'picture'}, compose:{s:'panelM', r:'compose'}, mic:{s:'panelM', r:'mic'}, moods:{s:'panelM', r:'mood'}, mfi:{s:'panelI', r:'mfi'},
   style:{s:'look', r:'painters'}, modes:{s:'look', r:'pal'}, signature:{s:'look', r:'sig'}, fujam:{s:'look', r:'solofu'}, ensemble:{s:'look', r:'solofu'}, composers:{s:'panel', r:'tiles'},
   favorites:{s:'p_gold', r:'fav', g:'dtap'}, save:{s:'share', r:'save'}, scan:{s:'studio', r:'canvas'}, overview:{s:'p_delaunay'}, daily:{s:'home'}, pro:{s:'menu', r:'ai'}, setup:{s:'menu', r:'settings'}, tools:{s:'panel', r:'bottom'}, battle:{s:'p_gold', g:'dtap'}, appmodes:{s:'studio'},
+  // the palettes and the Mosaic: the same painting in its colours, the control lit but the painting hardly dimmed (lt) — the colours are the point
+  harmony:{s:'pal_harmony', r:'pal', lt:1}, spectral:{s:'pal_spectral', r:'pal', lt:1}, phi:{s:'pal_phi', r:'pal', lt:1}, kontra:{s:'pal_kontra', r:'pal', lt:1}, custom:{s:'pal_custom', r:'pal', lt:1}, mosaic:{s:'mosaic', r:'mo', lt:1}, shuffle:{s:'look', r:'painters', g:'up'},
 };
 const GUIDE_TOURS = {
   st_canvas: [['studio','home'],['studio','tabs'],['studio','canvas'],['studio','title'],['studio','row'],['panel','tiles'],['panel','bottom']],
