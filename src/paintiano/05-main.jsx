@@ -9587,6 +9587,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       setCompositionName(s.compositionName || '');
       // image-specific
       pixelRef.current = s.pixel;
+      // the notes a draft kept are the ones the app of that day read: the picture is read again by this one — the same picture,
+      // the same choices, the same spot (a picture kept from before a new Scan went on playing the old one, on every relaunch)
+      if(s.pixel && !s.imgCompose) pixelRef.current = Object.assign({}, s.pixel, { lastSig:null, reRead:true });
       if(s.pixelBackup) scanPixelBackupRef.current = s.pixelBackup;
       imgComposeRef.current = !!s.imgCompose;
       setImgPlayMode(s.imgPlayMode||'scan'); imgPlayModeRef.current=s.imgPlayMode||'scan';
@@ -9606,7 +9609,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         if(L.on && L.isg){ try{ imgSigFnRef.current && imgSigFnRef.current.apply(L.isg); }catch(_){} }
         else if(L.comp){ imgComposerRef.current = L.comp; setImgComposer(L.comp); composerStageRef.current = (L.stage||[]).slice(); setComposerStage((L.stage||[]).slice()); } }
       setStamp(prev=>prev+1);
-      setTimeout(()=>{ restoringRef.current = false; }, 0);
+      setTimeout(()=>{ restoringRef.current = false; if(pixelRef.current && pixelRef.current.reRead) setScanBump(x=>x+1); }, 0);
       return true;
     }
     if(mode==='mfi'){
@@ -12297,6 +12300,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // (the sung line is computed and scheduled in parallel by startPlay), so the
     // events here are always just the texture.
     const evts=_evtsAtmo;
+    if(pixelRef.current.reRead){   // a draft come back (see restoreMode): today's reading takes the kept one's place, quietly, at the same spot
+      pixelRef.current.reRead=false;
+      if(!playingRef.current){
+        const _n0=(chordsRef.current||[]).length, _d0=dispRef.current||0;
+        const keep=(_n0 && _d0>=_n0) ? evts.length : (_d0>0 ? _mapIdx(chordsRef.current, _d0, evts) : 0);
+        setChords(evts);chordsRef.current=evts;
+        setDisp(keep);dispRef.current=keep;
+        if(resumeFromRef.current!=null) resumeFromRef.current=keep;
+        setStamp(s=>s+1);
+        return;
+      }
+    }
     // Changing the colour mode re-transcribes the SAME painting through a new
     // hue→pitch table, so the notes change but the structure/length do not. If a
     // playback is in progress we must NOT stop it — like MIDI and live drawing,
