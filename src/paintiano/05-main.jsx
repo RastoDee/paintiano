@@ -5427,7 +5427,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const S=globalThis.__IMG_SIG, px=pixelRef.current && pixelRef.current.px; if(!px || !S || !S.keys || S.keys.join()!==ks.join()) return false;
         const sig=ks.join(), h=_jamHash(ks, px)>>>0, st=_fsNorm(S.fs || (J && J.style));
         imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; _imgSigRelease();
-        globalThis.__JAM_STYLE_PIN={ sig, h, style:st }; globalThis.__JAM_VAR={ sig, h, v:1 };
+        globalThis.__JAM_STYLE_PIN=null; globalThis.__JAM_VAR={ sig, h, v:1 };   // its style drawn anew among the Setup's, as for the painters
         { const H=jamVarHistRef.current; H.key=sig+'|'+h; H.st=[{ v:0, md:mode, st, sig:true }]; H.fw=[]; }
         _palTo({ v:1, md:null, st }, pal); setJamFlipN(n=>n+1); return true; }
       if(!J || J.h==null || ks.length<2 || J.sig!==ks.join()) return false;
@@ -5438,10 +5438,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const now={ v:cur, md:mode, st:curSt };
         if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); if(to.sig && imgSigRef.current){ _applyImgSig(); setJamFlipN(n=>n+1); return true; } }   // → back to the ✦ the jam came from
         else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
-        else { to={ v:cur+1, md:null, st:curSt }; H.st.push(now); }
+        else { to={ v:cur+1, md:null, st:null }; H.st.push(now); }   // a new variant: the style drawn anew among the Setup's (the painters' fusion does the same)
         if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift(); }
       globalThis.__JAM_VAR={ sig:J.sig, h:(J.h>>>0), v:to.v };
       if(to.st){ globalThis.__JAM_STYLE_PIN={ sig:J.sig, h:J.h, style:to.st }; if(to.st!==curSt) globalThis.__COMP_JAM_STYLE={ ...J, style:to.st, roles:null }; }
+      else globalThis.__JAM_STYLE_PIN=null;
       _palTo(to, pal); setJamFlipN(n=>n+1); return true; }catch(_){ return false; } };
   const _variantNextRaw = (pal)=>{ if(viewMode==='image') return _jamVarStep(1, pal);
     const H=varHistRef.current, k=_varKey(); if(H.key!==k){ if(H.keep) H.key=k; else { H.key=k; H.st=[]; H.fw=[]; } } H.keep=false;

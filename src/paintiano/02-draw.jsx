@@ -18377,14 +18377,17 @@ function composeImageCallResponse(px,nc,nr,table,colorMode,keys){
       if(ev.length){ const inf=_jamNoteInfo||{barMs:2000,qpb:4}; P.push({k,ev,bar0:inf.barMs,qpb:inf.qpb}); } } }
   finally{ _jamCtx=prev; _jamNoteInfo=null; }
   if(P.length<2) return P.length ? P[0].ev : [];
-  let h=_jamHash(ks,px); let style=_jamStyleOf(h); let out=null;
-  // The user tapped the style (strip / fullscreen pill) → this jam on this picture is pinned to the other one (the pin names the ensemble AND the picture's hash)
+  let h=_jamHash(ks,px); let out=null;
+  // its variant (← → in the Studio): the same composers on the same picture, the roles or the genes dealt again; 0 is the jam as it always was
+  let v=0; try{ const VV=globalThis.__JAM_VAR; if(VV && VV.sig===ks.join() && (VV.h>>>0)===(h>>>0)) v=Math.max(0,VV.v|0); }catch(_){}
+  // the style: the coin of the Setup's letters — for a variant (v>0) a coin of its own, so ← draws the style anew as it does for the painters'
+  // fusion (a new variant of every member, a new coin); 0 keeps the coin it always had
+  let style=_jamStyleOf(v ? (Math.imul((h ^ Math.imul(v, 0x9E3779B1))>>>0, 0x85ebca6b)>>>0) : h);
+  // The user tapped the style (strip / fullscreen pill), or → came back to a variant already seen → this jam on this picture is pinned to that style (the pin names the ensemble AND the picture's hash)
   try{ const pin=globalThis.__JAM_STYLE_PIN; if(pin && pin.sig===ks.join() && pin.h===h && (pin.style==='E' || pin.style==='A' || pin.style==='G')) style=pin.style; }catch(_){}
   // A picture's ✦ Signature (__IMG_SIG, 05-main) is the same for everyone: its own style, and in a Synthesis its own
   // ground — read from the picture's character, not from this screen's pixels
-  let sigOn=false; try{ const S=globalThis.__IMG_SIG; if(S && S.keys && S.keys.join()===ks.join() && (S.fs==='E' || S.fs==='A' || S.fs==='G')){ style=S.fs; h=(S.h>>>0); sigOn=true; } }catch(_){}
-  // its variant (← → in the Studio): the same composers on the same picture, the roles or the genes dealt again; 0 is the jam as it always was
-  let v=0; try{ const VV=globalThis.__JAM_VAR; if(!sigOn && VV && VV.sig===ks.join() && (VV.h>>>0)===(h>>>0)) v=Math.max(0,VV.v|0); }catch(_){}
+  let sigOn=false; try{ const S=globalThis.__IMG_SIG; if(S && S.keys && S.keys.join()===ks.join() && (S.fs==='E' || S.fs==='A' || S.fs==='G')){ style=S.fs; h=(S.h>>>0); sigOn=true; v=0; } }catch(_){}
   if(style==='G') out=_jamGenesis(P,h,v);
   else if(style==='E') out=_jamBred(P,h,v);
   if(!out){ style='A'; out=_jamRelay(P,v); }
