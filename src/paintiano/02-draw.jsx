@@ -19190,7 +19190,7 @@ function _fuMark(ctx, kind, r, col, F, R, ang, col2){
       case 'splat': { for(let j=0;j<7;j++){ ctx.beginPath(); const a=R()*6.2832,d=R()*rr*2.2; ctx.arc(Math.cos(a)*d,Math.sin(a)*d,rr*(.1+R()*.5),0,6.2832); ctx.fill(); } break; }
       // ── signature motifs — each artist's own, so the parent stays recognisable ──
       case 'orphic': { // Delaunay: concentric disc, quartered, two colours alternating
-        const rings=3+(R()*2|0); for(let q=rings;q>=1;q--){ const rq=rr*q/rings; for(let sgm=0;sgm<4;sgm++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,rq,sgm*1.5708,(sgm+1)*1.5708); ctx.closePath(); ctx.fillStyle=((q+sgm)%2)?col:col2; ctx.fill(); } } break; }
+        const rings=3+(R()*2|0), c2=_fuApart(col, col2||col); for(let q=rings;q>=1;q--){ const rq=rr*q/rings; for(let sgm=0;sgm<4;sgm++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,rq,sgm*1.5708,(sgm+1)*1.5708); ctx.closePath(); ctx.fillStyle=((q+sgm)%2)?col:c2; ctx.fill(); } } break; }   // the two colours must read apart, or the wheel is a plain disc
       case 'facet': { // Picasso: angular shard with a hard contour
         const k=4+(R()*3|0); const a0=R()*6.28; for(let j=0;j<k;j++){ const a=a0+j/k*6.2832, q=rr*(0.55+R()*0.6); j?ctx.lineTo(Math.cos(a)*q,Math.sin(a)*q):ctx.moveTo(Math.cos(a)*q,Math.sin(a)*q);} ctx.closePath(); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=Math.max(1.2,rr*.08); ctx.stroke(); break; }
       case 'cutout': { // Matisse: an algue — rounded fronds fanning up from one stem, as in his scissor cut-outs; never a symmetric blob
@@ -19939,7 +19939,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
           // so a long piece is not a soup of a hundred overlapping translucent discs
           // Delaunay's rhythms / Bauhaus targets are a few big forms, not a wall of them: a smaller area budget and sparser echoes
           const _disc=/^(orphic|arch|fan|target|protractor)$/.test(kind);
-          if(r > (_disc?S*0.06:S*0.09)){ const B=Math.max(6, Math.min(80, Math.round((_disc?0.8:1.6)/(Math.PI*(r/S)*(r/S))))); const sl='A'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)){ if(_disc && R()<0.6) continue; r*=0.35; } else _spanUsed.add(sl); }
+          if(r > (_disc?S*0.06:S*0.09)){ const B=Math.max(6, Math.min(80, Math.round((_disc?0.8:1.6)/(Math.PI*(r/S)*(r/S))))); const sl='A'+Math.floor(i*B/Math.max(1,n)); if(_spanUsed.has(sl)){ if(_disc && R()<0.6 && (_E || kind!=='orphic')) continue; r*=0.35; } else _spanUsed.add(sl); }   // in a Collage Delaunay's wheels come smaller, not fewer — they are all he brings
         }
         const [cr,cg,cb]=gc(m,v);
         // Monet's touches are the song's own colours, broken — never snapped to a sampled palette
