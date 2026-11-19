@@ -1,32 +1,34 @@
-Chaque chanson a son propre tableau. Paintiano le trouve.
+À quoi ressemble ta chanson préférée ?
 
-Joue un morceau et regarde-le apparaître, note après note. Ce n’est pas un visualiseur aléatoire : c’est la musique elle-même qui choisit l’image — ses accords, ses tonalités, son rythme — et la même chanson peint toujours le même tableau, sur n’importe quel téléphone, pour tout le monde.
+Paintiano transforme la musique en tableaux. Lance une chanson et regarde-la se peindre, note après note : les accords choisissent les couleurs, la mélodie les formes, le rythme les coups de pinceau. La même chanson peint toujours le même tableau, sur chaque téléphone, pour tout le monde.
 
-LA MUSIQUE DEVIENT PEINTURE
-• Joue un fichier MIDI, un enregistrement ou une vidéo, ou choisis l’un des morceaux intégrés.
-• Chante, joue ou approche le téléphone d’une enceinte — le micro peint en direct.
-• Chacune des douze notes a sa couleur sur un cercle construit sur le nombre d’or.
+UNE CHANSON, 24 PEINTRES
+Glisse vers le haut et les mêmes notes sont peintes dans un autre style, inspiré par Klimt, Hokusai, Monet, Kandinsky, Mondrian, Matisse et 18 autres. Glisse sur le côté pour d’autres versions du même peintre. La Fusion mêle 2 à 4 peintres en un peintre tout nouveau.
 
-LES IMAGES DEVIENNENT MUSIQUE
-• Toute photo ou tout tableau peut être joué : ses couleurs se lisent comme une partition.
-• Ou écoute-le recomposé dans l’esprit de l’un des quinze styles de compositeurs.
+TOUTE LA MUSIQUE
+• Tes MP3, vidéos et fichiers MIDI
+• Des classiques intégrés : Clair de lune, La Lettre à Élise, The Entertainer et d’autres
+• Chante, fredonne ou joue dans le micro : il peint en direct
+• Compose ta propre mélodie sur le clavier
 
-UNE CHANSON, PLUSIEURS MAINS
-• Les mêmes notes dans 24 styles de peintres, chacun avec plusieurs manières de peindre.
-• Fusion réunit jusqu’à quatre peintres sur une toile ; en Jam session, les compositeurs se répondent.
-• Glisse vers le haut pour un nouveau tableau, sur le côté pour ses variantes.
-
-GARDE-LE
-• Enregistre le tableau, partage-le ou exporte-le prêt à imprimer pour ton mur.
-• Tes favoris restent sur ton appareil.
+TOUTE PHOTO EN MUSIQUE
+Choisis une photo ou un tableau et écoute-le : ses couleurs se lisent comme une partition. Ou laisse un style de compositeur en faire un nouveau morceau.
 
 UNE IA QUI COMPOSE
-• Décris une humeur ou choisis une photo : l’IA écrit un nouveau morceau, et Paintiano le peint.
+Écris une humeur, comme « une nuit de pluie à Tokyo ». L’IA compose un nouveau morceau et Paintiano le peint.
 
-GRATUIT, PRO ET LE PASS IA
-Paintiano est gratuit avec 9 styles de peintres, 3 styles de compositeurs et un essai gratuit de chaque fonction IA. Pro est un achat unique qui ouvre tous les styles, ta propre palette et des exports de qualité impression sans filigrane — pour toujours. Le pass IA ajoute la composition par IA pendant 12 mois ; il ne se renouvelle pas tout seul.
+GARDE-LE, PARTAGE-LE, ACCROCHE-LE
+• Double-tape pour mettre un tableau dans tes Favoris
+• Vidéo 9:16 pour TikTok, Reels et Stories qui se peint toute seule
+• Affiches prêtes à imprimer pour ton mur
+• Battle : envoie ton meilleur tableau et vote pour les autres
 
-Tous les tableaux et toutes les musiques sont des originaux Paintiano, créés à partir de ta musique et inspirés des styles cités dans l’application — ce ne sont pas des copies, et ils ne sont ni réalisés avec les artistes ni approuvés par eux.
+GRATUIT POUR COMMENCER. SANS ABONNEMENT.
+Gratuit : 9 peintres, un de plus chaque jour et un essai gratuit de chaque fonction IA.
+Pro : un seul achat, à toi pour toujours. Les 24 peintres, tous les styles de compositeurs, ta propre palette et des fichiers en qualité d’impression sans filigrane.
+Pass IA : la composition par IA pendant 12 mois. Il ne se renouvelle jamais tout seul.
+
+Tous les tableaux et morceaux sont des originaux Paintiano créés à partir de ta musique, inspirés des styles cités dans l’app. Ce ne sont pas des copies d’œuvres existantes, ni des créations réalisées avec ou approuvées par un artiste ou ses ayants droit.
 
 Conditions : https://paintiano.app/terms.html
 Confidentialité : https://paintiano.app/privacy.html

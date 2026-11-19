@@ -1,32 +1,34 @@
-Cada canção tem o seu próprio quadro. O Paintiano encontra-o.
+Como é a tua música preferida?
 
-Toca uma peça e vê-a aparecer, nota a nota. Não é um visualizador ao acaso: é a própria música que escolhe a imagem — os acordes, as tonalidades, o ritmo — e a mesma canção pinta sempre o mesmo quadro, em qualquer telemóvel e para qualquer pessoa.
+O Paintiano transforma música em pinturas. Toca uma música e vê-a pintar-se sozinha, nota a nota: os acordes escolhem as cores, a melodia as formas, o ritmo as pinceladas. A mesma música pinta sempre a mesma pintura, em qualquer telemóvel, para qualquer pessoa.
 
-A MÚSICA TORNA-SE PINTURA
-• Reproduz um ficheiro MIDI, uma gravação ou um vídeo, ou escolhe uma das peças incluídas.
-• Canta, toca ou aproxima o telemóvel de uma coluna — o microfone pinta ao vivo.
-• Cada uma das doze notas tem a sua cor numa roda construída sobre a proporção áurea.
+UMA MÚSICA, 24 PINTORES
+Desliza para cima e as mesmas notas são pintadas noutro estilo, inspirado em Klimt, Hokusai, Monet, Kandinsky, Mondrian, Matisse e mais 18. Desliza para o lado para mais versões do mesmo pintor. A Fusão mistura 2 a 4 pintores num pintor totalmente novo.
 
-AS IMAGENS TORNAM-SE MÚSICA
-• Qualquer foto ou quadro pode ser tocado: as cores são lidas como uma partitura.
-• Ou ouve-o recomposto no espírito de um de quinze estilos de compositor.
+QUALQUER MÚSICA
+• Os teus MP3, vídeos e ficheiros MIDI
+• Clássicos incluídos: Clair de lune, Für Elise, The Entertainer e mais
+• Canta, trauteia ou toca para o micro e pinta em direto
+• Compõe a tua própria melodia nas teclas
 
-UMA CANÇÃO, MUITAS MÃOS
-• As mesmas notas em 24 estilos de pintor, cada um com várias formas de pintar.
-• A Fusão junta até quatro pintores numa tela; na Jam session os compositores trocam frases.
-• Desliza para cima para um quadro novo e para os lados para as variantes.
+QUALQUER FOTO, COMO MÚSICA
+Escolhe uma foto ou uma pintura e ouve-a: as suas cores são lidas como uma partitura. Ou deixa um estilo de compositor transformá-la numa peça nova.
 
-FICA COM ELE
-• Guarda o quadro, partilha-o ou exporta-o pronto a imprimir para a parede.
-• Os teus favoritos ficam no teu dispositivo.
+IA QUE COMPÕE MÚSICA
+Escreve uma emoção, como «uma noite de chuva em Tóquio». A IA compõe uma peça nova e o Paintiano pinta-a.
 
-IA QUE COMPÕE
-• Descreve um estado de espírito ou escolhe uma foto: a IA escreve uma peça nova e o Paintiano pinta-a.
+GUARDA, PARTILHA, PENDURA
+• Toque duplo para guardar uma pintura nos Favoritos
+• Vídeo 9:16 para TikTok, Reels e Stories que se pinta sozinho
+• Posters prontos a imprimir para a tua parede
+• Battle: envia a tua melhor pintura e vota nas outras
 
-GRÁTIS, PRO E O PASSE DE IA
-O Paintiano é grátis com 9 estilos de pintor, 3 de compositor e uma experiência gratuita de cada função de IA. O Pro é uma compra única que abre todos os estilos, a tua própria paleta e exportações com qualidade de impressão sem marca de água — é teu para sempre. O passe de IA junta composição com IA durante 12 meses; não se renova sozinho.
+GRÁTIS PARA COMEÇAR. SEM SUBSCRIÇÃO.
+Grátis: 9 pintores, mais um todos os dias e uma experiência grátis de cada função de IA.
+Pro: uma só compra, teu para sempre. Os 24 pintores, todos os estilos de compositor, a tua própria paleta e ficheiros com qualidade de impressão sem marca de água.
+Passe de IA: composição com IA durante 12 meses. Nunca se renova sozinho.
 
-Todos os quadros e toda a música são originais do Paintiano, criados a partir da tua música e inspirados nos estilos indicados na aplicação — não são cópias da obra de ninguém, nem foram feitos com artistas ou aprovados por eles.
+Todas as pinturas e músicas são originais do Paintiano criados a partir da tua música, inspirados nos estilos indicados na app. Não são cópias de obras de outros nem foram feitos com artistas ou os seus herdeiros, nem aprovados por eles.
 
 Termos: https://paintiano.app/terms.html
 Privacidade: https://paintiano.app/privacy.html

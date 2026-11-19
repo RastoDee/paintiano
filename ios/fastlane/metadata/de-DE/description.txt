@@ -1,32 +1,34 @@
-Jeder Song hat sein eigenes Bild. Paintiano findet es.
+Wie sieht dein Lieblingssong aus?
 
-Spiel ein Stück und sieh zu, wie es entsteht, Note für Note. Das ist kein zufälliger Visualizer: Die Musik selbst wählt das Bild — ihre Akkorde, Tonarten und ihr Rhythmus — und derselbe Song malt immer dasselbe Bild, auf jedem Telefon, für alle.
+Paintiano macht aus Musik Gemälde. Spiel einen Song ab und sieh zu, wie er sich Note für Note selbst malt: Die Akkorde wählen die Farben, die Melodie die Formen, der Rhythmus die Pinselstriche. Derselbe Song malt immer dasselbe Bild, auf jedem Handy, für jeden.
 
-MUSIK WIRD MALEREI
-• Spiel eine MIDI-Datei, eine Aufnahme oder ein Video ab oder wähle eines der eingebauten Stücke.
-• Sing, spiel oder halte das Telefon an einen Lautsprecher — das Mikrofon malt live.
-• Jeder der zwölf Töne hat seine eigene Farbe auf einem Kreis, der auf dem Goldenen Schnitt beruht.
+EIN SONG, 24 MALER
+Wisch nach oben und dieselben Noten werden in einem anderen Stil gemalt, inspiriert von Klimt, Hokusai, Monet, Kandinsky, Mondrian, Matisse und 18 weiteren. Zur Seite wischen bringt weitere Versionen desselben Malers. Fusion mischt 2–4 Maler zu einem ganz neuen.
 
-BILDER WERDEN MUSIK
-• Jedes Foto oder Gemälde lässt sich spielen: Seine Farben werden wie eine Partitur gelesen.
-• Oder hör es neu komponiert im Geist eines von fünfzehn Komponistenstilen.
+JEDE MUSIK
+• Deine MP3s, Videos und MIDI-Dateien
+• Eingebaute Klassiker: Clair de lune, Für Elise, The Entertainer und mehr
+• Sing, summ oder spiel ins Mikro – es malt live
+• Komponier deine eigene Melodie auf den Tasten
 
-EIN SONG, VIELE HÄNDE
-• Dieselben Noten in 24 Malstilen, jeder mit mehreren Malweisen.
-• Fusion bringt bis zu vier Maler auf eine Leinwand; in der Jam-Session wechseln sich Komponisten ab.
-• Wisch nach oben für ein neues Bild, zur Seite für seine Varianten.
+JEDES FOTO ALS MUSIK
+Wähl ein Foto oder ein Gemälde und hör es dir an: Seine Farben werden wie eine Partitur gelesen. Oder lass einen Komponistenstil ein neues Stück daraus machen.
 
-BEHALTE ES
-• Speichere das Bild, teile es oder exportiere es druckfertig für deine Wand.
-• Deine Favoriten bleiben auf deinem Gerät.
+KI, DIE MUSIK SCHREIBT
+Schreib eine Stimmung, etwa „eine verregnete Nacht in Tokio“. Die KI komponiert ein neues Stück dazu und Paintiano malt es.
 
-KI, DIE KOMPONIERT
-• Beschreibe eine Stimmung oder wähle ein Foto: Die KI schreibt ein neues Stück dazu, und Paintiano malt es.
+BEHALTEN, TEILEN, AUFHÄNGEN
+• Doppeltippen speichert ein Bild in deinen Favoriten
+• 9:16-Video für TikTok, Reels und Stories, das sich selbst malt
+• Druckfertige Poster für deine Wand
+• Battle: Schick dein bestes Bild und stimm über andere ab
 
-GRATIS, PRO UND DER KI-PASS
-Paintiano ist kostenlos mit 9 Mal- und 3 Komponistenstilen und einem Gratisversuch jeder KI-Funktion. Pro ist ein einmaliger Kauf, der alle Stile, deine eigene Palette und Exporte in Druckqualität ohne Wasserzeichen freischaltet — für immer. Der KI-Pass bringt KI-Komposition für 12 Monate; er verlängert sich nicht von selbst.
+KOSTENLOS STARTEN. KEIN ABO.
+Gratis: 9 Maler, jeden Tag einer mehr und ein Gratisversuch jeder KI-Funktion.
+Pro: ein Kauf, für immer deins. Alle 24 Maler, alle Komponistenstile, deine eigene Palette und Dateien in Druckqualität ohne Wasserzeichen.
+KI-Pass: KI-Komponieren für 12 Monate. Er verlängert sich nie von selbst.
 
-Alle Bilder und alle Musik sind Paintiano-Originale, aus deiner Musik entstanden und von den in der App genannten Stilen inspiriert — keine Kopien fremder Werke und weder mit Künstlern erstellt noch von ihnen empfohlen.
+Alle Bilder und Musikstücke sind Paintiano-Originale aus deiner Musik, inspiriert von den in der App genannten Stilen. Sie sind keine Kopien fremder Werke und nicht mit oder im Auftrag von Künstlern oder Nachlässen entstanden.
 
 Bedingungen: https://paintiano.app/terms.html
 Datenschutz: https://paintiano.app/privacy.html

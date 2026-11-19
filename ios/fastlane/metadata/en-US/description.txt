@@ -1,32 +1,34 @@
-Every song has its own painting. Paintiano finds it.
+What does your favorite song look like?
 
-Play a piece and watch it appear, note by note. This is not a random visualizer: the music itself chooses the picture — its chords, its keys, its rhythm — so the same song always paints the same painting, on any phone, for anyone.
+Paintiano turns music into paintings. Play a song and watch it paint itself, note by note: the chords choose the colors, the melody chooses the shapes, the rhythm sets the brushstrokes. The same song always paints the same painting, on any phone, for anyone.
 
-MUSIC BECOMES PAINTING
-• Play a MIDI file, an audio recording or a video, or pick one of the built-in pieces.
-• Sing, play or hold the phone to a speaker — the microphone paints live.
-• Each of the twelve notes has its own colour on a wheel built on the golden ratio.
+ONE SONG, 24 PAINTERS
+Swipe up and the same notes are painted in another style, inspired by Klimt, Hokusai, Monet, Kandinsky, Mondrian, Matisse and 18 more. Swipe sideways for more versions of the same painter. Fusion mixes 2–4 painters into one brand-new painter.
 
-PICTURES BECOME MUSIC
-• Any photo or painting can be played: its colours are read as a score.
-• Or hear it recomposed in the spirit of one of fifteen composer styles.
+ANY MUSIC
+• Your MP3s, videos and MIDI files
+• Built-in classics: Clair de lune, Für Elise, The Entertainer and more
+• Sing, hum or play into the mic and it paints live
+• Compose your own tune on the keys
 
-ONE SONG, MANY HANDS
-• See the same notes in 24 painter styles, each with several ways of painting.
-• Fusion puts up to four painters on one canvas; a Jam session lets composers trade phrases.
-• Swipe up for a new painting, sideways for its variants.
+ANY PHOTO, AS MUSIC
+Pick a photo or a painting and hear it: its colors are read like a score. Or let a composer style turn it into a new piece.
 
-KEEP IT
-• Save the painting, share it, or export it print-ready for your wall.
-• Your favourites stay on your device.
+AI THAT WRITES MUSIC
+Type a mood, like "a rainy night in Tokyo". AI composes a new piece for it and Paintiano paints it.
 
-AI THAT COMPOSES
-• Describe a mood, or choose a photo: AI writes a new piece to match, and Paintiano paints it.
+KEEP IT, POST IT, HANG IT
+• Double-tap to save a painting to your Favorites
+• 9:16 video for TikTok, Reels and Stories that paints itself
+• Print-ready posters for your wall
+• Battle: send your best painting and vote on others
 
-FREE, PRO AND THE AI PASS
-Paintiano is free to use with 9 painter and 3 composer styles and one free try of every AI feature. Pro is a one-time purchase that opens every style, your own palette and print-quality exports without a watermark — it is yours for good. The AI pass adds AI composing for 12 months; it does not renew by itself.
+FREE TO START. NO SUBSCRIPTION.
+Free: 9 painters, one more every day, and one free try of every AI feature.
+Pro: one purchase, yours for good. All 24 painters, all composer styles, your own palette and print-quality files without a watermark.
+AI pass: AI composing for 12 months. It never renews by itself.
 
-All paintings and music are Paintiano originals, made from your music and inspired by the styles named in the app — not copies of anyone's work, and not made with or endorsed by any artist or estate.
+All paintings and music are Paintiano originals made from your music, inspired by the styles named in the app. They are not copies of anyone's work, and not made with or endorsed by any artist or estate.
 
 Terms: https://paintiano.app/terms.html
 Privacy: https://paintiano.app/privacy.html
