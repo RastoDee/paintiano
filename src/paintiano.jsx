@@ -34109,13 +34109,22 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _jamVarStep = (d, pal)=>{ try{
       const J=globalThis.__COMP_JAM_STYLE, ks=[imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
       if(ks.length===1) return _soloFormStep(d, pal);
-      if(!J || J.h==null || ks.length<2 || J.sig!==ks.join() || imgSigActiveRef.current) return false;
+      // ← on a picture's ✦ Jam does what it does on a painting's ✦ fusion: the same composers in the same style, its next variant, and ✦ goes out
+      // (→ brings the ✦ back). Before, the ✦ held the jam fast and ← changed only the palette
+      if(imgSigActiveRef.current){ if(d<0) return false;
+        const S=globalThis.__IMG_SIG, px=pixelRef.current && pixelRef.current.px; if(!px || !S || !S.keys || S.keys.join()!==ks.join()) return false;
+        const sig=ks.join(), h=_jamHash(ks, px)>>>0, st=_fsNorm(S.fs || (J && J.style));
+        imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; _imgSigRelease();
+        globalThis.__JAM_STYLE_PIN={ sig, h, style:st }; globalThis.__JAM_VAR={ sig, h, v:1 };
+        { const H=jamVarHistRef.current; H.key=sig+'|'+h; H.st=[{ v:0, md:mode, st, sig:true }]; H.fw=[]; }
+        _palTo({ v:1, md:null, st }, pal); setJamFlipN(n=>n+1); return true; }
+      if(!J || J.h==null || ks.length<2 || J.sig!==ks.join()) return false;
       const nv=Math.max(1,J.nv|0); if(nv<2) return false;
       const VV=globalThis.__JAM_VAR, cur=(VV && VV.sig===J.sig && (VV.h>>>0)===(J.h>>>0)) ? (VV.v|0) : (J.v|0);
       const curSt=_fsNorm(J.style); let to=null;
       { const H=jamVarHistRef.current, key=J.sig+'|'+(J.h>>>0); if(H.key!==key){ H.key=key; H.st=[]; H.fw=[]; }
         const now={ v:cur, md:mode, st:curSt };
-        if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
+        if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); if(to.sig && imgSigRef.current){ _applyImgSig(); setJamFlipN(n=>n+1); return true; } }   // → back to the ✦ the jam came from
         else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
         else { to={ v:cur+1, md:null, st:curSt }; H.st.push(now); }
         if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift(); }
