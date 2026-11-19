@@ -5418,8 +5418,21 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     soloFormRef.current={ k, v:to.v };
     _palTo(to, pal); setJamFlipN(n=>n+1); return true; };
   // ← → on a Fusion or a Jam: the standard (the Guide's Gestures) — ← a new variant (the painters' / composers' variants mixed anew), → back to the one before
+  // ← → on SCAN: its four readings are its variants — rows, columns, spiral in, spiral out (→ back to the one before).
+  // A new one rolls the palette as the painters' and composers' variants do (a gold palette stays); → brings its colours back.
+  const _SCAN_DIRS=['lr','vert','spiralIn','spiralOut'];
+  const _scanDirStep = (d, pal)=>{
+    if(imgPlayModeRef.current==='compose' || imgSigActiveRef.current) return false;
+    const H=jamVarHistRef.current, key='D|'+(imgNameRef.current||''); if(H.key!==key){ H.key=key; H.st=[]; H.fw=[]; }
+    const cur=imgDirRef.current||'lr'; const now={ dir:cur, md:mode }; let to=null;
+    if(d<0){ if(!H.st.length) return false; to=H.st.pop(); H.fw.push(now); }
+    else if(H.fw.length){ to=H.fw.pop(); H.st.push(now); }
+    else { to={ dir:_SCAN_DIRS[(_SCAN_DIRS.indexOf(cur)+1)%_SCAN_DIRS.length], md:null }; H.st.push(now); }
+    if(H.st.length>30) H.st.shift(); if(H.fw.length>30) H.fw.shift();
+    imgDirRef.current=to.dir; setImgDir(to.dir); _palTo(to, pal); return true; };
   const _jamVarStep = (d, pal)=>{ try{
       const J=globalThis.__COMP_JAM_STYLE, ks=[imgComposerRef.current, ...composerStageRef.current].filter(Boolean);
+      if(!ks.length) return _scanDirStep(d, pal);
       if(ks.length===1) return _soloFormStep(d, pal);
       // ← on a picture's ✦ Jam does what it does on a painting's ✦ fusion: the same composers in the same style, its next variant, and ✦ goes out
       // (→ brings the ✦ back). Before, the ✦ held the jam fast and ← changed only the palette
@@ -20414,8 +20427,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   <div style={{fontWeight:600,color:'rgba(226,196,119,1)',letterSpacing:'.16em',textTransform:'uppercase',fontSize:'.82em'}}>✦ {_sigT('label')}{imgSig.keys.length>1 ? ' · '+_ensT('cr') : ''}</div>
                 </div>
               )}
-              {/* SCAN's reading directions — only while SCAN is chosen (composers always read in rows) */}
-              {_scanSel && (<>
+              {/* SCAN's reading directions — only while SCAN is chosen (composers always read in rows). The Studio has no row:
+                  there the four readings are SCAN's variants, ← → on the painting (_scanDirStep); its chip shows the one playing */}
+              {_scanSel && !studioFs && (<>
                 <div style={{fontSize:(.46*effScale)+'rem',fontWeight:600,letterSpacing:'.2em',color:PF.muted,marginTop:2,textTransform:'uppercase'}}>{t('dirLabel')}</div>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
                   {['lr','vert','spiralIn','spiralOut'].map(d=>{
