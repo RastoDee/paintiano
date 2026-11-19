@@ -21790,7 +21790,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               // Ensemble: one name per line, a small × / ↔ between — never one long
               // line running off the screen. Size steps down with the stage size.
               const _ens = _ensF;
-              const _fmN = (_isImgFlash && imgComposer && imgPlayMode!=='compose' && _soloHas(imgComposer) && _stepAt(2)) ? _formName(imgComposer, _soloForm()) : '';
+              // a composer alone: which of his two forms; SCAN: which of its four readings (its variants, ← →)
+              const _fmN = (_isImgFlash && imgPlayMode!=='compose' && _stepAt(2))
+                ? (imgComposer ? (_soloHas(imgComposer) ? _formName(imgComposer, _soloForm()) : '') : String(t('dir_'+(imgDir||'lr'))||''))
+                : '';
               if(!_ens) return (<><div>{_fLabel}</div>{_fmN && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',marginTop:'.75em',fontStyle:'normal',fontSize:'.46em',letterSpacing:'.34em',fontWeight:600,opacity:.95}}><span style={{width:'2.4em',height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>{_fmN}</span><span style={{width:'2.4em',height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>)}</>);   // a composer alone: which of his two forms
               const _sep = _isImgFlash ? '↔' : '×';
               const _fs = _ens.length>=4 ? '.62em' : _ens.length===3 ? '.72em' : '.82em';
