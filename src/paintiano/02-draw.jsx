@@ -16425,6 +16425,8 @@ function pixelsToImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
 //     is an accent, a second colour in a busy cell sounds as a quick touch;
 //   the GROUND — the colour field the line moves through: its two or three
 //     strongest colours, low and soft, struck again only when the field changes.
+//   the COLOURS — a cell of several colours sounds them together, a soft chord
+//     beside the line: the more colours, the more often; one colour stays calm.
 // To stay listenable it keeps to the picture's own scale (the pentatonic or
 // diatonic set that holds most of its colours, the strongest colour as home),
 // never grinds a semitone against the ground, and breathes at every row's end.
@@ -16529,7 +16531,7 @@ function scanImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
   let gnd=null;           // the sounding ground chord {pcs:'..', at, notes, ev}
   const F=new Float32Array(12); let fL=avgL, fC=avgC;    // the colour field (a slow running mix)
   const EMA=0.16;
-  let prevL=null, prevC=null, lastMelAt=-1e9, lastGndAt=-1e9, lineL=null, rowAt=0;
+  let prevL=null, prevC=null, lastMelAt=-1e9, lastGndAt=-1e9, lineL=null, rowAt=0, lastTchAt=-1e9;
   const close = (o, at)=>{ if(!o) return; for(const n of o.notes) n.durMs=Math.max(160, Math.min(o.max, Math.round(at - o.at + 60))); };
   for(let i=0;i<cells.length;i++){
     const c=cells[i];
@@ -16604,6 +16606,19 @@ function scanImageEvents(px,nc,nr,table,colorMode,dir,atmoBias){
         gnd={key:gkey, at:t, notes, max:4600}; ns.push(...notes); lastGndAt=t; onset=true;
       }
     } else if(gChange && !gkey && gnd){ close(gnd,t); gnd=null; }
+    // the COLOURS: a cell of several colours sounds them together, as one soft chord beside the line (not a run of quick notes) —
+    // the more colours, the more often; a field of one colour (a gold, a sky) stays calm. Each colour its own note at the height
+    // of its own lightness, never a note the line already holds, never a semitone grinding on the line or the ground
+    if(c.groups.length>1 && (t-lastTchAt)>=320){
+      const tot=c.groups.reduce((a,g)=>a+g.w,0), used=new Set();
+      if(mel) used.add(((mel.m%12)+12)%12); if(top) used.add(snapPc(top.pc));
+      const rub=(m)=>{ const near=[...(mel?[mel.m]:[]), ...(gnd?gnd.notes.map(x=>x.m):[]), ...ns.map(x=>x.m)]; return near.some(o=>{ const d=Math.abs(m-o)%12, ic=Math.min(d,12-d); return ic===1||ic===6||(d===0 && m===o); }); };
+      const tc=[]; for(const gr of c.groups.slice(1)){ if(gr.w < tot*0.1) continue; const pc=snapPc(gr.pc); if(used.has(pc)) continue;
+        const m=Math.max(48,Math.min(86,nearestOf(pc, height(gr.l)))); if(rub(m) || tc.some(x=>{ const d=Math.abs(x.m-m)%12, ic=Math.min(d,12-d); return ic<=2||ic===6; })) continue; used.add(pc); tc.push({m, gr}); if(tc.length>=2) break; }
+      tc.forEach((x)=>{ const v=Math.max(24,Math.min(76,Math.round((32+0.6*Math.min(80,x.gr.w/Math.max(1,x.gr.n)))*0.85)));
+        ns.push({m:x.m, v, durMs:Math.max(420,Math.round(stepMs*5)), offsetMs: onset && ns.some(n=>n._melody) ? Math.round(stepMs*0.5) : 0, _paintPc:x.gr.pc}); });
+      if(tc.length){ lastTchAt=t; onset=true; }
+    }
     // a row's end breathes a little — the eye goes back to the start of the line
     const rowEnd = i<cells.length-1 && (dir==='vert' ? cells[i+1].cg!==c.cg : (dir==='lr' && cells[i+1].band!==c.band));
     if(rowEnd) stepMs*=2;
