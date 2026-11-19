@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """The product page header (App Store, iOS 27+): uploads ios/asc/header.png (3840 x 1646, no alpha) to the app's asset library and
-places it as the header on every language of version 1.1. Touches nothing else; submits nothing. Prints what Apple answers."""
+places it as the header on every language of the version being prepared (PF_VER, 1.2 by default; 1.1 was locked in review). Touches nothing else; submits nothing. Prints what Apple answers."""
 import os, sys, json, time, urllib.request, urllib.error
 HERE = os.path.dirname(os.path.abspath(__file__))
 exec(compile(open(os.path.join(HERE, 'asc.py'), encoding='utf-8').read().split("\nNOTES = {")[0], 'asc_head', 'exec'))
 FILE = os.path.join(HERE, 'header.png'); data = open(FILE, 'rb').read(); TYPE = 'PRODUCT_PAGE_HEADER_ASSET'
 step('app'); s, j = call('GET', '/v1/apps?filter[bundleId]=' + BUNDLE); app = [d for d in j['data'] if d['attributes'].get('bundleId') == BUNDLE][0]['id']
-s, j = call('GET', f'/v1/apps/{app}/appStoreVersions?filter[platform]=IOS&filter[versionString]=1.1&limit=3'); v = j['data'][0]; vid = v['id']; print('version 1.1', v['attributes'].get('appStoreState'))
+VER = os.environ.get('PF_VER', '1.2')
+s, j = call('GET', f'/v1/apps/{app}/appStoreVersions?filter[platform]=IOS&filter[versionString]={VER}&limit=3'); v = j['data'][0]; vid = v['id']; print('version', VER, v['attributes'].get('appStoreState'))
 step('asset library'); s, j = call('GET', f'/v1/apps/{app}/assetLibrary'); lib = (j.get('data') or {}).get('id') if s == 200 else None; print('library', s, lib or errs(j))
 if not lib: lib = app
 step('reserve'); s, j = call('POST', '/v1/appAssetLibraryImages', {'data': {'type': 'appAssetLibraryImages', 'attributes': {'category': 'CREATIVE_ASSETS', 'fileName': 'paintiano-header.png', 'fileSize': len(data)}, 'relationships': {'assetLibrary': {'data': {'type': 'appAssetLibraries', 'id': lib}}}}})
