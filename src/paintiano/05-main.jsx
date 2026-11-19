@@ -19457,6 +19457,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   {_fL ? (<canvas ref={feedCvRef} className="pf-sh-live" aria-label={_fTitle}/>) : (FC.u ? (<img src={FC.u} alt={_fTitle}/>) : null)}
                   {FC.pu && feedPosterCut!==FC.id && (<img className={'pf-sh-poster'+((feedPosterGo===FC.id) ? ' go' : '')} src={FC.pu} alt="" aria-hidden="true"/>)}   {/* the first screen's picture stays until the piece starts, then melts into it */}
                   <div className="pf-sh-cap"><div className="pf-sh-cap-t">{_fTitle}</div><div className="pf-sh-cap-l">{_fLine}</div></div>
+                  {/* full screen (the painting alone): each painting still says what it is for a moment — the first screen's title card:
+                      the composer, the piece, who painted it (again after ← → as the look changes) — then only the painting */}
+                  {feedClean && _fTitle && (()=>{ const q=String(_fTitle).split(' — '), sv=(style!==null ? [style] : []).concat(painterStage).map(k=>STYLE_INSPIRED[k]||k);
+                    const cs=[imgComposer].concat(composerStage||[]).filter(Boolean).map(k=>COMPOSER_INSPIRED[k]||k);
+                    const who = FC.kind==='img' ? (cs.length ? t('inspiredBy').replace('{artist}', cs.join(' × ')) : 'Scan')
+                      : style===null ? _fUp(String(notesMode ? t('notesStyle') : t('liteMosaicStyle')).toLowerCase()) : t('inspiredBy').replace('{artist}', sv.join(' × '));
+                    return (<div key={'fc'+FC.id+'|'+feedFlash} className="pf-lh-card" aria-hidden="true">{q[1] && (<small>{q[1]}</small>)}<b>{q[0]||_fTitle}</b>{who && (<i>{(FC.kind==='img' ? imgSigActive : sigActive) ? '✦ '+who : who}</i>)}</div>); })()}
                   {_fL && feedIntro && _fPlay && (()=>{
                     if(feedIntro.k==='m'){ const _cur=chords[Math.max(0, Math.min(chords.length-1, (disp|0)-1))]; const _lit=new Set(((_cur && (_cur.n||_cur.notes)) || []).map(x=>{ const m=(x && x.m!==undefined) ? x.m : x; return ((Math.round(+m||0)%12)+12)%12; })); const _nm=_miT('names');
                       return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><p>{_miT('line')}</p><div className="pf-sh-key">{[0,7,2,9,4,11,6,1,8,3,10,5].map(pc=>{ let c=[160,160,160]; try{ c=gc(72+pc,110); }catch(_){} const on=_lit.has(pc); return (<span key={pc} className={on?'on':''}><i style={{background:'rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')',...(on?{boxShadow:'0 0 0 1.5px #f4e7c6,0 0 10px 1px rgba('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+',.85)'}:{})}}/><b>{_nm[pc]}</b></span>); })}</div></div>); }
