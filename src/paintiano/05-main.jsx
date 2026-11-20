@@ -2856,6 +2856,8 @@ const STUDIO_FX_CSS = `
 @keyframes pfStTipInL{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .pf-st-tipup{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:16px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(242,238,232,.22);color:#fff;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;pointer-events:none;animation:pfStTipInL .3s ease-out both}
 .pf-st-tipup svg{animation:pfStBob 1.4s ease-in-out infinite}
+.pf-zc-up{animation:pfZcUp .5s ease 3.6s both}   /* the first card's ↑ waits until the piece's title card (pfLhCard, 3.8 s) has gone, so it never sits on "inspired by …" */
+@keyframes pfZcUp{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translateX(-50%)}}
 @keyframes pfStBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @media (prefers-reduced-motion: reduce){.pf-st-tipup svg{animation:none}}
 .pf-st-min{position:fixed;left:max(12px, env(safe-area-inset-left, 0px));top:calc(env(safe-area-inset-top, 0px) + 12px);z-index:10001;width:40px;height:40px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(242,238,232,.18);color:#f2eee8;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -18578,7 +18580,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         // ZAČNI — the first minute: one line at a time over the painting that plays (1 swipe up · 2 ♥ · 3 your turn, ✦ Change glows)
         const h=_stT('zc'+zcK+'h'), b=_stT('zc'+zcK);
         return (<div className="pf-zc" role="status" style={{position:'fixed',left:'max(22px, env(safe-area-inset-left, 0px))',right:'max(22px, env(safe-area-inset-right, 0px))',bottom:'calc(env(safe-area-inset-bottom, 0px) + 152px)',zIndex:10003,maxWidth:420,margin:'0 auto',borderRadius:22,padding:'18px 18px 12px',background:'rgba(12,10,18,.86)',border:'1px solid rgba(226,196,119,.55)',boxShadow:'0 10px 30px rgba(0,0,0,.45)',textAlign:'center',color:'#f2eee8',pointerEvents:'none',fontFamily:"'Outfit',system-ui,sans-serif"}}>
-          {zcK===1 && (<div aria-hidden="true" style={{position:'absolute',left:'50%',top:-82,transform:'translateX(-50%)',width:60,height:60,borderRadius:'50%',background:'rgba(12,10,18,.55)',border:'1px solid rgba(255,255,255,.35)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28}}>↑</div>)}
+          {zcK===1 && (<div aria-hidden="true" className="pf-zc-up" style={{position:'absolute',left:'50%',top:-82,transform:'translateX(-50%)',width:60,height:60,borderRadius:'50%',background:'rgba(12,10,18,.55)',border:'1px solid rgba(255,255,255,.35)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28}}>↑</div>)}
           <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:27,fontWeight:600,color:'#e2c477',lineHeight:1.05}}>{h}</div>
           <div style={{fontSize:15,marginTop:8,lineHeight:1.4}}>{b}</div>
           <div aria-hidden="true" style={{display:'flex',justifyContent:'center',gap:7,marginTop:12}}>{[1,2,3].map(n=>(<i key={n} style={{width:n===zcK?20:7,height:7,borderRadius:n===zcK?4:'50%',background:n===zcK?'#e2c477':'rgba(255,255,255,.3)'}}/>))}</div>
