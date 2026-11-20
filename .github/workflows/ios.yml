@@ -98,14 +98,17 @@ jobs:
           xcode-version: latest-stable
       - name: Web build
         env:
-          PF_IOS_DEBUG: ${{ contains(github.event.head_commit.message, '[simshot]') && '1' || '0' }}
+          PF_IOS_DEBUG: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[simshot]') || contains(github.event.head_commit.message, '[simtest]')) && '1' || '0' }}
+          PF_IOS_SELFTEST: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[simtest]') && '1' || '0' }}
         run: |
           npm ci
           npm run build
           node scripts/ios-web.mjs
           npx cap sync ios
       - name: Run in the simulator and take screenshots (diagnostics)
-        if: ${{ contains(github.event.head_commit.message, '[simshot]') }}
+        if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[simshot]') || contains(github.event.head_commit.message, '[simtest]')) }}
+        env:
+          SIMTEST: ${{ contains(github.event.head_commit.message, '[simtest]') && '1' || '0' }}
         run: |
           set -uo pipefail
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
@@ -119,19 +122,25 @@ jobs:
           xcrun simctl install "$UDID" "$APP"
           xcrun simctl launch "$UDID" app.paintiano
           mkdir -p "$RUNNER_TEMP/shots"
-          for t in 12 25 45; do sleep $([ $t = 12 ] && echo 12 || [ $t = 25 ] && echo 13 || echo 20); xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/s$t.png"; done
+          if [ "$SIMTEST" = 1 ]; then
+            for k in $(seq -w 1 46); do sleep 3; xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/t$k.png" >/dev/null 2>&1; done
+            for k in $(seq -w 1 46); do [ -f "$RUNNER_TEMP/shots/t$k.png" ] && sips -Z 900 -s format jpeg -s formatOptions 60 "$RUNNER_TEMP/shots/t$k.png" --out "$RUNNER_TEMP/shots/t$k.jpg" >/dev/null && rm -f "$RUNNER_TEMP/shots/t$k.png"; done
+            xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "App"' --style compact 2>/dev/null | grep -iE "error|crash|exception|jetsam|WebContent" | tail -40 || true
+          fi
+          for t in 12 25 45; do [ "$SIMTEST" = 1 ] && break; sleep $([ $t = 12 ] && echo 12 || [ $t = 25 ] && echo 13 || echo 20); xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/s$t.png"; done
           ls -la "$RUNNER_TEMP/shots"
           for t in 12 45; do
+            [ -f "$RUNNER_TEMP/shots/s$t.png" ] || continue
             sips -Z 1400 -s format jpeg -s formatOptions 45 "$RUNNER_TEMP/shots/s$t.png" --out "$RUNNER_TEMP/shots/s$t.jpg" >/dev/null
             echo "B64START s$t"; base64 -i "$RUNNER_TEMP/shots/s$t.jpg" | fold -w 20000; echo "B64END s$t"
           done
       - uses: actions/upload-artifact@v4
-        if: ${{ contains(github.event.head_commit.message, '[simshot]') }}
+        if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[simshot]') || contains(github.event.head_commit.message, '[simtest]')) }}
         with:
           name: simshots
           path: ${{ runner.temp }}/shots
       - name: Build for the simulator (no signing)
-        if: ${{ !inputs.upload && !contains(github.event.head_commit.message, '[testflight]') && !contains(github.event.head_commit.message, '[simshot]') }}
+        if: ${{ !inputs.upload && !contains(github.event.head_commit.message, '[testflight]') && !contains(github.event.head_commit.message, '[simshot]') && !contains(github.event.head_commit.message, '[simtest]') }}
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
