@@ -131,8 +131,9 @@ jobs:
           to 90 xcrun simctl launch "$UDID" app.paintiano; echo "$(date -u +%T) launched"
           mkdir -p "$RUNNER_TEMP/shots"
           if [ "$SIMTEST" = 1 ]; then
-            for k in $(seq -w 1 46); do sleep 3; to 45 xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/t$k.png" >/dev/null 2>&1 || echo "shot $k: $?"; done; echo "$(date -u +%T) shots done"
-            for k in $(seq -w 1 46); do [ -f "$RUNNER_TEMP/shots/t$k.png" ] && sips -Z 900 -s format jpeg -s formatOptions 60 "$RUNNER_TEMP/shots/t$k.png" --out "$RUNNER_TEMP/shots/t$k.jpg" >/dev/null && rm -f "$RUNNER_TEMP/shots/t$k.png"; done || true
+            end=$((SECONDS+660)); k=0
+            while [ $SECONDS -lt $end ]; do k=$((k+1)); n=$(printf %02d $k); to 45 xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/t$n.png" >/dev/null 2>&1 || echo "shot $n: $?"; echo "$(date -u +%T) shot $n"; done
+            for f in "$RUNNER_TEMP"/shots/t*.png; do [ -f "$f" ] || continue; j="${f%.png}.jpg"; sips -Z 640 -s format jpeg -s formatOptions 50 "$f" --out "$j" >/dev/null && rm -f "$f"; echo "B64START $(basename "$j")"; base64 -i "$j" | fold -w 20000; echo "B64END"; done || true
             to 90 xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "App"' --style compact 2>/dev/null | grep -iE "error|crash|exception|jetsam|WebContent" | tail -40 || true
           fi
           for t in 12 25 45; do [ "$SIMTEST" = 1 ] && break; sleep $([ $t = 12 ] && echo 12 || [ $t = 25 ] && echo 13 || echo 20); xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/s$t.png"; done

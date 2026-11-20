@@ -44,6 +44,7 @@
     [4000, 'done', function () { step('DONE'); log('SELFTEST DONE'); }]
   ];
   var i = 0;
-  var next = function () { if (i >= S.length) return; var s = S[i++]; setTimeout(function () { try { s[2](); } catch (e) { log('STEP ERR ' + s[1] + ' ' + (e && e.message)); } next(); }, s[0]); };
+  var K = 2.5;   // the simulator on a CI Mac takes a screenshot only every ~15 s: each step is held long enough to be caught
+  var next = function () { if (i >= S.length) return; var s = S[i++]; setTimeout(function () { try { s[2](); } catch (e) { log('STEP ERR ' + s[1] + ' ' + (e && e.message)); } next(); }, s[0] * K); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', next); else next();
 })();
