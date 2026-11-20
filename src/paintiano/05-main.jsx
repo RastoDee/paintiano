@@ -23962,8 +23962,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:12}}>
             <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
               {ico}
-              <div role="heading" aria-level={2} style={_hStyle}>{title}</div>
-              {count!=null && (<span style={{fontSize:_px(12),color:'rgba(230,222,196,.62)',fontVariantNumeric:'tabular-nums'}}>{count}</span>)}
+              <div role="heading" aria-level={2} style={{..._hStyle,whiteSpace:'nowrap'}}>{title}</div>
+              {count!=null && (<span style={{fontSize:_px(12),color:'rgba(230,222,196,.62)',fontVariantNumeric:'tabular-nums',whiteSpace:'nowrap'}}>{count}</span>)}
             </div>
             {onAll && (<div style={{display:'inline-flex',gap:6,flexShrink:0}}>
               <button type="button" onClick={onAll} style={_pillOn}>{_sent(ts('setupAll','All'))}</button>
