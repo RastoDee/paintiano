@@ -124,15 +124,16 @@ jobs:
           UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys,re; d=json.load(sys.stdin)['devices']; ks=sorted([(tuple(int(n) for n in m.groups()),k) for k in d for m in [re.search(r'SimRuntime\.iOS-(\d+)-(\d+)$',k)] if m]); print(next((x['udid'] for _,k in reversed(ks) for x in d[k] if x['name'].startswith('iPhone') and x.get('isAvailable', True)), ''))")
           [ -n "$UDID" ] || { echo "no iPhone simulator on this runner"; exit 1; }
           echo "app=$APP sim=$UDID"
+          set +e   # from here a slow simulator call must not end the diagnostics
           to 240 xcrun simctl boot "$UDID" || true
           to 300 xcrun simctl bootstatus "$UDID" -b | tail -2; echo "$(date -u +%T) booted"
           to 180 xcrun simctl install "$UDID" "$APP"; echo "$(date -u +%T) installed"
           to 90 xcrun simctl launch "$UDID" app.paintiano; echo "$(date -u +%T) launched"
           mkdir -p "$RUNNER_TEMP/shots"
           if [ "$SIMTEST" = 1 ]; then
-            for k in $(seq -w 1 46); do sleep 3; to 20 xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/t$k.png" >/dev/null 2>&1; done; echo "$(date -u +%T) shots done"
-            for k in $(seq -w 1 46); do [ -f "$RUNNER_TEMP/shots/t$k.png" ] && sips -Z 900 -s format jpeg -s formatOptions 60 "$RUNNER_TEMP/shots/t$k.png" --out "$RUNNER_TEMP/shots/t$k.jpg" >/dev/null && rm -f "$RUNNER_TEMP/shots/t$k.png"; done
-            to 60 xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "App"' --style compact 2>/dev/null | grep -iE "error|crash|exception|jetsam|WebContent" | tail -40 || true
+            for k in $(seq -w 1 46); do sleep 3; to 45 xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/t$k.png" >/dev/null 2>&1 || echo "shot $k: $?"; done; echo "$(date -u +%T) shots done"
+            for k in $(seq -w 1 46); do [ -f "$RUNNER_TEMP/shots/t$k.png" ] && sips -Z 900 -s format jpeg -s formatOptions 60 "$RUNNER_TEMP/shots/t$k.png" --out "$RUNNER_TEMP/shots/t$k.jpg" >/dev/null && rm -f "$RUNNER_TEMP/shots/t$k.png"; done || true
+            to 90 xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "App"' --style compact 2>/dev/null | grep -iE "error|crash|exception|jetsam|WebContent" | tail -40 || true
           fi
           for t in 12 25 45; do [ "$SIMTEST" = 1 ] && break; sleep $([ $t = 12 ] && echo 12 || [ $t = 25 ] && echo 13 || echo 20); xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/s$t.png"; done
           ls -la "$RUNNER_TEMP/shots"
