@@ -107,25 +107,30 @@ jobs:
           npx cap sync ios
       - name: Run in the simulator and take screenshots (diagnostics)
         if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[simshot]') || contains(github.event.head_commit.message, '[simtest]')) }}
+        timeout-minutes: 25
         env:
           SIMTEST: ${{ contains(github.event.head_commit.message, '[simtest]') && '1' || '0' }}
         run: |
           set -uo pipefail
-          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+          to(){ perl -e 'alarm shift; exec @ARGV' "$@"; }   # macOS has no timeout(1): every simulator call gets a time limit
+          echo "$(date -u +%T) runtimes:"; xcrun simctl list runtimes | tail -6
+          to 1200 xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO build | tail -5
+          echo "$(date -u +%T) built"
           APP=$(find "$RUNNER_TEMP/dd/Build/Products" -name 'App.app' -maxdepth 3 | head -1)
-          UDID=$(xcrun simctl list devices available | grep -E 'iPhone' | head -1 | grep -oE '[0-9A-F-]{36}')
+          # an iPhone on the newest iOS runtime that is actually installed
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; ks=sorted([k for k in d if '.iOS-' in k], key=lambda k:[int(x) for x in k.split('.iOS-')[1].split('-')]); print(next((x['udid'] for k in reversed(ks) for x in d[k] if x['name'].startswith('iPhone') and x.get('isAvailable', True)), ''))")
           echo "app=$APP sim=$UDID"
-          xcrun simctl boot "$UDID" || true
-          xcrun simctl bootstatus "$UDID" -b | tail -2
-          xcrun simctl install "$UDID" "$APP"
-          xcrun simctl launch "$UDID" app.paintiano
+          to 240 xcrun simctl boot "$UDID" || true
+          to 300 xcrun simctl bootstatus "$UDID" -b | tail -2; echo "$(date -u +%T) booted"
+          to 180 xcrun simctl install "$UDID" "$APP"; echo "$(date -u +%T) installed"
+          to 90 xcrun simctl launch "$UDID" app.paintiano; echo "$(date -u +%T) launched"
           mkdir -p "$RUNNER_TEMP/shots"
           if [ "$SIMTEST" = 1 ]; then
-            for k in $(seq -w 1 46); do sleep 3; xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/t$k.png" >/dev/null 2>&1; done
+            for k in $(seq -w 1 46); do sleep 3; to 20 xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/t$k.png" >/dev/null 2>&1; done; echo "$(date -u +%T) shots done"
             for k in $(seq -w 1 46); do [ -f "$RUNNER_TEMP/shots/t$k.png" ] && sips -Z 900 -s format jpeg -s formatOptions 60 "$RUNNER_TEMP/shots/t$k.png" --out "$RUNNER_TEMP/shots/t$k.jpg" >/dev/null && rm -f "$RUNNER_TEMP/shots/t$k.png"; done
-            xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "App"' --style compact 2>/dev/null | grep -iE "error|crash|exception|jetsam|WebContent" | tail -40 || true
+            to 60 xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "App"' --style compact 2>/dev/null | grep -iE "error|crash|exception|jetsam|WebContent" | tail -40 || true
           fi
           for t in 12 25 45; do [ "$SIMTEST" = 1 ] && break; sleep $([ $t = 12 ] && echo 12 || [ $t = 25 ] && echo 13 || echo 20); xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/shots/s$t.png"; done
           ls -la "$RUNNER_TEMP/shots"
