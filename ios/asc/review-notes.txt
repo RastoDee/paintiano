@@ -1,6 +1,8 @@
 Paintiano turns music into a painting: each piece of music produces its own picture. Painting needs no account or sign-in.
 
-New in 1.1 - Battle (the third tab at the top: For You, Studio, Battle):
+To see every feature at once: Paintiano opens step by step for newcomers, so on a fresh install some parts (Battle among them) appear a little later. To show everything right away: tap "Paintiano" at the top > Guide > "Show me everything now".
+
+Battle (the third tab at the top: For You, Studio, Battle - shown after "Show me everything now"):
 Battle is a monthly game for paintings made in Paintiano. Two paintings are shown and a double tap votes for one. Voting needs no account. Only sending your own painting to compete needs a Battle account: a nickname and a password, made inside Battle (no e-mail, no third-party sign-in).
 Until the first round opens on December 1, 2026, visitors without an account see a countdown screen. To see the game now, sign in with the demo account from the sign-in fields: Battle tab > the circle at the top right > Sign in.
 Content from other people in Battle is only paintings made in Paintiano and nicknames (no chat, no free text, no photos):
@@ -13,7 +15,7 @@ Content from other people in Battle is only paintings made in Paintiano and nick
 In-app purchases (StoreKit):
 - Paintiano Pro (non-consumable): unlocks all painter styles, composers, custom palette and watermark-free export.
 - AI pass 12 months (non-renewing subscription): AI composition from a mood or a photo for 12 months. It does not renew.
-To see the purchase screen: tap a locked painter or a locked feature. "Restore purchases" is at the bottom of that screen.
+To see the purchase screen: tap "Paintiano" at the top > Paintiano Pro. (Tapping a locked painter also opens it - except the first one, which is a free try.) "Restore purchases" is at the bottom of that screen.
 
 Refunds: the Refunds page (menu "Paintiano" at the top > Refunds) has a button that opens Apple's refund request sheet.
 
