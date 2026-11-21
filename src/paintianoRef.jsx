@@ -47578,7 +47578,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(r && r.state!=='inactive'){ try{ r.requestData(); }catch(_){} try{ r.stop(); }catch(_){} }
   };
   const _vidClose = ()=>{ try{ if(stVid && stVid.url) URL.revokeObjectURL(stVid.url); }catch(_){} setStVid(null); };
-  const _vidSave = ()=>{ if(!stVid || !stVid.url) return; try{ window.posthog && window.posthog.capture('export_done',{kind:'video', how:'save'}); }catch(_){} const a=document.createElement('a'); a.href=stVid.url; a.download=_vidName(String(stVid.type).includes('mp4') ? 'mp4' : 'webm'); document.body.appendChild(a); a.click(); a.remove(); };
+  // Save the video: a phone hands just the video to the system sheet (→ Save Video puts it in Photos) — as Save does for the pictures;
+  // a download does nothing in the iOS and Android apps and lands in Files in Safari. A computer (mouse) downloads it.
+  const _vidSave = async ()=>{ if(!stVid || !stVid.url) return; try{ window.posthog && window.posthog.capture('export_done',{kind:'video', how:'save'}); }catch(_){}
+    const nm=_vidName(String(stVid.type).includes('mp4') ? 'mp4' : 'webm');
+    const fine = typeof window!=='undefined' && window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+    if((!fine || _pfIosApp()) && stVid.blob && navigator.share){ try{ const f=new File([stVid.blob], nm, {type:stVid.type}); if(!navigator.canShare || navigator.canShare({files:[f]})){ await navigator.share({files:[f]}); try{ await unlockAudio(); }catch(_){} return; } }catch(e){ try{ await unlockAudio(); }catch(_){} if(e && e.name==='AbortError') return; } }
+    const a=document.createElement('a'); a.href=stVid.url; a.download=nm; document.body.appendChild(a); a.click(); a.remove(); };
   const _vidShare = async ()=>{
     if(!stVid || !stVid.blob) return;
     const f=new File([stVid.blob], _vidName(String(stVid.type).includes('mp4') ? 'mp4' : 'webm'), {type:stVid.type});
