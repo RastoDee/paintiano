@@ -30602,7 +30602,7 @@ const TOUR_REEL_LANGS = ['EN','SK','DE','FR','ES','PT','zh','zhTW','ja'];
 const TOUR_VIDEOS = {
   // the short one is recorded once per language (the app on screen speaks the viewer's language); where the app shows its own hint, no caption ('none')
   reel:{src:(lang)=>'/tour/reel_'+(TOUR_REEL_LANGS.indexOf(lang)>=0 ? lang : 'EN')+'.mp4', fs:true, d:'r', cues:[[0,'hook',1],[3.6,'none',1],[11.9,'song',1],[13.6,'art',1],[19.07,'col',1],[23.57,'none',1],[26.57,'photo',1],[29.47,'share',1]]},
-  full:{src:'/tour/full.mp4', fs:false, d:'f', cues:[[0,'intro',1],[2.6,'song',0],[9.1,'look',1],[13.8,'tap',0],[16.6,'pal',0],[22.1,'fusion',1],[25.7,'pin',0],[28.9,'guests',0],[33.6,'variant',0],[39.1,'painter',1],[49.3,'fav',1],[54.9,'image',1],[68.7,'composer',0],[82.6,'home',1],[87.9,'foryou',0],[94.0,'studio2',0]]},
+  full:{src:(lang)=>'/tour/full_'+(TOUR_REEL_LANGS.indexOf(lang)>=0 ? lang : 'EN')+'.mp4', fs:true, burn:true, d:'f', cues:[[0,'intro',1],[6.9,'song',1],[15.85,'look',0],[20.2,'painter',1],[32.65,'tap',0],[37.4,'pal',1],[45.2,'fusion',1],[54.4,'pin',0],[58.45,'guests',0],[64.35,'variant',1],[70.2,'fav',0],[73.4,'home',1],[77.0,'foryou',0],[84.45,'studio2',0],[87.45,'image',1],[93.8,'composer',0],[105.95,'home',1]]},   // burn: the words are part of the video (one recording per language), the player adds none
 };
 const TOUR_POSTER = '/tour/poster.webp';
 // *word* = the word in the gold-pink gradient; \n = a new line
@@ -30645,6 +30645,8 @@ const TOUR_CSS = `
 .pf-tour-vw .pf-tour-v{height:100%;width:auto;max-width:86%;aspect-ratio:9/16;object-fit:cover;border-radius:22px;background:#07060c;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(240,199,94,.25)}
 .pf-tour-vw.fs{inset:0}
 .pf-tour-vw.fs .pf-tour-v{width:100%;height:100%;max-width:none;aspect-ratio:auto;border-radius:0;box-shadow:none}
+.pf-tour-vw.fs.burn{inset:auto;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 76px);bottom:calc(env(safe-area-inset-bottom,0px) + 62px);align-items:center}
+.pf-tour-vw.fs.burn .pf-tour-v{width:auto;height:100%;max-width:100%;aspect-ratio:9/16;object-fit:contain;border-radius:18px}
 .pf-tour-shade{position:absolute;left:0;right:0;top:0;height:150px;background:linear-gradient(180deg,rgba(7,6,12,.72),rgba(7,6,12,0));pointer-events:none}
 .pf-tour-bars{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:12px;display:flex;gap:4px;z-index:4}
 .pf-tour-bars span{flex:1;height:3px;border-radius:2px;background:rgba(242,238,232,.25);overflow:hidden}
@@ -30743,15 +30745,15 @@ const TourPlayer = memo(function TourPlayer({kind, lang, onClose, onPlay, onFull
       <style>{TOUR_CSS}</style>
       <div className="pf-tour-in" onPointerDown={pDown} onPointerUp={pUp} onPointerCancel={pCancel} onPointerLeave={pCancel}>
         {!V.fs && (<div className="pf-tour-glow" aria-hidden="true"/>)}
-        <div className={'pf-tour-vw'+(V.fs ? ' fs' : '')}><video ref={vRef} className="pf-tour-v" src={typeof V.src==='function' ? V.src(lang) : V.src} poster={TOUR_POSTER} playsInline preload="auto" onEnded={()=>setEnded(true)} onError={()=>setErr(true)}/></div>
-        {V.fs && (<div className="pf-tour-shade" aria-hidden="true"/>)}
+        <div className={'pf-tour-vw'+(V.fs ? ' fs' : '')+(V.burn ? ' burn' : '')}><video ref={vRef} className="pf-tour-v" src={typeof V.src==='function' ? V.src(lang) : V.src} poster={TOUR_POSTER} playsInline preload="auto" onEnded={()=>setEnded(true)} onError={()=>setErr(true)}/></div>
+        {V.fs && !V.burn && (<div className="pf-tour-shade" aria-hidden="true"/>)}
         <div className="pf-tour-bars" aria-hidden="true">{chs.map((ci,j)=> (j===ch && !ended) ? (<span key={j}><i ref={fillRef}/></span>) : (<span key={j} className={(j<ch || ended) ? 'd' : ''}/>))}</div>
         <div className="pf-tour-hd" onPointerDown={stop} onPointerUp={stop}>
           <div className="tt"><em>Paintiano</em>{kind==='full' ? W.ui('full') : W.ui('ring')}</div>
           <div><button type="button" className="pf-tour-bt" onClick={mute} aria-label={muted ? 'sound' : 'mute'}>{muted ? ico(<><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M23 9l-6 6M17 9l6 6"/></>) : ico(<><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></>)}</button>
             <button type="button" className="pf-tour-bt" onClick={(e)=>{ e.stopPropagation(); onClose(); }} aria-label="close">{ico(<path d="M6 6l12 12M18 6L6 18"/>, 15)}</button></div>
         </div>
-        {!ended && !err && c && (<div key={cue} className="pf-tour-cap" aria-live="polite">{Array.isArray(c)
+        {!ended && !err && !V.burn && c && (<div key={cue} className="pf-tour-cap" aria-live="polite">{Array.isArray(c)
           ? (<><div className="l">{tourRich(c[0])}</div>{c[1] && (<div className="s">{c[1]}</div>)}</>)
           : String(c).split('\n').map((x,i)=>(<div key={i} className="l">{tourRich(x)}</div>))}</div>)}
         {err && !ended && (<div className="pf-tour-err">{W.ui('err')}</div>)}
