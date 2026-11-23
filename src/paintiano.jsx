@@ -24923,6 +24923,22 @@ const BUILTIN_PIECES = [
   {key:"fifth", name:SAMPLE_MIDI_NAME_FIFTH, b64:SAMPLE_MIDI_B64_FIFTH},
 ];
 const BUILTIN_NAMES = BUILTIN_PIECES.map(p=>p.name);
+// A file's name read as the built-in pieces are named: "Title — Composer" (Nov 2026; before: "InterstellarSuite__Hans_Zimmer" stood
+// under the painting and on the first screen's card as it was, one long word running off both edges). The two halves are told apart
+// by a name the app knows (Zimmer, Chopin…), then by which half reads as a person's name, then by how such files are usually named:
+// "Title__Composer" and "Title by Composer", but "Artist - Title". A name with one half only is just tidied (no extension, no
+// underscores, CamelCase apart). A name that already has " — " is left as it is.
+const PF_KNOWN_BY = /(^|[^a-zÀ-ɏ])(bach|beethoven|mozart|chopin|debussy|satie|liszt|schubert|schumann|brahms|tchaikovsky|rachmaninov|rachmaninoff|vivaldi|h[aä]ndel|haydn|grieg|dvo[rř][aá]k|smetana|ravel|mahler|wagner|verdi|puccini|rossini|strauss|mendelssohn|paganini|prokofiev|shostakovich|stravinsky|scriabin|mussorgsky|rimsky|korsakov|sibelius|elgar|holst|pachelbel|albinoni|scarlatti|gershwin|joplin|philip glass|einaudi|yiruma|tiersen|zimmer|john williams|morricone|hisaishi|max richter|nyman|arnalds|nils frahm|arvo p[aä]rt|piazzolla|bart[oó]k|jan[aá][cč]ek|sucho[nň]|cikker|saint[- ]sa[eë]ns|faur[eé]|bizet|offenbach|berlioz|telemann|purcell|khachaturian|copland|bernstein|howard shore|james horner|desplat|elfman|silvestri|vangelis|ludovico|yann)([^a-zÀ-ɏ]|$)/i;
+function pfSongTitle(raw){ let s=String(raw==null ? '' : raw).trim(); if(!s || s.indexOf(' — ')>=0) return s;
+  s=s.replace(/\.(mp3|m4a|aac|wav|ogg|oga|flac|midi?|kar|musicxml|mxl|xml|pdf|aiff?|wma|opus|webm|mp4|mov)$/i,'').replace(/^\d{1,3}\s*[.\-_]+\s*(?=\D)/,'');   // and no track number in front
+  const tidy=(x)=> String(x||'').replace(/_+/g,' ').replace(/([a-zß-ɏ])([A-ZÀ-Þ])/g,'$1 $2').replace(/\s*[\(\[](official|lyrics?|audio|video|hd|hq|remaster(ed)?|full|live)[^\)\]]*[\)\]]/ig,'').replace(/^\d{1,3}\s*[.\-_]\s*(?=\D)/,'').replace(/\s{2,}/g,' ').trim();
+  let q=null, way='';
+  [['u', /\s*_{2,}\s*/], ['u', /_+[-–—]+_+/], ['b', /\s+by\s+|_+by_+/i], ['d', /\s+[-–—]+\s+/]].some(([w,re])=>{ const x=s.split(re).map(y=>y.trim()).filter(Boolean); if(x.length===2){ q=x; way=w; return true; } return false; });
+  if(!q) return tidy(s);
+  const a=tidy(q[0]), b=tidy(q[1]); if(!a || !b) return tidy(s);
+  const kn=(x)=>PF_KNOWN_BY.test(x), nm=(x)=>{ const w=x.split(' '); return w.length<=3 && !/\d/.test(x) && w.every(y=>/^[A-ZÀ-Þ]/.test(y) || /^(van|von|de|da|di|le|la)$/i.test(y)); };
+  let by = kn(b)&&!kn(a) ? 1 : kn(a)&&!kn(b) ? 0 : way==='b' ? 1 : (nm(b)&&!nm(a)) ? 1 : (nm(a)&&!nm(b)) ? 0 : way==='d' ? 0 : 1;
+  return by ? (a+' — '+b) : (b+' — '+a); }
 const BUILTIN_KEYS = BUILTIN_PIECES.map(p=>p.key);
 // links made before a piece changed its key still open the piece that took its place
 const BUILTIN_KEY_ALIAS = {metamorphosis:"mountainking"};
@@ -32259,7 +32275,7 @@ const STUDIO_HOME_CSS = `
 .pf-lh-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 22px;pointer-events:none;z-index:3;animation:pfLhCard 3.8s ease both;background:radial-gradient(ellipse 70% 38% at 50% 50%,rgba(6,6,12,.62),rgba(6,6,12,.35) 55%,rgba(6,6,12,0) 100%)}   /* a dark veil under the words: readable on a white painting too */
 @keyframes pfLhCard{0%{opacity:0;transform:scale(1.06)}10%{opacity:1;transform:scale(1.03)}80%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-40px) scale(.98)}}
 .pf-lh-card small{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.85);text-shadow:0 2px 12px rgba(0,0,0,.9)}
-.pf-lh-card b{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:46px;line-height:1.02;color:#fff;margin:8px 0;text-shadow:0 4px 30px rgba(0,0,0,.95)}
+.pf-lh-card b{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:46px;line-height:1.02;color:#fff;margin:8px 0;max-width:100%;overflow-wrap:anywhere;text-shadow:0 4px 30px rgba(0,0,0,.95)}
 .pf-lh-card i{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;color:#f0c75e;text-shadow:0 2px 16px rgba(0,0,0,.95)}
 .pf-lh-foot{position:absolute;left:0;right:0;bottom:calc(90px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:10px;z-index:4;pointer-events:none}   /* the words under the painting stack: the pill above the line, never over it */
 .pf-lh-line{text-align:center;pointer-events:none;animation:pfLhFade .5s ease both;background:rgba(6,6,12,.55);padding:6px 14px 7px;border-radius:14px;max-width:88%}
@@ -39671,7 +39687,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const{raw,div,temps,skipped}=parseMidi(evt.target.result);
         const evts=toChords(raw,div,temps);
         if(!evts.length){setErr(t('errs').noNotesMidi);setErrInfo(false);return;}
-        const mName=file.name.replace(/\.midi?$/i,'').replace(/[_-]/g,' ');
+        const mName=pfSongTitle(file.name);   // read as the built-in pieces are named (Title — Composer)
         sigMusicNextRef.current=true; applyEvents(evts,mName);
         setCompositionName(mName);
         // Persist the original MIDI bytes so the ♫ MY MUSIC chip can put
@@ -39806,7 +39822,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(_fromMic){ const _mp=(_fromMic && _fromMic.port) ? 1 : 0; evts.forEach(e=>{ e._mic=1; e._micP=_mp; }); }   // a song from the Mic keeps its take's frame, landscape or portrait (computeGrid reads _micP — live, resized, as a favorite)
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesAudio);setErrInfo(false);return;}
-      const aName=file.name.replace(/\.[^.]+$/,'');
+      const aName=pfSongTitle(file.name);
       setCompositionName(aName);
       { const ec=_evCopy(evts); audioEvRef.current = ec ? {b:blob, e:ec} : null;   // the notes as read (before applyEvents touches them): kept with a save to My Music
         const mid=_loadedFromMyMusicRef.current; if(_fromMyMusic && !_kept && ec && mid) myMusicPatch(mid, {ev:{v:AUDIO_EV_VER, e:ec}}); }   // one of yours read for the first time: next time at once
@@ -40624,7 +40640,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const evts=parseMusicXml(xmlText);
       if(loadTokenRef.current!==myToken)return;
       if(!evts.length){setErr(t('errs').noNotesXml);setErrInfo(false);return;}
-      const sName=file.name.replace(/\.[^.]+$/,'');
+      const sName=pfSongTitle(file.name);
       setScoreName(sName);
       setCompositionName(sName);
       sigMusicNextRef.current=true; applyEvents(evts,sName);
@@ -46947,7 +46963,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return ()=>{ c=true; }; },[studioHome, myMusicSlots, myImgSlots]);
   const _feedMine = (kind, piece)=> typeof piece==='string' ? ((kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).find(x=>'m'+x.id===piece) || null) : null;
   const feedOwnTtlRef = useRef('');   // the title of your own painting, brought along to For You
-  const _feedTitle = (c)=> c ? (c.piece==='own' ? feedOwnTtlRef.current : typeof c.piece==='string' ? ((_feedMine(c.kind, c.piece)||{}).n || '') : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
+  const _feedTitle = (c)=> c ? (c.piece==='own' ? feedOwnTtlRef.current : typeof c.piece==='string' ? (c.kind==='img' ? ((_feedMine(c.kind, c.piece)||{}).n || '') : pfSongTitle((_feedMine(c.kind, c.piece)||{}).n || '')) : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
   const feedImgElRef = useRef({u:null, el:null});   // the picture under a feed picture's scan, for the card
   // the painting on the canvas, small, for a card that is left
   const feedDrawRef = useRef(()=>{});   // the interval draws with today's picture, not the one it started with
@@ -47421,7 +47437,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(r.kind!=='midi'){ const cs=r.ev.e.map((c,i)=>({...c,idx:i})); C[idx]=cs; return cs; }
       return r.blob.arrayBuffer().then(ab=>{ const {raw,div,temps}=parseMidi(ab); const cs=toChords(raw,div,temps).map((c,i)=>({...c,idx:i})); C[idx]=cs; return cs; }); }
     const ab=b64ToArrayBuffer(BUILTIN_PIECES[idx].b64); const {raw,div,temps}=parseMidi(ab); const ev=toChords(raw,div,temps); const cs=ev.map((c,i)=>({...c,idx:i})); C[idx]=cs; return cs; };
-  const _liveName = (idx)=>{ if(typeof idx==='string'){ const r=liveMineRef.current.find(x=>'m'+x.id===idx); return String((r && r.name)||'').replace(/\.[a-z0-9]+$/i,''); } return String(BUILTIN_NAMES[idx]||''); };
+  const _liveName = (idx)=>{ if(typeof idx==='string'){ const r=liveMineRef.current.find(x=>'m'+x.id===idx); return pfSongTitle(String((r && r.name)||'')); } return String(BUILTIN_NAMES[idx]||''); };
   const livePrevRef = useRef(null);
   useEffect(()=>{
     if(!liveHomeOn){ liveHomeRef.current=null; return; }
