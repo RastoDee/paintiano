@@ -1679,10 +1679,11 @@ function pfSongTitle(raw){ let s=String(raw==null ? '' : raw).trim(); if(!s || s
   const tidy=(x)=> String(x||'').replace(/_+/g,' ').replace(/([a-zß-ɏ])([A-ZÀ-Þ])/g,'$1 $2').replace(/\s*[\(\[](official|lyrics?|audio|video|hd|hq|remaster(ed)?|full|live)[^\)\]]*[\)\]]/ig,'').replace(/^\d{1,3}\s*[.\-_]\s*(?=\D)/,'').replace(/\s{2,}/g,' ').trim();
   let q=null, way='';
   [['u', /\s*_{2,}\s*/], ['u', /_+[-–—]+_+/], ['b', /\s+by\s+|_+by_+/i], ['d', /\s+[-–—]+\s+/]].some(([w,re])=>{ const x=s.split(re).map(y=>y.trim()).filter(Boolean); if(x.length===2){ q=x; way=w; return true; } return false; });
+  if(!q){ const m=s.match(/^(.+?)\s*[\(\[][^A-Za-z0-9\u00c0-\u024f]*[\)\]]\s*(.+)$/); if(m){ q=[m[1].trim(), m[2].trim()]; way='p'; } }   // "alt-J (\u2206) Breezeblocks": a bracket with no letter in it stands between the artist and the title
   if(!q) return tidy(s);
   const a=tidy(q[0]), b=tidy(q[1]); if(!a || !b) return tidy(s);
   const kn=(x)=>PF_KNOWN_BY.test(x), nm=(x)=>{ const w=x.split(' '); return w.length<=3 && !/\d/.test(x) && w.every(y=>/^[A-ZÀ-Þ]/.test(y) || /^(van|von|de|da|di|le|la)$/i.test(y)); };
-  let by = kn(b)&&!kn(a) ? 1 : kn(a)&&!kn(b) ? 0 : way==='b' ? 1 : (nm(b)&&!nm(a)) ? 1 : (nm(a)&&!nm(b)) ? 0 : way==='d' ? 0 : 1;
+  let by = kn(b)&&!kn(a) ? 1 : kn(a)&&!kn(b) ? 0 : way==='b' ? 1 : way==='p' ? 0 : (nm(b)&&!nm(a)) ? 1 : (nm(a)&&!nm(b)) ? 0 : way==='d' ? 0 : 1;
   return by ? (a+' — '+b) : (b+' — '+a); }
 const BUILTIN_KEYS = BUILTIN_PIECES.map(p=>p.key);
 // links made before a piece changed its key still open the piece that took its place
