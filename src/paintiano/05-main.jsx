@@ -8017,7 +8017,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     setMyMusicSaveName(_stem || _autoName);
     setMyMusicSaveTargetSlot(null);
     setMyMusicCapHit(false);
-    myMusicList().then(l=>{ setMyMusicSlots(l); if(_slotsUsed(l)>=_slotCap){ setMyMusicCapHit(true); setMyMusicSaveTargetSlot(null); } else { const e=l.find(r=>r.empty); setMyMusicSaveTargetSlot(e ? e.id : null); } }).catch(()=>{ myMusicFirstEmpty().then(slot=>setMyMusicSaveTargetSlot(slot)); });   // the sheet shows which places are taken; Free keeps one
+    myMusicList().then(l=>{ setMyMusicSlots(l); if(_slotsUsed(l)>=_slotCap){ setMyMusicCapHit(proStatus==='free'); setMyMusicSaveTargetSlot(null); }   /* Pro with all five taken is not sent to Pro: it is told the archive is full */ else { const e=l.find(r=>r.empty); setMyMusicSaveTargetSlot(e ? e.id : null); } }).catch(()=>{ myMusicFirstEmpty().then(slot=>setMyMusicSaveTargetSlot(slot)); });   // the sheet shows which places are taken; Free keeps one
     setShowMyMusicSaveModal(true);
   };
 
