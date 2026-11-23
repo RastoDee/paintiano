@@ -38523,6 +38523,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [feedUpCue, setFeedUpCue] = useState(false);
   const [feedSideDone, setFeedSideDone] = useState(()=>{ try{ return localStorage.getItem('paintiano_swiped_side')==='1'; }catch(_){ return false; } });   // ←→ a variant: known once swiped
   const [feedSidePeek, setFeedSidePeek] = useState(0); const feedSideNRef = useRef(0);
+  const fdQuietRef = useRef(false), fdNudgeRef = useRef(null), fdNudgeGoRef = useRef(null), fdMetaNowRef = useRef(null);   // the side nudge shows the real next variant (see _fdNudgeX)
   const _sideDone = ()=>{ feedSideNRef.current=9; setFeedSidePeek(0); if(!feedSideDone){ setFeedSideDone(true); try{ localStorage.setItem('paintiano_swiped_side','1'); }catch(_){} } };
   const [feedPosterGo, setFeedPosterGo] = useState(null); const [feedPosterCut, setFeedPosterCut] = useState(null);   // Cut: the picture goes at once (the look changed under it)
   const [feedPeek, setFeedPeek] = useState(0);   // the surprise lifts a little and the next one shows under it (until the first swipe up)
@@ -46751,7 +46752,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _metaWatchOff = ()=>{ const W=metaWatchRef.current; if(W.id){ clearInterval(W.id); W.id=0; } };
   const _metaWatch = (touchRef)=>{ _metaWatchOff(); const W=metaWatchRef.current; W.t0=Date.now();
     W.id=setInterval(()=>{ const t=touchRef.current, S=feedSprRef.current, old=Date.now()-W.t0>4000;
-      if(t && t.fd && !old) return; if(S && S.id && !old) return;
+      if(t && t.fd && !old) return; if(S && S.id && !old) return; if(fdNudgeRef.current && !old) return;   // the nudge is a drag too
       if(S && S.id){ try{ _fdFinish(); }catch(_){} }
       if(touchRef===_swipeStartRef && !(t && t.fd)) _sdOrphan();
       _metaWatchOff(); metaKeepRef.current=false; setFdMeta(null); }, 700); };
@@ -47143,7 +47144,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   //          going back undoes it (↓, or the variant back) — and the same look waits for the next ↑
   //  'known' the card you go to is a picture already (one seen before, the home card, a picture's own image): it is put on when it lands
   //  'rub'   nothing that way: the card only gives
-  feedNavRef.current = { up:()=>_feedUp(null, true), back:()=>_feedBack(true), vn:()=>{ try{ return !!_variantNext(); }catch(_){ return false; } }, vb:()=>{ try{ return !!_variantBack(); }catch(_){ return false; } },
+  feedNavRef.current = { up:()=>_feedUp(null, true), back:()=>_feedBack(true), vn:()=>{ try{ return !!(fdQuietRef.current ? _variantNextRaw() : _variantNext()); }catch(_){ return false; } }, vb:()=>{ try{ return !!_variantBack(); }catch(_){ return false; } },
     flash:()=>_feedFlashNow(), buzz:(ms)=>_stBuzz(ms), draw:()=>{ try{ feedDrawRef.current(); }catch(_){} },
     hold:(m)=>{ metaKeepRef.current=true; setFdMeta(m || null); _metaWatch(feedTouchRef); setFeedFlash(0); },   // the lines stay, the last name over the card goes (it would turn into the new one mid-drag)
     free:()=>{ _metaWatchOff(); metaKeepRef.current=false; setFdMeta(null); } };
@@ -47164,7 +47165,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // fn: the step when its time comes · fin: all of it at once (a finger comes back before) — a newer step replaces an older one
   const _fdFrame = (fn, fin)=>{ const P=feedFdCleanRef.current; if(P){ clearTimeout(P.tm); cancelAnimationFrame(P.raf); } const C={tm:0, raf:0, fin}; C.raf=requestAnimationFrame(()=>{ if(feedFdCleanRef.current===C) feedFdCleanRef.current=null; try{ fn(); }catch(_){} }); feedFdCleanRef.current=C; };
   const _fdLater = (ms, fn, fin)=>{ const P=feedFdCleanRef.current; if(P){ clearTimeout(P.tm); cancelAnimationFrame(P.raf); } const C={tm:0, raf:0, fin}; C.tm=setTimeout(()=>{ if(feedFdCleanRef.current===C) feedFdCleanRef.current=null; try{ fn(); }catch(_){} }, ms); feedFdCleanRef.current=C; };
-  const _fdClear = (fd)=>{ try{ _fdCopyFree(); fd.out.style.display='none'; fd.out.style.transform=''; fd.out.style.opacity=''; fd.out.style.transition=''; fd.out.innerHTML=''; delete fd.card.dataset.fdz; fd.card.style.transform=''; fd.card.style.animation=''; }catch(_){} };
+  const _fdClear = (fd)=>{ try{ _fdCopyFree(); fd.out.style.pointerEvents=''; fd.out.style.display='none'; fd.out.style.transform=''; fd.out.style.opacity=''; fd.out.style.transition=''; fd.out.innerHTML=''; delete fd.card.dataset.fdz; fd.card.style.transform=''; fd.card.style.animation=''; }catch(_){} };
   // the painting, very small: once it differs clearly from before the change, the new look is on the canvas (at most 0.9 s of waiting)
   const _fdSig = ()=>{ try{ const s=canvasRef.current; if(!s || !s.width || !s.height) return null; const c=feedSigCvRef.current || (feedSigCvRef.current=document.createElement('canvas')); c.width=12; c.height=20;
     const x=c.getContext('2d'); x.clearRect(0,0,12,20); x.drawImage(s,0,0,12,20); return x.getImageData(0,0,12,20).data; }catch(_){ return null; } };   // no willReadFrequently: the big canvas is not read back, only these 240 pixels
@@ -47174,7 +47175,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _fdWhenNew = (sig0, fn, fin)=>{ const t0=performance.now(); const poll=()=>{ if(_fdPainted() || _fdDiff(sig0, _fdSig())>12 || performance.now()-t0>900){ fdWaitRef.current=null; fn(); } else _fdFrame(poll, fin); }; _fdFrame(poll, fin); };   // every frame: it shows the moment it is there
   const _fdUngate = (fd, sig0)=>{ const f=()=>{ feedNavRef.current.draw(); delete fd.card.dataset.fdz; fd.ready=true; }; _fdWhenNew(sig0, f, f); };
   const _fdLock = (ax, dir, o)=>{
-    if(ax==='x'){ try{ _sideDone(); }catch(_){} }   // a finger that drags the card sideways knows the variant
+    if(ax==='x' && !fdQuietRef.current){ try{ _sideDone(); }catch(_){} }   // a finger that drags the card sideways knows the variant
     const card=feedCardRef.current, out=feedOutRef.current; if(!card || !out || feedFly) return null;
     const r=card.getBoundingClientRect(), L=Math.round(ax==='y' ? r.height : r.width); if(!L) return null;
     const fd={ax, dir, L, card, out, mode:'rub', d:0};
@@ -47216,6 +47217,24 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const fin=()=>{ N.draw(); _fdClear(fd); if(fd.mode==='pre') metaKeepRef.current=false; };
       _fdWhenNew(sig0, ()=>{ N.draw(); delete fd.card.dataset.fdz; if(fd.mode==='pre') metaKeepRef.current=false; fd.out.style.transition='opacity .18s ease'; fd.out.style.opacity='0'; _fdLater(200, ()=>_fdClear(fd), fin); }, fin);
     }, hold); };
+  // The side nudge shows what ← really brings (Nov 2026; before: a stock picture of some other painter slid in at the edge, and ← then
+  // gave the next variant of the painter on screen). It is the finger's own drag, done by the app: the next variant is painted on the card
+  // under a copy of the painting, the copy slides a little to the left and back, and the variant is taken back again. → keeps it as the way
+  // forward, so the ← that follows brings exactly the one that was shown. No finger: nothing counts as a swipe (no step, no "side known").
+  const _fdNudgeX = ()=>{ if(fdNudgeRef.current || feedTouchRef.current || feedFly || feedSprRef.current.id || viewMode==='image') return false;
+    let fd=null; fdQuietRef.current=true; try{ fd=_fdLock('x', 1, {img:false, meta:fdMetaNowRef.current}); }catch(_){ fd=null; } fdQuietRef.current=false;
+    if(!fd) return false; if(fd.mode!=='pre'){ _fdClear(fd); return false; }   // no other variant to show: no nudge
+    const pk=Math.min(window.innerWidth*0.14, 64), N={fd, raf:0, t0:0, tw:performance.now(), done:false};
+    fd.out.style.pointerEvents='auto';   // the copy lies over the card meanwhile: a finger on it is a finger on the card (its touches go to the card's own handlers)
+    const e3=(x)=>1-Math.pow(1-x,3), eio=(x)=> x<.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2;
+    N.end=()=>{ if(N.done) return; N.done=true; cancelAnimationFrame(N.raf); fdNudgeRef.current=null; fd.out.style.pointerEvents=''; try{ _fdSet(fd, 0); _fdEnd(fd, 0, true); }catch(_){ _fdClear(fd); } };
+    N.take=()=>{ if(N.done) return; N.done=true; cancelAnimationFrame(N.raf); fdNudgeRef.current=null; fd.out.style.pointerEvents=''; };   // the finger goes on with it
+    const tick=()=>{ if(N.done) return; const now=performance.now();
+      if(!N.t0){ if(fd.ready || now-N.tw>1100) N.t0=now; N.raf=requestAnimationFrame(tick); return; }   // it lifts once the variant is on the card
+      const t=now-N.t0; if(t>=1900){ N.end(); return; }
+      _fdSet(fd, -pk*(t<570 ? e3(t/570) : t<1060 ? 1 : 1-eio((t-1060)/840))); N.raf=requestAnimationFrame(tick); };
+    fdNudgeRef.current=N; N.raf=requestAnimationFrame(tick); return true; };
+  fdNudgeGoRef.current=_fdNudgeX;
   // ⤢ on a playing card: full screen — it plays on, and from now on it is your painting
   // ↓ on a surprise: keep it — it slides down into the Studio as your painting (still painting / playing); nothing loaded yet: the card just gives
   const _feedTake = ()=>{
@@ -47337,7 +47356,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{ if(!feedPeek) return; const tm=setTimeout(()=>{ setFeedPeek(0); feedPeekNRef.current.k=(feedPeekNRef.current.k|0)+1; }, 2000); return ()=>clearTimeout(tm); },[feedPeek]);   // the next painting is chosen once the card is down again: it loads hidden, so nothing swaps mid-lift
   useEffect(()=>{ if(feedUpDone && feedPeek) setFeedPeek(0); },[feedUpDone]);
   // the side nudge: the first swipe up is known, this card has played 6 s — the card slides a little to the left and another painting shows at its right edge (twice at most, ever)
-  useEffect(()=>{ if(!feedUpDone || feedSideDone || !playing || feedAt<0 || feedIntro || feedSideNRef.current>=2) return; const tm=setTimeout(()=>{ feedSideNRef.current++; setFeedSidePeek(Date.now()); }, 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedSideDone, playing, feedAt, feedIntro]);
+  useEffect(()=>{ if(!feedUpDone || feedSideDone || !playing || feedAt<0 || feedIntro || feedSideNRef.current>=2) return; const tm=setTimeout(()=>{ let ok=false; try{ ok=!!(fdNudgeGoRef.current && fdNudgeGoRef.current()); }catch(_){} if(ok) feedSideNRef.current++; }, 4000); return ()=>clearTimeout(tm); },[feedUpDone, feedSideDone, playing, feedAt, feedIntro]);
   useEffect(()=>{ if(!feedSidePeek) return; const tm=setTimeout(()=>setFeedSidePeek(0), 2000); return ()=>clearTimeout(tm); },[feedSidePeek]);
   useEffect(()=>{ if(!playing || feedAt<0) return; const c=feedCards[feedAt]; if(c && c.pu && feedPosterGo!==c.id) setFeedPosterGo(c.id); },[playing, feedAt, feedCards]);
   // … and when its look changes while it stands still (a variant, a palette, a painter on a paused painting): the picture taken of it
@@ -48702,6 +48721,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         };
         const _fTitle = FC ? _feedTitle(FC) : '';
         const _fLine = FC ? (_fL ? _vidLine() : FC.l) : '';
+        fdMetaNowRef.current = FC ? {feed:1, t:_fTitle, l:_fLine} : null;   // the lines as they stand now: the nudge holds them while it shows the next variant
         // the look's name over the card, for a moment (Lite's flash): the Mosaic, a painter, ✦ Signature, a fusion
         const _fFlash = (()=>{ if(!FC || !_fL || !feedFlash || feedIntro) return null; const sv=(style!==null ? [style] : []).concat(painterStage).map(k=>STYLE_INSPIRED[k]||k);
           if(FC.kind==='img'){ const cs=[imgComposer].concat(composerStage||[]).filter(Boolean).map(k=>COMPOSER_INSPIRED[k]||k); if(imgSigActive) return {h:'✦ '+_sigT('label'), by:t('inspiredByTitle')||'inspired by', n:cs.length?cs:['Scan']}; if(!cs.length) return {h:'', by:'', n:['Scan']}; return {h:cs.length>1 ? _ensT('cr') : '', by:t('inspiredByTitle')||'inspired by', n:cs}; }
@@ -48734,6 +48754,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(st.e) return;   // the way out of the app (or the notifications): the card stays, nothing is dealt
           if(st.S){ const now=performance.now(); st.S.push([now, tt.clientX, tt.clientY]); while(st.S.length>2 && now-st.S[0][0]>100) st.S.shift(); }
           if(!st.ax && st.S && (Math.abs(dx)>10 || Math.abs(dy)>10)){ st.ax = Math.abs(dy)>=Math.abs(dx) ? 'y' : 'x';
+            { const NG=fdNudgeRef.current;   // a finger during the side nudge: to the left it takes the nudge's own drag over (the variant shown is the one it gets); any other way the nudge goes back first
+              if(NG){ if(st.ax==='x' && dx<0){ NG.take(); st.fd=NG.fd; st.x=tt.clientX-NG.fd.d; try{ _sideDone(); }catch(_){} _fdMove(st.fd, NG.fd.d); return; } NG.end(); st.e=true; return; } }
             if(FC && _fL && !st.b && !metaHoldRef.current.on){ const dir = st.ax==='y' ? (dy<0 ? 1 : -1) : (dx<0 ? 1 : -1), up = st.ax==='y' && dir>0, dn = st.ax==='y' && dir<0;
               st.fd = _fdLock(st.ax, dir, { img:FC.kind==='img', picU:originalImgUrl || null, meta:{feed:1, t:_fTitle, l:_fLine},
                 nextU: (up && feedAt<feedCards.length-1) ? ((feedCards[feedAt+1] && feedCards[feedAt+1].u) || null) : undefined,
@@ -48779,10 +48801,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             <img className="pf-sh-bg" src={(FC && ((_fL && feedBg) || FC.u)) || H.u} alt="" aria-hidden="true"/>
             <div className="pf-sh-vig" aria-hidden="true"/>
             <div className={'pf-sh-stage'+(_fHint ? ' hint' : '')}>
-              {FC && feedUpDone && !feedSideDone && !feedFly && (<div className={'pf-sh-nextx'+(feedSidePeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/gallery-'+['09-vasarely','03-kandinsky','07-afklint'][feedSideNRef.current%3]+'.webp'} alt=""/></div>)}
-              {FC && !feedUpDone && !feedFly && (<div className={'pf-sh-next'+(feedPeek>0 ? ' on' : '')} aria-hidden="true"><img src={'/gallery/peek-'+['stella','bauhaus','kandinsky','klee','mondrian','monet'][(feedPeekNRef.current.k|0)%6]+'.webp'} alt="" ref={(el)=>{ try{ if(el && el.decode && !el._dec){ el._dec=1; el.decode().catch(()=>{}); } }catch(_){} }}/><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>{_stT('supNext')}</span></div>)}
-              <div ref={feedOutRef} className="pf-sh-dragout" aria-hidden="true"/>
-              <div ref={feedCardRef} className={'pf-sh-card'+(feedBurst ? ' press' : '')+(feedBump ? ' bump'+feedBump : '')+((FC && feedPeek>0 && !feedFly) ? ' peek' : '')+((FC && feedSidePeek>0 && !feedFly && !feedPeek) ? ' peekx' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE} onTouchCancel={_fTC}>
+              {FC && !feedUpDone && !feedFly && (<div className={'pf-sh-next'+(feedPeek>0 ? ' on' : '')} aria-hidden="true"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6"/></svg>{_stT('supNext')}</span></div>)}
+              <div ref={feedOutRef} className="pf-sh-dragout" aria-hidden="true" onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE} onTouchCancel={_fTC}/>
+              <div ref={feedCardRef} className={'pf-sh-card'+(feedBurst ? ' press' : '')+(feedBump ? ' bump'+feedBump : '')+((FC && feedPeek>0 && !feedFly) ? ' peek' : '')} onTouchStart={_fTS} onTouchMove={_fTM} onTouchEnd={_fTE} onTouchCancel={_fTC}>
                 {_smp && !liveHomeOn && !FC && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}
                 {feedBurst && (<span key={feedBurst.k} className="pf-sh-burst" aria-hidden="true" style={{left:feedBurst.x, top:feedBurst.y}}>{Array.from({length:12},(_,i)=>{ const a=i/12*Math.PI*2, d=46+((i*37)%5)*9; return (<i key={i} style={{'--dx':Math.round(Math.cos(a)*d)+'px','--dy':Math.round(Math.sin(a)*d)+'px', animationDelay:((i%3)*25)+'ms'}}/>); })}</span>)}
                 {!!FC && _fTapCue && !feedFly && !feedMuteFl && (<span className="pf-sh-mute" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H3v6h3l5 4z" fill="currentColor"/><path d="M22 9l-6 6M16 9l6 6"/></svg></span>)}
