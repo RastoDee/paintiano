@@ -1668,6 +1668,22 @@ const BUILTIN_PIECES = [
   {key:"fifth", name:SAMPLE_MIDI_NAME_FIFTH, b64:SAMPLE_MIDI_B64_FIFTH},
 ];
 const BUILTIN_NAMES = BUILTIN_PIECES.map(p=>p.name);
+// A file's name read as the built-in pieces are named: "Title — Composer" (Nov 2026; before: "InterstellarSuite__Hans_Zimmer" stood
+// under the painting and on the first screen's card as it was, one long word running off both edges). The two halves are told apart
+// by a name the app knows (Zimmer, Chopin…), then by which half reads as a person's name, then by how such files are usually named:
+// "Title__Composer" and "Title by Composer", but "Artist - Title". A name with one half only is just tidied (no extension, no
+// underscores, CamelCase apart). A name that already has " — " is left as it is.
+const PF_KNOWN_BY = /(^|[^a-zÀ-ɏ])(bach|beethoven|mozart|chopin|debussy|satie|liszt|schubert|schumann|brahms|tchaikovsky|rachmaninov|rachmaninoff|vivaldi|h[aä]ndel|haydn|grieg|dvo[rř][aá]k|smetana|ravel|mahler|wagner|verdi|puccini|rossini|strauss|mendelssohn|paganini|prokofiev|shostakovich|stravinsky|scriabin|mussorgsky|rimsky|korsakov|sibelius|elgar|holst|pachelbel|albinoni|scarlatti|gershwin|joplin|philip glass|einaudi|yiruma|tiersen|zimmer|john williams|morricone|hisaishi|max richter|nyman|arnalds|nils frahm|arvo p[aä]rt|piazzolla|bart[oó]k|jan[aá][cč]ek|sucho[nň]|cikker|saint[- ]sa[eë]ns|faur[eé]|bizet|offenbach|berlioz|telemann|purcell|khachaturian|copland|bernstein|howard shore|james horner|desplat|elfman|silvestri|vangelis|ludovico|yann)([^a-zÀ-ɏ]|$)/i;
+function pfSongTitle(raw){ let s=String(raw==null ? '' : raw).trim(); if(!s || s.indexOf(' — ')>=0) return s;
+  s=s.replace(/\.(mp3|m4a|aac|wav|ogg|oga|flac|midi?|kar|musicxml|mxl|xml|pdf|aiff?|wma|opus|webm|mp4|mov)$/i,'').replace(/^\d{1,3}\s*[.\-_]+\s*(?=\D)/,'');   // and no track number in front
+  const tidy=(x)=> String(x||'').replace(/_+/g,' ').replace(/([a-zß-ɏ])([A-ZÀ-Þ])/g,'$1 $2').replace(/\s*[\(\[](official|lyrics?|audio|video|hd|hq|remaster(ed)?|full|live)[^\)\]]*[\)\]]/ig,'').replace(/^\d{1,3}\s*[.\-_]\s*(?=\D)/,'').replace(/\s{2,}/g,' ').trim();
+  let q=null, way='';
+  [['u', /\s*_{2,}\s*/], ['u', /_+[-–—]+_+/], ['b', /\s+by\s+|_+by_+/i], ['d', /\s+[-–—]+\s+/]].some(([w,re])=>{ const x=s.split(re).map(y=>y.trim()).filter(Boolean); if(x.length===2){ q=x; way=w; return true; } return false; });
+  if(!q) return tidy(s);
+  const a=tidy(q[0]), b=tidy(q[1]); if(!a || !b) return tidy(s);
+  const kn=(x)=>PF_KNOWN_BY.test(x), nm=(x)=>{ const w=x.split(' '); return w.length<=3 && !/\d/.test(x) && w.every(y=>/^[A-ZÀ-Þ]/.test(y) || /^(van|von|de|da|di|le|la)$/i.test(y)); };
+  let by = kn(b)&&!kn(a) ? 1 : kn(a)&&!kn(b) ? 0 : way==='b' ? 1 : (nm(b)&&!nm(a)) ? 1 : (nm(a)&&!nm(b)) ? 0 : way==='d' ? 0 : 1;
+  return by ? (a+' — '+b) : (b+' — '+a); }
 const BUILTIN_KEYS = BUILTIN_PIECES.map(p=>p.key);
 // links made before a piece changed its key still open the piece that took its place
 const BUILTIN_KEY_ALIAS = {metamorphosis:"mountainking"};
