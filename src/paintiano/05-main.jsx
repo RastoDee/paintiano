@@ -22068,46 +22068,22 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const _fsGo = (e)=>{ e.stopPropagation(); e.preventDefault(); _flipFusionStyle(_fsK);
           if(!String(_swipeFlashKey).startsWith('hold-')) _setSwipeFlashKey('hold-'+Date.now()+'~0~s');
           _holdKeep(); if(controlsIdleRef.current){ clearTimeout(controlsIdleRef.current); controlsIdleRef.current=null; } setControlsAwake(false); };
-        // Press and hold on a fusion / jam: the whole story on a small frosted plate — who gives what, the style, and (✦ only) why this one.
-        // (The automatic flash after a change stays the short one below.)
-        if(_ensF && /^(hold|out)-/.test(String(_swipeFlashKey))){
-          const _H=_ensT('hr')||{}; let _rows=[], _st=null;
+        // Press and hold on a fusion / jam: the same flash, told in full — under every name what he gives, under the style what it means,
+        // and (✦ only) why this one. The automatic flash after a change stays the short one.
+        const _hold=!!_ensF && /^(hold|out)-/.test(String(_swipeFlashKey));
+        const _H=_ensT('hr')||{}; let _rows=[], _st=null;
+        if(_hold){
           try{
             if(_isImgFlash){ const ks=[imgComposer,...composerStage].filter(Boolean), J=globalThis.__COMP_JAM_STYLE, ok=!!(J && J.sig===ks.join()), R=ok ? J.roles : null; _st=ok ? _fsNorm(J.style) : _fsV;
               _rows=ks.map(k=>{ const r=[]; if(R && _st!=='A'){ if(R.melody===k || R.melody2===k || (R.hands && R.hands.includes(k))) r.push('mel'); if(R.harmony===k) r.push('har'); if(R.touch===k || R.ground===k) r.push('acc'); if(R.pulse===k) r.push('pul'); } return {n:_COMP_SHORT[k]||k, r}; }); }
             else { const fa=_fusionAddr(_jamStage(), paintPhase|0); if(fa){ _st=_fsNorm(fa.fs); const R=(_st!=='A' && typeof _fuRolesOf==='function') ? _fuRolesOf(fa.phs, fa.keys) : null;
               _rows=fa.keys.map((k,i)=>{ const r=[]; if(R){ if(R.hand===i) r.push('hand'); if(R.ground===i) r.push('bg'); if(R.layout===i) r.push('lay'); if(!r.length) r.push('shp'); } return {n:_painterLabel(k), r}; }); } }
           }catch(_){}
-          if(!_rows.length) _rows=_ensF.map(n=>({n, r:[]}));
-          const _anyR=_rows.some(o=>o.r.length), _sepP=_isImgFlash ? '↔' : '×';
-          const _sub=_st==='E' ? _ensT('fsNewSub') : _st==='G' ? _ensT('fsGenSub') : _st ? _ensT('fsTurnsSub') : '';
-          const _sans="'Outfit','Helvetica Neue',Arial,sans-serif", _gold='#ecd9a4';
-          return (
-          <div ref={flashBoxRef} style={{position:'fixed',top:'50%',left:'50%',width:0,height:0,zIndex:10001,transformOrigin:'0 0',pointerEvents:'none'}}>
-          <div key={String(_swipeFlashKey).startsWith('out-') ? 'plate-out' : 'plate'} data-plate="1" style={{position:'absolute',top:0,left:0,transform:'translate(-50%,-50%)',width:Math.round(296*Math.min(1.15,effScale))+'px',boxSizing:'border-box',padding:'15px 17px 14px',borderRadius:18,background:'rgba(18,14,24,.6)',WebkitBackdropFilter:'blur(16px) saturate(1.25)',backdropFilter:'blur(16px) saturate(1.25)',border:'1px solid rgba(240,222,180,.26)',boxShadow:'0 10px 34px rgba(0,0,0,.32)',color:'#f6efe0',fontFamily:_sans,fontSize:Math.round(13*Math.min(1.15,effScale))+'px',lineHeight:1.3,textAlign:'left',pointerEvents:'none',animation:(String(_swipeFlashKey).startsWith('out-') ? 'pfFlashOut .4s ease-in both' : 'pfFlashIn .25s ease-out both')}}>
-            <div style={{fontSize:'.8em',letterSpacing:'.2em',fontWeight:600,textTransform:'uppercase',color:_gold,textAlign:'center'}}>{(_sigF ? ('✦ '+_sigT('label')+' · ') : '')+(_isImgFlash ? _ensT('cr') : _ensT('fusion'))}</div>
-            <div aria-hidden="true" style={{height:1,background:'rgba(240,222,180,.22)',margin:'10px 0 11px'}}/>
-            {_anyR
-              ? (<div style={{display:'flex',flexDirection:'column',gap:9}}>{_rows.map((o,i)=>(<div key={i} style={{display:'grid',gridTemplateColumns:'minmax(0,40%) minmax(0,1fr)',columnGap:12,alignItems:'baseline'}}>
-                  <div style={{fontSize:'1.2em',fontWeight:600,overflowWrap:'anywhere'}}>{o.n}</div>
-                  <div style={{display:'flex',flexDirection:'column',gap:5}}>{o.r.map(k=>(<div key={k}><div style={{fontWeight:600,color:_gold}}>{_H[k]}</div><div style={{opacity:.82}}>{_H[k+'D']||''}</div></div>))}</div>
-                </div>))}</div>)
-              : (<div style={{fontSize:'1.2em',fontWeight:600,textAlign:'center',lineHeight:1.45}}>{_rows.map((o,i)=>(<Fragment key={i}>{i>0 && (<span style={{opacity:.6,fontWeight:400}}>{' '+_sepP+' '}</span>)}<span style={{whiteSpace:'nowrap'}}>{o.n}</span></Fragment>))}</div>)}
-            {_st && (<>
-              <div aria-hidden="true" style={{height:1,background:'rgba(240,222,180,.22)',margin:'11px 0 10px'}}/>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'center',flexWrap:'wrap',gap:'4px 9px',textAlign:'center'}}>
-                {(_fsTap && _fsV && !_sigF)
-                  ? (<button type="button" onPointerDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onClick={_fsGo} aria-label={'→ '+_fsWord(_fsNext(_fsV,_fsK),_fsK)} title={'→ '+_fsWord(_fsNext(_fsV,_fsK),_fsK)}
-                      style={{pointerEvents:'auto',display:'inline-flex',alignItems:'center',gap:8,font:'inherit',fontWeight:600,color:_gold,background:'none',border:'none',padding:'4px 0',margin:0,cursor:'pointer',WebkitTapHighlightColor:'transparent'}}><FsGlyph v={_st} w={22} h={16} fo={.75}/>{_fsWord(_st,_fsK)} ›</button>)
-                  : (<span style={{display:'inline-flex',alignItems:'center',gap:8,fontWeight:600,color:_gold}}><FsGlyph v={_st} w={22} h={16} fo={.75}/>{_fsWord(_st,_fsK)}</span>)}
-                {_sub && (<span style={{opacity:.82}}>{'— '+_sub}</span>)}
-              </div>
-            </>)}
-            {_sigF && (<div style={{marginTop:10,paddingTop:10,borderTop:'1px solid rgba(240,222,180,.22)',fontSize:'.94em',lineHeight:1.35,opacity:.9,textAlign:'center'}}>{_sigT(_isImgFlash ? 'introImg' : 'intro')}</div>)}
-          </div>
-          </div>
-          );
+          if(_rows.length!==_ensF.length) _rows=_ensF.map(n=>({n, r:[]}));
         }
+        const _hSub=!_hold ? '' : _st==='E' ? _ensT('fsNewSub') : _st==='G' ? _ensT('fsGenSub') : _st ? _ensT('fsTurnsSub') : '';
+        const _hNote={fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',textTransform:'none',letterSpacing:'.02em',fontWeight:500,whiteSpace:'normal'};
+        const _fName={fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontWeight:600,textTransform:'none',letterSpacing:'.01em'};   // the names: the app's serif italic, as written — not spaced capitals   // the small explaining lines of a hold: the flash's own serif, not capitals
         return (
           <div ref={flashBoxRef} style={{position:'fixed',top:'50%',left:'50%',width:0,height:0,zIndex:10001,transformOrigin:'0 0',pointerEvents:'none'}}>   {/* centred on the painting, scaled down to fit inside it (see the flash's fit) */}
           <div key={_swipeFlashKey} style={{position:'absolute',top:0,left:0,transform:'translate(-50%,-50%)',textAlign:'center',fontSize:(1.6*effScale)+'rem',letterSpacing:'.14em',textTransform:'uppercase',fontStyle:'italic',pointerEvents:'none',whiteSpace:'nowrap',animation:(String(_swipeFlashKey).startsWith('hold-')?'pfFlashIn .25s ease-out both':String(_swipeFlashKey).startsWith('out-')?'pfFlashOut .4s ease-in both':(_fMs>1200?('pfSwipeFlashL '+(_fMs/1000)+'s ease-out both'):'pfSwipeFlash 1.2s ease-out both')),color:'#f6e8c2',fontWeight:500,textShadow:'0 1px 3px rgba(10,8,14,.75), 0 0 14px rgba(10,8,14,.55)'}}>
@@ -22120,10 +22096,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               {_fsV && !_fsTap && (<div style={{animation:'pfFsPillIn .25s ease-out both',display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
               {_fsV && _fsTap && (<div style={{animation:'pfFsPillIn .25s ease-out both',display:'flex',justifyContent:'center',marginBottom:'1.3em'}}><button type="button" onPointerDown={(e)=>e.stopPropagation()} onTouchStart={(e)=>e.stopPropagation()} onClick={_fsGo} aria-label={'\u2192 '+_fsWord(_fsNext(_fsV,_fsK),_fsK)} title={'\u2192 '+_fsWord(_fsNext(_fsV,_fsK),_fsK)}
                 style={{pointerEvents:'auto',display:'inline-flex',alignItems:'center',gap:'.8em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.22em',fontWeight:700,textTransform:'uppercase',fontFamily:'inherit',color:'#f3e2b4',textShadow:'inherit',background:'rgba(16,12,22,.26)',border:'1px solid rgba(226,188,98,.92)',borderRadius:30,padding:'.75em 1.2em .75em 1.1em',cursor:'pointer',boxShadow:'0 3px 12px rgba(0,0,0,.16)',WebkitTapHighlightColor:'transparent'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)} ›</button></div>)}
+              {_hold && !_fsV && _st && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_st} w={26} h={19} fo={.75} shadow/>{_fsWord(_st,_fsK)}</div>)}
               {!_fsV && _ensF && !_sigF && (_fsTap || (_fsK==='art' ? fuStyleNow : fuStyleCNow).length>1) && (_fsTap
                 ? (<div aria-hidden="true" style={{visibility:'hidden',display:'flex',justifyContent:'center',marginBottom:'1.3em'}}><span style={{display:'inline-flex',alignItems:'center',gap:'.8em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.22em',fontWeight:700,border:'1px solid transparent',padding:'.75em 1.2em .75em 1.1em'}}><FsGlyph v="A" w={26} h={19} fo={.75}/>{_fsWord('A',_fsK)} ›</span></div>)
                 : (<div aria-hidden="true" style={{visibility:'hidden',display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em'}}><FsGlyph v="A" w={26} h={19} fo={.75}/>{_fsWord('A',_fsK)}</div>))}   {/* the style is still being worked out (a jam is written a moment later): its place is kept, the names below do not jump */}
             </>)}
+            {_hold && _hSub && (<div style={{..._hNote,fontSize:'.6em',opacity:.92,marginTop:_fsV ? '-1.2em' : 0,marginBottom:'1.5em'}}>{_hSub}</div>)}
             {(!_fBare || _ensF || _sigF) && (<div style={{fontStyle:'normal',fontSize:'0.55em',opacity:.75,marginBottom:(_ensF||_sigF)?14:6}}>{t('inspiredByTitle')||'inspired by'}</div>)}
             {(()=>{
               // Ensemble: one name per line, a small × / ↔ between — never one long
@@ -22133,10 +22111,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               const _fmN = (_isImgFlash && imgPlayMode!=='compose' && _stepAt(2))
                 ? (imgComposer ? (_soloHas(imgComposer) ? _formName(imgComposer, _soloForm()) : '') : String(t('dir_'+(imgDir||'lr'))||''))
                 : '';
-              if(!_ens) return (<><div>{_fLabel}</div>{_fmN && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',marginTop:'.75em',fontStyle:'normal',fontSize:'.46em',letterSpacing:'.34em',fontWeight:600,opacity:.95}}><span style={{width:'2.4em',height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>{_fmN}</span><span style={{width:'2.4em',height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>)}</>);   // a composer alone: which of his two forms
+              if(!_ens) return (<><div style={{..._fName,fontSize:'1.4em',lineHeight:1.1}}>{_fLabel}</div>{_fmN && (<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',marginTop:'.75em',fontStyle:'normal',fontSize:'.46em',letterSpacing:'.34em',fontWeight:600,opacity:.95}}><span style={{width:'2.4em',height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>{_fmN}</span><span style={{width:'2.4em',height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>)}</>);   // a composer alone: which of his two forms
               const _sep = _isImgFlash ? '↔' : '×';
-              const _fs = _ens.length>=4 ? '.62em' : _ens.length===3 ? '.72em' : '.82em';
-              return (<div style={{fontSize:_fs,lineHeight:1.15,whiteSpace:'normal',maxWidth:'86vw'}}>{_ens.map((n,i)=>(<Fragment key={i}>{i>0 && (<div style={{fontStyle:'normal',fontSize:'.6em',opacity:.7,margin:'2px 0'}}>{_sep}</div>)}<div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n}</div></Fragment>))}</div>);
+              const _fs = _ens.length>=4 ? '.9em' : _ens.length===3 ? '1.02em' : '1.16em';
+              return (<div style={{..._fName,fontSize:_fs,lineHeight:1.12,whiteSpace:'normal',maxWidth:'86vw'}}>{_ens.map((n,i)=>(<Fragment key={i}>{i>0 && (<div style={{fontFamily:"'Outfit',sans-serif",fontStyle:'normal',fontWeight:400,fontSize:'.42em',opacity:.75,margin:'1px 0'}}>{_sep}</div>)}<div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n}</div>{_hold && _rows[i] && _rows[i].r.map(k=>(<div key={k} style={{..._hNote,fontSize:'.52em',lineHeight:1.2,opacity:.92,margin:'.1em auto .25em',maxWidth:'17em'}}><span style={{fontFamily:"'Outfit',sans-serif",fontStyle:'normal',fontSize:'.62em',letterSpacing:'.22em',textTransform:'uppercase',fontWeight:600}}>{_H[k]}</span>{' \u2014 '+(_H[k+'D']||'')}</div>))}</Fragment>))}{_hold && _sigF && (<div style={{..._hNote,fontSize:'.58em',lineHeight:1.3,opacity:.92,margin:'1.5em auto 0',maxWidth:'17em'}}>{_sigT(_isImgFlash ? 'introImg' : 'intro')}</div>)}</div>);
             })()}
           </div>
           </div>
