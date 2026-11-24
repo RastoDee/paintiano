@@ -762,6 +762,34 @@ export default async function handler(req) {
           refunded_at: new Date().toISOString(),
         });
 
+        // A word from us too (Paddle sends its own receipt): what was refunded and what it means in the app.
+        // Only for a refund the buyer asked for (not a chargeback), only when we know the buyer; never fails the webhook.
+        if (action === 'refund' && rec && rec.email) {
+          try {
+            const k = String(rec.key || '');
+            const kind = k.startsWith('BOOK-') ? 'book' : k.startsWith('UPGRADE-') ? 'pass' : 'licence';
+            const done = data?.status === 'approved';
+            const line1 = done
+              ? 'Your refund has been issued. Paddle, our payment provider, is returning the money — it can take a few days to appear on your statement.'
+              : 'We have your refund request. Paddle, our payment provider, is processing it — you will hear from them as soon as the money is on its way.';
+            const line2 = kind === 'book'
+              ? 'The Book of Golden Music is switched off for this purchase: its book code no longer opens the book in the app.'
+              : kind === 'pass'
+                ? 'The year of AI from this purchase is taken back. Pro stays yours for life.'
+                : 'Your Paintiano licence key is no longer active, so the app is back to the free version on your devices.';
+            const line3 = 'If this was a mistake, or you would like to tell us what did not work for you, just reply to this e-mail — it goes straight to a person.';
+            const what = kind === 'book' ? 'book' : kind === 'pass' ? 'AI pass' : 'licence';
+            const mail = await sendLicenseEmail({
+              to: rec.email, tier: rec.tier, orderId, category: 'refund_notice',
+              subject: `Your Paintiano ${what} refund`,
+              text: ['Hi,', '', line1, '', line2, '', line3, '', `Order: ${orderId}`, '', 'Paintiano'].join('\n'),
+              html: `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#222;max-width:520px">
+<p>Hi,</p><p>${line1}</p><p>${line2}</p><p>${line3}</p><p style="color:#777;font-size:13px">Order: ${orderId}</p><p>Paintiano</p></div>`,
+            });
+            if (!mail.ok) console.warn('paddle-webhook: refund e-mail NOT sent', mail);
+          } catch (e) { console.warn('paddle-webhook: refund e-mail threw', e); }
+        }
+
         if (rec && String(rec.key || '').startsWith('UPGRADE-')) {
           let ev = rec.raw_event;
           if (typeof ev === 'string') { try { ev = JSON.parse(ev); } catch { ev = null; } }
