@@ -1,0 +1,5 @@
+Novedades de la 1.2
+• Nueva guía: cada consejo en la pantalla real, con recorridos «Enséñamelo».
+• Nuevo menú: tu cuadro más reciente, tu progreso en la guía y el libro de un vistazo.
+• Las imágenes suenan más llenas: prados y jardines tocan sus colores en acordes.
+• Correcciones y mejoras.

@@ -1,1 +1,1 @@
-arte,pintura,música,canção,visualizador,fundo,póster,piano,midi,cor,sinestesia,ia,abstrato
+arte,quadro,canção,visualizador,fundo,póster,piano,midi,cor,desenho,relaxar,abstrato,ia,presente

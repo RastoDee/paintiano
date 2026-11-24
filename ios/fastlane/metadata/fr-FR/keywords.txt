@@ -1,1 +1,1 @@
-art,peinture,musique,visualiseur,fond d'écran,affiche,piano,midi,couleur,synesthésie,ia,abstrait
+art,peinture,visualiseur,fond,affiche,piano,midi,couleur,dessin,détente,abstrait,ia,cadeau,toile

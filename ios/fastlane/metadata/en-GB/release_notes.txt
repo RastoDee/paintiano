@@ -1,0 +1,5 @@
+New in 1.2
+• A new Guide: every tip on the real screen, with "Show me" walkthroughs.
+• A fresh menu: your newest painting, your Guide progress and the book at a glance.
+• Pictures sound fuller: meadows and gardens play their own colours in chords.
+• Fixes and polish.
