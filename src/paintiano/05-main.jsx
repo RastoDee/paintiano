@@ -2119,7 +2119,8 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, book
             <button type="button" onClick={(e)=>{ e.stopPropagation(); open('bsum', 0); }} style={{marginTop:22,height:48,padding:'0 24px',borderRadius:24,border:0,cursor:'pointer',fontFamily:'inherit',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:700,textDecoration:'none',boxShadow:'0 10px 28px rgba(201,168,76,.4)'}}><GuideIco k="book" z={18}/>{card.cta}</button>
             {!PF_STORE && (<button type="button" onClick={(e)=>{ e.stopPropagation(); pfBookBuy(); }} style={{marginTop:12,height:44,padding:'0 24px',borderRadius:24,border:'1px solid rgba(240,215,138,.5)',cursor:'pointer',fontFamily:'inherit',background:'none',color:'#f0d78a',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:600,textDecoration:'none',boxShadow:'none'}}><GuideIco k="book" z={18}/>{String(ts('bookBuy','Buy the book \u00b7 {p}')).replace('{p}', PRO_CFG.displayPriceBook)}</button>)}
             <div style={{marginTop:16,maxWidth:320,fontSize:13.5*rs,lineHeight:1.45,color:'rgba(242,238,232,.74)',textWrap:'balance'}}>{PF_STORE ? (<><span style={{color:'#f0d78a',fontWeight:700,letterSpacing:'.12em'}}>{'\u2726 PRO'}</span><br/>{ts('bookProLine','')}</>) : (<>{ts('bookBuyNote','')}<br/><span style={{color:'#f0d78a',fontWeight:700,letterSpacing:'.12em'}}>{'\u2726 PRO'}</span>{' '}{ts('bookInPro','')}</>)}</div>
-            <BookCodeBox ts={ts} rs={rs} open0={bookAsk} onOk={onBookCode}/>
+            {/* the iPhone app has no book code: Apple lets a code open only what can also be bought inside the app, and there the book comes with Pro */}
+            {!PF_IOS && (<BookCodeBox ts={ts} rs={rs} open0={bookAsk} onOk={onBookCode}/>)}
           </>)}
         </div>
       ) : (
@@ -6221,17 +6222,17 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const openReader = useCallback(()=>setShowReader(true),[]);
   const closeReader = useCallback(()=>{ setShowReader(false); setReaderK(k=>k+1); },[]);
   // the book bought on its own: its code (from the e-mail) lives on the device; back from the Paddle window (/play?book=1) the Book card opens asking for it
-  const [bookCode, setBookCode] = useState(()=>pfBookCodeRead());
+  const [bookCode, setBookCode] = useState(()=>PF_IOS ? null : pfBookCodeRead());   // no book code in the iPhone app (see the Book card)
   const [bookAsk] = useState(()=>{ try{ return new URLSearchParams(window.location.search).get('book')==='1'; }catch(_){ return false; } });
   useEffect(()=>{ if(bookAsk) setShowBook(true); },[bookAsk]);
   // the button in the book's e-mail (/play?bookcode=BOOK-…): the code is checked and kept, the Book card opens, and the code leaves the address bar
-  useEffect(()=>{ let c=null; try{ c=new URLSearchParams(window.location.search).get('bookcode'); }catch(_){} if(!c) return;
+  useEffect(()=>{ let c=null; try{ c=new URLSearchParams(window.location.search).get('bookcode'); }catch(_){} if(!c || PF_IOS) return;
     try{ const u=new URL(window.location.href); u.searchParams.delete('bookcode'); window.history.replaceState(null, '', u.pathname+(u.search||'')+(u.hash||'')); }catch(_){}
     let off=false; pfBookCodeTry(c).then(r=>{ if(off) return; if(r.ok){ setBookCode(r.code); setReaderK(k=>k+1); } setShowBook(true); }); return ()=>{ off=true; }; },[]);
   const onBookCode = useCallback((c)=>{ setBookCode(c); setReaderK(k=>k+1); },[]);
   // a book that was refunded: the server stops serving its code — the device forgets it (on start, and when the reader is opened)
-  const onBookDenied = useCallback(()=>{ setBookCode(pfBookCodeRead()); setShowReader(false); setReaderK(k=>k+1); },[]);
-  useEffect(()=>{ const c=pfBookCodeRead(); if(!c) return; let off=false; pfBookCodeStill(c).then(ok=>{ if(!off && !ok){ setBookCode(null); setReaderK(k=>k+1); } }); return ()=>{ off=true; }; },[]);
+  const onBookDenied = useCallback(()=>{ setBookCode(PF_IOS ? null : pfBookCodeRead()); setShowReader(false); setReaderK(k=>k+1); },[]);
+  useEffect(()=>{ const c=PF_IOS ? null : pfBookCodeRead(); if(!c) return; let off=false; pfBookCodeStill(c).then(ok=>{ if(!off && !ok){ setBookCode(null); setReaderK(k=>k+1); } }); return ()=>{ off=true; }; },[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [printThumb, setPrintThumb] = useState(null);   // Save › Print: the painting, small, on the white and the dark sheet
   // Paint-mode Web/Print export toggle: when ON and a source image is on
