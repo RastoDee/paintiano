@@ -23293,7 +23293,7 @@ const I18N = {
     recUnsupported:'Recording not supported in this browser.',
     recTooShort:'Recording was too short — hold rec for at least a second.',
     searchGuide:'search the guide…', noMatches:'No matches for',
-    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'text size', legalPricing:'Pricing', legalTerms:'Terms', legalPrivacy:'Privacy', legalRefunds:'Refunds', bookTitle:'Paintiano — The Book of Golden Music', bookDesc:'The full story behind Paintiano — finding beauty between the note and the colour, the golden ratio, Scriabin.', bookRead:'Read the book', bookCont:'Continue reading', bookProLine:'The whole book in the app — 14 chapters, with pictures. Part of Pro and Pro AI.', bookPdfPro:'We also send the book as a PDF on request, free: hello@paintiano.app', rdFont:'Text', rdLook:'Look', rdDark:'Dark', rdPaper:'Paper', rdToc:'Contents', rdErr:'The book could not be loaded. Check your connection and try again.', bookCta:'Open the book', bookExcerptCta:'Book summary',
+    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'text size', legalPricing:'Pricing', legalTerms:'Terms', legalPrivacy:'Privacy', legalRefunds:'Refunds', bookTitle:'Paintiano — The Book of Golden Music', bookDesc:'The full story behind Paintiano — finding beauty between the note and the colour, the golden ratio, Scriabin.', bookRead:'Read the book', bookCont:'Continue reading', bookProLine:'The whole book in the app — 14 chapters, with pictures. Part of Pro and Pro AI.', bookPdfPro:'The whole book is also free on request, as a PDF: hello@paintiano.app', rdFont:'Text', rdLook:'Look', rdDark:'Dark', rdPaper:'Paper', rdToc:'Contents', rdErr:'The book could not be loaded. Check your connection and try again.', bookCta:'Open the book', bookExcerptCta:'Book summary',
     pickMoodFirst:'pick a mood first', morphInto:'morph current mood into another', morphTitle:'morph {mood} into…', morphHint:'pick up to 3 — in order', morphGo:'morph',
     reroll:'reroll: a fresh take',
     demoMode:'demo mode — clear to play again', demoSkip:'tap canvas to skip',
@@ -23466,7 +23466,7 @@ const I18N = {
     recUnsupported:'Aufnahme wird nicht unterstützt.',
     recTooShort:'Aufnahme zu kurz — mindestens eine Sekunde halten.',
     searchGuide:'anleitung durchsuchen…', noMatches:'Keine Treffer für',
-    guideTitle:'anleitung', conceptTitle:'konzept', fsNormal:'A', fsLarge:'A+', fsLabel:'schriftgröße', legalPricing:'Preise', legalTerms:'Bedingungen', legalPrivacy:'Datenschutz', legalRefunds:'Erstattungen', bookTitle:'Paintiano — Das Buch der goldenen Musik', bookDesc:'Die ganze Geschichte hinter Paintiano — Schönheit zwischen Note und Farbe, der Goldene Schnitt, Skrjabin.', bookRead:'Buch lesen', bookCont:'Weiterlesen', bookProLine:'Das ganze Buch in der App — 14 Kapitel, mit Bildern. Teil von Pro und Pro AI.', bookPdfPro:'Auf Anfrage schicken wir das Buch auch kostenlos als PDF: hello@paintiano.app', rdFont:'Schrift', rdLook:'Aussehen', rdDark:'Dunkel', rdPaper:'Papier', rdToc:'Inhalt', rdErr:'Das Buch konnte nicht geladen werden. Prüfe die Verbindung und versuche es noch einmal.', bookCta:'Buch öffnen', bookExcerptCta:'Zusammenfassung des Buches',
+    guideTitle:'anleitung', conceptTitle:'konzept', fsNormal:'A', fsLarge:'A+', fsLabel:'schriftgröße', legalPricing:'Preise', legalTerms:'Bedingungen', legalPrivacy:'Datenschutz', legalRefunds:'Erstattungen', bookTitle:'Paintiano — Das Buch der goldenen Musik', bookDesc:'Die ganze Geschichte hinter Paintiano — Schönheit zwischen Note und Farbe, der Goldene Schnitt, Skrjabin.', bookRead:'Buch lesen', bookCont:'Weiterlesen', bookProLine:'Das ganze Buch in der App — 14 Kapitel, mit Bildern. Teil von Pro und Pro AI.', bookPdfPro:'Das ganze Buch gibt es auch kostenlos auf Anfrage, als PDF: hello@paintiano.app', rdFont:'Schrift', rdLook:'Aussehen', rdDark:'Dunkel', rdPaper:'Papier', rdToc:'Inhalt', rdErr:'Das Buch konnte nicht geladen werden. Prüfe die Verbindung und versuche es noch einmal.', bookCta:'Buch öffnen', bookExcerptCta:'Zusammenfassung des Buches',
     pickMoodFirst:'zuerst stimmung wählen', morphInto:'aktuelle stimmung transformieren', morphTitle:'{mood} verwandeln in…', morphHint:'bis zu 3 wählen — der Reihe nach', morphGo:'verwandeln',
     reroll:'neu würfeln',
     demoMode:'demo-modus — löschen zum erneuten spielen', demoSkip:'auf canvas tippen zum überspringen',
@@ -23637,7 +23637,7 @@ const I18N = {
     recUnsupported:'Enregistrement non supporté.',
     recTooShort:'Enregistrement trop court — tenir au moins une seconde.',
     searchGuide:'rechercher dans le guide…', noMatches:'Aucun résultat pour',
-    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'taille du texte', legalPricing:'Tarifs', legalTerms:'Conditions', legalPrivacy:'Confidentialité', legalRefunds:'Remboursements', bookTitle:'Paintiano — Le Livre de la musique dorée', bookDesc:'Toute l’histoire derrière Paintiano — la beauté entre la note et la couleur, le nombre d’or, Scriabine.', bookRead:'Lire le livre', bookCont:'Continuer la lecture', bookProLine:'Le livre entier dans l’app — 14 chapitres, avec images. Inclus dans Pro et Pro AI.', bookPdfPro:'Sur demande, nous envoyons aussi le livre en PDF, gratuitement : hello@paintiano.app', rdFont:'Texte', rdLook:'Aspect', rdDark:'Sombre', rdPaper:'Papier', rdToc:'Sommaire', rdErr:'Le livre n’a pas pu être chargé. Vérifie ta connexion et réessaie.', bookCta:'Ouvrir le livre', bookExcerptCta:'Résumé du livre',
+    guideTitle:'guide', conceptTitle:'concept', fsNormal:'A', fsLarge:'A+', fsLabel:'taille du texte', legalPricing:'Tarifs', legalTerms:'Conditions', legalPrivacy:'Confidentialité', legalRefunds:'Remboursements', bookTitle:'Paintiano — Le Livre de la musique dorée', bookDesc:'Toute l’histoire derrière Paintiano — la beauté entre la note et la couleur, le nombre d’or, Scriabine.', bookRead:'Lire le livre', bookCont:'Continuer la lecture', bookProLine:'Le livre entier dans l’app — 14 chapitres, avec images. Inclus dans Pro et Pro AI.', bookPdfPro:'Le livre entier est aussi gratuit sur demande, en PDF : hello@paintiano.app', rdFont:'Texte', rdLook:'Aspect', rdDark:'Sombre', rdPaper:'Papier', rdToc:'Sommaire', rdErr:'Le livre n’a pas pu être chargé. Vérifie ta connexion et réessaie.', bookCta:'Ouvrir le livre', bookExcerptCta:'Résumé du livre',
     pickMoodFirst:'choisir d\'abord une humeur', morphInto:'transformer l\'humeur actuelle', morphTitle:'transformer {mood} en…', morphHint:'choisir jusqu’à 3 — dans l’ordre', morphGo:'transformer',
     reroll:'relancer',
     demoMode:'mode démo — effacer pour rejouer', demoSkip:'toucher la toile pour passer',
@@ -23808,7 +23808,7 @@ const I18N = {
     recUnsupported:'Grabación no compatible.',
     recTooShort:'Grabación demasiado corta — mantener al menos un segundo.',
     searchGuide:'buscar en la guía…', noMatches:'Sin resultados para',
-    guideTitle:'guía', conceptTitle:'concepto', fsNormal:'A', fsLarge:'A+', fsLabel:'tamaño del texto', legalPricing:'Precios', legalTerms:'Términos', legalPrivacy:'Privacidad', legalRefunds:'Reembolsos', bookTitle:'Paintiano — El libro de la música dorada', bookDesc:'Toda la historia tras Paintiano — la belleza entre la nota y el color, la proporción áurea, Scriabin.', bookRead:'Leer el libro', bookCont:'Seguir leyendo', bookProLine:'El libro completo en la app — 14 capítulos, con imágenes. Incluido en Pro y Pro AI.', bookPdfPro:'A petición también enviamos el libro en PDF, gratis: hello@paintiano.app', rdFont:'Texto', rdLook:'Aspecto', rdDark:'Oscuro', rdPaper:'Papel', rdToc:'Índice', rdErr:'No se pudo cargar el libro. Revisa la conexión e inténtalo de nuevo.', bookCta:'Abrir el libro', bookExcerptCta:'Resumen del libro',
+    guideTitle:'guía', conceptTitle:'concepto', fsNormal:'A', fsLarge:'A+', fsLabel:'tamaño del texto', legalPricing:'Precios', legalTerms:'Términos', legalPrivacy:'Privacidad', legalRefunds:'Reembolsos', bookTitle:'Paintiano — El libro de la música dorada', bookDesc:'Toda la historia tras Paintiano — la belleza entre la nota y el color, la proporción áurea, Scriabin.', bookRead:'Leer el libro', bookCont:'Seguir leyendo', bookProLine:'El libro completo en la app — 14 capítulos, con imágenes. Incluido en Pro y Pro AI.', bookPdfPro:'El libro completo también es gratis a petición, en PDF: hello@paintiano.app', rdFont:'Texto', rdLook:'Aspecto', rdDark:'Oscuro', rdPaper:'Papel', rdToc:'Índice', rdErr:'No se pudo cargar el libro. Revisa la conexión e inténtalo de nuevo.', bookCta:'Abrir el libro', bookExcerptCta:'Resumen del libro',
     pickMoodFirst:'primero elegir un estado', morphInto:'transformar el estado actual', morphTitle:'transformar {mood} en…', morphHint:'elige hasta 3 — en orden', morphGo:'transformar',
     reroll:'relanzar',
     demoMode:'modo demo — borrar para volver a tocar', demoSkip:'toca el lienzo para saltar',
@@ -23978,7 +23978,7 @@ const I18N = {
     recUnsupported:'Nahrávanie nie je v tomto prehliadači podporované.',
     recTooShort:'Nahrávka bola príliš krátka — podrž rec aspoň sekundu.',
     searchGuide:'hľadať v príručke…', noMatches:'Žiadne výsledky pre',
-    guideTitle:'príručka', conceptTitle:'koncept', fsNormal:'A', fsLarge:'A+', fsLabel:'veľkosť textu', legalPricing:'Cenník', legalTerms:'Podmienky', legalPrivacy:'Súkromie', legalRefunds:'Vrátenie', bookTitle:'Paintiano — Kniha o zlatej hudbe', bookDesc:'Celý príbeh za Paintianom — hľadanie krásy medzi notou a farbou, zlatý rez, Scriabin.', bookRead:'Čítať knihu', bookCont:'Pokračovať v čítaní', bookProLine:'Celá kniha v appke — 14 kapitol, s obrazmi. Súčasť Pro a Pro AI.', bookPdfPro:'Knihu pošleme na požiadanie aj v PDF, zadarmo: hello@paintiano.app', rdFont:'Písmo', rdLook:'Vzhľad', rdDark:'Tmavý', rdPaper:'Papier', rdToc:'Obsah', rdErr:'Knihu sa nepodarilo načítať. Skontroluj pripojenie a skús to znova.', bookCta:'Otvoriť knihu', bookExcerptCta:'Zhrnutie knihy',
+    guideTitle:'príručka', conceptTitle:'koncept', fsNormal:'A', fsLarge:'A+', fsLabel:'veľkosť textu', legalPricing:'Cenník', legalTerms:'Podmienky', legalPrivacy:'Súkromie', legalRefunds:'Vrátenie', bookTitle:'Paintiano — Kniha o zlatej hudbe', bookDesc:'Celý príbeh za Paintianom — hľadanie krásy medzi notou a farbou, zlatý rez, Scriabin.', bookRead:'Čítať knihu', bookCont:'Pokračovať v čítaní', bookProLine:'Celá kniha v appke — 14 kapitol, s obrazmi. Súčasť Pro a Pro AI.', bookPdfPro:'Celú knihu pošleme aj zadarmo na požiadanie, v PDF: hello@paintiano.app', rdFont:'Písmo', rdLook:'Vzhľad', rdDark:'Tmavý', rdPaper:'Papier', rdToc:'Obsah', rdErr:'Knihu sa nepodarilo načítať. Skontroluj pripojenie a skús to znova.', bookCta:'Otvoriť knihu', bookExcerptCta:'Zhrnutie knihy',
     pickMoodFirst:'najprv vyber náladu', morphInto:'morfovať súčasnú náladu do inej', morphTitle:'plynule prejdi z {mood} do…', morphHint:'vyber max 3 — v poradí', morphGo:'morfovať',
     reroll:'prehodiť: čerstvé prevedenie',
     demoMode:'režim demo — vyčisti pre nové prehratie', demoSkip:'klikni na plátno pre preskočenie',
@@ -24148,7 +24148,7 @@ const I18N = {
     recUnsupported:'此浏览器不支持录音。',
     recTooShort:'录音过短 — 请按住录制至少一秒。',
     searchGuide:'搜索指南…', noMatches:'未找到匹配项',
-    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字号', legalPricing:'价格', legalTerms:'条款', legalPrivacy:'隐私', legalRefunds:'退款', bookTitle:'Paintiano — 金色音乐之书', bookDesc:'Paintiano 背后的完整故事——在音符与色彩之间寻找美、黄金比例、斯克里亚宾。', bookRead:'阅读本书', bookCont:'继续阅读', bookProLine:'整本书就在 App 里——14 章，配有图片。包含在 Pro 与 Pro AI 中。', bookPdfPro:'也可免费索取本书 PDF：hello@paintiano.app', rdFont:'字号', rdLook:'外观', rdDark:'深色', rdPaper:'纸张', rdToc:'目录', rdErr:'无法载入本书。请检查网络后重试。', bookCta:'打开书', bookExcerptCta:'本书摘要',
+    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字号', legalPricing:'价格', legalTerms:'条款', legalPrivacy:'隐私', legalRefunds:'退款', bookTitle:'Paintiano — 金色音乐之书', bookDesc:'Paintiano 背后的完整故事——在音符与色彩之间寻找美、黄金比例、斯克里亚宾。', bookRead:'阅读本书', bookCont:'继续阅读', bookProLine:'整本书就在 App 里——14 章，配有图片。包含在 Pro 与 Pro AI 中。', bookPdfPro:'完整的书也可免费索取（PDF）：hello@paintiano.app', rdFont:'字号', rdLook:'外观', rdDark:'深色', rdPaper:'纸张', rdToc:'目录', rdErr:'无法载入本书。请检查网络后重试。', bookCta:'打开书', bookExcerptCta:'本书摘要',
     pickMoodFirst:'请先选择情绪', morphInto:'将当前情绪变形为另一种', morphTitle:'将 {mood} 变形为…', morphHint:'最多选 3 种 — 按顺序', morphGo:'变形',
     reroll:'重掷:换一种诠释',
     demoMode:'演示模式 — 清空以重新播放', demoSkip:'点击画布跳过',
@@ -24318,7 +24318,7 @@ const I18N = {
     recUnsupported:'此瀏覽器不支援錄音。',
     recTooShort:'錄音過短 — 請按住錄製至少一秒。',
     searchGuide:'搜尋指南…', noMatches:'未找到符合項目',
-    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字級', legalPricing:'價格', legalTerms:'條款', legalPrivacy:'隱私', legalRefunds:'退款', bookTitle:'Paintiano — 金色音樂之書', bookDesc:'Paintiano 背後的完整故事——在音符與色彩之間尋找美、黃金比例、斯克里亞賓。', bookRead:'閱讀本書', bookCont:'繼續閱讀', bookProLine:'整本書就在 App 裡——14 章，配有圖片。包含在 Pro 與 Pro AI 中。', bookPdfPro:'也可免費索取本書 PDF：hello@paintiano.app', rdFont:'字級', rdLook:'外觀', rdDark:'深色', rdPaper:'紙張', rdToc:'目錄', rdErr:'無法載入本書。請檢查網路後重試。', bookCta:'打開書', bookExcerptCta:'本書摘要',
+    guideTitle:'指南', conceptTitle:'理念', fsNormal:'A', fsLarge:'A+', fsLabel:'字級', legalPricing:'價格', legalTerms:'條款', legalPrivacy:'隱私', legalRefunds:'退款', bookTitle:'Paintiano — 金色音樂之書', bookDesc:'Paintiano 背後的完整故事——在音符與色彩之間尋找美、黃金比例、斯克里亞賓。', bookRead:'閱讀本書', bookCont:'繼續閱讀', bookProLine:'整本書就在 App 裡——14 章，配有圖片。包含在 Pro 與 Pro AI 中。', bookPdfPro:'完整的書也可免費索取（PDF）：hello@paintiano.app', rdFont:'字級', rdLook:'外觀', rdDark:'深色', rdPaper:'紙張', rdToc:'目錄', rdErr:'無法載入本書。請檢查網路後重試。', bookCta:'打開書', bookExcerptCta:'本書摘要',
     pickMoodFirst:'請先選擇情緒', morphInto:'將目前情緒變形為另一種', morphTitle:'將 {mood} 變形為…', morphHint:'最多選 3 種 — 按順序', morphGo:'變形',
     reroll:'重擲：換一種詮釋',
     demoMode:'示範模式 — 清空以重新播放', demoSkip:'點擊畫布跳過',
@@ -24487,7 +24487,7 @@ const I18N = {
     recUnsupported:'Gravação não suportada neste navegador.',
     recTooShort:'Gravação muito curta — segure rec por pelo menos um segundo.',
     searchGuide:'buscar no guia…', noMatches:'Nenhum resultado para',
-    guideTitle:'guia', conceptTitle:'conceito', fsNormal:'A', fsLarge:'A+', fsLabel:'tamanho do texto', legalPricing:'Preços', legalTerms:'Termos', legalPrivacy:'Privacidade', legalRefunds:'Reembolsos', bookTitle:'Paintiano — O Livro da Música Dourada', bookDesc:'Toda a história por trás do Paintiano — a beleza entre a nota e a cor, a proporção áurea, Skriabin.', bookRead:'Ler o livro', bookCont:'Continuar a ler', bookProLine:'O livro completo na app — 14 capítulos, com imagens. Incluído no Pro e no Pro AI.', bookPdfPro:'A pedido, também enviamos o livro em PDF, grátis: hello@paintiano.app', rdFont:'Texto', rdLook:'Aspeto', rdDark:'Escuro', rdPaper:'Papel', rdToc:'Índice', rdErr:'Não foi possível carregar o livro. Verifica a ligação e tenta de novo.', bookCta:'Abrir o livro', bookExcerptCta:'Resumo do livro',
+    guideTitle:'guia', conceptTitle:'conceito', fsNormal:'A', fsLarge:'A+', fsLabel:'tamanho do texto', legalPricing:'Preços', legalTerms:'Termos', legalPrivacy:'Privacidade', legalRefunds:'Reembolsos', bookTitle:'Paintiano — O Livro da Música Dourada', bookDesc:'Toda a história por trás do Paintiano — a beleza entre a nota e a cor, a proporção áurea, Skriabin.', bookRead:'Ler o livro', bookCont:'Continuar a ler', bookProLine:'O livro completo na app — 14 capítulos, com imagens. Incluído no Pro e no Pro AI.', bookPdfPro:'O livro completo também é grátis a pedido, em PDF: hello@paintiano.app', rdFont:'Texto', rdLook:'Aspeto', rdDark:'Escuro', rdPaper:'Papel', rdToc:'Índice', rdErr:'Não foi possível carregar o livro. Verifica a ligação e tenta de novo.', bookCta:'Abrir o livro', bookExcerptCta:'Resumo do livro',
     pickMoodFirst:'escolha um humor primeiro', morphInto:'transformar o humor atual em outro', morphTitle:'transformar {mood} em…', morphHint:'escolha até 3 — em ordem', morphGo:'transformar',
     reroll:'rerrolar: uma nova versão',
     demoMode:'modo demo — limpe para tocar novamente', demoSkip:'toque a tela para pular',
@@ -24657,7 +24657,7 @@ const I18N = {
     recUnsupported:'このブラウザでは録音がサポートされていません。',
     recTooShort:'録音が短すぎました — rec を 1 秒以上押し続けてください。',
     searchGuide:'ガイドを検索…', noMatches:'一致なし:',
-    guideTitle:'ガイド', conceptTitle:'コンセプト', fsNormal:'A', fsLarge:'A+', fsLabel:'文字サイズ', legalPricing:'料金', legalTerms:'利用規約', legalPrivacy:'プライバシー', legalRefunds:'返金', bookTitle:'Paintiano — 黄金の音楽の書', bookDesc:'Paintiano の物語のすべて——音と色のあいだの美、黄金比、スクリャービン。', bookRead:'本を読む', bookCont:'続きを読む', bookProLine:'本の全文をアプリで——全14章、図版つき。Pro と Pro AI に含まれます。', bookPdfPro:'ご希望の方には PDF も無料でお送りします：hello@paintiano.app', rdFont:'文字', rdLook:'表示', rdDark:'ダーク', rdPaper:'紙', rdToc:'目次', rdErr:'本を読み込めませんでした。接続を確認して、もう一度お試しください。', bookCta:'本を開く', bookExcerptCta:'本の要約',
+    guideTitle:'ガイド', conceptTitle:'コンセプト', fsNormal:'A', fsLarge:'A+', fsLabel:'文字サイズ', legalPricing:'料金', legalTerms:'利用規約', legalPrivacy:'プライバシー', legalRefunds:'返金', bookTitle:'Paintiano — 黄金の音楽の書', bookDesc:'Paintiano の物語のすべて——音と色のあいだの美、黄金比、スクリャービン。', bookRead:'本を読む', bookCont:'続きを読む', bookProLine:'本の全文をアプリで——全14章、図版つき。Pro と Pro AI に含まれます。', bookPdfPro:'完全版は PDF でも無料でお送りします。ご希望は hello@paintiano.app まで。', rdFont:'文字', rdLook:'表示', rdDark:'ダーク', rdPaper:'紙', rdToc:'目次', rdErr:'本を読み込めませんでした。接続を確認して、もう一度お試しください。', bookCta:'本を開く', bookExcerptCta:'本の要約',
     pickMoodFirst:'まずムードを選んでください', morphInto:'現在のムードを別のムードに morph', morphTitle:'{mood} を…に morph', morphHint:'最大 3 つを選ぶ — 順番に', morphGo:'モーフ',
     reroll:'振り直し:新しい解釈',
     demoMode:'デモモード — もう一度再生するにはクリア', demoSkip:'キャンバスをタップでスキップ',
@@ -30799,16 +30799,17 @@ const PF_RD_CSS = `
 .pf-rd-flow h1.solo{margin-top:1.6em}
 .pf-rd-flow p.fig,.pf-rd-flow p.hist,.pf-rd-flow p.qr{text-align:center;margin:1em 0 .3em}
 .pf-rd-flow img{max-width:100%;max-height:calc(var(--rdh) * .58);height:auto;border-radius:2px}
-.pf-rd-flow div.figpage{-webkit-column-break-before:always;break-before:column;-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;padding-top:calc(var(--rdh) * .06)}
-.pf-rd-flow div.figpage p.fig{margin:0 0 .6em}
-.pf-rd-flow div.histbox{-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;margin:1.2em 0}
-.pf-rd-flow div.histbox p.hist{margin:0 0 .4em}
+.pf-rd-flow p.fig img,.pf-rd-flow p.hist img,.pf-rd-flow div.pl img{display:block;margin-left:auto;margin-right:auto}
+.pf-rd-flow div.figpage{-webkit-column-break-before:always;break-before:column;-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;padding-top:calc(var(--rdh) * .06);margin-bottom:1.5em}
+.pf-rd-flow div.figpage p.fig{margin:0 0 .5em}
+.pf-rd-flow div.histbox{-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;margin:1.2em 0 1.5em}
+.pf-rd-flow div.histbox p.hist{margin:0 0 .5em}
 .pf-rd-flow p.hist img{max-width:50%;max-height:calc(var(--rdh) * .4)}
 .pf-rd-flow p.qr img{width:4.4em;background:#fff;padding:4px}
 .pf-rd-flow p.cap,.pf-rd-flow p.caps,.pf-rd-flow p.capt{text-align:center;margin:0}
-.pf-rd-flow p.cap{font-style:italic;color:var(--rm);font-size:.82em}
-.pf-rd-flow p.caps{font-style:italic;color:var(--rm);font-size:.88em}
-.pf-rd-flow p.capt{font-weight:600;font-size:.92em;margin-top:.4em}
+.pf-rd-flow p.cap{font-style:italic;color:var(--rm);font-size:.76em}
+.pf-rd-flow p.caps{font-style:italic;color:var(--rm);font-size:.81em}
+.pf-rd-flow p.capt{font-weight:600;font-size:.85em;margin-top:0}
 .pf-rd-flow .quote{margin:1.4em 6%;text-align:center;font-style:italic}
 .pf-rd-flow .quote p{text-align:center;line-height:1.55}
 .pf-rd-flow .tp{text-align:center;padding-top:calc(var(--rdh) * .16)}
@@ -30827,12 +30828,12 @@ const PF_RD_CSS = `
 .pf-rd-flow .src p{text-indent:-1.2em;margin:0 0 .25em 1.2em;text-align:left;font-size:.86em;line-height:1.35;-webkit-hyphens:none;hyphens:none;overflow-wrap:anywhere}
 .pf-rd-flow .src p.it{text-indent:0;margin:1em 0 .3em 0;text-align:left;color:var(--ra);font-size:.92em}
 .pf-rd-flow p.gt{text-align:center;font-weight:600;margin:1.6em 0 .1em}
-.pf-rd-flow div.plates{text-align:center;margin:1em 0 1.2em}
+.pf-rd-flow div.plates{text-align:center;margin:1em 0 1.5em}
 .pf-rd-flow div.pl{display:inline-block;vertical-align:top;width:44%;margin:0 2% 1em;-webkit-column-break-inside:avoid;break-inside:avoid}
 .pf-rd-flow div.c4 div.pl{width:21%;margin:0 1.5% .6em}
 .pf-rd-flow div.c1 div.pl{width:70%}
 .pf-rd-flow div.pl img{width:100%;height:auto;max-height:none}
-.pf-rd-flow div.pl p.cap{font-size:.8em;margin-top:.2em}
+.pf-rd-flow div.pl p.cap{font-size:.74em;margin-top:.35em}
 .pf-rd-flow p.leg{margin-top:.2em}
 .pf-rd-flow a{color:var(--ra)}
 .pf-rd-bar{height:3px;margin:8px 28px 0;border-radius:2px;background:var(--rl);overflow:hidden}
@@ -30936,7 +30937,7 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, onCl
   const bookCard = useMemo(()=>({id:'book', book:true, title:t('bookTitle')||'The Book', body:ts('bookDesc',''), cta:ts('bookExcerptCta','Book summary')}), [t, ts]);
   // the book summary as story cards (key 'bsum'): the opening, one card per part, the quote — ✕ or the last tap returns to the Book card
   const bookSum = useMemo(()=>{ const B = PF_BOOK_SUM[BOOK_LANGS.indexOf(lang)>=0 ? lang : 'EN'] || PF_BOOK_SUM.EN;
-    return [{id:'bs0', sum:true, brand:B.s.split(/ — | · /)[0], body:B.i}].concat(B.c.map((c,i)=>({id:'bs'+(i+1), sum:true, title:c[0], body:c[1]})), [{id:'bsq', sum:true, quote:B.q, foot:(pro ? ts('bookPdfPro','') : ts('bookProLine','')) || B.f}]); }, [lang, pro, ts]);
+    return [{id:'bs0', sum:true, brand:B.s.split(/ — | · /)[0], body:B.i}].concat(B.c.map((c,i)=>({id:'bs'+(i+1), sum:true, title:c[0], body:c[1]})), [{id:'bsq', sum:true, quote:B.q, foot:B.f}]); }, [lang]);
   const direct = mode==='concept' || mode==='book';
   const [story, setStory] = useState(()=> mode==='concept' ? {k:'concept', i:0} : mode==='book' ? {k:'book', i:0} : null);
   const [sheet, setSheet] = useState(false);
@@ -31211,11 +31212,11 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, onCl
             <button type="button" onClick={(e)=>{ e.stopPropagation(); onRead && onRead(); }} style={{marginTop:22,height:48,padding:'0 24px',borderRadius:24,border:0,cursor:'pointer',fontFamily:'inherit',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:700,textDecoration:'none',boxShadow:'0 10px 28px rgba(201,168,76,.4)'}}><GuideIco k="book" z={18}/>{_bp ? ts('bookCont','Continue reading') : ts('bookRead','Read the book')}</button>
             {_bp && (<div style={{marginTop:10,fontSize:13*rs,color:'rgba(242,238,232,.7)'}}>{_bp.t}{' \u00b7 '}{(_bp.p|0)+' %'}</div>)}
             <button type="button" onClick={(e)=>{ e.stopPropagation(); open('bsum', 0); }} style={{marginTop:12,height:44,padding:'0 24px',borderRadius:24,border:'1px solid rgba(240,215,138,.5)',cursor:'pointer',fontFamily:'inherit',background:'none',color:'#f0d78a',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:600,textDecoration:'none',boxShadow:'none'}}><GuideIco k="book" z={18}/>{card.cta}</button>
-            <div style={{marginTop:16,maxWidth:320,fontSize:13.5*rs,lineHeight:1.45,color:'rgba(242,238,232,.7)',textWrap:'balance'}}>{ts('bookPdfPro','')}</div>
           </>); })()}
           {card.book && !pro && (<>
             <button type="button" onClick={(e)=>{ e.stopPropagation(); open('bsum', 0); }} style={{marginTop:22,height:48,padding:'0 24px',borderRadius:24,border:0,cursor:'pointer',fontFamily:'inherit',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:700,textDecoration:'none',boxShadow:'0 10px 28px rgba(201,168,76,.4)'}}><GuideIco k="book" z={18}/>{card.cta}</button>
             <div style={{marginTop:16,maxWidth:320,fontSize:13.5*rs,lineHeight:1.45,color:'rgba(242,238,232,.74)',textWrap:'balance'}}><span style={{color:'#f0d78a',fontWeight:700,letterSpacing:'.12em'}}>{'\u2726 PRO'}</span><br/>{ts('bookProLine','')}</div>
+            <div style={{marginTop:12,maxWidth:320,fontSize:13.5*rs,lineHeight:1.45,color:'rgba(242,238,232,.7)',textWrap:'balance'}}>{ts('bookPdfPro','')}</div>
           </>)}
         </div>
       ) : (
