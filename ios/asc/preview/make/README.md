@@ -16,3 +16,12 @@ Everything on screen comes from the app itself (a local build of `dev`, opened i
 
 The scripts expect a small capture rig (a Playwright page with touch input and an audio tap) that is not part of the repo.
 Upload: `ios/asc/asc_preview.py`, run by a commit marked `[asc] [asc-preview]`.
+
+## The search results video (3:2)
+
+`ios/asc/searchvideo/<LANG>.mp4` — 2400 × 1600, 30 fps, 17 s: the search results picture come alive. Same material as the App Preview.
+
+- `layers32.js` — its headlines (left-aligned; the first and third are the screenshots' own, from `captions.js`).
+- `mk32.py` — the video (`PV_OUTW=2400 PV_LANG=SK python3 mk32.py out.mp4`); drawn at 2880 × 1920, encoded at 2400 × 1600.
+
+Upload: `ios/asc/asc_search_video.py` (the commit that runs it is marked for the `asc` job with the script's own tag, see `ios.yml`).
