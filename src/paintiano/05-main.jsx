@@ -1660,7 +1660,149 @@ const TourPlayer = memo(function TourPlayer({kind, lang, onClose, onPlay}){
     </div>);
 });
 
-const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId, t, ts, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale, mode='guide', studio=false, art=null, onTour=null, step=3, tab=null, onReplay=null, onAll=null, onTabCard=null}){
+// ─── BOOK READER (Pro, Nov 2026) ─────────────────────────────────────────
+// The whole book inside the app: public/bookr/<LANG>.json (made from the EPUBs by documentation/book-reader/conv.py — chapters in
+// reading order, pictures in /bookr/img/). One chapter is laid out in CSS columns one page wide; a swipe or a tap on a side turns the
+// page, the last page of a chapter leads into the next. Where the reader stopped, the text size and the look are kept on the device.
+const PF_RD_CSS = `
+.pf-rd{position:fixed;inset:0;z-index:100200;display:flex;flex-direction:column;background:var(--rb);color:var(--rf);font-family:'Outfit','Helvetica Neue',Arial,sans-serif;-webkit-user-select:none;user-select:none;touch-action:pan-y;overscroll-behavior:contain}
+.pf-rd[data-th="dark"]{--rb:#0c0a12;--rf:#ece6da;--ra:#e2c468;--rm:rgba(242,238,232,.66);--rl:rgba(255,255,255,.16)}
+.pf-rd[data-th="paper"]{--rb:#f4eedd;--rf:#262019;--ra:#9a7b1f;--rm:#6b6152;--rl:rgba(0,0,0,.16)}
+.pf-rd-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 6px max(16px,env(safe-area-inset-left,0px));font-size:13px;color:var(--rm)}
+.pf-rd-top span{flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-rd-ib{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--rl);background:none;color:var(--rf);display:flex;align-items:center;justify-content:center;font:inherit;font-size:16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-rd-box{flex:1;min-height:0;overflow:hidden;padding:4px 28px 0;max-width:720px;width:100%;margin:0 auto;box-sizing:border-box}
+.pf-rd-flow{height:100%;column-fill:auto;font-family:'Cormorant Garamond','Songti SC','Noto Serif SC','Hiragino Mincho ProN','Yu Mincho',Georgia,serif;font-weight:500;line-height:1.42;transition:transform .26s ease-out;will-change:transform}
+.pf-rd-flow p{margin:0;text-indent:1.3em;text-align:justify;-webkit-hyphens:auto;hyphens:auto}
+.pf-rd-flow p.first,.pf-rd-flow p.noind,.pf-rd-flow p.orn,.pf-rd-flow p.it,.pf-rd-flow p.fig,.pf-rd-flow p.hist,.pf-rd-flow p.qr,.pf-rd-flow p.cap,.pf-rd-flow p.caps,.pf-rd-flow p.capt,.pf-rd-flow p.phi,.pf-rd-flow p.gt,.pf-rd-flow .quote p,.pf-rd-flow .tp p,.pf-rd-flow .colo p{text-indent:0}
+.pf-rd-flow p.first{margin-top:.6em}
+.pf-rd-flow .dc{float:left;font-size:3.1em;line-height:.8;padding:.06em .08em 0 0;color:var(--ra);font-weight:600}
+.pf-rd-flow p.orn{text-align:center;color:var(--ra);margin:1.2em 0;font-size:1.1em}
+.pf-rd-flow p.it{text-align:center;font-style:italic;margin:.6em 0}
+.pf-rd-flow .chnum{text-align:center;text-indent:0;font-style:italic;color:var(--ra);margin:1em 0 .3em}
+.pf-rd-flow h1{text-align:center;font-weight:600;font-size:1.55em;margin:0 0 1em;line-height:1.15}
+.pf-rd-flow h1.solo{margin-top:1.6em}
+.pf-rd-flow p.fig,.pf-rd-flow p.hist,.pf-rd-flow p.qr{text-align:center;margin:1em 0 .3em}
+.pf-rd-flow img{max-width:100%;max-height:calc(var(--rdh) * .58);height:auto;border-radius:2px}
+.pf-rd-flow div.figpage{-webkit-column-break-before:always;break-before:column;-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;padding-top:calc(var(--rdh) * .06)}
+.pf-rd-flow div.figpage p.fig{margin:0 0 .6em}
+.pf-rd-flow div.histbox{-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;margin:1.2em 0}
+.pf-rd-flow div.histbox p.hist{margin:0 0 .4em}
+.pf-rd-flow p.hist img{max-width:50%;max-height:calc(var(--rdh) * .4)}
+.pf-rd-flow p.qr img{width:4.4em;background:#fff;padding:4px}
+.pf-rd-flow p.cap,.pf-rd-flow p.caps,.pf-rd-flow p.capt{text-align:center;margin:0}
+.pf-rd-flow p.cap{font-style:italic;color:var(--rm);font-size:.82em}
+.pf-rd-flow p.caps{font-style:italic;color:var(--rm);font-size:.88em}
+.pf-rd-flow p.capt{font-weight:600;font-size:.92em;margin-top:.4em}
+.pf-rd-flow .quote{margin:1.4em 6%;text-align:center;font-style:italic}
+.pf-rd-flow .quote p{text-align:center;line-height:1.55}
+.pf-rd-flow .tp{text-align:center;padding-top:calc(var(--rdh) * .16)}
+.pf-rd-flow .tp p{text-align:center;margin:.5em 0}
+.pf-rd-flow .tp .t1{font-size:2.2em;letter-spacing:.14em;color:var(--ra);font-weight:600;margin-bottom:.3em}
+.pf-rd-flow .tp .t2{font-size:1.4em;font-style:italic}
+.pf-rd-flow .tp .t3{font-style:italic;letter-spacing:.06em;color:var(--rm);font-size:.95em}
+.pf-rd-flow .tp .phi{font-size:1.8em;color:var(--ra);margin:1.2em 0}
+.pf-rd-flow .tp .au{font-size:1.2em;margin-top:1.6em}
+.pf-rd-flow .tp .dt{color:var(--rm);font-size:.9em}
+.pf-rd-flow .epi{padding-top:calc(var(--rdh) * .26)}
+.pf-rd-flow .epi .sig{text-align:right;margin:1em 8% 0 0}
+.pf-rd-flow .colo{text-align:center;padding-top:calc(var(--rdh) * .22)}
+.pf-rd-flow .colo p{text-align:center;margin:.4em 0;font-size:.95em}
+.pf-rd-flow p.phi{text-align:center;color:var(--ra);font-size:1.6em;margin-top:1.2em}
+.pf-rd-flow .src p{text-indent:-1.2em;margin:0 0 .25em 1.2em;text-align:left;font-size:.86em;line-height:1.35;-webkit-hyphens:none;hyphens:none;overflow-wrap:anywhere}
+.pf-rd-flow .src p.it{text-indent:0;margin:1em 0 .3em 0;text-align:left;color:var(--ra);font-size:.92em}
+.pf-rd-flow p.gt{text-align:center;font-weight:600;margin:1.6em 0 .1em}
+.pf-rd-flow div.plates{text-align:center;margin:1em 0 1.2em}
+.pf-rd-flow div.pl{display:inline-block;vertical-align:top;width:44%;margin:0 2% 1em;-webkit-column-break-inside:avoid;break-inside:avoid}
+.pf-rd-flow div.c4 div.pl{width:21%;margin:0 1.5% .6em}
+.pf-rd-flow div.c1 div.pl{width:70%}
+.pf-rd-flow div.pl img{width:100%;height:auto;max-height:none}
+.pf-rd-flow div.pl p.cap{font-size:.8em;margin-top:.2em}
+.pf-rd-flow p.leg{margin-top:.2em}
+.pf-rd-flow a{color:var(--ra)}
+.pf-rd-bar{height:3px;margin:8px 28px 0;border-radius:2px;background:var(--rl);overflow:hidden}
+.pf-rd-bar i{display:block;height:100%;background:var(--ra);border-radius:2px;transition:width .26s ease-out}
+.pf-rd-bot{display:flex;justify-content:space-between;gap:12px;padding:7px 28px calc(14px + env(safe-area-inset-bottom,0px));font-size:12.5px;color:var(--rm)}
+.pf-rd-bot span:first-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-rd-sh{position:absolute;left:0;right:0;bottom:0;z-index:3;max-width:560px;margin:0 auto;background:#15111f;color:#f2eee8;border-radius:22px 22px 0 0;border-top:1px solid rgba(255,255,255,.14);padding:10px 22px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -18px 50px rgba(0,0,0,.5)}
+.pf-rd-sh .g{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:0 auto 10px}
+.pf-rd-row{display:flex;align-items:center;justify-content:space-between;margin:8px 0;font-size:13.5px;color:rgba(242,238,232,.72)}
+.pf-rd-seg{display:flex;gap:8px}
+.pf-rd-seg button{min-width:52px;height:40px;padding:0 13px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:none;color:#f2eee8;font:inherit;font-size:14.5px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-rd-seg button[aria-pressed="true"]{border-color:#e9cf86;color:#f0d98c;font-weight:600}
+.pf-rd-toc{margin-top:8px;border-top:1px solid rgba(255,255,255,.12);padding-top:6px;max-height:42vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pf-rd-toc button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 0;color:rgba(242,238,232,.88);font-family:'Cormorant Garamond','Songti SC','Hiragino Mincho ProN',Georgia,serif;font-size:18px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-rd-toc button[aria-current="true"]{color:#f0d98c;font-weight:600}
+`;
+const _pfBookPos = (L)=>{ try{ const p=(JSON.parse(localStorage.getItem('paintiano_book_pos')||'{}')||{})[L]; return (p && p.c>=0) ? p : null; }catch(_){ return null; } };
+const BookReader = memo(function BookReader({lang, onClose, ts}){
+  const L = BOOK_LANGS.indexOf(lang)>=0 ? lang : 'EN';
+  const [bk, setBk] = useState(null);
+  const [err, setErr] = useState(false);
+  const [ui, setUi] = useState(()=>{ try{ return Object.assign({fs:1, th:'dark'}, JSON.parse(localStorage.getItem('paintiano_book_ui')||'{}')||{}); }catch(_){ return {fs:1, th:'dark'}; } });
+  const [ci, setCi] = useState(()=>{ const p=_pfBookPos(L); return p ? (p.c|0) : 0; });
+  const [pg, setPg] = useState(0);
+  const [np, setNp] = useState(1);
+  const [dim, setDim] = useState({w:0, h:0});
+  const [sheet, setSheet] = useState(false);
+  const wantRef = useRef((()=>{ const p=_pfBookPos(L); return {f:(p && +p.f) || 0}; })());   // where to land once the chapter is laid out: a share of it, or its last page
+  const boxRef = useRef(null), flowRef = useRef(null), tRef = useRef(null), sRef = useRef({ci:0, pg:0, np:1});
+  const GAP = 56;
+  useEffect(()=>{ let off=false; fetch('/bookr/'+L+'.json').then(r=>{ if(!r.ok) throw 0; return r.json(); }).then(d=>{ if(off) return; if(!d || !d.ch || !d.ch.length) throw 0; setBk(d); setCi(c=>Math.max(0, Math.min(d.ch.length-1, c))); }).catch(()=>{ if(!off) setErr(true); }); return ()=>{ off=true; }; }, [L]);
+  useEffect(()=>{ try{ localStorage.setItem('paintiano_book_ui', JSON.stringify(ui)); }catch(_){} }, [ui]);
+  useLayoutEffect(()=>{ const m=()=>{ const b=boxRef.current; if(!b) return; const w=Math.max(120, b.clientWidth-56), h=b.clientHeight; setDim(d=>(d.w===w && d.h===h) ? d : {w, h}); };
+    m(); window.addEventListener('resize', m); let ro=null; try{ ro=new ResizeObserver(m); if(boxRef.current) ro.observe(boxRef.current); }catch(_){}
+    return ()=>{ window.removeEventListener('resize', m); try{ ro && ro.disconnect(); }catch(_){} }; }, [bk]);
+  const measure = useCallback(()=>{ const f=flowRef.current; if(!f || !dim.w) return; const n=Math.max(1, Math.round((f.scrollWidth+GAP)/(dim.w+GAP)));
+    setNp(n); const w=wantRef.current; if(w){ wantRef.current=null; setPg(w==='last' ? n-1 : Math.max(0, Math.min(n-1, Math.round((+w.f||0)*(n-1))))); } else setPg(p=>Math.min(p, n-1)); }, [dim.w]);
+  useLayoutEffect(()=>{ measure(); const t=setTimeout(measure, 350); let off=false; try{ document.fonts && document.fonts.ready && document.fonts.ready.then(()=>{ if(!off) measure(); }); }catch(_){} return ()=>{ off=true; clearTimeout(t); }; }, [bk, ci, ui.fs, dim.w, dim.h, measure]);
+  sRef.current = {ci, pg, np};
+  const fsPx = [17, 19.5, 22.5][ui.fs] || 19.5;
+  const total = useMemo(()=> bk ? bk.ch.reduce((s,c)=>s+(c.n||1), 0) : 1, [bk]);
+  const pct = useMemo(()=>{ if(!bk) return 0; let b=0; for(let i=0;i<ci;i++) b+=(bk.ch[i].n||1); return Math.max(0, Math.min(100, Math.round((b+(bk.ch[ci].n||1)*((pg+1)/np))/total*100))); }, [bk, ci, pg, np, total]);
+  useEffect(()=>{ if(!bk || wantRef.current) return; try{ const all=JSON.parse(localStorage.getItem('paintiano_book_pos')||'{}')||{}; all[L]={c:ci, f:(np>1 ? pg/(np-1) : 0), p:pct, t:bk.ch[ci].t}; localStorage.setItem('paintiano_book_pos', JSON.stringify(all)); }catch(_){} }, [bk, L, ci, pg, np, pct]);
+  const go = useCallback((d)=>{ const s=sRef.current; if(!bk) return;
+    if(d>0){ if(s.pg<s.np-1) setPg(s.pg+1); else if(s.ci<bk.ch.length-1){ wantRef.current={f:0}; setPg(0); setCi(s.ci+1); } }
+    else { if(s.pg>0) setPg(s.pg-1); else if(s.ci>0){ wantRef.current='last'; setCi(s.ci-1); } } }, [bk]);
+  const jump = (i)=>{ wantRef.current={f:0}; setPg(0); setCi(i); setSheet(false); };
+  const setFs = (n)=>{ wantRef.current={f:(np>1 ? pg/(np-1) : 0)}; setUi(u=>({...u, fs:n})); };
+  useEffect(()=>{ const k=(e)=>{ if(e.key==='Escape'){ e.stopPropagation(); if(sheet) setSheet(false); else onClose(); } else if(e.key==='ArrowRight' || e.key==='PageDown' || e.key===' '){ e.preventDefault(); go(1); } else if(e.key==='ArrowLeft' || e.key==='PageUp'){ e.preventDefault(); go(-1); } };
+    window.addEventListener('keydown', k, true); return ()=>window.removeEventListener('keydown', k, true); }, [go, onClose, sheet]);
+  const tap = (x, target)=>{ if(target && target.closest && target.closest('a')) return; const b=boxRef.current; if(!b) return; const r=b.getBoundingClientRect(), u=(x-r.left)/Math.max(1,r.width); if(u>0.62) go(1); else if(u<0.38) go(-1); };
+  const onTS = (e)=>{ if(e.touches.length!==1){ tRef.current=null; return; } tRef.current={x:e.touches[0].clientX, y:e.touches[0].clientY}; };
+  const onTE = (e)=>{ const a=tRef.current; tRef.current=null; if(!a) return; const t=e.changedTouches[0], dx=t.clientX-a.x, dy=t.clientY-a.y;
+    if(Math.abs(dx)>42 && Math.abs(dx)>Math.abs(dy)*1.2){ e.preventDefault(); go(dx<0 ? 1 : -1); } else if(Math.abs(dx)<10 && Math.abs(dy)<10){ if(!(e.target.closest && e.target.closest('a'))) e.preventDefault(); tap(t.clientX, e.target); } };
+  const ch = bk ? bk.ch[ci] : null;
+  const html = useMemo(()=>({__html: ch ? ch.h : ''}), [ch]);
+  return (
+    <div className="pf-rd" data-th={ui.th==='paper' ? 'paper' : 'dark'} role="dialog" aria-modal="true" aria-label={bk ? bk.title : 'Paintiano'} style={{'--rdh':(dim.h||600)+'px'}}>
+      <style dangerouslySetInnerHTML={{__html:PF_RD_CSS}}/>
+      <div className="pf-rd-top">
+        <button type="button" className="pf-rd-ib" onClick={onClose} aria-label={ts('close','Close')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span>{ch ? ch.t : ''}</span>
+        <button type="button" className="pf-rd-ib" onClick={()=>setSheet(s=>!s)} aria-label={ts('rdToc','Contents')} aria-expanded={sheet} style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:18,fontWeight:600}}>Aa</button>
+      </div>
+      <div className="pf-rd-box" ref={boxRef} onTouchStart={onTS} onTouchEnd={onTE} onClick={(e)=>{ if(e.detail && !('ontouchstart' in window)) tap(e.clientX, e.target); }}>
+        {ch && dim.w>0 && (<div key={ci} ref={flowRef} className="pf-rd-flow" lang={bk.lang==='zhTW' ? 'zh-TW' : bk.lang==='zh' ? 'zh-CN' : String(bk.lang||'en').toLowerCase()} onLoad={measure}
+          style={{width:dim.w+'px',margin:'0 auto',columnWidth:dim.w+'px',columnGap:GAP+'px',fontSize:fsPx+'px',transform:'translateX('+(-pg*(dim.w+GAP))+'px)'}} dangerouslySetInnerHTML={html}/>)}
+        {!bk && (<div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',textAlign:'center',color:'var(--rm)',fontSize:15,lineHeight:1.5,padding:'0 12px'}}>{err ? ts('rdErr','The book could not be loaded. Check your connection and try again.') : '…'}</div>)}
+      </div>
+      <div className="pf-rd-bar" aria-hidden="true"><i style={{width:pct+'%'}}/></div>
+      <div className="pf-rd-bot"><span>{ch ? ch.t : ''}</span><span>{bk ? (pct+' %') : ''}</span></div>
+      {sheet && bk && (<>
+        <div onClick={()=>setSheet(false)} style={{position:'absolute',inset:0,zIndex:2,background:'rgba(4,4,10,.45)'}}/>
+        <div className="pf-rd-sh" role="dialog" aria-label={ts('rdToc','Contents')}>
+          <div className="g" aria-hidden="true"/>
+          <div className="pf-rd-row"><span>{ts('rdFont','Text')}</span><div className="pf-rd-seg">{[0,1,2].map(n=>(<button key={n} type="button" aria-pressed={ui.fs===n} onClick={()=>setFs(n)} style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:[14,18,23][n]}}>A</button>))}</div></div>
+          <div className="pf-rd-row"><span>{ts('rdLook','Look')}</span><div className="pf-rd-seg"><button type="button" aria-pressed={ui.th!=='paper'} onClick={()=>setUi(u=>({...u, th:'dark'}))}>{ts('rdDark','Dark')}</button><button type="button" aria-pressed={ui.th==='paper'} onClick={()=>setUi(u=>({...u, th:'paper'}))}>{ts('rdPaper','Paper')}</button></div></div>
+          <div className="pf-rd-toc">{bk.ch.map((c,i)=>(<button key={c.id} type="button" aria-current={i===ci} onClick={()=>jump(i)}>{c.t}</button>))}</div>
+        </div>
+      </>)}
+    </div>
+  );
+});
+
+const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, onClose, onOpenSetup, initialCardId, t, ts, lang, guideQuery, setGuideQuery, focusedInput, setFocusedInput, inputFocus, readScale, setReadScale, mode='guide', studio=false, art=null, onTour=null, step=3, tab=null, onReplay=null, onAll=null, onTabCard=null}){
   const panelRef = useRef(null);
   useModalFocusTrap(panelRef);
   const rs = readScale || 1;
@@ -1679,7 +1821,7 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
   const bookCard = useMemo(()=>({id:'book', book:true, title:t('bookTitle')||'The Book', body:ts('bookDesc',''), cta:ts('bookExcerptCta','Book summary')}), [t, ts]);
   // the book summary as story cards (key 'bsum'): the opening, one card per part, the quote — ✕ or the last tap returns to the Book card
   const bookSum = useMemo(()=>{ const B = PF_BOOK_SUM[BOOK_LANGS.indexOf(lang)>=0 ? lang : 'EN'] || PF_BOOK_SUM.EN;
-    return [{id:'bs0', sum:true, brand:B.s.split(/ — | · /)[0], body:B.i}].concat(B.c.map((c,i)=>({id:'bs'+(i+1), sum:true, title:c[0], body:c[1]})), [{id:'bsq', sum:true, quote:B.q, foot:B.f}]); }, [lang]);
+    return [{id:'bs0', sum:true, brand:B.s.split(/ — | · /)[0], body:B.i}].concat(B.c.map((c,i)=>({id:'bs'+(i+1), sum:true, title:c[0], body:c[1]})), [{id:'bsq', sum:true, quote:B.q, foot:(pro ? ts('bookPdfPro','') : ts('bookProLine','')) || B.f}]); }, [lang, pro, ts]);
   const direct = mode==='concept' || mode==='book';
   const [story, setStory] = useState(()=> mode==='concept' ? {k:'concept', i:0} : mode==='book' ? {k:'book', i:0} : null);
   const [sheet, setSheet] = useState(false);
@@ -1950,7 +2092,16 @@ const GuideModal = memo(function GuideModal({onClose, onOpenSetup, initialCardId
           {!card.sum && (<div style={{marginTop:16,display:'flex',flexDirection:'column',gap:9,maxWidth:340}}>
             {_gSentences(card.body).map((ln,i)=>(<div key={i} className="pf-g2-ln" style={{animationDelay:(140+i*90)+'ms',fontSize:16.5*rs,lineHeight:1.42,color:'rgba(242,238,232,.86)',textWrap:'balance'}}>{ln}</div>))}
           </div>)}
-          {card.book && (<button type="button" onClick={(e)=>{ e.stopPropagation(); open('bsum', 0); }} style={{marginTop:22,height:48,padding:'0 24px',borderRadius:24,border:0,cursor:'pointer',fontFamily:'inherit',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:700,textDecoration:'none',boxShadow:'0 10px 28px rgba(201,168,76,.4)'}}><GuideIco k="book" z={18}/>{card.cta}</button>)}
+          {card.book && pro && (()=>{ const _bp=_pfBookPos(BOOK_LANGS.indexOf(lang)>=0 ? lang : 'EN'); void rdK; return (<>
+            <button type="button" onClick={(e)=>{ e.stopPropagation(); onRead && onRead(); }} style={{marginTop:22,height:48,padding:'0 24px',borderRadius:24,border:0,cursor:'pointer',fontFamily:'inherit',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:700,textDecoration:'none',boxShadow:'0 10px 28px rgba(201,168,76,.4)'}}><GuideIco k="book" z={18}/>{_bp ? ts('bookCont','Continue reading') : ts('bookRead','Read the book')}</button>
+            {_bp && (<div style={{marginTop:10,fontSize:13*rs,color:'rgba(242,238,232,.7)'}}>{_bp.t}{' \u00b7 '}{(_bp.p|0)+' %'}</div>)}
+            <button type="button" onClick={(e)=>{ e.stopPropagation(); open('bsum', 0); }} style={{marginTop:12,height:44,padding:'0 24px',borderRadius:24,border:'1px solid rgba(240,215,138,.5)',cursor:'pointer',fontFamily:'inherit',background:'none',color:'#f0d78a',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:600,textDecoration:'none',boxShadow:'none'}}><GuideIco k="book" z={18}/>{card.cta}</button>
+            <div style={{marginTop:16,maxWidth:320,fontSize:13.5*rs,lineHeight:1.45,color:'rgba(242,238,232,.7)',textWrap:'balance'}}>{ts('bookPdfPro','')}</div>
+          </>); })()}
+          {card.book && !pro && (<>
+            <button type="button" onClick={(e)=>{ e.stopPropagation(); open('bsum', 0); }} style={{marginTop:22,height:48,padding:'0 24px',borderRadius:24,border:0,cursor:'pointer',fontFamily:'inherit',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:700,textDecoration:'none',boxShadow:'0 10px 28px rgba(201,168,76,.4)'}}><GuideIco k="book" z={18}/>{card.cta}</button>
+            <div style={{marginTop:16,maxWidth:320,fontSize:13.5*rs,lineHeight:1.45,color:'rgba(242,238,232,.74)',textWrap:'balance'}}><span style={{color:'#f0d78a',fontWeight:700,letterSpacing:'.12em'}}>{'\u2726 PRO'}</span><br/>{ts('bookProLine','')}</div>
+          </>)}
         </div>
       ) : (
         <div key={story.k+story.i} className="pf-g2-in" style={{position:'absolute',left:0,right:0,top:top+'78px)',bottom:0,display:'flex',flexDirection:'column',alignItems:'center',padding:'0 26px calc(env(safe-area-inset-bottom, 0px) + 34px)',textAlign:'center'}}>
@@ -6045,6 +6196,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [showDailyInfo, setShowDailyInfo] = useState(false);
   const openDailyInfo = useCallback((e)=>{ if(e){ e.preventDefault(); e.stopPropagation(); } setShowDailyInfo(true); try{ window.posthog && window.posthog.capture('daily_info_open'); }catch(_){} },[]);
   const closeBook = useCallback(()=>setShowBook(false),[]);
+  // the whole book, read in the app (Pro and Pro AI): the reader lies over the Book card; closing it returns there with the place kept
+  const [showReader, setShowReader] = useState(false);
+  const [readerK, setReaderK] = useState(0);
+  const openReader = useCallback(()=>setShowReader(true),[]);
+  const closeReader = useCallback(()=>{ setShowReader(false); setReaderK(k=>k+1); },[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [printThumb, setPrintThumb] = useState(null);   // Save › Print: the painting, small, on the white and the dark sheet
   // Paint-mode Web/Print export toggle: when ON and a source image is on
@@ -9337,6 +9493,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(navMenuOpen){e.preventDefault();setNavMenuOpen(false);return;}
       if(showGuide){e.preventDefault();setShowGuide(false);setGuideQuery('');return;}
       if(showAbout){e.preventDefault();setShowAbout(false);return;}
+      if(showReader) return;   // the reader has its own Escape
       if(showBook){e.preventDefault();setShowBook(false);return;}
       if(pickMode){e.preventDefault();setPickMode(null);return;}
     };
@@ -22803,6 +22960,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
 
       {showAbout && (
         <GuideModal
+          pro={proStatus==='pro' || proStatus==='pro_ai'}
+          onRead={openReader}
+          rdK={readerK}
           mode="concept"
           studio={studioOn}
           art={(homeArt && homeArt.u) || STUDIO_HOME_SAMPLE.u}
@@ -22824,8 +22984,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       {showDailyInfo && (
         <DailyInfoPopover onClose={()=>setShowDailyInfo(false)} onPro={()=>{ setShowSetupModal(false); setPaywallReason('settings'); }} ts={ts} artistName={STYLE_INSPIRED[artistOfDay]||artistOfDay} composerName={COMPOSER_INSPIRED[composerOfDay]||composerOfDay} readScale={effScale} studio={studioOn} />
       )}
+      {showReader && (proStatus==='pro' || proStatus==='pro_ai') && (<BookReader lang={lang} onClose={closeReader} ts={ts}/>)}
       {showBook && (
         <GuideModal
+          pro={proStatus==='pro' || proStatus==='pro_ai'}
+          onRead={openReader}
+          rdK={readerK}
           mode="book"
           studio={studioOn}
           art={(homeArt && homeArt.u) || STUDIO_HOME_SAMPLE.u}
@@ -22845,6 +23009,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
 
       {showGuide && (
         <GuideModal
+          pro={proStatus==='pro' || proStatus==='pro_ai'}
+          onRead={openReader}
+          rdK={readerK}
           studio={studioOn}
           art={(homeArt && homeArt.u) || STUDIO_HOME_SAMPLE.u}
           onClose={closeGuide}
