@@ -17,6 +17,8 @@ In-app purchases (StoreKit):
 - AI pass 12 months (non-renewing subscription): AI composition from a mood or a photo for 12 months. It does not renew.
 To see the purchase screen: tap "Paintiano" at the top > Paintiano Pro. (Tapping a locked painter also opens it - except the first one, which is a free try.) "Restore purchases" is at the bottom of that screen.
 
+The book (tap "Paintiano" at the top > Book): a summary of The Book of Golden Music is free for everyone. The whole book can be read in the app by owners of Paintiano Pro or Pro AI - it is part of those in-app purchases. The book is not sold separately in the app and there is no code field for it.
+
 Refunds: the Refunds page (menu "Paintiano" at the top > Refunds) has a button that opens Apple's refund request sheet.
 
 Licence key field: Paintiano is also a web app. People who bought a licence earlier on the website can enter their key to use it here (multiplatform service). All purchases inside the iOS app use In-App Purchase.
