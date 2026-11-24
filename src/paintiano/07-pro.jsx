@@ -73,6 +73,10 @@ const PRO_CFG = {
   // No early-bird window any more (Oct 2026): these are the prices, plain.
   displayPricePro:   '€9.99',
   displayPriceProAI: '€19.99',
+  // The book on its own (web only; the store apps sell Pro alone). The buyer gets a book code by e-mail (api/_lib/book.js).
+  paddlePriceIdBook: 'pri_01m86ytn6fpae4hzgtdc9vyp3n',
+  displayPriceBook: '€4.99',
+  bookCodeStoreKey: 'paintiano_book_code_v1',
 };
 
 // Accent colour used to brand AI features across the paywall (Pro AI tier card,
@@ -106,6 +110,37 @@ function _proClearCache() {
 
 // The current anonymous PostHog visit id as '&pv=…' (funnel across a page change;
 // PostHog runs cookieless, so a new page would otherwise start a new visit).
+// ─── the book on its own ─────────────────────────────────────────────────────
+const _pfBookApi = ()=> (PF_STORE ? 'https://paintiano.app' : '') + '/api/book';
+function pfBookCodeRead(){ try{ const c=String(localStorage.getItem(PRO_CFG.bookCodeStoreKey)||''); return /^BOOK-[A-Z2-9]{8}-[A-Z2-9]{12}$/.test(c) ? c : null; }catch(_){ return null; } }
+// is this code good? (the server signs book codes; nothing is stored there)
+async function pfBookCodeTry(raw){
+  const code=String(raw||'').trim().toUpperCase().replace(/\s+/g,'');
+  if(!/^BOOK-[A-Z2-9]{8}-[A-Z2-9]{12}$/.test(code)) return {ok:false, reason:'format'};
+  try{ const r=await fetch(_pfBookApi(), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code, check:true})}); const d=await r.json().catch(()=>null);
+    if(d && d.ok){ try{ localStorage.setItem(PRO_CFG.bookCodeStoreKey, code); }catch(_){} return {ok:true, code}; }
+    return {ok:false, reason:(d && d.reason) || 'server'}; }catch(_){ return {ok:false, reason:'offline'}; }
+}
+// the book's text for the reader: with a licence key (Pro, Pro AI) or a book code; kept on the device after the first time
+async function pfBookFetch(lang, key, code){
+  const ck='paintiano_book_c_'+lang;
+  try{ const r=await fetch(_pfBookApi(), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lang, ...(key?{key}:{}), ...(code?{code}:{})})}); const d=await r.json().catch(()=>null);
+    if(d && d.ok && d.book && d.book.ch){ try{ localStorage.setItem(ck, JSON.stringify(d.book)); }catch(_){} return d.book; } }catch(_){}
+  try{ const c=JSON.parse(localStorage.getItem(ck)||'null'); if(c && c.ch && c.ch.length) return c; }catch(_){}
+  return null;
+}
+// the Paddle window for the book (the web only)
+function pfBookBuy(){
+  if(PF_STORE || typeof window==='undefined') return;
+  const go=(Paddle)=>{ try{ window.posthog && window.posthog.capture('checkout_opened', { tier:'book' }); }catch(_){}
+    Paddle.Environment.set(PRO_CFG.paddleEnv); Paddle.Initialize({ token: PRO_CFG.paddleClientToken });
+    Paddle.Checkout.open({ items:[{ priceId:PRO_CFG.paddlePriceIdBook, quantity:1 }], settings:{ displayMode:'overlay', theme:'dark', locale:(navigator.language||'en').slice(0,2), successUrl:window.location.origin+'/play?book=1'+_pfVisitParam() } }); };
+  if(window.Paddle) return go(window.Paddle);
+  let s=document.querySelector('script[data-paintiano-paddle]');
+  if(!s){ s=document.createElement('script'); s.src='https://cdn.paddle.com/paddle/v2/paddle.js'; s.async=true; s.setAttribute('data-paintiano-paddle','1'); document.head.appendChild(s); }
+  s.addEventListener('load', ()=>{ if(window.Paddle) go(window.Paddle); });
+  s.addEventListener('error', ()=>{ try{ window.location.href='mailto:hello@paintiano.app?subject=Paintiano book - checkout issue'; }catch(_){} });
+}
 function _pfVisitParam() {
   try {
     const d = window.posthog && window.posthog.get_distinct_id && window.posthog.get_distinct_id();

@@ -53,6 +53,7 @@
 import { insertLicense, setLicenseStatus, getLicenseByKey, getLicenseByOrderId, patchLicense } from './_lib/supabase.js';
 import { passState, extendedUntil, plusYear, minusYear } from './_lib/pass.js';
 import { aiCountOf } from './_lib/refund.js';
+import { bookCodeFor } from './_lib/book.js';
 
 export const config = { runtime: 'edge' };
 
@@ -68,6 +69,8 @@ const PRICE_ID_PRO_AI = process.env.PADDLE_PRICE_ID_PRO_AI || null;
 // Upgrade price (Pro → Pro AI). Price IDs are public (the app ships them), so a
 // literal fallback is fine; the env var wins when set.
 const PRICE_ID_UPGRADE = process.env.PADDLE_PRICE_ID_UPGRADE || 'pri_01m5zep41d8kv3m6tcxbbnxsb2';
+// The book sold on its own (Nov 2026): no licence row — the buyer is e-mailed a stateless book code (_lib/book.js).
+const PRICE_ID_BOOK = process.env.PADDLE_PRICE_ID_BOOK || 'pri_01m86ytn6fpae4hzgtdc9vyp3n';
 const RESEND_API_KEY = process.env.RESEND_API_KEY;     // for emailing the license
 const EMAIL_FROM = 'Paintiano <hello@paintiano.app>';  // verified Resend sender
 const EMAIL_REPLY_TO = 'hello@paintiano.app';
@@ -173,6 +176,7 @@ function generateLicenseKey() {
 // null means the price isn't one of ours (caller treats as price_mismatch).
 function priceIdToTier(priceId) {
   if (!priceId) return null;
+  if (PRICE_ID_BOOK && priceId === PRICE_ID_BOOK) return 'book';
   if (PRICE_ID_UPGRADE && priceId === PRICE_ID_UPGRADE) return 'upgrade';
   if (PRICE_ID_PRO_AI && priceId === PRICE_ID_PRO_AI) return 'pro_ai';
   if (PRICE_ID_PRO    && priceId === PRICE_ID_PRO)    return 'pro';
@@ -458,6 +462,64 @@ async function sendLicenseEmail({ to, licenseKey, tier, amount, currency, orderI
   }
 }
 
+// ─── the book's e-mail ───────────────────────────────────────────────────────
+function buildBookEmailHtml({ code, amount, currency, orderId }) {
+  const priceLine = (amount != null && currency) ? `${amount} ${currency}` : '€4.99';
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your Paintiano book</title></head>
+<body style="margin:0;padding:0;background:#06060c;color:#e8e2d4;font-family:'Outfit',-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;line-height:1.55;">
+<div style="max-width:560px;margin:0 auto;padding:40px 24px 56px;">
+  <div style="text-align:center;padding-bottom:32px;border-bottom:1px solid rgba(232,226,212,.12);">
+    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:34px;font-weight:600;color:#c9a84c;line-height:1;">Paintiano</div>
+    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:16px;color:#e8e2d4;margin-top:10px;">The Book of Golden Music is yours</div>
+  </div>
+  <p style="font-size:15px;margin:32px 0 10px;">Hi,</p>
+  <p style="font-size:15px;margin:0 0 8px;">Thank you. Here is your book code — keep this email safe.</p>
+  <div style="margin:24px 0 28px;padding:22px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.5);border-radius:12px;text-align:center;">
+    <div style="font-size:11px;letter-spacing:.18em;color:rgba(232,226,212,.6);">BOOK CODE</div>
+    <div style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:20px;color:#ffd07a;letter-spacing:1px;margin-top:8px;">${code}</div>
+  </div>
+  <p style="font-size:14px;margin:0 0 8px;"><strong style="color:#ffd07a;">Read it in the app:</strong> open <a href="https://paintiano.app/play" style="color:#ffd07a;">paintiano.app</a> → menu → Book → “I have a code”, and paste the code. It works on every device, in all nine languages.</p>
+  <p style="font-size:14px;margin:18px 0 10px;"><strong style="color:#ffd07a;">Want the file too?</strong> Reply to this email with your language and we will send you the e-book (EPUB), free of charge.</p>
+  <div style="margin:32px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,.10);font-size:12px;color:rgba(232,226,212,.55);line-height:1.7;">
+    <div><strong style="color:rgba(232,226,212,.78);">Order:</strong> ${orderId || '—'}</div>
+    <div><strong style="color:rgba(232,226,212,.78);">Amount:</strong> ${priceLine} (one-time)</div>
+    <div><strong style="color:rgba(232,226,212,.78);">Refunds:</strong> see the Refund Policy — just reply to this email.</div>
+  </div>
+  <div style="margin:32px 0 0;text-align:center;font-size:13px;color:rgba(232,226,212,.6);">Need help? Reply to this email — it goes straight to <a href="mailto:hello@paintiano.app" style="color:#ffd07a;text-decoration:none;">hello@paintiano.app</a>.</div>
+  <div style="margin:40px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,.08);text-align:center;font-size:11px;color:rgba(232,226,212,.4);line-height:1.7;">
+    Rastislav Ďurica · sole trader · Slovakia · IČO 34 594 671<br>
+    Payments processed by Paddle.com Market Limited (Merchant of Record)<br>
+    <a href="https://paintiano.app/terms.html" style="color:rgba(232,226,212,.5);text-decoration:none;">Terms</a> ·
+    <a href="https://paintiano.app/privacy.html" style="color:rgba(232,226,212,.5);text-decoration:none;">Privacy</a> ·
+    <a href="https://paintiano.app/refunds.html" style="color:rgba(232,226,212,.5);text-decoration:none;">Refunds</a>
+  </div>
+</div></body></html>`;
+}
+function buildBookEmailText({ code, amount, currency, orderId }) {
+  const priceLine = (amount != null && currency) ? `${amount} ${currency}` : '€4.99';
+  return ['Hi,', '', 'Thank you. The Book of Golden Music is yours — keep this email safe.', '', `BOOK CODE: ${code}`, '',
+    'Read it in the app: open https://paintiano.app/play → menu → Book → "I have a code", and paste the code.', '',
+    'Want the file too? Reply to this email with your language and we will send you the e-book (EPUB), free of charge.', '',
+    `Order: ${orderId || '—'}`, `Amount: ${priceLine} (one-time)`, 'Refunds: see the Refund Policy. Just reply to this email.', '',
+    'Need help? hello@paintiano.app', '', '—', 'Paintiano · Rastislav Ďurica · Slovakia · IČO 34 594 671', 'Payments by Paddle.com Market Limited (Merchant of Record).'].join('\n');
+}
+async function sendBookEmail({ to, code, amount, currency, orderId }) {
+  if (!RESEND_API_KEY) return { ok: false, reason: 'no_api_key' };
+  if (!to) return { ok: false, reason: 'no_recipient' };
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': 'book-' + String(orderId || code) },
+      body: JSON.stringify({ from: EMAIL_FROM, to: [to], bcc: EMAIL_BCC, reply_to: EMAIL_REPLY_TO, subject: 'Your Paintiano book',
+        html: buildBookEmailHtml({ code, amount, currency, orderId }), text: buildBookEmailText({ code, amount, currency, orderId }),
+        tags: [{ name: 'category', value: 'book_delivery' }, { name: 'provider', value: 'paddle' }] }),
+    });
+    if (!res.ok) { const e = await res.text().catch(() => ''); console.error('paddle-webhook: Resend (book) failed', res.status, e.slice(0, 300)); return { ok: false, reason: 'resend_http_' + res.status }; }
+    return { ok: true };
+  } catch (err) { console.error('paddle-webhook: Resend (book) threw', err); return { ok: false, reason: 'resend_exception' }; }
+}
+
 // ─── handler ────────────────────────────────────────────────────────────────
 
 export default async function handler(req) {
@@ -557,6 +619,23 @@ export default async function handler(req) {
         // which could be a different product if a cart ever bundles things).
         const productId = matchedItem?.price?.product_id || null;
         const variantId = matchedItem?.price?.id || null;
+
+        // ── The book on its own ───────────────────────────────────────────
+        // No licence is written (a book must never read as Pro anywhere): the buyer gets a book code by e-mail.
+        // The code is the same for every delivery of this transaction, and Resend drops a second copy of the mail.
+        if (tier === 'book') {
+          const code = await bookCodeFor(orderId);
+          if (!code) {
+            console.error('paddle-webhook: book code could not be made (no secret / no order id)', { orderId });
+            return json({ ok: false, reason: 'no_book_secret' }, 500);
+          }
+          const sent = await sendBookEmail({ to: email, code, amount: amountMajor, currency: currencyCode, orderId });
+          if (!sent.ok) {
+            console.error('paddle-webhook: book e-mail not sent', sent);
+            return json({ ok: false, reason: 'book_email_failed', detail: sent.reason }, 500);   // Paddle retries
+          }
+          return json({ ok: true, book: true });
+        }
 
         // ── Pro → Pro AI upgrade ──────────────────────────────────────────
         if (tier === 'upgrade') {

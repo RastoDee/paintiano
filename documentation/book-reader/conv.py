@@ -1,4 +1,6 @@
-# EPUB -> the app's book files: public/bookr/<LANG>.json (chapters in reading order, images pointed at /bookr/img/) + public/bookr/img/<hash>.<ext>
+# EPUB -> the app's book files: api/_book/<LANG>.js (the text, chapters in reading order; served by /api/book) + public/bookr/img/<hash>.<ext>
+# NOTE (24 Nov 2026): the texts in api/_book were also edited by hand after the first run — compare before overwriting.
+# usage: python3 conv.py <folder with paintiano-<LANG>.epub> public/bookr
 import zipfile,re,json,hashlib,os,sys,glob
 SRC,OUT=sys.argv[1],sys.argv[2]
 os.makedirs(OUT+'/img',exist_ok=True)
@@ -28,6 +30,9 @@ for f in sorted(glob.glob(SRC+'/paintiano-*.epub')):
         ch.append({'id':h.rsplit('.',1)[0],'t':t,'n':len(re.sub(r'<[^>]+>','',b)),'h':b})
     cov=hashlib.md5(z.read(base+'cover.jpg')).hexdigest()[:14]+'.jpg'
     if not os.path.exists(OUT+'/img/'+cov): open(OUT+'/img/'+cov,'wb').write(z.read(base+'cover.jpg'))
-    json.dump({'v':1,'lang':L,'title':title,'cover':'/bookr/img/'+cov,'ch':ch},open(OUT+'/%s.json'%L,'w',encoding='utf8'),ensure_ascii=False,separators=(',',':'))
-    tot[L]=(len(ch),os.path.getsize(OUT+'/%s.json'%L))
+    # the text is NOT public: it goes to api/_book/<LANG>.js and is served by /api/book to a licence key or a book code only
+    API=os.path.join(os.path.dirname(OUT.rstrip('/')),'..','api','_book'); os.makedirs(API,exist_ok=True)
+    js='// the book, '+L+' — made from the EPUB (documentation/book-reader); served only by /api/book\nexport default '+json.dumps({'v':1,'lang':L,'title':title,'cover':'/bookr/img/'+cov,'ch':ch},ensure_ascii=False,separators=(',',':'))+';\n'
+    open(API+'/%s.js'%L,'w',encoding='utf8').write(js)
+    tot[L]=(len(ch),len(js))
 print(tot); print('imgs',len(os.listdir(OUT+'/img')),round(sum(os.path.getsize(OUT+'/img/'+x) for x in os.listdir(OUT+'/img'))/1e6,2),'MB')
