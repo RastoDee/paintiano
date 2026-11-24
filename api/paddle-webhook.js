@@ -477,9 +477,11 @@ function buildBookEmailHtml({ code, amount, currency, orderId }) {
   <p style="font-size:15px;margin:0 0 8px;">Thank you. Here is your book code — keep this email safe.</p>
   <div style="margin:24px 0 28px;padding:22px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.5);border-radius:12px;text-align:center;">
     <div style="font-size:11px;letter-spacing:.18em;color:rgba(232,226,212,.6);">BOOK CODE</div>
-    <div style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:20px;color:#ffd07a;letter-spacing:1px;margin-top:8px;">${code}</div>
+    <div style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:16px;color:#ffd07a;letter-spacing:.5px;margin-top:8px;white-space:nowrap;">${code}</div>
+    <a href="https://paintiano.app/play?bookcode=${code}" style="display:inline-block;margin-top:18px;padding:13px 26px;border-radius:26px;background:#c9a84c;color:#1a1408;font-weight:700;font-size:15px;text-decoration:none;">Open my book</a>
+    <div style="font-size:12px;color:rgba(232,226,212,.6);margin-top:10px;">One tap — the code is entered for you.</div>
   </div>
-  <p style="font-size:14px;margin:0 0 8px;"><strong style="color:#ffd07a;">Read it in the app:</strong> open <a href="https://paintiano.app/play" style="color:#ffd07a;">paintiano.app</a> → menu → Book → “I have a code”, and paste the code. It works on every device, in all nine languages.</p>
+  <p style="font-size:14px;margin:0 0 8px;"><strong style="color:#ffd07a;">On another device, or in the iPhone / Android app:</strong> menu → Book → “I have a code”, and paste the code. It works on every device, in all nine languages.</p>
   <p style="font-size:14px;margin:18px 0 10px;"><strong style="color:#ffd07a;">Want the file too?</strong> Reply to this email with your language and we will send you the e-book (EPUB), free of charge.</p>
   <div style="margin:32px 0 0;padding-top:24px;border-top:1px solid rgba(232,226,212,.10);font-size:12px;color:rgba(232,226,212,.55);line-height:1.7;">
     <div><strong style="color:rgba(232,226,212,.78);">Order:</strong> ${orderId || '—'}</div>
@@ -499,7 +501,8 @@ function buildBookEmailHtml({ code, amount, currency, orderId }) {
 function buildBookEmailText({ code, amount, currency, orderId }) {
   const priceLine = (amount != null && currency) ? `${amount} ${currency}` : '€4.99';
   return ['Hi,', '', 'Thank you. The Book of Golden Music is yours — keep this email safe.', '', `BOOK CODE: ${code}`, '',
-    'Read it in the app: open https://paintiano.app/play → menu → Book → "I have a code", and paste the code.', '',
+    `Open your book (the code is entered for you): https://paintiano.app/play?bookcode=${code}`, '',
+    'On another device, or in the iPhone / Android app: menu → Book → "I have a code", and paste the code.', '',
     'Want the file too? Reply to this email with your language and we will send you the e-book (EPUB), free of charge.', '',
     `Order: ${orderId || '—'}`, `Amount: ${priceLine} (one-time)`, 'Refunds: see the Refund Policy. Just reply to this email.', '',
     'Need help? hello@paintiano.app', '', '—', 'Paintiano · Rastislav Ďurica · Slovakia · IČO 34 594 671', 'Payments by Paddle.com Market Limited (Merchant of Record).'].join('\n');
