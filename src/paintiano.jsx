@@ -32558,11 +32558,10 @@ const STUDIO_HOME_CSS = `
 .pf-sh-mutefl{position:absolute;left:50%;top:50%;z-index:7;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);color:#fff;pointer-events:none;animation:pfShMuteFl 1s ease-out both}
 @keyframes pfShMuteFl{0%{opacity:0;transform:scale(.72)}16%{opacity:1;transform:scale(1.07)}28%{transform:scale(1)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
 /* full screen: only the painting — but the look's name still comes for a moment, as without it (.pf-sh-flash: inspired by …, a Fusion, ✦) */
-.pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-cta,.pf-fy-clean .pf-lh-in.out .pf-lh-foot,.pf-fy-clean .pf-lh-shade{display:none!important}
-.pf-fy-clean .pf-lh-in:not(.out) .pf-lh-cap{transform:translateY(var(--dy,-300px)) scale(var(--s,1.4))!important;transition:opacity .7s ease!important}   /* the painting alone: its title still comes, large in the middle, and then goes — it does not settle (there is nothing below to settle by) */
-.pf-fy-clean .pf-lh-in:not(.out) .pf-lh-cap:not(.big){opacity:0!important}
+.pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-shade{display:none!important}
+.pf-fy-clean .pf-lh-cta{visibility:hidden!important}   /* the painting alone: its title stays where it always is, at the foot — only the line about the tap goes (here a tap first brings everything back); its place is kept, so the title does not move */
 .pf-fy-clean .pf-sh-stage::after{display:none!important}
-.pf-fy-fade .pf-topbar,.pf-fy-fade .pf-st-bar,.pf-fy-fade .pf-sh-prog,.pf-fy-fade .pf-sh-mute,.pf-fy-fade .pf-sh-paused,.pf-fy-fade .pf-sh-intro,.pf-fy-fade .pf-sh-up,.pf-fy-fade .pf-sh-next,.pf-fy-fade .pf-sh-nextx,.pf-fy-fade .pf-sh-tap,.pf-fy-fade .pf-sh-cap,.pf-fy-fade .pf-lh-foot,.pf-fy-fade .pf-lh-shade{opacity:0!important;transition:opacity 1.6s ease-in-out!important;pointer-events:none!important}
+.pf-fy-fade .pf-topbar,.pf-fy-fade .pf-st-bar,.pf-fy-fade .pf-sh-prog,.pf-fy-fade .pf-sh-mute,.pf-fy-fade .pf-sh-paused,.pf-fy-fade .pf-sh-intro,.pf-fy-fade .pf-sh-up,.pf-fy-fade .pf-sh-next,.pf-fy-fade .pf-sh-nextx,.pf-fy-fade .pf-sh-tap,.pf-fy-fade .pf-sh-cap,.pf-fy-fade .pf-lh-cta,.pf-fy-fade .pf-lh-shade{opacity:0!important;transition:opacity 1.6s ease-in-out!important;pointer-events:none!important}
 .pf-fy-cleanhint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);z-index:20;transform:translateX(-50%);white-space:nowrap;padding:9px 16px;border-radius:999px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);color:#f2eee8;font-size:13px;font-weight:600;letter-spacing:.01em;pointer-events:none;animation:pfFyHint 2.6s ease both}
 @keyframes pfFyHint{0%{opacity:0;transform:translate(-50%,8px)}12%{opacity:1;transform:translate(-50%,0)}80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,0)}}
 @keyframes pfShPausedIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
@@ -47674,8 +47673,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const liveHomeOn = studioHome && feedAt<0 && !feedFly && !_homeCurV() && !showIntro && !showOnboarding;   // once the splash has gone
   useEffect(()=>{ if(lhBack && (feedAt>=0 || !studioHome || homeSide)) setLhBack(false); },[lhBack, feedAt, studioHome, homeSide]);   // it plays, the Studio or a way of yours opens: For You is on again, the home card as before
   const [liveHome, setLiveHome] = useState({i:0, k:0});
-  // the first screen watched without a touch (10.5 s or more): in the middle of a painting — its title gone, well before it is done, never
-  // as one painting gives way to the next — all but the painting fades slowly away, as two spread fingers do (TikTok's clear screen).
+  // the first screen watched without a touch (10.5 s or more): in the middle of a painting — well before it is done, never
+  // as one painting gives way to the next — all but the painting and its title fades slowly away, as two spread fingers do (TikTok's clear screen).
   // A tap brings it back, without sound; whatever starts brings it back too
   const _LH_IDLE = 10500; const lhIdleRef = useRef(Date.now()); const lhAutoRef = useRef(false); const lhStartRef = useRef(Date.now()); const [lhFade, setLhFade] = useState(false);
   lhOnRef.current = liveHomeOn; const navMenuOpenRef = useRef(false); navMenuOpenRef.current = navMenuOpen;
@@ -47702,7 +47701,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // The title large in the middle is the settled title itself, moved and scaled — one element, so nothing is said twice. Where the middle is
   // (--dy) and how large it may be without leaving the screen (--s: a long title grows less) is measured from its settled place.
   // In the first minute (its card lies over the painting) the title stands below from the start: one thing at a time, and it never passes under the card.
-  const _lhBig = livePhase==='card' && !((pfStepEff===0 || zcReplay) && zcK>0);
+  // Only the opening painting does this (k is 0 until the first one gives way): every later one has its title below from the start — one place to look.
+  const _lhBig = livePhase==='card' && liveHome.k===0 && !((pfStepEff===0 || zcReplay) && zcK>0);
   const lhCapElRef = useRef(null);
   // The painting before this one stays as it is while it leaves (its own canvas and words — no picture taken of it, so nothing blinks as
   // they change): {k, m} — its key and its words.
@@ -47760,7 +47760,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     setLivePhase('card');
     if(reduce){ paint(cn); setLivePhase('done'); return; }   // no motion asked for: the finished painting, still
     paint(1); last=1;   // its ground and first stroke at once: it never comes up as an empty dark card that turns into the painting a moment later
-    tm=setTimeout(step, lead+200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, lead+2400); };   // the title large in the middle: 2.4 s — then it settles below and stays, so there is time to read it
+    tm=setTimeout(step, lead+200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, lead+2400); };   // the opening painting's title large in the middle: 2.4 s — then it settles below and stays, so there is time to read it
     if(got && typeof got.then==='function') got.then(run).catch(()=>{ run(null); }); else run(got);
     return ()=>{ alive=false; clearTimeout(tm); clearTimeout(tc); };
   }, [liveHomeOn, liveHome.i, tone]);
