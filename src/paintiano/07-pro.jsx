@@ -121,11 +121,16 @@ async function pfBookCodeTry(raw){
     if(d && d.ok){ try{ localStorage.setItem(PRO_CFG.bookCodeStoreKey, code); }catch(_){} return {ok:true, code}; }
     return {ok:false, reason:(d && d.reason) || 'server'}; }catch(_){ return {ok:false, reason:'offline'}; }
 }
+// the server no longer gives the book: the texts kept on the device go, and (for a book code) the code itself
+function pfBookForget(codeToo){ try{ for(const l of ['EN','SK','DE','FR','ES','PT','zh','zhTW','ja']) localStorage.removeItem('paintiano_book_c_'+l); if(codeToo) localStorage.removeItem(PRO_CFG.bookCodeStoreKey); }catch(_){} }
+// a quiet look on start: does this device's book code still hold? (false only on the server's clear no)
+async function pfBookCodeStill(code){ try{ const r=await fetch(_pfBookApi(), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code, check:true})}); const d=await r.json().catch(()=>null); if(d && d.ok===false && (d.reason==='no_access' || d.reason==='refunded')){ pfBookForget(true); return false; } }catch(_){} return true; }
 // the book's text for the reader: with a licence key (Pro, Pro AI) or a book code; kept on the device after the first time
 async function pfBookFetch(lang, key, code){
   const ck='paintiano_book_c_'+lang;
   try{ const r=await fetch(_pfBookApi(), {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lang, ...(key?{key}:{}), ...(code?{code}:{})})}); const d=await r.json().catch(()=>null);
-    if(d && d.ok && d.book && d.book.ch){ try{ localStorage.setItem(ck, JSON.stringify(d.book)); }catch(_){} return d.book; } }catch(_){}
+    if(d && d.ok && d.book && d.book.ch){ try{ localStorage.setItem(ck, JSON.stringify(d.book)); }catch(_){} return d.book; }
+    if(d && d.ok===false && (d.reason==='no_access' || d.reason==='refunded')){ pfBookForget(!!code); return {denied:true}; } }catch(_){}   // the server said no (a refunded book, a key that no longer holds): nothing is read from the device's copy either
   try{ const c=JSON.parse(localStorage.getItem(ck)||'null'); if(c && c.ch && c.ch.length) return c; }catch(_){}
   return null;
 }
