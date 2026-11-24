@@ -1342,7 +1342,10 @@ const GvPic = ({v, lang, M})=>{ const parts=String(v||'').split('+'), bw=84/part
       <rect x="42" y="4" width="16" height="32" rx="3" stroke="rgba(242,238,232,.35)"/><path d="M50 20m-1 0a1 1 0 1 1 2 0a4 4 0 1 1 -6 -1a7 7 0 1 1 10 6"/>
       <rect x="62" y="4" width="16" height="32" rx="3" stroke="rgba(242,238,232,.35)"/><path d="M70 20a7 7 0 1 0 -5 6a4 4 0 1 0 6 -4"/></svg>);
     return (<span key={i} style={{fontSize:26,lineHeight:1,color:'#f0d78a',fontWeight:800}}>{pfIcons(a||k)}</span>); }); };
-const GvHero = ({v, lang, M})=>{ const p=v.split(':'), sh=_gvShot(M, lang, p[1]); if(!sh) return null; const yr=(p[2]||'0-844').split('-').map(Number), y0=yr[0], hh=Math.max(20, yr[1]-y0);
+const GvHero = ({v, lang, M})=>{ const p=v.split(':'), sh=_gvShot(M, lang, p[1]); if(!sh) return null;
+  // the stretch of the screen: y0-y1, or first..last — from the top of one control to the foot of another (their places come with the screenshots, so the cut never falls through a row)
+  const nm=String(p[2]||'').match(/^([a-z_]+)\.\.([a-z_]+)$/i), ra=nm && sh.S.r && sh.S.r[nm[1]], rb=nm && sh.S.r && sh.S.r[nm[2]];
+  const yr=(ra && rb) ? [Math.max(0, ra[1]-8), Math.min(sh.H, rb[1]+rb[3]+8)] : (p[2]||'0-844').split('-').map(Number), y0=yr[0], hh=Math.max(20, yr[1]-y0);
   return (<div style={{position:'relative',width:'100%',paddingTop:(hh/sh.W*100)+'%',borderRadius:16,overflow:'hidden',border:'1px solid rgba(242,238,232,.1)',margin:'6px 0 8px'}}>
     <img src={sh.src} alt="" style={{position:'absolute',left:0,top:(-y0/hh*100)+'%',width:'100%',height:'auto',display:'block'}}/>
     {(p[3]||'').split(',').filter(Boolean).map((q)=>{ const kv=q.split('='), r=sh.S.r && sh.S.r[kv[0]]; if(!r) return null;
@@ -1857,6 +1860,10 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, book
   const listOf = (k)=> k.indexOf('tour:')===0 ? (tourOf(k.slice(5))||[]) : k.indexOf('tab')===0 ? tabIds(+k.slice(3)).map(id=>byId[id]) : k.indexOf('lnk:')===0 ? k.slice(4).split(',').map(id=>byId[id]).filter(Boolean) : k==='concept' ? concept : k==='book' ? [bookCard] : k==='bsum' ? bookSum : k==='battle' ? all.filter(c=>c.id==='battle') : all.filter(c=>c.cat===k);
   const cards = story ? listOf(story.k) : [];
   const card = story ? cards[Math.max(0, Math.min(story.i, cards.length-1))] : null;
+  // A step's More: where it leads to one card that has no tour of its own, that card's details open at once. (Before, the same screen came
+  // once more with nearly the same line — "Photo: its colours play you music", then "Image: its colours and energy become music" — and only its More gave the details.)
+  const _linkSheet = (c)=>{ const id=(c && c.link && c.link.length===1) ? c.link[0] : null, L=id && byId[id]; return (L && L.more && !(GUIDE_TOURS[id] && tourOf(id))) ? id : null; };
+  const sheetCard = (typeof sheet==='string' && byId[sheet]) ? byId[sheet] : card;   // the sheet shows this card's details: the one on screen, or the one a step leads to
   useEffect(()=>{ if(tourM[lang]!==undefined) return; let dead=false;
     fetch('/guide/shots/'+lang+'/m.json').then(r=>r.json()).catch(()=>null).then(m=>{ if(dead) return; setTourM(o=>({...o, [lang]: (m && m.s) ? m : false})); });
     return ()=>{ dead=true; };
@@ -2072,7 +2079,7 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, book
       {(tr || c.more || c.link) && (<div style={{marginTop:12,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
         {tr && (<button type="button" onClick={(e)=>{ e.stopPropagation(); setSheet(false); setStory({k:'tour:'+c.id, i:0, back:{k:story.k, i:story.i}}); }} style={{height:40,padding:'0 18px',borderRadius:20,border:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:7,fontSize:14*rs,fontWeight:700,cursor:'pointer'}}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>{(GUIDE_TOUR_I18N[lang]||GUIDE_TOUR_I18N.EN).go}</button>)}
-        {(c.more || c.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(c.link){ setSheet(false); setStory({k:'lnk:'+c.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{height:40,padding:'0 4px',border:0,background:'none',color:'rgba(242,238,232,.72)',display:'inline-flex',alignItems:'center',gap:6,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
+        {(c.more || c.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(c.link){ const _one=_linkSheet(c); if(_one){ setSheet(_one); return; } setSheet(false); setStory({k:'lnk:'+c.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{height:40,padding:'0 4px',border:0,background:'none',color:'rgba(242,238,232,.72)',display:'inline-flex',alignItems:'center',gap:6,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
           {(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'}
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
       </div>)}</>)); };
@@ -2135,23 +2142,23 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, book
           <div style={{marginTop:10,fontSize:16*rs,lineHeight:1.45,color:'rgba(242,238,232,.8)',maxWidth:340,textWrap:'balance'}}>{pfIcons(card.body)}</div>
           {(!card.tour && GUIDE_TOURS[card.id] && tourOf(card.id)) ? (<button type="button" onClick={(e)=>{ e.stopPropagation(); setSheet(false); setStory({k:'tour:'+card.id, i:0, back:{k:story.k, i:story.i}}); }} style={{marginTop:20,height:44,padding:'0 22px',borderRadius:22,border:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:8,fontSize:14.5*rs,fontWeight:700,cursor:'pointer'}}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>{(GUIDE_TOUR_I18N[lang]||GUIDE_TOUR_I18N.EN).go}
-          </button>) : (card.more || card.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(card.link){ setSheet(false); setStory({k:'lnk:'+card.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{marginTop:20,height:40,padding:'0 20px',borderRadius:20,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',display:'inline-flex',alignItems:'center',gap:8,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
+          </button>) : (card.more || card.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(card.link){ const _one=_linkSheet(card); if(_one){ setSheet(_one); return; } setSheet(false); setStory({k:'lnk:'+card.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{marginTop:20,height:40,padding:'0 20px',borderRadius:20,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',display:'inline-flex',alignItems:'center',gap:8,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
             {(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </button>)}
         </div>
       )}
     </div>
-    {sheet && card.more && (<>
+    {sheet && sheetCard && sheetCard.more && (<>
       <div onClick={()=>setSheet(false)} style={{position:'absolute',inset:0,zIndex:5,background:'rgba(4,4,10,.55)'}}/>
-      <div role="dialog" aria-label={card.title} className="pf-g2-sheet" style={{position:'absolute',left:0,right:0,bottom:0,maxHeight:'80%',zIndex:6,display:'flex',flexDirection:'column',background:'rgba(16,13,24,.98)',borderRadius:'24px 24px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',boxShadow:'0 -18px 50px rgba(0,0,0,.6)'}}>
+      <div role="dialog" aria-label={sheetCard.title} className="pf-g2-sheet" style={{position:'absolute',left:0,right:0,bottom:0,maxHeight:'80%',zIndex:6,display:'flex',flexDirection:'column',background:'rgba(16,13,24,.98)',borderRadius:'24px 24px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',boxShadow:'0 -18px 50px rgba(0,0,0,.6)'}}>
         <button type="button" onClick={()=>setSheet(false)} aria-label="close" style={{flexShrink:0,height:28,background:'none',border:0,padding:0,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><span aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)'}}/></button>
         <div style={{overflowY:'auto',padding:'0 18px calc(env(safe-area-inset-bottom, 0px) + 18px)'}}>
-          <div style={{fontSize:19*rs,fontWeight:700,margin:'2px 0 8px'}}>{pfIcons(card.title)}</div>
-          {(()=>{ const _rows=_gRows(card.more), _pk=card.peek||3; if(_rows.some(r=>r.v || r.sec)) return (<GuideVisRows rows={_rows} lang={lang} M={tourM[lang]} rs={rs}/>); const _cut=(!sheetAll && _rows.length>_pk+1) ? _rows.slice(0,_pk) : _rows; return (<>
+          <div style={{fontSize:19*rs,fontWeight:700,margin:'2px 0 8px'}}>{pfIcons(sheetCard.title)}</div>
+          {(()=>{ const _rows=_gRows(sheetCard.more), _pk=sheetCard.peek||3; if(_rows.some(r=>r.v || r.sec)) return (<GuideVisRows rows={_rows} lang={lang} M={tourM[lang]} rs={rs}/>); const _cut=(!sheetAll && _rows.length>_pk+1) ? _rows.slice(0,_pk) : _rows; return (<>
           {_cut.map((r,i)=>(
             <div key={i} style={{display:'flex',gap:12,padding:'11px 0',borderTop:'1px solid rgba(242,238,232,.07)'}}>
-              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(tk(card)).g}}/>
+              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(tk(sheetCard)).g}}/>
               <div style={{minWidth:0}}>
                 {r.h && (<div style={{fontSize:14.5*rs,fontWeight:700,lineHeight:1.3}}>{pfIcons(r.h)}</div>)}
                 <div style={{fontSize:13.5*rs,lineHeight:1.42,color:'rgba(242,238,232,.72)',marginTop:r.h?2:0}}>{pfIcons(r.x)}</div>
