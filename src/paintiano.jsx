@@ -32501,6 +32501,7 @@ const STUDIO_HOME_CSS = `
 .pf-lh-cap{position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:center;text-align:center;max-width:88%;pointer-events:none;transform-origin:50% 50%;transition:transform .9s cubic-bezier(.5,0,.15,1);animation:pfLhFade .5s ease both}
 .pf-lh-cap::before{content:"";position:absolute;inset:-30px -44px -44px;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(6,6,12,.62),rgba(6,6,12,.36) 55%,rgba(6,6,12,0) 100%)}   /* a soft dark veil under the words only — readable on a white painting too; it is theirs, so it moves and grows with them (no plate, the painting is not darkened) */
 .pf-lh-cap.big{transform:translateY(var(--dy,-300px)) scale(var(--s,1.4))}   /* large, in the middle: the same words, moved and scaled (--dy, --s: measured, see _lhFit) */
+.pf-lh-cap.gone{opacity:0!important;transition:opacity .7s ease}   /* a later painting: its title was there for its moment (as long as it used to stand in the middle) and goes — it does not stay through the painting */
 .pf-lh-cap small{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.86);text-shadow:0 1px 10px rgba(0,0,0,.9)}
 .pf-lh-cap b{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:28px;line-height:1.06;color:#fff;margin:4px 0 2px;overflow-wrap:anywhere;text-shadow:0 2px 18px rgba(0,0,0,.95);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pf-lh-cap i{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:calc(var(--pf-read-scale,1) * 17px);color:#f0c75e;text-shadow:0 2px 12px rgba(0,0,0,.95)}
@@ -32559,7 +32560,7 @@ const STUDIO_HOME_CSS = `
 @keyframes pfShMuteFl{0%{opacity:0;transform:scale(.72)}16%{opacity:1;transform:scale(1.07)}28%{transform:scale(1)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
 /* full screen: only the painting — but the look's name still comes for a moment, as without it (.pf-sh-flash: inspired by …, a Fusion, ✦) */
 .pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-shade{display:none!important}
-.pf-fy-clean .pf-lh-cta{visibility:hidden!important}   /* the painting alone: its title stays where it always is, at the foot — only the line about the tap goes (here a tap first brings everything back); its place is kept, so the title does not move */
+.pf-fy-clean .pf-lh-cta{visibility:hidden!important}   /* the painting alone: its title still comes at the foot for its moment — only the line about the tap is gone (here a tap first brings everything back); its place is kept, so the title does not move */
 .pf-fy-clean .pf-sh-stage::after{display:none!important}
 .pf-fy-fade .pf-topbar,.pf-fy-fade .pf-st-bar,.pf-fy-fade .pf-sh-prog,.pf-fy-fade .pf-sh-mute,.pf-fy-fade .pf-sh-paused,.pf-fy-fade .pf-sh-intro,.pf-fy-fade .pf-sh-up,.pf-fy-fade .pf-sh-next,.pf-fy-fade .pf-sh-nextx,.pf-fy-fade .pf-sh-tap,.pf-fy-fade .pf-sh-cap,.pf-fy-fade .pf-lh-cta,.pf-fy-fade .pf-lh-shade{opacity:0!important;transition:opacity 1.6s ease-in-out!important;pointer-events:none!important}
 .pf-fy-cleanhint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);z-index:20;transform:translateX(-50%);white-space:nowrap;padding:9px 16px;border-radius:999px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);color:#f2eee8;font-size:13px;font-weight:600;letter-spacing:.01em;pointer-events:none;animation:pfFyHint 2.6s ease both}
@@ -47673,8 +47674,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const liveHomeOn = studioHome && feedAt<0 && !feedFly && !_homeCurV() && !showIntro && !showOnboarding;   // once the splash has gone
   useEffect(()=>{ if(lhBack && (feedAt>=0 || !studioHome || homeSide)) setLhBack(false); },[lhBack, feedAt, studioHome, homeSide]);   // it plays, the Studio or a way of yours opens: For You is on again, the home card as before
   const [liveHome, setLiveHome] = useState({i:0, k:0});
-  // the first screen watched without a touch (10.5 s or more): in the middle of a painting — well before it is done, never
-  // as one painting gives way to the next — all but the painting and its title fades slowly away, as two spread fingers do (TikTok's clear screen).
+  // the first screen watched without a touch (10.5 s or more): in the middle of a painting — its title gone, well before it is done, never
+  // as one painting gives way to the next — all but the painting fades slowly away, as two spread fingers do (TikTok's clear screen).
   // A tap brings it back, without sound; whatever starts brings it back too
   const _LH_IDLE = 10500; const lhIdleRef = useRef(Date.now()); const lhAutoRef = useRef(false); const lhStartRef = useRef(Date.now()); const [lhFade, setLhFade] = useState(false);
   lhOnRef.current = liveHomeOn; const navMenuOpenRef = useRef(false); navMenuOpenRef.current = navMenuOpen;
@@ -47687,7 +47688,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(feedClean) return;
     let tf=null;
     const iv=setInterval(()=>{ if(tf) return; const now=Date.now(), into=now-lhStartRef.current;
-      if(feedCleanRef.current || now-lhIdleRef.current<_LH_IDLE || into<4900 || into>5800) return;   // its title settled (by 4.4 s with the slide), done at 8.5 s or later: the fade (1.6 s) ends inside the painting
+      if(feedCleanRef.current || now-lhIdleRef.current<_LH_IDLE || into<4900 || into>5800) return;   // its title gone (by 4.8 s with the slide), done at 8.5 s or later: the fade (1.6 s) ends inside the painting
       if(navMenuOpenRef.current || document.querySelector('[role="dialog"]') || document.querySelector('.pf-chg, .pf-st-sheet')) return;
       const t0=lhIdleRef.current; setLhFade(true);
       tf=setTimeout(()=>{ tf=null; setLhFade(false); if(lhIdleRef.current!==t0 || feedCleanRef.current || !lhOnRef.current) return; lhAutoRef.current=true; feedCleanRef.current=true; setFeedClean(true); }, 1600); }, 250);
@@ -47701,8 +47702,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // The title large in the middle is the settled title itself, moved and scaled — one element, so nothing is said twice. Where the middle is
   // (--dy) and how large it may be without leaving the screen (--s: a long title grows less) is measured from its settled place.
   // In the first minute (its card lies over the painting) the title stands below from the start: one thing at a time, and it never passes under the card.
-  // Only the opening painting does this (k is 0 until the first one gives way): every later one has its title below from the start — one place to look.
+  // Only the opening painting does this (k is 0 until the first one gives way), and its title then stays. Every later one has its title below from
+  // the start — one place to look — for as long as it used to stand in the middle, and then it goes: it does not stay through the painting.
   const _lhBig = livePhase==='card' && liveHome.k===0 && !((pfStepEff===0 || zcReplay) && zcK>0);
+  const _lhGone = livePhase!=='card' && liveHome.k!==0;
   const lhCapElRef = useRef(null);
   // The painting before this one stays as it is while it leaves (its own canvas and words — no picture taken of it, so nothing blinks as
   // they change): {k, m} — its key and its words.
@@ -47758,9 +47761,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(lim>=cn){ setLivePhase('done'); tm=setTimeout(()=>{ if(!alive) return; lhPrevRef.current={k:liveHome.k, m:meta}; liveOutRef.current=null; setLiveHome(h=>({i:h.i+1, k:Date.now()})); }, _LH_HOLD); return; }
       tm=setTimeout(step, Math.max(70, cost*1.5)); };
     setLivePhase('card');
-    if(reduce){ paint(cn); setLivePhase('done'); return; }   // no motion asked for: the finished painting, still
+    if(reduce){ paint(cn); if(liveHome.k===0) setLivePhase('done'); else tc=setTimeout(()=>{ if(alive) setLivePhase('done'); }, 3000); return; }   // no motion asked for: the finished painting, still (a later one's title has its moment all the same)
     paint(1); last=1;   // its ground and first stroke at once: it never comes up as an empty dark card that turns into the painting a moment later
-    tm=setTimeout(step, lead+200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, lead+2400); };   // the opening painting's title large in the middle: 2.4 s — then it settles below and stays, so there is time to read it
+    tm=setTimeout(step, lead+200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, lead+(liveHome.k===0 ? 2400 : 3000)); };   // the opening painting's title large in the middle: 2.4 s — then it settles below and stays. A later one's title: 3 s below once the painting has arrived (small, and the last thing to come up with it), then it goes
     if(got && typeof got.then==='function') got.then(run).catch(()=>{ run(null); }); else run(got);
     return ()=>{ alive=false; clearTimeout(tm); clearTimeout(tc); };
   }, [liveHomeOn, liveHome.i, tone]);
@@ -49145,7 +49148,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   {_fL && holdPaused && !playing && !anim && !feedNeedTap && !feedMuteFl && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')}>
-                                    {_smp ? (liveHomeOn ? (<div className="pf-lh" aria-hidden="true">{(()=>{ const P=lhPrevRef.current; return (P && P.k!==liveHome.k) ? (<div key={'i'+P.k} className="pf-lh-in out"><canvas/><div className="pf-lh-shade"/><div className="pf-lh-foot">{P.m && (<div className="pf-lh-cap"><small>{P.m.by}</small><b>{P.m.t}</b><i>{P.m.p}</i></div>)}{P.m && _lhCta(' on')}</div></div>) : (liveOutRef.current && liveHome.k) ? (<img key={'o'+liveHome.k} className="pf-lh-out" src={liveOutRef.current} alt=""/>) : null; })()}<div key={'i'+liveHome.k} className={'pf-lh-in'+((lhPrevRef.current || (liveOutRef.current && liveHome.k)) ? '' : ' first')}><canvas ref={liveCvRef}/><div className="pf-lh-shade"/><div className="pf-lh-foot">{_lhOwn && (<div ref={_lhFit} className={'pf-lh-cap'+(_lhBig ? ' big' : '')}><small>{liveMeta.by}</small><b>{liveMeta.t}</b><i>{liveMeta.p}</i></div>)}{_lhOwn && _lhCta((_lhBig ? ' wait' : '')+(livePhase==='done' ? ' on' : ''))}</div></div></div>) : (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>)) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
+                                    {_smp ? (liveHomeOn ? (<div className="pf-lh" aria-hidden="true">{(()=>{ const P=lhPrevRef.current; return (P && P.k!==liveHome.k) ? (<div key={'i'+P.k} className="pf-lh-in out"><canvas/><div className="pf-lh-shade"/><div className="pf-lh-foot">{P.m && (<div className={'pf-lh-cap'+(P.k!==0 ? ' gone' : '')}><small>{P.m.by}</small><b>{P.m.t}</b><i>{P.m.p}</i></div>)}{P.m && _lhCta(' on')}</div></div>) : (liveOutRef.current && liveHome.k) ? (<img key={'o'+liveHome.k} className="pf-lh-out" src={liveOutRef.current} alt=""/>) : null; })()}<div key={'i'+liveHome.k} className={'pf-lh-in'+((lhPrevRef.current || (liveOutRef.current && liveHome.k)) ? '' : ' first')}><canvas ref={liveCvRef}/><div className="pf-lh-shade"/><div className="pf-lh-foot">{_lhOwn && (<div ref={_lhFit} className={'pf-lh-cap'+(_lhBig ? ' big' : '')+(_lhGone ? ' gone' : '')}><small>{liveMeta.by}</small><b>{liveMeta.t}</b><i>{liveMeta.p}</i></div>)}{_lhOwn && _lhCta((_lhBig ? ' wait' : '')+(livePhase==='done' ? ' on' : ''))}</div></div></div>) : (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>)) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}   {/* your painting waits: the same rings as the first screen, not a ▶ */}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{'--g':'linear-gradient(135deg,'+K.g+')'}}><span className="pf-sh-chip-ic">{_sv(K.p, 14)}</span><span className="pf-sh-chip-t">{K.label}</span></span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
