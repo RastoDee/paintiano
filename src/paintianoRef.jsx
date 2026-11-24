@@ -35374,6 +35374,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [bookCode, setBookCode] = useState(()=>pfBookCodeRead());
   const [bookAsk] = useState(()=>{ try{ return new URLSearchParams(window.location.search).get('book')==='1'; }catch(_){ return false; } });
   useEffect(()=>{ if(bookAsk) setShowBook(true); },[bookAsk]);
+  // the button in the book's e-mail (/play?bookcode=BOOK-…): the code is checked and kept, the Book card opens, and the code leaves the address bar
+  useEffect(()=>{ let c=null; try{ c=new URLSearchParams(window.location.search).get('bookcode'); }catch(_){} if(!c) return;
+    try{ const u=new URL(window.location.href); u.searchParams.delete('bookcode'); window.history.replaceState(null, '', u.pathname+(u.search||'')+(u.hash||'')); }catch(_){}
+    let off=false; pfBookCodeTry(c).then(r=>{ if(off) return; if(r.ok){ setBookCode(r.code); setReaderK(k=>k+1); } setShowBook(true); }); return ()=>{ off=true; }; },[]);
   const onBookCode = useCallback((c)=>{ setBookCode(c); setReaderK(k=>k+1); },[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [printThumb, setPrintThumb] = useState(null);   // Save › Print: the painting, small, on the white and the dark sheet

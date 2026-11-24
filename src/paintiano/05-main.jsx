@@ -1736,7 +1736,7 @@ const PF_RD_CSS = `
 .pf-rd-toc button[aria-current="true"]{color:#f0d98c;font-weight:600}
 `;
 const _pfBookPos = (L)=>{ try{ const p=(JSON.parse(localStorage.getItem('paintiano_book_pos')||'{}')||{})[L]; return (p && p.c>=0) ? p : null; }catch(_){ return null; } };
-const BookReader = memo(function BookReader({lang, onClose, ts, lic=null, code=null}){
+const BookReader = memo(function BookReader({lang, onClose, ts, lic=null, code=null, onDenied=null}){
   const L = BOOK_LANGS.indexOf(lang)>=0 ? lang : 'EN';
   const [bk, setBk] = useState(null);
   const [err, setErr] = useState(false);
@@ -1749,7 +1749,7 @@ const BookReader = memo(function BookReader({lang, onClose, ts, lic=null, code=n
   const wantRef = useRef((()=>{ const p=_pfBookPos(L); return {f:(p && +p.f) || 0}; })());   // where to land once the chapter is laid out: a share of it, or its last page
   const boxRef = useRef(null), flowRef = useRef(null), tRef = useRef(null), sRef = useRef({ci:0, pg:0, np:1});
   const GAP = 56;
-  useEffect(()=>{ let off=false; pfBookFetch(L, lic, code).then(d=>{ if(off) return; if(!d || !d.ch || !d.ch.length){ setErr(true); return; } setBk(d); setCi(c=>Math.max(0, Math.min(d.ch.length-1, c))); }); return ()=>{ off=true; }; }, [L, lic, code]);   // the text is served to a licence key or a book code only (api/book.js) and kept on the device
+  useEffect(()=>{ let off=false; pfBookFetch(L, lic, code).then(d=>{ if(off) return; if(d && d.denied){ onDenied && onDenied(); return; } if(!d || !d.ch || !d.ch.length){ setErr(true); return; } setBk(d); setCi(c=>Math.max(0, Math.min(d.ch.length-1, c))); }); return ()=>{ off=true; }; }, [L, lic, code]);   // the text is served to a licence key or a book code only (api/book.js) and kept on the device
   useEffect(()=>{ try{ localStorage.setItem('paintiano_book_ui', JSON.stringify(ui)); }catch(_){} }, [ui]);
   useLayoutEffect(()=>{ const m=()=>{ const b=boxRef.current; if(!b) return; const w=Math.max(120, b.clientWidth-56), h=b.clientHeight; setDim(d=>(d.w===w && d.h===h) ? d : {w, h}); };
     m(); window.addEventListener('resize', m); let ro=null; try{ ro=new ResizeObserver(m); if(boxRef.current) ro.observe(boxRef.current); }catch(_){}
@@ -6229,6 +6229,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{ const u=new URL(window.location.href); u.searchParams.delete('bookcode'); window.history.replaceState(null, '', u.pathname+(u.search||'')+(u.hash||'')); }catch(_){}
     let off=false; pfBookCodeTry(c).then(r=>{ if(off) return; if(r.ok){ setBookCode(r.code); setReaderK(k=>k+1); } setShowBook(true); }); return ()=>{ off=true; }; },[]);
   const onBookCode = useCallback((c)=>{ setBookCode(c); setReaderK(k=>k+1); },[]);
+  // a book that was refunded: the server stops serving its code — the device forgets it (on start, and when the reader is opened)
+  const onBookDenied = useCallback(()=>{ setBookCode(pfBookCodeRead()); setShowReader(false); setReaderK(k=>k+1); },[]);
+  useEffect(()=>{ const c=pfBookCodeRead(); if(!c) return; let off=false; pfBookCodeStill(c).then(ok=>{ if(!off && !ok){ setBookCode(null); setReaderK(k=>k+1); } }); return ()=>{ off=true; }; },[]);
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [printThumb, setPrintThumb] = useState(null);   // Save › Print: the painting, small, on the white and the dark sheet
   // Paint-mode Web/Print export toggle: when ON and a source image is on
@@ -23015,7 +23018,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       {showDailyInfo && (
         <DailyInfoPopover onClose={()=>setShowDailyInfo(false)} onPro={()=>{ setShowSetupModal(false); setPaywallReason('settings'); }} ts={ts} artistName={STYLE_INSPIRED[artistOfDay]||artistOfDay} composerName={COMPOSER_INSPIRED[composerOfDay]||composerOfDay} readScale={effScale} studio={studioOn} />
       )}
-      {showReader && (proStatus==='pro' || proStatus==='pro_ai' || !!bookCode) && (<BookReader lang={lang} onClose={closeReader} ts={ts} lic={(proStatus==='pro' || proStatus==='pro_ai') ? _licKeyRf : null} code={bookCode}/>)}
+      {showReader && (proStatus==='pro' || proStatus==='pro_ai' || !!bookCode) && (<BookReader lang={lang} onClose={closeReader} ts={ts} lic={(proStatus==='pro' || proStatus==='pro_ai') ? _licKeyRf : null} code={bookCode} onDenied={onBookDenied}/>)}
       {showBook && (
         <GuideModal
           pro={proStatus==='pro' || proStatus==='pro_ai'}

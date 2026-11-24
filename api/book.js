@@ -37,7 +37,9 @@ export default async function handler(req) {
   if ((!key && !code) || key.length > 200 || code.length > 60) return json({ ok: false, reason: 'bad_request' }, 400);
   try {
     let ok = false;
-    if (code) ok = await bookCodeValid(code);
+    if (code) { ok = await bookCodeValid(code);
+      // a refunded book: its row (written at the sale) says so. No row, or the table out of reach → the signed code stands.
+      if (ok) { try { const row = await getLicenseByKey(code.trim().toUpperCase()); if (row && row.status === 'refunded') return json({ ok: false, reason: 'refunded' }); } catch (_) {} } }
     if (!ok && key) { const row = await getLicenseByKey(key); ok = !!row && row.status !== 'refunded' && row.status !== 'disabled'; }
     if (!ok) return json({ ok: false, reason: 'no_access' });
     if (body?.check === true) return json({ ok: true });
