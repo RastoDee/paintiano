@@ -1342,7 +1342,10 @@ const GvPic = ({v, lang, M})=>{ const parts=String(v||'').split('+'), bw=84/part
       <rect x="42" y="4" width="16" height="32" rx="3" stroke="rgba(242,238,232,.35)"/><path d="M50 20m-1 0a1 1 0 1 1 2 0a4 4 0 1 1 -6 -1a7 7 0 1 1 10 6"/>
       <rect x="62" y="4" width="16" height="32" rx="3" stroke="rgba(242,238,232,.35)"/><path d="M70 20a7 7 0 1 0 -5 6a4 4 0 1 0 6 -4"/></svg>);
     return (<span key={i} style={{fontSize:26,lineHeight:1,color:'#f0d78a',fontWeight:800}}>{pfIcons(a||k)}</span>); }); };
-const GvHero = ({v, lang, M})=>{ const p=v.split(':'), sh=_gvShot(M, lang, p[1]); if(!sh) return null; const yr=(p[2]||'0-844').split('-').map(Number), y0=yr[0], hh=Math.max(20, yr[1]-y0);
+const GvHero = ({v, lang, M})=>{ const p=v.split(':'), sh=_gvShot(M, lang, p[1]); if(!sh) return null;
+  // the stretch of the screen: y0-y1, or first..last — from the top of one control to the foot of another (their places come with the screenshots, so the cut never falls through a row)
+  const nm=String(p[2]||'').match(/^([a-z_]+)\.\.([a-z_]+)$/i), ra=nm && sh.S.r && sh.S.r[nm[1]], rb=nm && sh.S.r && sh.S.r[nm[2]];
+  const yr=(ra && rb) ? [Math.max(0, ra[1]-8), Math.min(sh.H, rb[1]+rb[3]+8)] : (p[2]||'0-844').split('-').map(Number), y0=yr[0], hh=Math.max(20, yr[1]-y0);
   return (<div style={{position:'relative',width:'100%',paddingTop:(hh/sh.W*100)+'%',borderRadius:16,overflow:'hidden',border:'1px solid rgba(242,238,232,.1)',margin:'6px 0 8px'}}>
     <img src={sh.src} alt="" style={{position:'absolute',left:0,top:(-y0/hh*100)+'%',width:'100%',height:'auto',display:'block'}}/>
     {(p[3]||'').split(',').filter(Boolean).map((q)=>{ const kv=q.split('='), r=sh.S.r && sh.S.r[kv[0]]; if(!r) return null;
@@ -1857,6 +1860,10 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, book
   const listOf = (k)=> k.indexOf('tour:')===0 ? (tourOf(k.slice(5))||[]) : k.indexOf('tab')===0 ? tabIds(+k.slice(3)).map(id=>byId[id]) : k.indexOf('lnk:')===0 ? k.slice(4).split(',').map(id=>byId[id]).filter(Boolean) : k==='concept' ? concept : k==='book' ? [bookCard] : k==='bsum' ? bookSum : k==='battle' ? all.filter(c=>c.id==='battle') : all.filter(c=>c.cat===k);
   const cards = story ? listOf(story.k) : [];
   const card = story ? cards[Math.max(0, Math.min(story.i, cards.length-1))] : null;
+  // A step's More: where it leads to one card that has no tour of its own, that card's details open at once. (Before, the same screen came
+  // once more with nearly the same line — "Photo: its colours play you music", then "Image: its colours and energy become music" — and only its More gave the details.)
+  const _linkSheet = (c)=>{ const id=(c && c.link && c.link.length===1) ? c.link[0] : null, L=id && byId[id]; return (L && L.more && !(GUIDE_TOURS[id] && tourOf(id))) ? id : null; };
+  const sheetCard = (typeof sheet==='string' && byId[sheet]) ? byId[sheet] : card;   // the sheet shows this card's details: the one on screen, or the one a step leads to
   useEffect(()=>{ if(tourM[lang]!==undefined) return; let dead=false;
     fetch('/guide/shots/'+lang+'/m.json').then(r=>r.json()).catch(()=>null).then(m=>{ if(dead) return; setTourM(o=>({...o, [lang]: (m && m.s) ? m : false})); });
     return ()=>{ dead=true; };
@@ -2072,7 +2079,7 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, book
       {(tr || c.more || c.link) && (<div style={{marginTop:12,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
         {tr && (<button type="button" onClick={(e)=>{ e.stopPropagation(); setSheet(false); setStory({k:'tour:'+c.id, i:0, back:{k:story.k, i:story.i}}); }} style={{height:40,padding:'0 18px',borderRadius:20,border:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:7,fontSize:14*rs,fontWeight:700,cursor:'pointer'}}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>{(GUIDE_TOUR_I18N[lang]||GUIDE_TOUR_I18N.EN).go}</button>)}
-        {(c.more || c.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(c.link){ setSheet(false); setStory({k:'lnk:'+c.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{height:40,padding:'0 4px',border:0,background:'none',color:'rgba(242,238,232,.72)',display:'inline-flex',alignItems:'center',gap:6,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
+        {(c.more || c.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(c.link){ const _one=_linkSheet(c); if(_one){ setSheet(_one); return; } setSheet(false); setStory({k:'lnk:'+c.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{height:40,padding:'0 4px',border:0,background:'none',color:'rgba(242,238,232,.72)',display:'inline-flex',alignItems:'center',gap:6,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
           {(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'}
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
       </div>)}</>)); };
@@ -2135,23 +2142,23 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, book
           <div style={{marginTop:10,fontSize:16*rs,lineHeight:1.45,color:'rgba(242,238,232,.8)',maxWidth:340,textWrap:'balance'}}>{pfIcons(card.body)}</div>
           {(!card.tour && GUIDE_TOURS[card.id] && tourOf(card.id)) ? (<button type="button" onClick={(e)=>{ e.stopPropagation(); setSheet(false); setStory({k:'tour:'+card.id, i:0, back:{k:story.k, i:story.i}}); }} style={{marginTop:20,height:44,padding:'0 22px',borderRadius:22,border:0,background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:8,fontSize:14.5*rs,fontWeight:700,cursor:'pointer'}}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>{(GUIDE_TOUR_I18N[lang]||GUIDE_TOUR_I18N.EN).go}
-          </button>) : (card.more || card.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(card.link){ setSheet(false); setStory({k:'lnk:'+card.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{marginTop:20,height:40,padding:'0 20px',borderRadius:20,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',display:'inline-flex',alignItems:'center',gap:8,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
+          </button>) : (card.more || card.link) && (<button type="button" onClick={(e)=>{ e.stopPropagation(); if(card.link){ const _one=_linkSheet(card); if(_one){ setSheet(_one); return; } setSheet(false); setStory({k:'lnk:'+card.link.join(','), i:0, back:{k:story.k, i:story.i}}); } else setSheet(true); }} style={{marginTop:20,height:40,padding:'0 20px',borderRadius:20,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'#f2eee8',display:'inline-flex',alignItems:'center',gap:8,fontSize:14*rs,fontWeight:600,cursor:'pointer'}}>
             {(t('guideMore')&&t('guideMore')!=='guideMore')?t('guideMore'):'More'}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </button>)}
         </div>
       )}
     </div>
-    {sheet && card.more && (<>
+    {sheet && sheetCard && sheetCard.more && (<>
       <div onClick={()=>setSheet(false)} style={{position:'absolute',inset:0,zIndex:5,background:'rgba(4,4,10,.55)'}}/>
-      <div role="dialog" aria-label={card.title} className="pf-g2-sheet" style={{position:'absolute',left:0,right:0,bottom:0,maxHeight:'80%',zIndex:6,display:'flex',flexDirection:'column',background:'rgba(16,13,24,.98)',borderRadius:'24px 24px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',boxShadow:'0 -18px 50px rgba(0,0,0,.6)'}}>
+      <div role="dialog" aria-label={sheetCard.title} className="pf-g2-sheet" style={{position:'absolute',left:0,right:0,bottom:0,maxHeight:'80%',zIndex:6,display:'flex',flexDirection:'column',background:'rgba(16,13,24,.98)',borderRadius:'24px 24px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',boxShadow:'0 -18px 50px rgba(0,0,0,.6)'}}>
         <button type="button" onClick={()=>setSheet(false)} aria-label="close" style={{flexShrink:0,height:28,background:'none',border:0,padding:0,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}><span aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)'}}/></button>
         <div style={{overflowY:'auto',padding:'0 18px calc(env(safe-area-inset-bottom, 0px) + 18px)'}}>
-          <div style={{fontSize:19*rs,fontWeight:700,margin:'2px 0 8px'}}>{pfIcons(card.title)}</div>
-          {(()=>{ const _rows=_gRows(card.more), _pk=card.peek||3; if(_rows.some(r=>r.v || r.sec)) return (<GuideVisRows rows={_rows} lang={lang} M={tourM[lang]} rs={rs}/>); const _cut=(!sheetAll && _rows.length>_pk+1) ? _rows.slice(0,_pk) : _rows; return (<>
+          <div style={{fontSize:19*rs,fontWeight:700,margin:'2px 0 8px'}}>{pfIcons(sheetCard.title)}</div>
+          {(()=>{ const _rows=_gRows(sheetCard.more), _pk=sheetCard.peek||3; if(_rows.some(r=>r.v || r.sec)) return (<GuideVisRows rows={_rows} lang={lang} M={tourM[lang]} rs={rs}/>); const _cut=(!sheetAll && _rows.length>_pk+1) ? _rows.slice(0,_pk) : _rows; return (<>
           {_cut.map((r,i)=>(
             <div key={i} style={{display:'flex',gap:12,padding:'11px 0',borderTop:'1px solid rgba(242,238,232,.07)'}}>
-              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(tk(card)).g}}/>
+              <span aria-hidden="true" style={{width:9,height:9,borderRadius:'50%',flexShrink:0,marginTop:6*rs,background:T(tk(sheetCard)).g}}/>
               <div style={{minWidth:0}}>
                 {r.h && (<div style={{fontSize:14.5*rs,fontWeight:700,lineHeight:1.3}}>{pfIcons(r.h)}</div>)}
                 <div style={{fontSize:13.5*rs,lineHeight:1.42,color:'rgba(242,238,232,.72)',marginTop:r.h?2:0}}>{pfIcons(r.x)}</div>
@@ -3324,9 +3331,11 @@ const STUDIO_HOME_CSS = `
 .pf-sh-art img{pointer-events:none;-webkit-user-drag:none}
 .pf-sh-art{position:absolute;inset:0;border-radius:24px;overflow:hidden;border:1px solid rgba(242,238,232,.18);box-shadow:0 30px 60px rgba(0,0,0,.65);animation:pfShFloat 6s ease-in-out infinite;background:#0b0910}
 .pf-lh{position:absolute;inset:0;overflow:hidden;background:#0a0814}
-.pf-lh-in{position:absolute;inset:0;animation:pfLhIn .6s cubic-bezier(.2,.8,.2,1) both;background:#0a0814}
+.pf-lh-in{position:absolute;inset:0;animation:pfLhIn 1.1s cubic-bezier(.45,0,.2,1) both;background:#0a0814}   /* one painting gives way to the next as in a slow swipe: both move together, joined, for 1.1 s (it was a .6 s snap) */
+.pf-lh-in.first{animation:pfLhFade .5s ease both}   /* the very first one is simply there */
+.pf-lh-in.out{animation:pfLhOut 1.1s cubic-bezier(.45,0,.2,1) both;z-index:1;pointer-events:none}   /* the one that leaves: the painting itself with its words, not a picture of it */
 @keyframes pfLhIn{from{transform:translateY(100%)}to{transform:none}}
-.pf-lh-out{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:pfLhOut .6s cubic-bezier(.2,.8,.2,1) both;z-index:1;pointer-events:none}
+.pf-lh-out{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:pfLhOut 1.1s cubic-bezier(.45,0,.2,1) both;z-index:1;pointer-events:none}
 @keyframes pfLhOut{from{transform:none}to{transform:translateY(-100%)}}
 .pf-lh canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 /* The first screen's words (Nov 2026): one title, said once. It opens large in the middle of the painting, then settles above ✦ Change and stays
@@ -3345,7 +3354,7 @@ const STUDIO_HOME_CSS = `
 .pf-lh-cta.on{color:#fff}
 .pf-lh-cta svg{flex:none}
 @keyframes pfLhFade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion: reduce){.pf-lh-in,.pf-lh-out,.pf-lh-cap{animation:none}.pf-lh-cap,.pf-lh-cta{transition:none}}
+@media (prefers-reduced-motion: reduce){.pf-lh-in,.pf-lh-out,.pf-lh-cap{animation:none}.pf-lh-in.out{display:none}.pf-lh-cap,.pf-lh-cta{transition:none}}
 .pf-sh-tease{position:absolute;inset:0;overflow:hidden;background:#0a0814}
 .pf-sh-tease img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;animation:pfShReel 18s ease-in-out infinite}
 .pf-sh-tease img:first-child{opacity:1}
@@ -3394,7 +3403,9 @@ const STUDIO_HOME_CSS = `
 .pf-sh-mutefl{position:absolute;left:50%;top:50%;z-index:7;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(10,8,18,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);color:#fff;pointer-events:none;animation:pfShMuteFl 1s ease-out both}
 @keyframes pfShMuteFl{0%{opacity:0;transform:scale(.72)}16%{opacity:1;transform:scale(1.07)}28%{transform:scale(1)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
 /* full screen: only the painting — but the look's name still comes for a moment, as without it (.pf-sh-flash: inspired by …, a Fusion, ✦) */
-.pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-foot,.pf-fy-clean .pf-lh-shade{display:none!important}
+.pf-fy-clean .pf-topbar,.pf-fy-clean .pf-st-bar,.pf-fy-clean .pf-sh-prog,.pf-fy-clean .pf-sh-mute,.pf-fy-clean .pf-sh-paused,.pf-fy-clean .pf-sh-intro,.pf-fy-clean .pf-sh-up,.pf-fy-clean .pf-sh-next,.pf-fy-clean .pf-sh-nextx,.pf-fy-clean .pf-sh-tap,.pf-fy-clean .pf-sh-cap,.pf-fy-clean .pf-lh-cta,.pf-fy-clean .pf-lh-in.out .pf-lh-foot,.pf-fy-clean .pf-lh-shade{display:none!important}
+.pf-fy-clean .pf-lh-in:not(.out) .pf-lh-cap{transform:translateY(var(--dy,-300px)) scale(var(--s,1.4))!important;transition:opacity .7s ease!important}   /* the painting alone: its title still comes, large in the middle, and then goes — it does not settle (there is nothing below to settle by) */
+.pf-fy-clean .pf-lh-in:not(.out) .pf-lh-cap:not(.big){opacity:0!important}
 .pf-fy-clean .pf-sh-stage::after{display:none!important}
 .pf-fy-fade .pf-topbar,.pf-fy-fade .pf-st-bar,.pf-fy-fade .pf-sh-prog,.pf-fy-fade .pf-sh-mute,.pf-fy-fade .pf-sh-paused,.pf-fy-fade .pf-sh-intro,.pf-fy-fade .pf-sh-up,.pf-fy-fade .pf-sh-next,.pf-fy-fade .pf-sh-nextx,.pf-fy-fade .pf-sh-tap,.pf-fy-fade .pf-sh-cap,.pf-fy-fade .pf-lh-foot,.pf-fy-fade .pf-lh-shade{opacity:0!important;transition:opacity 1.6s ease-in-out!important;pointer-events:none!important}
 .pf-fy-cleanhint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);z-index:20;transform:translateX(-50%);white-space:nowrap;padding:9px 16px;border-radius:999px;background:rgba(10,8,18,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);color:#f2eee8;font-size:13px;font-weight:600;letter-spacing:.01em;pointer-events:none;animation:pfFyHint 2.6s ease both}
@@ -18191,7 +18202,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
   // For You switched off (its lit tab tapped again): back to the first screen — the paintings paint themselves, silent and quick, one after another
   const _feedOff = ()=>{ if(feedAt<0) return; const c=feedCards[feedAt]; feedResumeRef.current=null; setFeedIntro(null); setFeedNeedTap(false);
-    try{ liveOutRef.current=_feedSnap()||null; }catch(_){ liveOutRef.current=null; } if(c && c.piece!=null && c.piece!=='own') livePrevRef.current=c.piece; setLiveHome(h=>({i:h.i+1, k:Date.now()}));   // the painting you leave fades into the next one — not the one you just heard
+    lhPrevRef.current=null; try{ liveOutRef.current=_feedSnap()||null; }catch(_){ liveOutRef.current=null; } if(c && c.piece!=null && c.piece!=='own') livePrevRef.current=c.piece; setLiveHome(h=>({i:h.i+1, k:Date.now()}));   // the painting you leave fades into the next one — not the one you just heard
     if(c && c.piece==='own' && feedLoaded!==null) _feedExit(); else { _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; }
     setHomeSide(null); setLhBack(true); _stBuzz(8); };
   const _feedStart = (want, first)=>{
@@ -18522,7 +18533,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(feedClean) return;
     let tf=null;
     const iv=setInterval(()=>{ if(tf) return; const now=Date.now(), into=now-lhStartRef.current;
-      if(feedCleanRef.current || now-lhIdleRef.current<_LH_IDLE || into<4300 || into>5200) return;   // its title settled (3.3 s), done at 8.5 s: the fade (1.6 s) ends inside the painting
+      if(feedCleanRef.current || now-lhIdleRef.current<_LH_IDLE || into<4900 || into>5800) return;   // its title settled (by 4.4 s with the slide), done at 8.5 s or later: the fade (1.6 s) ends inside the painting
       if(navMenuOpenRef.current || document.querySelector('[role="dialog"]') || document.querySelector('.pf-chg, .pf-st-sheet')) return;
       const t0=lhIdleRef.current; setLhFade(true);
       tf=setTimeout(()=>{ tf=null; setLhFade(false); if(lhIdleRef.current!==t0 || feedCleanRef.current || !lhOnRef.current) return; lhAutoRef.current=true; feedCleanRef.current=true; setFeedClean(true); }, 1600); }, 250);
@@ -18538,6 +18549,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // In the first minute (its card lies over the painting) the title stands below from the start: one thing at a time, and it never passes under the card.
   const _lhBig = livePhase==='card' && !((pfStepEff===0 || zcReplay) && zcK>0);
   const lhCapElRef = useRef(null);
+  // The painting before this one stays as it is while it leaves (its own canvas and words — no picture taken of it, so nothing blinks as
+  // they change): {k, m} — its key and its words.
+  const lhPrevRef = useRef(null);
+  const _lhCta = (cls)=>(<span className={'pf-lh-cta'+cls}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f0c75e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg><span>{(()=>{ const x=_stT('supTap'); return x.charAt(0).toUpperCase()+x.slice(1); })()}</span></span>);
   const _lhFit = (el)=>{ lhCapElRef.current = el || null; if(!el) return; try{ const box=el.closest('.pf-lh'), foot=el.parentElement; if(!box || !foot) return;
     const W=box.clientWidth, H=box.clientHeight, w=Math.max(1, el.offsetWidth), h=el.offsetHeight; if(W<40 || H<40) return;
     const s=Math.max(1, Math.min(1.5, (W-36)/w)), cy=foot.offsetTop+el.offsetTop+h/2;
@@ -18567,7 +18582,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _liveName = (idx)=>{ if(typeof idx==='string'){ const r=liveMineRef.current.find(x=>'m'+x.id===idx); return pfSongTitle(String((r && r.name)||'')); } return String(BUILTIN_NAMES[idx]||''); };
   const livePrevRef = useRef(null);
   useEffect(()=>{
-    if(!liveHomeOn){ liveHomeRef.current=null; return; }
+    if(!liveHomeOn){ liveHomeRef.current=null; lhPrevRef.current=null; return; }
     const cv=liveCvRef.current; if(!cv) return;
     const L=_liveList(); const it0=L[liveHome.i % L.length]; const it=it0.piece==null ? {...it0, piece:_livePick(livePrevRef.current)} : it0; livePrevRef.current=it.piece;
     let alive=true, tm=null, tc=null; let got=null; try{ got=_liveChords(it.piece); }catch(_){ got=null; }
@@ -18577,17 +18592,20 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const lay=_favLayout(fv, cs); if(!lay) return;
     try{ const box=cv.parentElement; const bw=box ? box.clientWidth : 0, bh=box ? box.clientHeight : 0; if(bw>40 && bh>40){ lay.CW=bw; lay.CH=bh; } }catch(_){}   // painted in the card's own frame, as the Studio paints (a painter's picture, not the mosaic grid)
     liveHomeRef.current={ piece:it.piece, sel:{style:st, phase:it.phase|0, mode:'harmony', notes:false, stage:[], sig:false}, snap:()=>{ try{ return cv.toDataURL('image/jpeg',0.8); }catch(_){ return null; } } };
-    try{ const nm=_liveName(it.piece); const q=nm.split(' — '); setLiveMeta({t:q[0]||nm, by:q[1]||'', p:t('inspiredBy').replace('{artist}', STYLE_INSPIRED[st]||st), k:liveHome.k}); }catch(_){ setLiveMeta(null); }
+    let meta=null; try{ const nm=_liveName(it.piece); const q=nm.split(' — '); meta={t:q[0]||nm, by:q[1]||'', p:t('inspiredBy').replace('{artist}', STYLE_INSPIRED[st]||st), k:liveHome.k}; setLiveMeta(meta); }catch(_){ setLiveMeta(null); }
     const reduce=(()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(_){ return false; } })();
-    const cn=cs.length, t0=performance.now(); let last=-1; const S=Math.min(1.5, window.devicePixelRatio||1);
+    // a painting before this one is leaving: this one comes up under it (1.1 s, see .pf-lh-in) and its strokes begin once it has arrived
+    const lead=((lhPrevRef.current || liveOutRef.current) && !reduce) ? 1100 : 0;
+    const cn=cs.length, t0=performance.now()+lead; let last=-1; const S=Math.min(1.5, window.devicePixelRatio||1);
     const paint=(lim)=>{ fv.lim=lim; try{ _favPaint(cv, fv, {chords:cs}, S, tone, lay); }catch(_){} };
-    const step=()=>{ if(!alive) return; const u=Math.min(1,(performance.now()-t0)/_LH_MS); const e=1-Math.pow(1-u,1.6); const lim=Math.max(1, Math.ceil(cn*e));
+    const step=()=>{ if(!alive) return; const u=Math.max(0, Math.min(1,(performance.now()-t0)/_LH_MS)); const e=1-Math.pow(1-u,1.6); const lim=Math.max(1, Math.ceil(cn*e));
       const a=performance.now(); if(lim!==last){ last=lim; paint(lim); } const cost=performance.now()-a;
-      if(lim>=cn){ setLivePhase('done'); tm=setTimeout(()=>{ if(!alive) return; try{ liveOutRef.current=cv.toDataURL('image/jpeg',0.7); }catch(_){} setLiveHome(h=>({i:h.i+1, k:Date.now()})); }, _LH_HOLD); return; }
+      if(lim>=cn){ setLivePhase('done'); tm=setTimeout(()=>{ if(!alive) return; lhPrevRef.current={k:liveHome.k, m:meta}; liveOutRef.current=null; setLiveHome(h=>({i:h.i+1, k:Date.now()})); }, _LH_HOLD); return; }
       tm=setTimeout(step, Math.max(70, cost*1.5)); };
     setLivePhase('card');
     if(reduce){ paint(cn); setLivePhase('done'); return; }   // no motion asked for: the finished painting, still
-    tm=setTimeout(step, 200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, 2400); };   // the title large in the middle: 2.4 s — then it settles below and stays, so there is time to read it
+    paint(1); last=1;   // its ground and first stroke at once: it never comes up as an empty dark card that turns into the painting a moment later
+    tm=setTimeout(step, lead+200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, lead+2400); };   // the title large in the middle: 2.4 s — then it settles below and stays, so there is time to read it
     if(got && typeof got.then==='function') got.then(run).catch(()=>{ run(null); }); else run(got);
     return ()=>{ alive=false; clearTimeout(tm); clearTimeout(tc); };
   }, [liveHomeOn, liveHome.i, tone]);
@@ -19972,7 +19990,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   {_fL && holdPaused && !playing && !anim && !feedNeedTap && !feedMuteFl && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')}>
-                                    {_smp ? (liveHomeOn ? (<div className="pf-lh" aria-hidden="true">{(liveOutRef.current && liveHome.k) ? (<img key={'o'+liveHome.k} className="pf-lh-out" src={liveOutRef.current} alt=""/>) : null}<div key={'i'+liveHome.k} className="pf-lh-in"><canvas ref={liveCvRef}/><div className="pf-lh-shade"/><div className="pf-lh-foot">{_lhOwn && (<div ref={_lhFit} className={'pf-lh-cap'+(_lhBig ? ' big' : '')}><small>{liveMeta.by}</small><b>{liveMeta.t}</b><i>{liveMeta.p}</i></div>)}{_lhOwn && (<span className={'pf-lh-cta'+(_lhBig ? ' wait' : '')+(livePhase==='done' ? ' on' : '')}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f0c75e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg><span>{(()=>{ const x=_stT('supTap'); return x.charAt(0).toUpperCase()+x.slice(1); })()}</span></span>)}</div></div></div>) : (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>)) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
+                                    {_smp ? (liveHomeOn ? (<div className="pf-lh" aria-hidden="true">{(()=>{ const P=lhPrevRef.current; return (P && P.k!==liveHome.k) ? (<div key={'i'+P.k} className="pf-lh-in out"><canvas/><div className="pf-lh-shade"/><div className="pf-lh-foot">{P.m && (<div className="pf-lh-cap"><small>{P.m.by}</small><b>{P.m.t}</b><i>{P.m.p}</i></div>)}{P.m && _lhCta(' on')}</div></div>) : (liveOutRef.current && liveHome.k) ? (<img key={'o'+liveHome.k} className="pf-lh-out" src={liveOutRef.current} alt=""/>) : null; })()}<div key={'i'+liveHome.k} className={'pf-lh-in'+((lhPrevRef.current || (liveOutRef.current && liveHome.k)) ? '' : ' first')}><canvas ref={liveCvRef}/><div className="pf-lh-shade"/><div className="pf-lh-foot">{_lhOwn && (<div ref={_lhFit} className={'pf-lh-cap'+(_lhBig ? ' big' : '')}><small>{liveMeta.by}</small><b>{liveMeta.t}</b><i>{liveMeta.p}</i></div>)}{_lhOwn && _lhCta((_lhBig ? ' wait' : '')+(livePhase==='done' ? ' on' : ''))}</div></div></div>) : (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>)) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}   {/* your painting waits: the same rings as the first screen, not a ▶ */}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{'--g':'linear-gradient(135deg,'+K.g+')'}}><span className="pf-sh-chip-ic">{_sv(K.p, 14)}</span><span className="pf-sh-chip-t">{K.label}</span></span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
