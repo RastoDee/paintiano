@@ -1822,7 +1822,7 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, onCl
   const bookCard = useMemo(()=>({id:'book', book:true, title:t('bookTitle')||'The Book', body:ts('bookDesc',''), cta:ts('bookExcerptCta','Book summary')}), [t, ts]);
   // the book summary as story cards (key 'bsum'): the opening, one card per part, the quote — ✕ or the last tap returns to the Book card
   const bookSum = useMemo(()=>{ const B = PF_BOOK_SUM[BOOK_LANGS.indexOf(lang)>=0 ? lang : 'EN'] || PF_BOOK_SUM.EN;
-    return [{id:'bs0', sum:true, brand:B.s.split(/ — | · /)[0], body:B.i}].concat(B.c.map((c,i)=>({id:'bs'+(i+1), sum:true, title:c[0], body:c[1]})), [{id:'bsq', sum:true, quote:B.q, foot:(pro ? ts('bookPdfPro','') : ts('bookProLine','')) || B.f}]); }, [lang, pro, ts]);
+    return [{id:'bs0', sum:true, brand:B.s.split(/ — | · /)[0], body:B.i}].concat(B.c.map((c,i)=>({id:'bs'+(i+1), sum:true, title:c[0], body:c[1]})), [{id:'bsq', sum:true, quote:B.q, foot:B.f}]); }, [lang]);
   const direct = mode==='concept' || mode==='book';
   const [story, setStory] = useState(()=> mode==='concept' ? {k:'concept', i:0} : mode==='book' ? {k:'book', i:0} : null);
   const [sheet, setSheet] = useState(false);
@@ -2097,11 +2097,11 @@ const GuideModal = memo(function GuideModal({pro=false, onRead=null, rdK=0, onCl
             <button type="button" onClick={(e)=>{ e.stopPropagation(); onRead && onRead(); }} style={{marginTop:22,height:48,padding:'0 24px',borderRadius:24,border:0,cursor:'pointer',fontFamily:'inherit',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:700,textDecoration:'none',boxShadow:'0 10px 28px rgba(201,168,76,.4)'}}><GuideIco k="book" z={18}/>{_bp ? ts('bookCont','Continue reading') : ts('bookRead','Read the book')}</button>
             {_bp && (<div style={{marginTop:10,fontSize:13*rs,color:'rgba(242,238,232,.7)'}}>{_bp.t}{' \u00b7 '}{(_bp.p|0)+' %'}</div>)}
             <button type="button" onClick={(e)=>{ e.stopPropagation(); open('bsum', 0); }} style={{marginTop:12,height:44,padding:'0 24px',borderRadius:24,border:'1px solid rgba(240,215,138,.5)',cursor:'pointer',fontFamily:'inherit',background:'none',color:'#f0d78a',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:600,textDecoration:'none',boxShadow:'none'}}><GuideIco k="book" z={18}/>{card.cta}</button>
-            <div style={{marginTop:16,maxWidth:320,fontSize:13.5*rs,lineHeight:1.45,color:'rgba(242,238,232,.7)',textWrap:'balance'}}>{ts('bookPdfPro','')}</div>
           </>); })()}
           {card.book && !pro && (<>
             <button type="button" onClick={(e)=>{ e.stopPropagation(); open('bsum', 0); }} style={{marginTop:22,height:48,padding:'0 24px',borderRadius:24,border:0,cursor:'pointer',fontFamily:'inherit',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',color:'#1a1408',display:'inline-flex',alignItems:'center',gap:10,fontSize:15*rs,fontWeight:700,textDecoration:'none',boxShadow:'0 10px 28px rgba(201,168,76,.4)'}}><GuideIco k="book" z={18}/>{card.cta}</button>
             <div style={{marginTop:16,maxWidth:320,fontSize:13.5*rs,lineHeight:1.45,color:'rgba(242,238,232,.74)',textWrap:'balance'}}><span style={{color:'#f0d78a',fontWeight:700,letterSpacing:'.12em'}}>{'\u2726 PRO'}</span><br/>{ts('bookProLine','')}</div>
+            <div style={{marginTop:12,maxWidth:320,fontSize:13.5*rs,lineHeight:1.45,color:'rgba(242,238,232,.7)',textWrap:'balance'}}>{ts('bookPdfPro','')}</div>
           </>)}
         </div>
       ) : (

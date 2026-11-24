@@ -30799,16 +30799,17 @@ const PF_RD_CSS = `
 .pf-rd-flow h1.solo{margin-top:1.6em}
 .pf-rd-flow p.fig,.pf-rd-flow p.hist,.pf-rd-flow p.qr{text-align:center;margin:1em 0 .3em}
 .pf-rd-flow img{max-width:100%;max-height:calc(var(--rdh) * .58);height:auto;border-radius:2px}
-.pf-rd-flow div.figpage{-webkit-column-break-before:always;break-before:column;-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;padding-top:calc(var(--rdh) * .06)}
-.pf-rd-flow div.figpage p.fig{margin:0 0 .6em}
-.pf-rd-flow div.histbox{-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;margin:1.2em 0}
-.pf-rd-flow div.histbox p.hist{margin:0 0 .4em}
+.pf-rd-flow p.fig img,.pf-rd-flow p.hist img,.pf-rd-flow div.pl img{display:block;margin-left:auto;margin-right:auto}
+.pf-rd-flow div.figpage{-webkit-column-break-before:always;break-before:column;-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;padding-top:calc(var(--rdh) * .06);margin-bottom:1.5em}
+.pf-rd-flow div.figpage p.fig{margin:0 0 .5em}
+.pf-rd-flow div.histbox{-webkit-column-break-inside:avoid;break-inside:avoid;text-align:center;margin:1.2em 0 1.5em}
+.pf-rd-flow div.histbox p.hist{margin:0 0 .5em}
 .pf-rd-flow p.hist img{max-width:50%;max-height:calc(var(--rdh) * .4)}
 .pf-rd-flow p.qr img{width:4.4em;background:#fff;padding:4px}
 .pf-rd-flow p.cap,.pf-rd-flow p.caps,.pf-rd-flow p.capt{text-align:center;margin:0}
-.pf-rd-flow p.cap{font-style:italic;color:var(--rm);font-size:.82em}
-.pf-rd-flow p.caps{font-style:italic;color:var(--rm);font-size:.88em}
-.pf-rd-flow p.capt{font-weight:600;font-size:.92em;margin-top:.4em}
+.pf-rd-flow p.cap{font-style:italic;color:var(--rm);font-size:.76em}
+.pf-rd-flow p.caps{font-style:italic;color:var(--rm);font-size:.81em}
+.pf-rd-flow p.capt{font-weight:600;font-size:.85em;margin-top:0}
 .pf-rd-flow .quote{margin:1.4em 6%;text-align:center;font-style:italic}
 .pf-rd-flow .quote p{text-align:center;line-height:1.55}
 .pf-rd-flow .tp{text-align:center;padding-top:calc(var(--rdh) * .16)}
@@ -30827,12 +30828,12 @@ const PF_RD_CSS = `
 .pf-rd-flow .src p{text-indent:-1.2em;margin:0 0 .25em 1.2em;text-align:left;font-size:.86em;line-height:1.35;-webkit-hyphens:none;hyphens:none;overflow-wrap:anywhere}
 .pf-rd-flow .src p.it{text-indent:0;margin:1em 0 .3em 0;text-align:left;color:var(--ra);font-size:.92em}
 .pf-rd-flow p.gt{text-align:center;font-weight:600;margin:1.6em 0 .1em}
-.pf-rd-flow div.plates{text-align:center;margin:1em 0 1.2em}
+.pf-rd-flow div.plates{text-align:center;margin:1em 0 1.5em}
 .pf-rd-flow div.pl{display:inline-block;vertical-align:top;width:44%;margin:0 2% 1em;-webkit-column-break-inside:avoid;break-inside:avoid}
 .pf-rd-flow div.c4 div.pl{width:21%;margin:0 1.5% .6em}
 .pf-rd-flow div.c1 div.pl{width:70%}
 .pf-rd-flow div.pl img{width:100%;height:auto;max-height:none}
-.pf-rd-flow div.pl p.cap{font-size:.8em;margin-top:.2em}
+.pf-rd-flow div.pl p.cap{font-size:.74em;margin-top:.35em}
 .pf-rd-flow p.leg{margin-top:.2em}
 .pf-rd-flow a{color:var(--ra)}
 .pf-rd-bar{height:3px;margin:8px 28px 0;border-radius:2px;background:var(--rl);overflow:hidden}
