@@ -637,6 +637,13 @@ export default async function handler(req) {
             console.error('paddle-webhook: book e-mail not sent', sent);
             return json({ ok: false, reason: 'book_email_failed', detail: sent.reason }, 500);   // Paddle retries
           }
+          // The sale is remembered as a row that is never a licence (status 'disabled', like the AI-pass rows): a second
+          // delivery of this transaction finds it (no second e-mail), and a refund flips it to 'refunded' — /api/book then
+          // stops serving that code. Written only after the e-mail went out; a failure here never fails the sale.
+          try {
+            await insertLicense({ key: code, email, status: 'disabled', tier: 'pro', order_id: orderId, provider: 'paddle', activations: 0,
+              customer_id: customerId, product_id: productId, variant_id: variantId, amount_cents: amountCents, currency: currencyCode, raw_event: evt });
+          } catch (e) { console.error('paddle-webhook: book row not written (the code works; a refund will not switch it off)', e); }
           return json({ ok: true, book: true });
         }
 
@@ -793,7 +800,9 @@ export default async function handler(req) {
         if (!rec || rec.status !== 'refunded') return json({ ok: true, ignored: 'not_refunded' });
 
         const isPass = String(rec.key || '').startsWith('UPGRADE-');
-        await setLicenseStatus(orderId, isPass ? 'disabled' : 'active', { refunded_at: null });
+        const isBook = String(rec.key || '').startsWith('BOOK-');   // a book's row is never a licence: it goes back to 'disabled', and its code works again
+        await setLicenseStatus(orderId, (isPass || isBook) ? 'disabled' : 'active', { refunded_at: null });
+        if (isBook) return json({ ok: true, restored: true, book: true });
 
         let key = rec.key, aiUntil = null;
         if (isPass) {
