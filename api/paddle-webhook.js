@@ -764,9 +764,13 @@ export default async function handler(req) {
 
         // A word from us too (Paddle sends its own receipt): what was refunded and what it means in the app.
         // Only for a refund the buyer asked for (not a chargeback), only when we know the buyer; never fails the webhook.
-        if (action === 'refund' && rec && rec.email) {
+        if (action === 'refund' && rec && rec.key) {
           try {
             const k = String(rec.key || '');
+            // the buyer's address is on the full row (the look-up by order carries only key, status and tier)
+            const full = await getLicenseByKey(k);
+            const toAddr = full?.email || null;
+            if (!toAddr) throw new Error('no e-mail on the licence row');
             const kind = k.startsWith('BOOK-') ? 'book' : k.startsWith('UPGRADE-') ? 'pass' : 'licence';
             const done = data?.status === 'approved';
             const line1 = done
@@ -780,7 +784,7 @@ export default async function handler(req) {
             const line3 = 'If this was a mistake, or you would like to tell us what did not work for you, just reply to this e-mail — it goes straight to a person.';
             const what = kind === 'book' ? 'book' : kind === 'pass' ? 'AI pass' : 'licence';
             const mail = await sendLicenseEmail({
-              to: rec.email, tier: rec.tier, orderId, category: 'refund_notice',
+              to: toAddr, tier: rec.tier, orderId, category: 'refund_notice',
               subject: `Your Paintiano ${what} refund`,
               text: ['Hi,', '', line1, '', line2, '', line3, '', `Order: ${orderId}`, '', 'Paintiano'].join('\n'),
               html: `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.6;color:#222;max-width:520px">
