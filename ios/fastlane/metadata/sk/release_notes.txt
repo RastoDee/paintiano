@@ -1,5 +1,5 @@
-Novinky v 1.2
-• Nová Príručka: každý tip na skutočnej obrazovke, s prehliadkami „Ukáž mi to“.
-• Nové menu: tvoja najnovšia maľba, postup v Príručke a kniha na prvý pohľad.
-• Obrázky znejú plnšie: lúky a záhrady hrajú svoje farby v akordoch.
+Novinky v 1.3
+• Celá kniha v appke: všetkých 14 kapitol Knihy o zlatej hudbe aj s obrazmi — pre Pro a Pro AI.
+• Podrž prst na fúzii: uvidíš, ktorý maliar dáva čo.
+• Tvoje vlastné skladby majú poriadne názvy: Názov — Interpret.
 • Opravy a vylepšenia.

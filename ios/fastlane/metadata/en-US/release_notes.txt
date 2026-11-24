@@ -1,5 +1,5 @@
-New in 1.2
-• A new Guide: every tip on the real screen, with "Show me" walkthroughs.
-• A fresh menu: your newest painting, your Guide progress and the book at a glance.
-• Pictures sound fuller: meadows and gardens play their own colours in chords.
+New in 1.3
+• The whole book in the app: all 14 chapters of The Book of Golden Music, with pictures — for Pro and Pro AI.
+• Press and hold a fusion: see which painter gives what.
+• Your own songs get proper names: Title — Artist.
 • Fixes and polish.

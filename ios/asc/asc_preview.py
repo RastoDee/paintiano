@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """The App Preview (the video among the screenshots; 886 x 1920, 30 fps, 22 s, with sound), one per language: uploads
-ios/asc/preview/<LANG>.mp4 to the 6.9-inch iPhone preview set of each language of the version being prepared (PF_VER, 1.3 by default),
+ios/asc/preview/<LANG>.mp4 to the 6.9-inch iPhone preview set of each language of the version being prepared (PF_VER, 1.3 by default;
+a commit also marked [only:<locale>,<locale>] uploads just those languages),
 replacing a preview uploaded there before, waits until Apple has processed it and sets the frame shown before it plays (PF_POSTER).
 es-MX has texts of its own but no screenshots yet: it gets the Spanish screenshots (ios/fastlane/screenshots/es-ES) so that the page is
 in one language. en-GB gets nothing of its own (it shows the en-US pictures). Touches nothing else; submits nothing. Prints what Apple answers."""
@@ -10,6 +11,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 exec(compile(open(os.path.join(HERE, 'asc.py'), encoding='utf-8').read().split("\nNOTES = {")[0], 'asc_head', 'exec'))
 FILES = {'en-US': 'EN', 'sk': 'SK', 'de-DE': 'DE', 'fr-FR': 'FR', 'es-ES': 'ES', 'es-MX': 'ES', 'pt-PT': 'PT', 'zh-Hans': 'zh', 'zh-Hant': 'zhTW', 'ja': 'ja'}
 SHOTS_FROM = {'es-MX': 'es-ES'}                                   # a language that borrows another language's screenshots when it has none
+import re
+_only = re.search(r'\[only:([^\]]+)\]', os.environ.get('MSG', ''))          # a commit marked [only:zh-Hans,ja] uploads just those languages
+if _only: FILES = {k: v for k, v in FILES.items() if k in [x.strip() for x in _only.group(1).split(',')]}; SHOTS_FROM = {}
 POSTER = os.environ.get('PF_POSTER', '00:00:03:18')               # 3.6 s: the finished Hokusai painting with the headline over it
 VER = os.environ.get('PF_VER', '1.3')
 def put_parts(data, ops):

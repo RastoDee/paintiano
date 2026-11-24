@@ -1,5 +1,5 @@
-Nouveautés de la 1.2
-• Nouveau guide : chaque astuce sur le vrai écran, avec des visites « Montre-moi ».
-• Nouveau menu : ton tableau le plus récent, ta progression dans le guide et le livre en un coup d’œil.
-• Les images sonnent plus riches : prairies et jardins jouent leurs couleurs en accords.
+Nouveautés de la 1.3
+• Le livre entier dans l’app : les 14 chapitres du Livre de la musique dorée, avec images — pour Pro et Pro AI.
+• Appui long sur une fusion : vois quel peintre apporte quoi.
+• Tes propres morceaux portent enfin un vrai nom : Titre — Artiste.
 • Corrections et améliorations.

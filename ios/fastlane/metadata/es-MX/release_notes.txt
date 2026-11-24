@@ -1,5 +1,5 @@
-Novedades de la 1.2
-• Nueva guía: cada consejo en la pantalla real, con recorridos «Enséñamelo».
-• Nuevo menú: tu cuadro más reciente, tu progreso en la guía y el libro de un vistazo.
-• Las imágenes suenan más llenas: prados y jardines tocan sus colores en acordes.
+Novedades de la 1.3
+• El libro entero en la app: los 14 capítulos de El libro de la música dorada, con imágenes — para Pro y Pro AI.
+• Mantén pulsada una fusión: mira qué pintor aporta qué.
+• Tus propias canciones tienen por fin un nombre de verdad: Título — Artista.
 • Correcciones y mejoras.

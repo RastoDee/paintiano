@@ -1,5 +1,5 @@
-Neu in 1.2
-• Neue Anleitung: jeder Tipp auf dem echten Bildschirm, mit „Zeig’s mir“-Rundgängen.
-• Neues Menü: dein neuestes Bild, dein Fortschritt in der Anleitung und das Buch auf einen Blick.
-• Bilder klingen voller: Wiesen und Gärten spielen ihre Farben in Akkorden.
+Neu in 1.3
+• Das ganze Buch in der App: alle 14 Kapitel von „Das Buch der goldenen Musik“, mit Bildern — für Pro und Pro AI.
+• Eine Fusion gedrückt halten: sehen, welcher Maler was beisteuert.
+• Deine eigenen Songs heißen jetzt richtig: Titel — Interpret.
 • Korrekturen und Feinschliff.
