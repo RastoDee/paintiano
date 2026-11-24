@@ -5705,7 +5705,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     ? (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'0 5px',borderRadius:9,background:PF.card2,border:'1px solid rgba(242,238,232,.75)',color:PF.cream,lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>{ix+1}</span>)
     : (<span title={roles[ix]||String(ix+1)} style={{position:'absolute',top:-7,right:6,minWidth:14,fontSize:(.36*effScale)+'rem',fontWeight:700,letterSpacing:'.04em',padding:'1px 5px',borderRadius:9,background:'linear-gradient(180deg,#f0d78a,#c9a84c)',color:'#1a1408',lineHeight:1.3,textAlign:'center',pointerEvents:'none',...(kind==='pin'?{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:2}:{})}}>{kind==='pin' && _pinIcon('#1a1408', 7)}{ix+1}</span>);
   const _pinIcon = (col, px)=> (<svg width={px} height={px} viewBox="0 0 24 24" fill="none" stroke={col} strokeWidth={px<9?3:2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.8a2 2 0 0 0-1.1-1.8l-1.8-.9A2 2 0 0 1 15 10.8V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.8a2 2 0 0 1-1.1 1.8l-1.8.9A2 2 0 0 0 5 15.2Z"/></svg>);
-  const _diceRoll = () => {
+  const _diceRoll = (other) => {   // other===true (↑ in the Studio): someone else — never the painter on screen again in another variant
     if(jamOn && jamAll){ _jamAllRoll(); return; }
     // a Fusion on screen: every member gets a new variant of its own
     if(style!==null && painterStage.length && viewMode!=='image' && !stTakenRef.current && _fuRollAll(_jamStage())){ _fuRollPal(); return; }
@@ -5742,7 +5742,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         for(let i=combos.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=combos[i];combos[i]=combos[j];combos[j]=t; }
         diceBagRef.current = combos;
       }
-      const next = diceBagRef.current.shift() || {a:0,v:0};
+      // the bag holds every painter in every variant, so one painter can come twice in a row: ↑ then takes the next one of another painter
+      let _bi=0; if(other===true){ const _cur=(((shuffleArtistIndex|0)%poolLen)+poolLen)%poolLen; _bi=diceBagRef.current.findIndex(c=>(c.a|0)!==_cur); if(_bi<0) _bi=0; }
+      const next = diceBagRef.current.splice(_bi,1)[0] || {a:0,v:0};
       if(notesMode) setNotesMode(false);   // a drawn Mosaic is the Mosaic (Notes is its own stop, or ←)
       // shuffleStyle reads ((basePick + shuffleArtistIndex) % poolLen). Set the
       // index so the artist lands exactly on combo.a (cancel basePick offset).
@@ -17283,7 +17285,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     stTakenRef.current=L.tk; setStTaken(L.tk);
     fuGoldMemRef.current = (L.gm||[]).slice(); soloGoldRef.current = L.sgm||null;
   };
-  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfLook = ()=>({ ...(_stLookNow()), fk:_favCurKey||null, fr:!!favReady, pl:!!playing, an:!!anim, hp:!!holdPaused, ssl:structureSeedLock, fsl:!!favSeedLockRef.current, fs:_fusionStyleOf('art'), sigA:!!sigActiveRef.current, disp:disp|0, ss:!!songSigRef.current, vh:{n:(varHistRef.current.st||[]).length, fw:(varHistRef.current.fw||[]).length, ok:varHistRef.current.key===_varKey(), keep:!!varHistRef.current.keep}, hist:{n:(stLookHistRef.current.st||[]).length, fw:(stLookHistRef.current.fw||[]).length, ok:stLookHistRef.current.key===_stHistKey(), last:(stLookHistRef.current.st||[]).slice(-1)[0]} }); } }catch(_){}   // the poster tool: the look on screen (tests)
+  try{ if(typeof window!=='undefined' && posterMaker){ window.__pfLook = ()=>({ ...(_stLookNow()), il:_stILookNow(), fk:_favCurKey||null, fr:!!favReady, pl:!!playing, an:!!anim, hp:!!holdPaused, ssl:structureSeedLock, fsl:!!favSeedLockRef.current, fs:_fusionStyleOf('art'), sigA:!!sigActiveRef.current, disp:disp|0, ss:!!songSigRef.current, vh:{n:(varHistRef.current.st||[]).length, fw:(varHistRef.current.fw||[]).length, ok:varHistRef.current.key===_varKey(), keep:!!varHistRef.current.keep}, hist:{n:(stLookHistRef.current.st||[]).length, fw:(stLookHistRef.current.fw||[]).length, ok:stLookHistRef.current.key===_stHistKey(), last:(stLookHistRef.current.st||[]).slice(-1)[0]} }); } }catch(_){}   // the poster tool: the look on screen (tests)
   // a picture's look: who plays it — the mirror of _stLookNow, so ↓ brings back the composer you came from and ↑ after ↓ goes forward again
   const _stILookNow = ()=>({ i:true, comp:imgComposerRef.current||null, form:_soloForm(), stage:(composerStageRef.current||[]).slice(), md:mode, cr:!!crOnRef.current, sig:!!imgSigActiveRef.current, dice:!!composerDice, pins:(crPinsRef.current||[]).slice() });
   const _stILookApply = (L)=>{
@@ -17330,6 +17332,16 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(!q){ _stBuzz(12); if(viewMode!=='image') _cvSlide(-1); _stFlashNow(); }
     return true;
   };
+  // ↑ from a ✦ Signature shown without the Fusion switch (Solo): its cast was the piece's — or the picture's — choice, not yours, so nobody of it
+  // is kept (gold). Its painters (composers) come one after another, each alone and drawn (white); past the last one ↑ draws from your set as ever.
+  // (Before, ↑ on a painting changed the colours only: the latch let go and the ✦'s first painter stayed alone and chosen — gold, so no ↑ brought
+  // anyone else after it; with a gold palette ↑ did nothing at all.) {key: the piece, q: still to come, last: the one of the cast on screen}
+  const sigTourRef = useRef({key:'', q:[], last:null});
+  const _stWhite = (k)=>{ const _ix=_shuffleIndexFor(k); if(_ix<0) return false;   // painter k alone and drawn (white): the next ↑ draws on
+    const _N = (proStatus==='free' && k!==artistOfDay) ? 2 : ((typeof ARTIST_VARIANT_N!=='undefined' && ARTIST_VARIANT_N[k]>1) ? ARTIST_VARIANT_N[k] : 6);
+    randomModeRef.current=true; setRandomMode(true); setMosaicShuffleLock(false); setNotesMode(false); setPainterStage([]); _setFuRoll(null);
+    nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
+    setStyle(null); setShuffleArtistIndex(_ix); setShufVariant((Math.random()*_N)|0); return true; };
   const _stNext = (q)=>{
     const _back0 = viewMode==='image' ? _stILookNow() : _stLookNow();
     let rolled = false;
@@ -17369,12 +17381,21 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           else if(crOn && crFixedRef.current){ rolled = !palGoldRef.current && _fuRollPal(true)===true; }   // a pinned Jam: ↑ brings a new palette (← → its variants), as a pinned Fusion
           else if(!_soloKept){
             const _sigCast = imgSigActiveRef.current;
+            const _sgK = (_sigCast && imgSigRef.current) ? (imgSigRef.current.keys||[]).filter(Boolean) : [];   // the ✦'s own composers
             if(imgSigActiveRef.current){ imgSigActiveRef.current=false; setImgSigActive(false); _setImgSigPin(null); imgSigPrevRef.current=null; if(!crOnRef.current && composerStageRef.current.length){ composerStageRef.current=[]; setComposerStage([]); } }   // ↑ from the picture's ✦: the latch lets go (as a painting's ✦ does) — its guests leave with it, the next composer is drawn, the ✦ word goes
             if(!crOn && !composerDice) setComposerDice(true);
             if(crOn && _sigCast){ crPinsRef.current=[]; setCrPins([]); if(!composerDice) setComposerDice(true); }   // ✦'s ensemble was the picture's choice, not yours: ↑ draws a whole new jam, as a painting's ✦ fusion does
             else if(crOn && !composerDice) _stCrPinStage();   // a Jam you chose: its gold composers stay, ↑ seats white guests — as for the painters
-            if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
-            else rolled = _composerRoll()!==false;   // the Classic composers' Next (a composer, or a new ensemble)
+            // ↑ from the picture's ✦ in Solo: its composers one after another, each alone and white — then the draw, as for the painters (sigTourRef)
+            const _tr=sigTourRef.current, _hk=_stHistKey();
+            const _tq = crOn ? null : (_sigCast ? (_sgK.length>1 ? _sgK.filter(_cOk) : null) : ((_tr.q.length && _tr.key===_hk && composerDice && imgComposerRef.current===_tr.last) ? _tr.q.filter(_cOk) : null));
+            if(_tq && _tq.length){ const _c=_tq[0]; sigTourRef.current={key:_hk, q:_tq.slice(1), last:_c};
+              if(composerStageRef.current.length){ composerStageRef.current=[]; setComposerStage([]); }
+              if(_c!==imgComposerRef.current){ _lastComposerRef.current=_c; imgComposerRef.current=_c; setImgComposer(_c); }
+              rolled = true; }
+            else { _tr.q=[];
+              if(playing){ _imgDip(()=>_composerRoll()); rolled = true; }
+              else rolled = _composerRoll()!==false; }   // the Classic composers' Next (a composer, or a new ensemble)
             if(rolled && !palGoldRef.current) _fuRollPal(true);   // … and a new palette, as on a painting
           }
           else if(!palGoldRef.current){ rolled = _fuRollPal(true)===true; }   // a gold composer in Solo stays: ↑ = a new palette, as for a chosen painter
@@ -17440,13 +17461,24 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
             setStyle(null); if(_ix>=0) setShuffleArtistIndex(_ix); setShufVariant((Math.random()*_N)|0); rolled = true; }
         }
+        else if(sigActiveRef.current && songSigRef.current){   // ↑ from the piece's ✦ in Solo: its painters one after another, each alone and white (see sigTourRef); a solo ✦: someone else
+          const _sk=(songSigRef.current.keys||[]).filter(_okP), _q=(_sk.length>1 ? _sk : []).filter(k=>_shuffleIndexFor(k)>=0);   // only the ones you have (Free: the unlocked)
+          sigPrevRef.current=null; _sigOff();
+          let _k=_q.shift();
+          if(!_k){ const _pool=SHUFFLE_POOL.filter(k=>(setupArtists.includes(k) || (proStatus==='free' && k===artistOfDay)) && !_sk.includes(k)); _k = _pool.length ? _pool[(Math.random()*_pool.length)|0] : null; }
+          if(_k && _stWhite(_k)){ sigTourRef.current={key:_stHistKey(), q:_q, last:_k}; rolled = true; }
+        }
         else if(jamOn && !jamAll && _jamStage().length){   // a Fusion: its gold painters stay, ↑ adds random (white) guests — as before
           if(!randomMode) _shuffleOn();
           const pins=_jamStage().filter(k=>k && k!=='mosaic' && k!=='notes').slice(0,STAGE_MAX);
           jamPinsRef.current=pins; setJamPins(pins); setJamAll(true);
           nextRollInProgressRef.current = true; setTimeout(()=>{ try{ showDiceRef.current && showDiceRef.current(); }catch(_){} }, 40); rolled = true;
         }
-        else if(_artMode===2){ nextRollInProgressRef.current = true; _diceRoll(); rolled = true; }
+        else if(_artMode===2){ const _tr=sigTourRef.current;
+          const _tk = (_tr.q.length && _tr.key===_stHistKey() && style===null && shuffleStyle===_tr.last) ? _tr.q.find(k=>_shuffleIndexFor(k)>=0) : null;   // the ✦'s next painter — only while its last one is still the one on screen
+          if(_tk && _stWhite(_tk)){ _tr.q=_tr.q.slice(_tr.q.indexOf(_tk)+1); _tr.last=_tk; }
+          else { _tr.q=[]; nextRollInProgressRef.current = true; _diceRoll(true); }
+          rolled = true; }
         // a white palette: ↑ brings new colours too (also under a gold painter — then only the colours change); a gold one stays
         if(!palGoldRef.current && _fuRollPal(true)) rolled = true;
       }
@@ -17743,7 +17775,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _tipShown = (k)=>{ _tipCount(k); setStTip(x=> x===k ? null : x); };
   const _tipQuiet = !(studioFs || (studioHome && feedLoaded!==null)) || studioLive || !!stChg || stShare || stripOpen || !!showMine || !!favView || showMoodMenu || !!pickMode || working || recording || stVidRec || demoReelOn || _stGuideOn.current;
   // ⌃ only where ↑ does something: a painter you chose (gold) stays — there the hint would be wrong
-  const _stUpWorks = ()=> viewMode==='image' ? (crOn || composerDice || !imgComposer || imgSigActive || !palGold) : (!palGold || !!stTakenRef.current || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0));   // a picture: a gold composer in Solo stays
+  const _stUpWorks = ()=> viewMode==='image' ? (crOn || composerDice || !imgComposer || imgSigActive || !palGold) : (!palGold || !!stTakenRef.current || sigActive || _artMode===2 || (jamOn && !jamAll && _jamStage().length>0));   // a picture: a gold composer in Solo stays
   useEffect(()=>{ if(stTip || _tipQuiet || !playing || pfStepRef.current===0) return;
     let k=null; let up=false; try{ up=localStorage.getItem('paintiano_swiped_up')==='1'; }catch(_){}
     if(studioFs && !up && !_tipSeen('up') && !tipSessRef.current.up && _stUpWorks()) k='up'; else if(!_tipSeen('chg') && !tipSessRef.current.chg) k='chg';   // at home ⌃ is the card's own cue
