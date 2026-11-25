@@ -32597,11 +32597,16 @@ const STUDIO_HOME_CSS = `
 .pf-sh-bob b{animation:pfShBob 1.6s ease-in-out infinite}
 @keyframes pfShBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @keyframes pfShHintIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.pf-sh-flash{--pf-shu:min(1cqw,.75svh);position:absolute;left:0;right:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(1.2 * var(--pf-shu));padding:calc(10 * var(--pf-shu));text-align:center;color:#f7f1e6;pointer-events:none;animation:pfShFlash 1.9s ease both;background:radial-gradient(60% 34% at 50% 50%,rgba(6,5,10,.55),rgba(6,5,10,0) 100%)}
-.pf-sh-flash small{font-family:'Outfit',sans-serif;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(2.7 * var(--pf-shu)));letter-spacing:.32em;text-transform:uppercase;color:#f0d78a}
-.pf-sh-flash em{font-family:'Outfit',sans-serif;font-style:normal;font-weight:500;font-size:calc(var(--pf-read-scale,1) * calc(2.6 * var(--pf-shu)));letter-spacing:.3em;text-transform:uppercase;opacity:.7}
-.pf-sh-flash b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(6.4 * var(--pf-shu)));line-height:1.12;letter-spacing:.01em;text-shadow:0 2px 16px rgba(0,0,0,.85)}
-.pf-sh-flash b span{display:block;font-family:'Outfit',sans-serif;font-style:normal;font-weight:400;font-size:.5em;opacity:.6;margin:.2em 0}
+.pf-sh-flash{--pf-shu:min(1cqw,.75svh);position:absolute;left:0;right:0;top:0;bottom:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(10 * var(--pf-shu));text-align:center;color:#fff3d6;pointer-events:none;animation:pfShFlash 1.9s ease both;text-shadow:0 1px 2px rgba(10,8,14,.95),0 0 8px rgba(10,8,14,.85),0 0 20px rgba(10,8,14,.6)}   /* the look's name: one design with the Studio's (same letters, same glow, same proportions) */
+.pf-sh-flash-in{position:relative;display:flex;flex-direction:column;align-items:center;gap:calc(1.5 * var(--pf-shu))}
+.pf-sh-flash-in::before{content:'';position:absolute;left:calc(-7 * var(--pf-shu));right:calc(-7 * var(--pf-shu));top:calc(-5 * var(--pf-shu));bottom:calc(-5 * var(--pf-shu));z-index:-1;border-radius:50%;background:radial-gradient(closest-side,rgba(12,9,16,.46),rgba(12,9,16,.3) 55%,rgba(12,9,16,0));filter:blur(8px)}   /* a soft dark halo behind the words only: the picture stays bright, the words read on any colours */
+.pf-sh-flash small{font-family:'Outfit',sans-serif;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(4.5 * var(--pf-shu)));letter-spacing:.32em;text-transform:uppercase;color:#f0d78a}
+.pf-sh-flash-rule{display:flex;align-items:center;justify-content:center;gap:8px;width:9em;margin:calc(.5 * var(--pf-shu)) auto calc(1.5 * var(--pf-shu));font-style:normal;font-size:calc(var(--pf-read-scale,1) * calc(2.7 * var(--pf-shu)));color:#fff3d6;opacity:.85}
+.pf-sh-flash-rule s{flex:1;height:1px;background:rgba(240,222,180,.75);box-shadow:0 0 1px rgba(20,14,18,.65)}
+.pf-sh-flash em{font-family:'Outfit',sans-serif;font-style:normal;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(3.6 * var(--pf-shu)));letter-spacing:.26em;text-transform:uppercase;opacity:.92}
+.pf-sh-flash b{display:block;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(9 * var(--pf-shu)));line-height:1.1;letter-spacing:.01em}
+.pf-sh-flash-in.n2 b{font-size:calc(var(--pf-read-scale,1) * calc(7.4 * var(--pf-shu)))}.pf-sh-flash-in.n3 b{font-size:calc(var(--pf-read-scale,1) * calc(6.5 * var(--pf-shu)))}.pf-sh-flash-in.n4 b{font-size:calc(var(--pf-read-scale,1) * calc(5.8 * var(--pf-shu)))}
+.pf-sh-flash b span{display:block;font-family:'Outfit',sans-serif;font-style:normal;font-weight:400;font-size:.42em;opacity:.75;margin:.1em 0}
 @keyframes pfShFlash{0%{opacity:0;transform:translateY(6px)}14%{opacity:1;transform:none}72%{opacity:1}100%{opacity:0}}
 .pf-sh-intro{--pf-shu:min(1cqw,.75svh);position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(4 * var(--pf-shu));padding:0 calc(8 * var(--pf-shu)) calc(14 * var(--pf-shu));text-align:center;pointer-events:none;background:radial-gradient(70% 42% at 50% 46%,rgba(8,6,14,.72),rgba(8,6,14,0) 100%);animation:pfShIntro 6.2s ease 1.5s both}
 .pf-sh-intro p{margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:600;font-size:calc(var(--pf-read-scale,1) * calc(6.6 * var(--pf-shu)));line-height:1.28;color:#f4e7c6;text-shadow:0 1px 14px rgba(0,0,0,.85)}
@@ -49032,10 +49037,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const _fLine = FC ? (_fL ? _vidLine() : FC.l) : '';
         fdMetaNowRef.current = FC ? {feed:1, t:_fTitle, l:_fLine} : null;   // the lines as they stand now: the nudge holds them while it shows the next variant
         // the look's name over the card, for a moment (Lite's flash): the Mosaic, a painter, ✦ Signature, a fusion
-        const _fFlash = (()=>{ if(!FC || !_fL || !feedFlash || feedIntro) return null; const sv=(style!==null ? [style] : []).concat(painterStage).map(k=>STYLE_INSPIRED[k]||k);
+        const _fFlash = (()=>{ if(!FC || !_fL || !feedFlash || feedIntro) return null; const sk=(style!==null ? [style] : []).concat(painterStage), sv=sk.map(k=>(sk.length>1 ? _painterLabel(k) : (STYLE_INSPIRED[k]||k)));   // a fusion's names short, one painter in full — as the Studio writes them
           if(FC.kind==='img'){ const cs=[imgComposer].concat(composerStage||[]).filter(Boolean).map(k=>COMPOSER_INSPIRED[k]||k); if(imgSigActive) return {h:'✦ '+_sigT('label'), by:t('inspiredByTitle')||'inspired by', n:cs.length?cs:['Scan']}; if(!cs.length) return {h:'', by:'', n:['Scan']}; return {h:cs.length>1 ? _ensT('cr') : '', by:t('inspiredByTitle')||'inspired by', n:cs}; }
           if(sigActive) return {h:'✦ '+_sigT('label'), by:t('inspiredByTitle')||'inspired by', n:sv};
-          if(style===null) return {h:'', by:'', n:[_fUp(String(notesMode ? t('notesStyle') : t('liteMosaicStyle')).toLowerCase())]};
+          if(style===null) return {h:'', by:'', n:[_fUp(notesMode ? t('notesStyle') : t('mosaicStyle'))]};   // the look's own name, as the Studio says it (Mosaic, Notes)
           if(painterStage.length) return {h:_ensT('fusion'), by:t('inspiredByTitle')||'inspired by', n:sv};
           return {h:'', by:t('inspiredByTitle')||'inspired by', n:sv}; })();
         const _fTap = (e)=>{
@@ -49133,7 +49138,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                     if(feedIntro.k==='s' && sigActive) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><small>✦ {_sigT('label')}</small><p>{_sigT('intro')}</p></div>);
                     if(feedIntro.k==='f' && painterStage.length && !sigActive) return (<div key={feedIntro.t} className="pf-sh-intro" aria-hidden="true"><small>{_ensT('fusion')}</small><p>{_stT('fuTip')}</p></div>);
                     return null; })()}
-                  {_fFlash && (()=>{ const ms = String(_fFlash.h||'').indexOf('✦')>=0 ? 5200 : (_fFlash.n.length>1 ? 3400 : 2200); feedFlashMsRef.current = ms; return null; })()}{_fFlash && (<div key={feedFlash} className="pf-sh-flash" aria-hidden="true" style={{animationDuration:feedFlashMsRef.current+'ms'}}>{_fFlash.h && (<small>{_fFlash.h}</small>)}{_fFlash.by && (<em>{_fFlash.by}</em>)}{_fFlash.n.map((x,i)=>(<b key={i}>{i>0 && (<span>×</span>)}{x}</b>))}</div>)}
+                  {_fFlash && (()=>{ const ms = String(_fFlash.h||'').indexOf('✦')>=0 ? 5200 : (_fFlash.n.length>1 ? 3400 : 2200); feedFlashMsRef.current = ms; return null; })()}{_fFlash && (<div key={feedFlash} className="pf-sh-flash" aria-hidden="true" style={{animationDuration:feedFlashMsRef.current+'ms'}}><div className={'pf-sh-flash-in n'+Math.min(4, _fFlash.n.length)}>{_fFlash.h && (<><small>{_fFlash.h}</small><i className="pf-sh-flash-rule"><s/>◆<s/></i></>)}{_fFlash.by && (<em>{_fFlash.by}</em>)}{_fFlash.n.map((x,i)=>(<b key={i}>{i>0 && (<span>{FC && FC.kind==='img' ? '↔' : '×'}</span>)}{x}</b>))}</div></div>)}
                   {_fL && (<div className="pf-sh-prog" aria-hidden="true"><i style={{width:_fPct+'%'}}/></div>)}
                   {feedHeart>0 && (<span key={feedHeart} className="pf-sh-heart" aria-hidden="true">♥</span>)}
                   {_fL && holdPaused && !playing && !anim && !feedNeedTap && !feedMuteFl && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
@@ -51458,8 +51463,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const _fKey = _isImgFlash ? ('c-'+(imgComposer||'scan')) : (effectiveStyle || 'mosaic');
         const _fBare = _isImgFlash ? !imgComposer : (_fKey === 'mosaic' || _fKey === 'notes' || _fKey === 'raffel');
         const _fLabel = _isImgFlash ? (imgComposer ? COMPOSER_INSPIRED[imgComposer] : 'Scan')
-                      : _fKey === 'notes' ? t('notesStyle')
-                      : _fKey === 'mosaic' ? t(basicMode ? 'liteMosaicStyle' : 'mosaicStyle')
+                      : _fKey === 'notes' ? _fUp(t('notesStyle'))
+                      : _fKey === 'mosaic' ? (basicMode ? t('liteMosaicStyle') : _fUp(t('mosaicStyle')))   // Mosaic, Notes — the same words, written the same way, as For You's
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         const _sigF = _isImgFlash ? (imgSigActive && !!imgComposer) : sigActive;
@@ -51496,7 +51501,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             <div aria-hidden="true" style={_hold ? {position:'absolute',left:'-.5em',right:'-.5em',top:'-.5em',bottom:'-.5em',zIndex:-1,pointerEvents:'none',borderRadius:'3em',background:'rgba(12,9,16,.74)',filter:'blur(20px)'} : {position:'absolute',left:'-1.1em',right:'-1.1em',top:'-.9em',bottom:'-.9em',zIndex:-1,pointerEvents:'none',borderRadius:'50%',background:'radial-gradient(closest-side, rgba(12,9,16,.46), rgba(12,9,16,.3) 55%, rgba(12,9,16,0))',filter:'blur(8px)'}}/>   {/* a soft dark halo behind the text only: the picture stays bright, the words stay readable on any colours */}
             {(_ensF || _sigF) && (<>
               {/* Fusion header: FUSION, a short gold rule with a diamond, then “inspired by” — or ✦ SIGNATURE */}
-              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600}}>{_sigF ? ('✦ '+_sigT('label')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
+              <div style={{fontStyle:'normal',fontSize:'.7em',letterSpacing:'.32em',fontWeight:600,color:'#f0d78a'}}>{_sigF ? ('✦ '+_sigT('label')) : _isImgFlash ? _ensT('cr') : _ensT('fusion')}</div>
               <div aria-hidden="true" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,margin:'8px auto 12px',width:'9em',fontSize:'.42em',fontStyle:'normal',opacity:.85}}><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/><span>◆</span><span style={{flex:1,height:1,background:'rgba(240,222,180,.75)',boxShadow:'0 0 1px rgba(20,14,18,.65)'}}/></div>
               {/* which style this fusion / jam is: take turns, or one new painter / composer */}
               {_fsV && !_fsTap && (<div style={{animation:'pfFsPillIn .25s ease-out both',display:'flex',alignItems:'center',justifyContent:'center',gap:'.9em',fontStyle:'normal',fontSize:'.52em',letterSpacing:'.24em',fontWeight:600,marginBottom:'1.5em',color:'rgba(248,232,196,1)'}}><FsGlyph v={_fsV} w={26} h={19} fo={.75} shadow/>{_fsWord(_fsV,_fsK)}</div>)}
