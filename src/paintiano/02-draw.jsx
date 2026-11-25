@@ -6087,10 +6087,10 @@ function stellaPhasePoly(ctx,CW,CH,chords,lim,gc,ss,mode){
 // a chain down the whole canvas and off its edges, and where two rings cross their bands weave, one over at the first crossing and under at the
 // next, a pinstripe of the dark ground between every band. Each band is a passage of the piece, as wide as the passage is long,
 // in its colour; the passages are dealt round the links in turn, so the whole chain grows at once, each link from its inner
-// band outward, each band laid as four arcs that appear whole, at an easy pace through most of the piece, in the colour of the chord sounding as they appear, turning to the band's
-// colour as they come home; the first as its passage sounds, the others later in the piece; every arc
-// pops up somewhere at random on the canvas, its own size and turn, and in the last third the arcs fly home one by one, settling into the chain, so the chaos of the start is the interlace at the end; the louder
-// links the larger; the links sway with their register. Arcs everywhere at first; the chain at the end. ──
+// band outward, each band laid as four arcs at an easy pace through most of the piece; the first as its passage sounds, the others later in the piece.
+// Every arc is painted where it belongs in the chain, swept round in one stroke like the edge of his protractor, in the colour of the
+// chord sounding as it starts, turning to the band's colour as the stroke closes; once laid nothing moves: the chain grows where it falls.
+// The louder links the larger; the links sway with their register. ──
 function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, S=_stxSetup(chords,gc,mode), cn=S.cn, isBW=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn;
   const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A);
@@ -6109,12 +6109,10 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const smooth=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x);
   const drawRing=(ring,home)=>{ for(const b of ring.bands){ if(b.q.t0*0.85>reveal) break; const np=4, dt=Math.max(0.004,b.q.t1-b.q.t0), ccw=b.dir<0, sw=6.2832/np;
       const spr=Math.max(dt/np,Math.min(0.06,(0.995-b.q.t0)/np));
-      for(let s=0;s<np;s++){ const ta=(b.q.t0+spr*s)*0.85; if(ta>reveal) break; const j=b.ord[s]; const pr=_seedRnd(4500+b.q.a*3+s,ss,0,0); pr();
-        const T=Math.max(ta+0.04,0.7+0.17*pr()), L=Math.max(0.0001,Math.min(0.12,1-T)), k=reveal>=1?1:smooth((reveal-T)/L);
-        if(home && k<0.999) continue;
-        const ccx=pr()*CW, ccy=pr()*CH, crm=D*(0.12+0.26*pr()), cw=crm*0.24, crot=(pr()-.5)*6.2832, csw=sw*(0.7+0.9*pr());
-        const fm=(b.a+b.b)/2, fw=b.b-b.a; const cx=ccx+(ring.cx-ccx)*k, cy=ccy+(ring.cy-ccy)*k, rm=crm+(fm-crm)*k, w=cw+(fw-cw)*k, swk=csw+(sw-csw)*k;
-        const a0=b.a0+(ccw?-1:1)*j*sw+crot*(1-k), a1=a0+(ccw?-swk:swk), ra=Math.max(0.5,rm-w/2), rb=rm+w/2;
+      for(let s=0;s<np;s++){ const ta=(b.q.t0+spr*s)*0.85; if(ta>reveal) break; const j=b.ord[s];
+        const k=reveal>=1?1:smooth((reveal-ta)/0.08);   // how far round the stroke has swept
+        if(k<=0 || (home && k<0.999)) continue;
+        const fm=(b.a+b.b)/2, fw=b.b-b.a, a0=b.a0+(ccw?-1:1)*j*sw, a1=a0+(ccw?-sw*k:sw*k), ra=Math.max(0.5,fm-fw/2), rb=fm+fw/2, cx=ring.cx, cy=ring.cy;   // in its place in the chain from the first moment
         ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a1,ccw); ctx.arc(cx,cy,ra,a1,a0,!ccw); ctx.closePath(); const cc=k>=1?b.col:(()=>{ const c0=S.col(Math.min(0.999,ta)); return [0,1,2].map(i=>c0[i]+(b.col[i]-c0[i])*k); })(); ctx.fillStyle=_stxCss(cc); ctx.fill();
         ctx.strokeStyle=_stxCss(canvas); ctx.lineWidth=gap; ctx.beginPath(); ctx.arc(cx,cy,ra,a0,a1,ccw); ctx.stroke(); ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a1,ccw); ctx.stroke(); } } };
   rings.forEach(r=>drawRing(r,false));
