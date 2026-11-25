@@ -18519,7 +18519,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _feedLiveOn = studioHome && feedAt>=0 && !!feedCards[feedAt] && feedLoaded!==null;
   // ── the first screen paints itself: a built-in piece by a painter, silent and sped up (the whole piece in a few
   //    seconds), its title large in the middle for a moment, the piece's colours pulsing beneath; a quick start and an easy end (the last
-  //    strokes are the ones to watch — Stella's arcs fly home over some three seconds), a rest on the done painting, then the next one
+  //    strokes are the ones to watch — Stella's last arcs sweeping shut in their places in the chain), a rest on the done painting, then the next one
   //    slides up — until a tap brings the sound (the piece then starts as itself, with the music)
   const _LH_MS = 7000, _LH_HOLD = 2600;   // a painting: 7 s, then it rests 2.6 s. The opening one alone is slower: 8.5 s, the last strokes the slowest, and 3 s of rest (_lhSlow)
   const liveHomeOn = studioHome && feedAt<0 && !feedFly && !_homeCurV() && !showIntro && !showOnboarding;   // once the splash has gone
