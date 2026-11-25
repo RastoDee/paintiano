@@ -10579,7 +10579,7 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // their slant turning as the passage dances; where the bass moves it drags thinned
 // paint in its own colour through the mass; an accent a stroke of her white, the
 // strongest a dark one; the thinned paint runs where the piece is loud.
-// Stroke by stroke as the piece plays. A minor, heavy piece lays it on a dark ground, as her paintings of the 1960s are dark.
+// Stroke by stroke as the piece plays. A minor, heavy piece or a fiery one lays it on a dark ground, as her violent paintings of the 1960s are dark.
 // ═══════════════════════════════════════════════════════════════════════════
 // her loaded brush as the variants always had it: a broad ribbon of oil, thick where the brush lands and thinning as it runs dry,
 // a darker relief under one edge (the impasto catching the light), a lit ridge along it, the hairs of the brush streaking through;
@@ -10629,9 +10629,9 @@ function _jmOil(c,v,isBW){ const R=c[0]/255,G=c[1]/255,B=c[2]/255, mx=Math.max(R
 function _jmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), played=Math.max(1,Math.min(cn,lim));
   const A=_kd2Analyze(chords,gc,mode), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>a==null?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
-  // a minor, heavy piece (as Kandinsky hears it: minor and loud): her dark paintings of the 1960s — the same dance of loaded strokes on a dark ground,
-  // her oils raised a step so they carry on it; her white stays white
-  const X=cn?_hear(chords,A):null, dark=!!X && !X.major && X.loud>0.6;
+  // a minor, heavy piece (as Kandinsky hears it: minor and loud), or a fiery one whatever its key (very loud): her dark, violent paintings of the 1960s —
+  // the same dance of loaded strokes on a dark ground, her oils raised a step so they carry on it; her white stays white
+  const X=cn?_hear(chords,A):null, dark=!!X && ((!X.major && X.loud>0.6) || X.loud>0.75);
   const GROUND=dark?(isBW?[22,22,24]:[16,15,20]):(isBW?[246,246,243]:[247,244,236]); ctx.fillStyle=css(GROUND); ctx.fillRect(0,0,CW,CH); if(!cn) return;
   // oil paint, not light: the piece's colours held to what her pigments give (cobalt, cadmium, viridian, lavender), at the value asked
   const paint=(c,v)=>_jmOil(c,dark?Math.min(1,0.3+v*0.8):v,isBW);
