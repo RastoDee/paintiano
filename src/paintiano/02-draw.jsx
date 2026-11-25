@@ -10579,7 +10579,7 @@ function rileyPhaseCrest(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // their slant turning as the passage dances; where the bass moves it drags thinned
 // paint in its own colour through the mass; an accent a stroke of her white, the
 // strongest a dark one; the thinned paint runs where the piece is loud.
-// Stroke by stroke as the piece plays.
+// Stroke by stroke as the piece plays. A minor, heavy piece lays it on a dark ground, as her paintings of the 1960s are dark.
 // ═══════════════════════════════════════════════════════════════════════════
 // her loaded brush as the variants always had it: a broad ribbon of oil, thick where the brush lands and thinning as it runs dry,
 // a darker relief under one edge (the impasto catching the light), a lit ridge along it, the hairs of the brush streaking through;
@@ -10629,9 +10629,12 @@ function _jmOil(c,v,isBW){ const R=c[0]/255,G=c[1]/255,B=c[2]/255, mx=Math.max(R
 function _jmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), played=Math.max(1,Math.min(cn,lim));
   const A=_kd2Analyze(chords,gc,mode), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>a==null?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
-  const GROUND=isBW?[246,246,243]:[247,244,236]; ctx.fillStyle=css(GROUND); ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  // a minor, heavy piece (as Kandinsky hears it: minor and loud): her dark paintings of the 1960s — the same dance of loaded strokes on a dark ground,
+  // her oils raised a step so they carry on it; her white stays white
+  const X=cn?_hear(chords,A):null, dark=!!X && !X.major && X.loud>0.6;
+  const GROUND=dark?(isBW?[22,22,24]:[16,15,20]):(isBW?[246,246,243]:[247,244,236]); ctx.fillStyle=css(GROUND); ctx.fillRect(0,0,CW,CH); if(!cn) return;
   // oil paint, not light: the piece's colours held to what her pigments give (cobalt, cadmium, viridian, lavender), at the value asked
-  const paint=(c,v)=>_jmOil(c,v,isBW);
+  const paint=(c,v)=>_jmOil(c,dark?Math.min(1,0.3+v*0.8):v,isBW);
   const WHITE=isBW?[250,250,248]:[250,247,238];
   const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
   const ds=A.ev.filter(Boolean).map(e=>e.dur).sort((a,b)=>a-b), dMed=ds[ds.length>>1]||1;
@@ -10664,7 +10667,7 @@ function _jmListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       for(let s2=0;s2<nS;s2++){ const off=(s2-(nS-1)/2)*w*0.9, K=12, pts=[]; let px=x-Math.cos(a)*L/2-Math.sin(a)*off, py=y-Math.sin(a)*L/2+Math.cos(a)*off, ang=a-bend/2;
         for(let k=0;k<=K;k++){ pts.push([px,py]); ang+=bend/K; px+=Math.cos(ang)*L/K; py+=Math.sin(ang)*L/K; }
         _jmBrush(ctx,pts,(acc?w*1.3:w)*(s2?0.8:1),col,0.96,acc?0.3:0.25+0.55*(1-f),r,false); } } }
-  try{ globalThis.__JM_LISTEN={v:'valley',masses:masses.length,stride}; }catch(_){}
+  try{ globalThis.__JM_LISTEN={v:'valley',dark,masses:masses.length,stride}; }catch(_){}
   _setCurE(0.5);
 }
 // ═══════════════════════════════════════════════════════════════════════════
