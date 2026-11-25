@@ -19885,7 +19885,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const _fFlash = (()=>{ if(!FC || !_fL || !feedFlash || feedIntro) return null; const sk=(style!==null ? [style] : []).concat(painterStage), sv=sk.map(k=>(sk.length>1 ? _painterLabel(k) : (STYLE_INSPIRED[k]||k)));   // a fusion's names short, one painter in full — as the Studio writes them
           if(FC.kind==='img'){ const cs=[imgComposer].concat(composerStage||[]).filter(Boolean).map(k=>COMPOSER_INSPIRED[k]||k); if(imgSigActive) return {h:'✦ '+_sigT('label'), by:t('inspiredByTitle')||'inspired by', n:cs.length?cs:['Scan']}; if(!cs.length) return {h:'', by:'', n:['Scan']}; return {h:cs.length>1 ? _ensT('cr') : '', by:t('inspiredByTitle')||'inspired by', n:cs}; }
           if(sigActive) return {h:'✦ '+_sigT('label'), by:t('inspiredByTitle')||'inspired by', n:sv};
-          if(style===null) return {h:'', by:'', n:[_fUp(notesMode ? t('notesStyle') : t('mosaicStyle'))]};   // the look's own name, as the Studio says it (Mosaic, Notes)
+          if(style===null) return {h:'', by:'', n:[notesMode ? _fUp(t('notesStyle')) : (t('mosaicName') || 'Tones → colours')]};   // the look's own name, the same in the Studio: Tones → colours, Notes
           if(painterStage.length) return {h:_ensT('fusion'), by:t('inspiredByTitle')||'inspired by', n:sv};
           return {h:'', by:t('inspiredByTitle')||'inspired by', n:sv}; })();
         const _fTap = (e)=>{
@@ -22309,7 +22309,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const _fBare = _isImgFlash ? !imgComposer : (_fKey === 'mosaic' || _fKey === 'notes' || _fKey === 'raffel');
         const _fLabel = _isImgFlash ? (imgComposer ? COMPOSER_INSPIRED[imgComposer] : 'Scan')
                       : _fKey === 'notes' ? _fUp(t('notesStyle'))
-                      : _fKey === 'mosaic' ? (basicMode ? t('liteMosaicStyle') : _fUp(t('mosaicStyle')))   // Mosaic, Notes — the same words, written the same way, as For You's
+                      : _fKey === 'mosaic' ? (basicMode ? t('liteMosaicStyle') : (t('mosaicName') || 'Tones → colours'))   // Tones → colours, Notes — the same words, written the same way, as For You's
                       : STYLE_INSPIRED[_fKey];
         if(!_fLabel) return null;
         const _sigF = _isImgFlash ? (imgSigActive && !!imgComposer) : sigActive;
