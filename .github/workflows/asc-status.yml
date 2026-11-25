@@ -1,0 +1,28 @@
+# Read-only look at App Store Connect: where the versions and their reviews stand. Changes nothing.
+# Started by hand ("Run workflow" on the ios branch) or by Claude while a version waits for Apple's review.
+name: App Store status
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ios]
+    paths: ['.github/workflows/asc-status.yml', 'ios/asc/asc_status.py']
+
+concurrency:
+  group: asc-status
+  cancel-in-progress: false
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Where the versions stand
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          pip install --quiet pyjwt cryptography
+          PF_VER=1.3 python3 ios/asc/asc_status.py
