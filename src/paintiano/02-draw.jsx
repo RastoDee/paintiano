@@ -3437,6 +3437,12 @@ function pollockDeep(ctx,CW,CH,chords,lim,gc,ss,mode){
   const CREAM=bw?[234,234,230]:[238,234,218], BLUEG=bw?[176,178,180]:[168,182,190];
   const col=(i)=>bw?[120,120,120]:_picChord(chords,cl(i,0,cn-1),gc,bw).rgb;
   const heavy=!X.major && (A.ch?A.ch.register:0.5)<0.5;
+  /* the deep colours a rift may take: a passage's colour by its hue, gone to the deep — navy, indigo, wine, deep teal,
+     bottle green; never brown (a warm orange or yellow goes to wine or navy instead) */
+  const DEEP=[[22,30,74],[42,24,78],[74,18,46],[14,54,62],[20,52,34]], DEEPH=[228,265,335,188,140];
+  const deepOf=(c)=>{ const r=c[0]/255,g=c[1]/255,b2=c[2]/255, mx=Math.max(r,g,b2), mn=Math.min(r,g,b2), d=mx-mn; if(d<0.08) return INK; let h=mx===r?((g-b2)/d)%6:mx===g?(b2-r)/d+2:(r-g)/d+4; h*=60; if(h<0) h+=360;
+    if(h>=12&&h<75) h=h<40?335:228;   /* orange to wine, yellow to navy */
+    let best=0, bd=1e9; DEEPH.forEach((x,k)=>{ const dd=Math.min(Math.abs(x-h),360-Math.abs(x-h)); if(dd<bd){ bd=dd; best=k; } }); return DEEP[best]; };
   const its=[]; const at=(t,z,f)=>its.push({t,z,f});
   const soft=(x,y,rx,ry,rot,c,a)=>{ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.scale(1,ry/rx); const g=ctx.createRadialGradient(0,0,0,0,0,rx); g.addColorStop(0,css(c,a)); g.addColorStop(0.7,css(c,a*0.6)); g.addColorStop(1,css(c,0)); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,rx,0,6.2832); ctx.fill(); ctx.restore(); };
   const blob=(x,y,R,c,a,seed)=>{ const r=_seedRnd(seed,ss,0,0); r(); ctx.fillStyle=css(c,a); ctx.beginPath(); for(let s=0;s<12;s++){ const an=s/12*6.2832, rr=R*(0.6+0.6*r()); s?ctx.lineTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr*0.8):ctx.moveTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr*0.8); } ctx.closePath(); ctx.fill(); };
@@ -3448,7 +3454,7 @@ function pollockDeep(ctx,CW,CH,chords,lim,gc,ss,mode){
   const nR=Math.round(cl(1+3.2*gloom*(0.4+dens),1,4)), rifts=[];
   for(const o of P){ if(rifts.length>=nR) break; const q=o.q, r=_seedRnd(63600+q.a,ss,0,0); r(); const x=CW*(0.14+0.72*cl(A.reg(q.top)*0.7+0.3*r(),0,1)), y=CH*(0.08+0.6*cl(q.t,0,1)), L=CH*cl(0.28+0.5*(q.n/cn)*nR+0.15*r(),0.25,0.78);
     if(rifts.some(f=>Math.hypot(f.x-x,f.y-y)<D*0.22)) continue; const ev0=A.ev[q.a]||A.ev.find(Boolean), ev1=A.ev[Math.max(q.a,q.b-1)]||ev0, trend=cl(((ev1?ev1.top:60)-(ev0?ev0.top:60))/12,-1,1);
-    const ang=Math.PI/2+trend*0.55+(r()-0.5)*0.3, W=D*(0.06+0.26*o.d*(0.6+0.6*gloom)), dc=bw?INK:(heavy&&o.d>0.6?INK:mix(_polMix(col(q.a),col(Math.floor((q.a+q.b)/2)),0.5),INK,0.72)), ph=[r()*6.28,r()*6.28,r()*6.28];
+    const ang=Math.PI/2+trend*0.55+(r()-0.5)*0.3, W=D*(0.06+0.26*o.d*(0.6+0.6*gloom)), dc=bw?INK:(heavy&&o.d>0.6?INK:mix(deepOf(_polMix(col(q.a),col(Math.floor((q.a+q.b)/2)),0.5)),INK,0.2)), ph=[r()*6.28,r()*6.28,r()*6.28];
     rifts.push({q,x,y,L,ang,W,dc,ph}); }
   const M=40; rifts.forEach((f,ri)=>{ const pts=[]; for(let j=0;j<=M;j++){ const u=j/M, env=Math.pow(Math.sin(Math.PI*cl(0.03+u*0.94,0,1)),0.55), cx=f.x+Math.cos(f.ang)*f.L*(u-0.5)+(-Math.sin(f.ang))*Math.sin(u*3.4+f.ph[0])*f.L*0.07, cy=f.y+Math.sin(f.ang)*f.L*(u-0.5)+Math.cos(f.ang)*Math.sin(u*3.4+f.ph[0])*f.L*0.07;
       const w=f.W*env, nl=1+0.32*Math.sin(u*6.3+f.ph[1])+0.16*Math.sin(u*13.7+f.ph[2])+0.08*Math.sin(u*29+f.ph[0]), nr=1+0.32*Math.sin(u*5.1+f.ph[2])+0.16*Math.sin(u*11.9+f.ph[1])+0.08*Math.sin(u*31+f.ph[0]),   /* the lips torn in a few big bites, not a saw */ nx=-Math.sin(f.ang), ny=Math.cos(f.ang);
