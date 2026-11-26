@@ -20070,7 +20070,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 nextU: (up && feedAt<feedCards.length-1) ? ((feedCards[feedAt+1] && feedCards[feedAt+1].u) || null) : undefined,
                 prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? ((FC.piece==='own' && _feedSnap()) || H.u || null) : undefined)) : undefined }); }
             else if(!FC && _smp && liveHomeOn && st.ax==='y' && !st.b){ st.fd = _lhLock(dy<0 ? 1 : -1); }   // the first screen: ↑ the next of its paintings, ↓ the one before — quiet still
-            else if(!FC && st.ax==='x' && !st.b){ const dir = dx<0 ? 1 : -1, nb=_homeNb(dir); if(nb && nb.u) st.fd = _fdLock('x', dir, { sideU:nb.u, onGo:()=>_homeGo(nb.k) }); } }
+ }   // your painting waiting on the home card: no swipe at all — a tap takes it into the Studio (26 Nov 2026; before: ↑ For You with another piece, ← → your unfinished ones)
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
         const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0, true); };   // the phone took the touch: the card goes back
         // ← → on your home: through the paintings you left unfinished — each way's own card (Music, Image, Mood from image, Mood,
@@ -20094,9 +20094,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             _fdEnd(st.fd, v); return; }
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(st.e && (Math.abs(dx)>=12 || Math.abs(dy)>=12)) return;   // from the phone's edge: not a swipe
-          if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(!FC && _smp && liveHomeOn) return; _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }   // the first screen's ↑ is its own (see _lhLock): never a jump into For You
+          if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(!FC && (!_smp || liveHomeOn)) return; _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }   // the first screen's ↑ is its own (see _lhLock): never a jump into For You
           if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedBack(); return; }   // ↓ back, as on TikTok: the surprise before
-          if(dt<800 && Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ _sideDone(); let ok=false; try{ ok = dx<0 ? _variantNext() : _variantBack(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } else if(!FC){ _homeLR(dx<0 ? 1 : -1); } return; }   // ← the next variant, → back to the one before   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
+          if(dt<800 && Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ _sideDone(); let ok=false; try{ ok = dx<0 ? _variantNext() : _variantBack(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } return; }   // ← the next variant, → back to the one before   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
         const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(true); return; } _feedStart(null, _smp); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
