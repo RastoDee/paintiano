@@ -1564,7 +1564,7 @@ const TOUR_CSS = `
 @keyframes pfCapPop{to{opacity:1;transform:none}}
 @keyframes pfCapWig{0%,100%{rotate:0deg}40%{rotate:-3.5deg}70%{rotate:1.5deg}}
 @keyframes pfCapIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.pf-tour b{font-weight:800;color:#f0c75e}   /* the gold word (the end card's "Now *you*"): plain gold, no candy gradient
+.pf-tour b{font-weight:800;color:#f0c75e}   /* the gold word (the end card's "Now *you*"): plain gold, no candy gradient */
 .pf-tour-ft{position:absolute;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;align-items:center;justify-content:space-between;z-index:4;cursor:default}
 .pf-tour-ft .h{font-size:calc(var(--pf-read-scale,1) * 12px);color:rgba(242,238,232,.72);text-shadow:0 1px 8px rgba(0,0,0,.85);transition:opacity .6s}
 .pf-tour-sk{font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;padding:8px 16px;border-radius:99px;background:rgba(7,6,12,.5);border:1px solid rgba(255,255,255,.15);color:#f2eee8;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
@@ -3286,7 +3286,7 @@ const STUDIO_HOME_CSS = `
 .pf-studio-home .pf-topbar button[aria-label="menu"]:not(.pf-st-word){visibility:hidden}
 .pf-st-word{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:0;border-radius:20px;background:none;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:24px;line-height:1;color:#f0c040;text-shadow:0 2px 18px rgba(0,0,0,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-st-word:active{transform:translate(-50%,-50%) scale(.95)}
-.pf-st-word.txt{cursor:default}.pf-st-word.txt:active{transform:translate(-50%,-50%)}   /* the first screen: the word alone, it does not press in
+.pf-st-word.txt{cursor:default}.pf-st-word.txt:active{transform:translate(-50%,-50%)}   /* the first screen: the word alone, it does not press in */
 .pf-st-word{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .pf-st-word::after{content:"";position:absolute;inset:-2px;border-radius:22px;border:2px solid #e2c477;opacity:0;clip-path:inset(0 100% 0 0);pointer-events:none}
 .pf-st-word.pf-hid-hold::after{animation:pfHidFill .9s linear forwards}
