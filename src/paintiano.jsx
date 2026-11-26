@@ -12260,13 +12260,15 @@ function haringPoster(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const Ops=_mtOps(); Ops.at(0,()=>_hgGround(ctx,CW,CH,bg,ss));
   const s=two?Math.min(CH*0.14,CW*0.19):Math.min(CH*0.17,CW*0.3); const figs=two?[[CW*0.3,1],[CW*0.7,-1]]:[[CW*0.5,r()<0.5?1:-1]]; const fy=CH*0.52;
   figs.forEach(([fx,dir],i)=>{ const col=_hgOn(st[1+i]||_hgPastel(_HG_PAL[(i*3+2)%8]),bg,isBW); const k2=two&&i===1?(kind==='hold'?'wave':kind==='jump'?'dance':kind):kind;
-    Ops.at(i*0.12, ()=>_hgPut(ctx,k2,fx,fy,s,dir,0,col,_HG_BLK,O,63100+i+ss,0)); });
+    /* Nov 2026: a figure used to stand complete at once, and then little happened. Now each is drawn up from the feet — the first through the first quarter of the piece, the second through the next — and the rays break out only once the figures stand; the finished poster is unchanged */
+    const f0=two?i*0.25:0, f1=two?f0+0.25:0.4, up=Math.max(0,Math.min(1,(reveal-f0)/(f1-f0)));
+    Ops.at(f0, ()=>{ if(up<=0) return; ctx.save(); ctx.beginPath(); ctx.rect(0,(fy+s*2.6)-up*s*5.4,CW,CH); ctx.clip(); _hgPut(ctx,k2,fx,fy,s,dir,0,col,_HG_BLK,O,63100+i+ss,0); ctx.restore(); }); });
   // the rays: one ring of dashes round each figure, a dash per accent as the piece reaches it
   const E=_kd2Events(A,40).filter(isAcc); const nR=Math.max(8,Math.min(22,E.length+8));
-  figs.forEach(([fx],i)=>{ for(let k=0;k<nR;k++){ const t=(k+0.5)/nR; const a=-Math.PI/2+(k/nR)*6.2832*(two?0.5:1)-(two?Math.PI*0.5:0)+(two&&i?Math.PI:0); const cx=fx, cy=fy-s*0.4; const R0=s*1.85, R1=s*(2.1+0.25*X.energy);
+  figs.forEach(([fx],i)=>{ for(let k=0;k<nR;k++){ const t0r=two?0.5:0.4, t=t0r+(1-t0r)*(k+0.5)/nR; const a=-Math.PI/2+(k/nR)*6.2832*(two?0.5:1)-(two?Math.PI*0.5:0)+(two&&i?Math.PI:0); const cx=fx, cy=fy-s*0.4; const R0=s*1.85, R1=s*(2.1+0.25*X.energy);
     Ops.at(t, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.25; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*R0,cy+Math.sin(a)*R0*1.08); ctx.lineTo(cx+Math.cos(a)*R1,cy+Math.sin(a)*R1*1.08); ctx.stroke(); }); } });
   // the little marks of motion off the hands and feet, quicker pieces more
-  figs.forEach(([fx,dir],i)=>{ Ops.at(0.5+i*0.1, ()=>{ const F=_hgFigure(fx,fy+0.25*s,s,two&&i===1?(kind==='hold'?'wave':kind==='jump'?'dance':kind):kind,dir,_hgR(63100+i+ss,3),1); _hgMotion(ctx,F,_HG_BLK,O*1.1,0.3+0.6*X.pace,_hgR(63200+i,ss)); }); });
+  figs.forEach(([fx,dir],i)=>{ Ops.at(0.62+i*0.1, ()=>{ const F=_hgFigure(fx,fy+0.25*s,s,two&&i===1?(kind==='hold'?'wave':kind==='jump'?'dance':kind):kind,dir,_hgR(63100+i+ss,3),1); _hgMotion(ctx,F,_HG_BLK,O*1.1,0.3+0.6*X.pace,_hgR(63200+i,ss)); }); });
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'poster',kind,two}; }catch(_){} _setCurE(0.5);
 }
 
