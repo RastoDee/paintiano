@@ -5810,14 +5810,21 @@ function pollockDeep(ctx,CW,CH,chords,lim,gc,ss,mode){
     if(rifts.some(f=>Math.hypot(f.x-x,f.y-y)<D*0.22)) continue; const ev0=A.ev[q.a]||A.ev.find(Boolean), ev1=A.ev[Math.max(q.a,q.b-1)]||ev0, trend=cl(((ev1?ev1.top:60)-(ev0?ev0.top:60))/12,-1,1);
     const ang=Math.PI/2+trend*0.55+(r()-0.5)*0.3, W=D*(0.06+0.26*o.d*(0.6+0.6*gloom)), dc=bw?INK:(heavy&&o.d>0.6?INK:mix(deepOf(_polMix(col(q.a),col(Math.floor((q.a+q.b)/2)),0.5)),INK,0.2)), ph=[r()*6.28,r()*6.28,r()*6.28];
     rifts.push({q,x,y,L,ang,W,dc,ph}); }
-  const M=40; rifts.forEach((f,ri)=>{ const pts=[]; for(let j=0;j<=M;j++){ const u=j/M, env=Math.pow(Math.sin(Math.PI*cl(0.03+u*0.94,0,1)),0.55), cx=f.x+Math.cos(f.ang)*f.L*(u-0.5)+(-Math.sin(f.ang))*Math.sin(u*3.4+f.ph[0])*f.L*0.07, cy=f.y+Math.sin(f.ang)*f.L*(u-0.5)+Math.cos(f.ang)*Math.sin(u*3.4+f.ph[0])*f.L*0.07;
-      const w=f.W*env, nl=1+0.32*Math.sin(u*6.3+f.ph[1])+0.16*Math.sin(u*13.7+f.ph[2])+0.08*Math.sin(u*29+f.ph[0]), nr=1+0.32*Math.sin(u*5.1+f.ph[2])+0.16*Math.sin(u*11.9+f.ph[1])+0.08*Math.sin(u*31+f.ph[0]),   /* the lips torn in a few big bites, not a saw */ nx=-Math.sin(f.ang), ny=Math.cos(f.ang);
+  /* the rift's shape (Nov 2026: a smooth rounded body read as something else): a crack, not a body — it tapers to a point at
+     both ends, its lips torn jagged and uneven, the two sides different, wider here and pinched there */
+  const M=56; rifts.forEach((f,ri)=>{ const pts=[], jr=_seedRnd(63620+ri,ss,0,0); jr(); let jl=0, jrr=0;
+    for(let j=0;j<=M;j++){ const u=j/M, env=Math.pow(Math.sin(Math.PI*cl(u,0,1)),1.15)*(0.55+0.45*Math.abs(Math.sin(u*2.6+f.ph[1]))), cx=f.x+Math.cos(f.ang)*f.L*(u-0.5)+(-Math.sin(f.ang))*Math.sin(u*3.4+f.ph[0])*f.L*0.08, cy=f.y+Math.sin(f.ang)*f.L*(u-0.5)+Math.cos(f.ang)*Math.sin(u*3.4+f.ph[0])*f.L*0.08;
+      jl=jl*0.6+(jr()-0.5)*0.8; jrr=jrr*0.6+(jr()-0.5)*0.8;   /* the tear: rough, a little correlated, never smooth */
+      const w=f.W*0.85*env, nl=Math.max(0.15,1+0.3*Math.sin(u*7.1+f.ph[1])+jl*0.55), nr=Math.max(0.15,1+0.3*Math.sin(u*5.3+f.ph[2])+jrr*0.55), nx=-Math.sin(f.ang), ny=Math.cos(f.ang);
       pts.push({u,cx,cy,w,L:[cx-nx*w*0.5*nl,cy-ny*w*0.5*nl],R:[cx+nx*w*0.5*nr,cy+ny*w*0.5*nr]}); } f.pts=pts;
     const t0=f.q.t0, t1=Math.max(f.q.t0+0.02,f.q.t1);
     for(let j=0;j<M;j++){ const a=pts[j], b2=pts[j+1], t=t0+(t1-t0)*a.u;
       at(t,1,()=>{ ctx.fillStyle=css(f.dc); ctx.beginPath(); ctx.moveTo(a.L[0],a.L[1]); ctx.lineTo(a.R[0],a.R[1]); ctx.lineTo(b2.R[0],b2.R[1]); ctx.lineTo(b2.L[0],b2.L[1]); ctx.closePath(); ctx.fill(); });
       const r=_seedRnd(63650+ri*97+j,ss,0,0); r(); if(j%2===0) for(let s=0;s<2;s++){ const e=s?a.R:a.L, c=mix(BLUEG,f.dc,0.35*r());
-        at(t+0.0005,2,()=>{ soft(e[0],e[1],D*(0.025+0.025*r()),D*(0.04+0.03*r()),f.ang+(r()-0.5)*0.6,c,0.4); ctx.strokeStyle=css(mix(CREAM,[140,140,140],0.35*r()),0.45); ctx.lineCap='round'; ctx.lineWidth=Math.max(0.6,D*0.002); for(let q=0;q<2;q++){ const L2=D*(0.03+0.04*r()), an=f.ang+Math.PI/2+(r()-0.5)*0.8; ctx.beginPath(); ctx.moveTo(e[0]-Math.cos(an)*L2*0.5,e[1]-Math.sin(an)*L2*0.5); ctx.lineTo(e[0]+Math.cos(an)*L2*0.5,e[1]+Math.sin(an)*L2*0.5); ctx.stroke(); } }); } } });
+        at(t+0.0005,2,()=>{ soft(e[0],e[1],D*(0.02+0.02*r()),D*(0.03+0.02*r()),f.ang+(r()-0.5)*0.6,c,0.2); ctx.strokeStyle=css(mix(CREAM,[140,140,140],0.35*r()),0.45); ctx.lineCap='round'; ctx.lineWidth=Math.max(0.6,D*0.002); for(let q=0;q<2;q++){ const L2=D*(0.03+0.04*r()), an=f.ang+Math.PI/2+(r()-0.5)*0.8; ctx.beginPath(); ctx.moveTo(e[0]-Math.cos(an)*L2*0.5,e[1]-Math.sin(an)*L2*0.5); ctx.lineTo(e[0]+Math.cos(an)*L2*0.5,e[1]+Math.sin(an)*L2*0.5); ctx.stroke(); } }); } } });
+  rifts.forEach((f,ri)=>{ const r=_seedRnd(63700+ri,ss,0,0); r(); const nb=1+Math.floor(r()*3); for(let k=0;k<nb;k++){ const j=Math.floor(M*(0.2+0.6*r())), p0=f.pts[j], side=r()<0.5?-1:1, e0=side<0?p0.L:p0.R; let x=e0[0], y=e0[1], an=f.ang+side*(Math.PI/2)*(0.5+0.4*r()); const pts=[[x,y]], n=5+Math.floor(r()*6), st=D*(0.012+0.01*r());
+    for(let s=0;s<n;s++){ an+=(r()-0.5)*0.9; x+=Math.cos(an)*st; y+=Math.sin(an)*st; pts.push([x,y]); }
+    at(f.q.t0+(f.q.t1-f.q.t0)*j/M+0.001,1,()=>{ ctx.strokeStyle=css(f.dc,0.85); ctx.lineCap='round'; ctx.lineJoin='miter'; pts.forEach((p,m)=>{ if(!m) return; ctx.lineWidth=Math.max(0.6,D*0.007*(1-m/pts.length)); ctx.beginPath(); ctx.moveTo(pts[m-1][0],pts[m-1][1]); ctx.lineTo(p[0],p[1]); ctx.stroke(); }); }); } });   /* fissures running off it */
   const riftAt=(t)=>{ for(const f of rifts){ if(t>=f.q.t0&&t<=f.q.t1){ const u=cl((t-f.q.t0)/Math.max(0.001,f.q.t1-f.q.t0),0,1); return {f,p:f.pts[Math.round(u*M)]}; } } return null; };
   const inRift=(x,y)=>rifts.some(f=>f.pts.some(p=>Math.hypot(p.cx-x,p.cy-y)<p.w*0.6+D*0.03));
   const ev=_kd2Events(A,Math.round(cl(60+140*dens,60,200)));
