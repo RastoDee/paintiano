@@ -5598,12 +5598,27 @@ function _pol2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
           list.push({id:id++,t:g.t,layer,x:x0,y:y0,ang:dir+(r()-.5)*0.5,len,col,alpha:0.95,o:{speed:1.1+S.tempo*0.5,w:layer===0?0.013:0.011,loopy:0.45,wob:0.7,guide:_pol2Guide(S,g,x0,y0,dir,len,CH*0.5,10,layer===0),follow:0.2}}); });
         return list; });
       break; }
-    case 2: { // Lavender Mist — a pale dense web of fine threads, one a phrase, black only at the accents; the handprints at the top edge are the loudest ones
-      _polGround(ctx,CW,CH,bw?[222,218,210]:[222,208,196]);
-      _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.spans(_polClamp(Math.round(S.cn/10),60,110)); const n=G.length; const pale=S.pal.map(c=>_polMix(c,[240,232,228],0.62));
-        G.forEach((g,i)=>{ const r=_polR(94000+i,ss); r(); const acc=g.vmax>=S.A.vHi; const li=r(); const layer=acc&&li<0.5?0:li<0.6?1:2; const col=layer===0?S.ink:layer===1?pale[Math.floor(r()*3)]:(r()<0.6?S.white:S.silver); const ang=r()*6.2832; const len=D*(1.2+1.6*Math.min(1.5,g.dur*n)); const x0=CW*r(), y0=CH*r();
-          list.push({id:id++,t:g.t,layer,x:x0,y:y0,ang,len,col,alpha:layer===0?0.8:0.9,o:{speed:1.3+S.tempo*0.5,w:0.007,loopy:0.3,wob:1.0,guide:_pol2Guide(S,g,x0,y0,ang,len,D*0.35,8,false),follow:0.18}}); });
-        const c=S.climax(); const acc=S.accents(c.a,c.b).slice(0,6); acc.forEach((e,k)=>{ list.push({id:id++,t:e.t,layer:3,f:(ctx)=>_pol2Hand(ctx,CW*(0.62+0.07*k),CH*(0.05+0.03*(k%2)),D*0.07,-0.3+0.15*k,S.ink,0.55)}); });
+    case 2: { // Lavender Mist (Number 1, 1950) — rebuilt Nov 2026: the mist itself. A warm grey ground veiled in the piece's colours gone to lavender and rose;
+      // through it a close web of fine black (the bass and the accents) and, over that, white (the melody), thrown so thick the threads become a haze;
+      // flecks of salmon, ochre and teal at the notes; his handprints at the top right where the loudest passage is
+      _polGround(ctx,CW,CH,bw?[214,212,208]:[208,198,192]);
+      _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const A=S.A, dens=S.density;
+        const LAV=[198,180,204], ROSE=[222,184,186], haze=S.pal.map((c,k)=>bw?[200,200,200]:_polMix(_polMix(c,k%2?ROSE:LAV,0.8),[230,222,220],0.2));
+        // the veils: soft clouds of the piece's colour gone to mist, laid first and all through
+        for(let k=0;k<18;k++){ const r=_polR(94500+k,ss); r(); const x=CW*r(), y=CH*r(), rx=D*(0.25+0.35*r()), ry=rx*(0.5+0.6*r()), c=haze[k%haze.length], t=k/18*0.9;
+          list.push({id:id++,t,layer:0,f:(ctx)=>{ ctx.save(); ctx.translate(x,y); ctx.scale(1,ry/rx); const g=ctx.createRadialGradient(0,0,0,0,0,rx); g.addColorStop(0,_polCss(c,0.34)); g.addColorStop(1,_polCss(c,0)); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,rx,0,6.2832); ctx.fill(); ctx.restore(); }}); }
+        // the web: many fine skeins — black for the low and the loud, white for the melody, a few in the haze colour
+        const G=S.spans(_polClamp(Math.round(S.cn/4*(0.7+0.6*dens)),140,300)); const n=G.length;
+        G.forEach((g,i)=>{ const r=_polR(94000+i,ss); r(); const acc=g.vmax>=A.vHi*0.95, low=g.bass!=null && g.reg<0.42, u=r();
+          const black=(acc||low)?u<0.55:u<0.32, layer=black?1:u<0.8?2:1, col=black?S.ink:layer===2?(r()<0.75?[246,242,236]:S.silver):haze[Math.floor(r()*haze.length)];   /* white and the haze over black, as in the painting */
+          const ang=r()*6.2832, len=D*(0.7+1.3*r()+0.8*Math.min(1.5,g.dur*n)), x0=CW*(-0.1+1.2*r()), y0=CH*(-0.1+1.2*r());
+          list.push({id:id++,t:g.t,layer,x:x0,y:y0,ang,len,col,alpha:col===S.ink?0.72:0.85,o:{speed:1.4+S.tempo*0.5,w:col===S.ink?0.0045:0.005,loopy:0.45,wob:1.25,guide:_pol2Guide(S,g,x0,y0,ang,len,D*0.4,8,false),follow:0.16}}); });
+        // the flecks: salmon, ochre, teal at the notes, thrown fine
+        const FL=[[224,132,110],[206,160,72],[86,150,150],[150,120,170]];
+        _kd2Events(A,Math.round(_polClamp(140+260*dens,140,420))).forEach((e,k)=>{ const r=_polR(94800+k,ss); r(); const x=CW*r(), y=CH*r(), c=bw?[90,90,90]:_polMix(S.col?S.col(e.t):FL[k%4],FL[k%4],0.6), rr=D*(0.002+0.005*r()*(e.acc?2:1));
+          list.push({id:id++,t:e.t,layer:3,f:(ctx)=>{ ctx.fillStyle=_polCss(c,0.85); ctx.beginPath(); ctx.arc(x,y,rr,0,6.2832); ctx.fill(); }}); });
+        // the handprints at the top right: the loudest passage's accents
+        const c=S.climax(); const acc=S.accents(c.a,c.b).slice(0,7); acc.forEach((e,k)=>{ list.push({id:id++,t:e.t,layer:3,f:(ctx)=>_pol2Hand(ctx,CW*(0.6+0.06*k),CH*(0.04+0.035*(k%2)),D*0.06,-0.35+0.12*k,[70,62,66],0.45)}); });
         return list; });
       break; }
     case 3: { // Blue Poles — the coloured web of the phrases, then the poles: one for each of the strongest accents, leaning with the register
