@@ -10945,22 +10945,37 @@ function hk2_altar(ctx,CW,CH,chords,lim,gc,ss,mode){
   push({kind:'poly',t:0.99,pts:[[apex[0],apex[1]-sr*0.3],[apex[0]-sr*0.25,apex[1]+sr*0.15],[apex[0]+sr*0.25,apex[1]+sr*0.15]],col:[20,16,24]});
   _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
-// ── 3 · The Swan, No. 17 (1915) — the circle quartered on white; each quarter a
-//        section of the piece in its colour, the cube at the centre the tonic, the
-//        rays the voices.
-function hk2_quarters(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
-  const r=_hkR(84000,ss); r(); const list=[]; const push=f=>{ f.id=list.length; list.push(f); }; const K=[24,22,24], W=[248,245,238];
+// ── 3 · The Swan (1914–15) — her series of the two that meet. (Nov 2026: it was No. 17 alone, a small quartered circle with a
+//        cube in the middle of a white canvas, the same on every piece. Now the whole canvas is hers: split into the dark and the
+//        light half, as her Swans are, and the great circle across the split — its rings the piece's passages, each ring cut
+//        into the arcs of that passage's chords in their colours, the inner rings the first passages, the outer the last; the
+//        colours turn to their darker selves on the dark half. The number of rings, how finely they are cut and where the
+//        circle sits are the piece's; the cube at its heart is the tonic.)
+function hk2_quarters(ctx,CW,CH,chords,lim,gc,ss0,mode){
+  const ss=((ss0|0)+_mrPieceKey(chords))|0, A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_hkR(84000,ss); r(); const K=[24,22,24], W=[248,245,238], cn=A.cn, dens=A.ch ? A.ch.density : 0.4, sm=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x);
+  // the two halves: which way the canvas is split and where the line runs is the piece's
+  const tilt=(r()-0.5)*0.5+(r()<0.5 ? 0 : Math.PI/2)*0, split=0.42+0.16*r(), nx=Math.sin(tilt), ny=Math.cos(tilt), cx=CW*(0.5+(r()-0.5)*0.12), cy=CH*split;
+  const dark=(x,y)=>((x-cx)*nx+(y-cy)*ny)>0;
   ctx.fillStyle=_hkCss(W); ctx.fillRect(0,0,CW,CH);
-  const cx=CW*0.5, cy=CH*0.5, R=D*0.4; const P=_kd2Phrases(A,4); const Q=[0,1,2,3].map(i=>P[Math.min(P.length-1,i)]);
-  Q.forEach((p,i)=>{ const c=A.pcCol(p.pc,Math.round(p.top)); const col=isBW?_hkPastel(c,0.3,true):_hkMix(c,W,0.25); const a0=-1.5708+i*1.5708;
-    const pts=[[cx,cy]]; for(let k=0;k<=12;k++){ const a=a0+k/12*1.5708; pts.push([cx+Math.cos(a)*R,cy+Math.sin(a)*R]); } push({kind:'poly',t:0.05+i*0.22,pts,col:i%2?col:(isBW?[60,60,60]:_hkMix(col,K,0.7)),ring:K,w:D*0.003});
-    // inside each quarter: a smaller arc of the other colour, and the rays for its voices
-    const pts2=[[cx,cy]]; for(let k=0;k<=12;k++){ const a=a0+k/12*1.5708; pts2.push([cx+Math.cos(a)*R*0.55,cy+Math.sin(a)*R*0.55]); } push({kind:'poly',t:0.1+i*0.22,pts:pts2,col:i%2?(isBW?[200,200,200]:_hkMix(A.pcCol(p.pc2,60),W,0.3)):W,ring:K,w:D*0.002});
-    const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=(ev.length?Math.round(ev.reduce((s,e)=>s+e.nn,0)/ev.length):2)+Math.round((A.ch?A.ch.density:0.3)*7); for(let k=0;k<nn+1;k++){ const a=a0+(k+0.5)/(nn+1)*1.5708;   /* the voices, and more rays for a dense piece */ push({kind:'curve',t:0.15+i*0.22,pts:[[cx+Math.cos(a)*R*0.58,cy+Math.sin(a)*R*0.58],[cx+Math.cos(a)*R*0.98,cy+Math.sin(a)*R*0.98]],col:K,w:D*0.002}); } });
-  push({kind:'ring',t:0.9,x:cx,y:cy,r:R,col:K,w:D*0.004}); push({kind:'curve',t:0.9,pts:[[cx,cy-R],[cx,cy+R]],col:K,w:D*0.003}); push({kind:'curve',t:0.9,pts:[[cx-R,cy],[cx+R,cy]],col:K,w:D*0.003});
-  const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60); const q=D*0.07; push({kind:'poly',t:0.95,pts:[[cx-q,cy-q],[cx+q,cy-q],[cx+q,cy+q],[cx-q,cy+q]],col:tc,ring:K,w:D*0.003}); push({kind:'poly',t:0.96,pts:[[cx-q,cy-q],[cx-q*0.5,cy-q*1.5],[cx+q*1.5,cy-q*1.5],[cx+q,cy-q]],col:_hkMix(tc,W,0.4),ring:K,w:D*0.003}); push({kind:'poly',t:0.96,pts:[[cx+q,cy-q],[cx+q*1.5,cy-q*1.5],[cx+q*1.5,cy+q*0.5],[cx+q,cy+q]],col:_hkMix(tc,K,0.4),ring:K,w:D*0.003});
-  _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+  ctx.save(); ctx.beginPath(); const far=Math.hypot(CW,CH)*1.5; ctx.moveTo(cx-ny*far, cy+nx*far); ctx.lineTo(cx+ny*far, cy-nx*far); ctx.lineTo(cx+ny*far+nx*far, cy-nx*far+ny*far); ctx.lineTo(cx-ny*far+nx*far, cy+nx*far+ny*far); ctx.closePath(); ctx.clip(); ctx.fillStyle=_hkCss(K); ctx.fillRect(0,0,CW,CH); ctx.restore();
+  // the rings: one per passage, cut into the arcs of its chords
+  const nR=Math.max(4, Math.min(8, Math.round(4+4*dens+Math.min(1,cn/600)))), P=_kd2Phrases(A,nR), n=Math.max(1,P.length), R=Math.max(CW,CH)*0.47, r0=R*0.13, rot=r()*6.283;
+  const col=(c,dk)=>{ const q=isBW ? _hkPastel(c,0.25,true) : c; return dk ? _hkMix(q,K,0.45) : _hkMix(q,W,0.12); };
+  for(let i=0;i<n;i++){ const p=P[i], ra=r0+(R-r0)*i/n, rb=r0+(R-r0)*(i+1)/n, t0=0.04+0.86*i/n, k=sm((reveal-t0)/(0.86/n)); if(k<=0) break;
+    const ev=[]; for(let j=p.a;j<p.b;j++) if(A.ev[j]) ev.push(A.ev[j]); const m=Math.max(3, Math.min(Math.round(5+16*dens+i*1.5), ev.length||3)), a0=rot+i*0.7+r()*0.4;
+    for(let q=0;q<Math.ceil(m*k);q++){ const e=ev.length ? ev[Math.min(ev.length-1, Math.floor(q*ev.length/m))] : null, c=e ? A.pcCol(((Math.round(e.top)%12)+12)%12, Math.round(e.top)) : A.pcCol(p.pc, Math.round(p.top||60)), s0=a0+q/m*6.283, s1=a0+(q+1)/m*6.283;
+      // each arc in two parts where the split line crosses it: light side, dark side
+      const st=10; for(let u=0;u<st;u++){ const b0=s0+(s1-s0)*u/st, b1=s0+(s1-s0)*(u+1)/st+0.004, mid=(b0+b1)/2, rm=(ra+rb)/2, dk=dark(cx+Math.cos(mid)*rm, cy+Math.sin(mid)*rm);
+        ctx.beginPath(); ctx.arc(cx,cy,rb,b0,b1); ctx.arc(cx,cy,ra,b1,b0,true); ctx.closePath(); ctx.fillStyle=_hkCss(col(c,dk)); ctx.fill(); }
+      ctx.strokeStyle=_hkCss([24,22,24],0.55); ctx.lineWidth=Math.max(0.7,D*0.0018); ctx.beginPath(); ctx.moveTo(cx+Math.cos(s0)*ra, cy+Math.sin(s0)*ra); ctx.lineTo(cx+Math.cos(s0)*rb, cy+Math.sin(s0)*rb); ctx.stroke(); }
+    ctx.strokeStyle=_hkCss([130,124,118]); ctx.lineWidth=Math.max(0.9,D*0.0026); ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a0+6.283*k); ctx.stroke(); }
+  // the line of the split through the circle, and the cube at its heart (the tonic), light on one side and dark on the other
+  ctx.strokeStyle=_hkCss([130,124,118]); ctx.lineWidth=Math.max(1,D*0.003); ctx.beginPath(); ctx.moveTo(cx-ny*far, cy+nx*far); ctx.lineTo(cx+ny*far, cy-nx*far); ctx.stroke();
+  if(reveal>0.9){ const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60), q=r0*0.5, kk=sm((reveal-0.9)/0.08); ctx.globalAlpha=kk; const poly=(pts,c)=>{ ctx.beginPath(); pts.forEach((v,i)=>i ? ctx.lineTo(v[0],v[1]) : ctx.moveTo(v[0],v[1])); ctx.closePath(); ctx.fillStyle=_hkCss(c); ctx.fill(); ctx.strokeStyle=_hkCss(K); ctx.lineWidth=Math.max(1,D*0.003); ctx.stroke(); };
+    ctx.fillStyle=_hkCss(W); ctx.beginPath(); ctx.arc(cx,cy,r0,0,6.283); ctx.fill(); ctx.strokeStyle=_hkCss(K); ctx.lineWidth=Math.max(1,D*0.003); ctx.stroke();
+    poly([[cx-q,cy-q*0.6],[cx+q*0.5,cy-q*0.6],[cx+q*0.5,cy+q*0.9],[cx-q,cy+q*0.9]],tc); poly([[cx-q,cy-q*0.6],[cx-q*0.5,cy-q*1.1],[cx+q,cy-q*1.1],[cx+q*0.5,cy-q*0.6]],_hkMix(tc,W,0.45)); poly([[cx+q*0.5,cy-q*0.6],[cx+q,cy-q*1.1],[cx+q,cy+q*0.4],[cx+q*0.5,cy+q*0.9]],_hkMix(tc,K,0.45)); ctx.globalAlpha=1; }
+  _setCurE(0.5);
 }
 // ── 4 · The Tree of Knowledge (1913) — the symmetrical tree inside its almond: the
 //        trunk, a branch for every phrase, a leaf for every chord in the phrase's colour,
