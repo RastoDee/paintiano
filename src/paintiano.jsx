@@ -34464,7 +34464,11 @@ function PaintianoApp() {
       try { window.posthog && window.posthog.capture('paint_done', { n: chords.length, touch: !!(typeof PF_TOUCH_DEV!=='undefined' && PF_TOUCH_DEV) }); } catch (_) {}
     }
   }, [disp, playing, chords]);
-  const [muted,setMuted]=useState(()=>{try{localStorage.removeItem('paintiano_muted');const q=parseInt(localStorage.getItem('paintiano_quiet')||'0',10);const v=q>0&&Date.now()-q<30*60000;mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);
+  const [muted,setMuted]=useState(()=>{try{localStorage.removeItem('paintiano_muted');const q=parseInt(localStorage.getItem('paintiano_quiet')||'0',10);const v=q>0&&Date.now()-q<30*60000;mutedRef.current=v;return v;}catch(_){return false;}});useEffect(()=>{mutedRef.current=muted;try{Tone.getDestination().mute=muted;if(!muted){const _v=Tone.getDestination().volume;if(_v.value<-1){_v.cancelScheduledValues(Tone.now());_v.value=0;}}if(audioSourceRef.current&&audioSourceRef.current._muteGain)audioSourceRef.current._muteGain.gain.value=muted?0:1;}catch(_){}},[muted]);const randomModeRef=useRef(false);const [randomMode,setRandomMode]=useState(false);const [rndSalt,setRndSalt]=useState(0);const [shuffleArtistIndex,setShuffleArtistIndex]=useState(0);const [mosaicShuffleLock,setMosaicShuffleLock]=useState(false);const [phaseIndex,setPhaseIndex]=useState(0);const [shufVariant,setShufVariant]=useState(0);
+  // SOUND OFF HOLDS (26 Nov 2026): Tone's mute is the master volume at -∞ — any ramp of that volume (the dip under a re-read picture, a For You
+  // start) used to lift it, so the music played under "Sound off". The dip and its way back now leave a muted app quiet.
+  const _volDip = (t)=>{ if(mutedRef.current) return; try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, t); }catch(_){} };
+  const _volBack = (t)=>{ try{ const D=Tone.getDestination(), v=D.volume; if(mutedRef.current){ if(!D.mute){ v.cancelScheduledValues(Tone.now()); v.value=0; D.mute=true; } return; } if(v.value<-1){ v.cancelScheduledValues(Tone.now()); if(t) v.rampTo(0, t); else v.value=0; } }catch(_){} };
   // Sound off (a hold in For You, or Sound in ✦ Change) lasts one visit: back within 30 minutes it is still quiet (even if the phone closed the app),
   // after a longer absence or at a new start the sound is on again — silence nobody chose this time would look like a fault
   useEffect(()=>{ let hid=0; const keep=()=>{ try{ if(mutedRef.current) localStorage.setItem('paintiano_quiet', String(hid || Date.now())); else localStorage.removeItem('paintiano_quiet'); }catch(_){} };   // the moment it went out of sight (closing it later does not restart the 30 minutes)
@@ -40497,7 +40501,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{ localStorage.removeItem('paintiano_home_art'); }catch(_){} try{ setHomeArt(null); }catch(_){}
     // …the surprise on the home goes too (its piece was just wiped: it would stay a black card with a title), every mode's last card, and the first time's
     // arc and hints — after Reset the home is the first screen again, as for someone new
-    try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){}
+    _volBack(0);
     try{ const F=feedLookRef.current; feedLookRef.current=null; if(F){ setStyle(F.style); setPainterStage(F.stage); setMode(F.mode); setPhaseIndex(F.phase); setJamOn(F.jamOn); setNotesMode(F.notesMode); if(F.comp!==undefined){ imgComposerRef.current=F.comp||null; setImgComposer(F.comp||null); setComposerStage(F.cstage||[]); } } }catch(_){}
     try{ feedTokRef.current++; feedPieceRef.current=false; feedStartRef.current=null; feedStepsRef.current=[]; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); setFeedIntro(null); setFeedUpCue(false); setFeedUpDone(false); }catch(_){}
     try{ setHomeArtBy({}); setHomeSide(null); }catch(_){}
@@ -40543,7 +40547,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     try{ clear(); }catch(_){}
     try{ localStorage.removeItem('paintiano_home_art'); localStorage.removeItem('paintiano_home_art_by'); }catch(_){}
     try{ setHomeArt(null); setHomeArtBy({}); setHomeSide(null); }catch(_){}
-    try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){}
+    _volBack(0);
     if(clearArmRef.current){ clearTimeout(clearArmRef.current); clearArmRef.current=null; } setClearArmed(false);
     setPickMode(null); setComposeMode(false); composedModeRef.current = false; setMicArmed(false); setStayActive(false);
     try{ window.posthog && window.posthog.capture('clear_all_drafts'); }catch(_){}
@@ -42784,8 +42788,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const sig = mode + '|' + _effDir + '|c:' + (_cLead||'scan') + _cForm + (_cStage.length ? '+'+_cStage.join('+') : '') + ((_cLead && _cStage.length && fuStyleCNow!=='A') ? '|f'+fuStyleCNow : '') + (jamFlipN ? '|j'+jamFlipN : '') + (_cSig ? '|\u2726' : '') + ((atmoOn&&atmoMood) ? '|atmo'+atmoMood.v.toFixed(2)+'_'+atmoMood.e.toFixed(2) : '') + (mode==='custom' ? '|' + activePalette.join(',') : '') + ((melodyOn&&melodyData) ? '|mel'+(melodyData.notes?melodyData.notes.length:0)+'_'+(melodyData.tempo||0) : '|nomel');
     if(pixelRef.current.lastSig===sig)return;
     // playing: the sound dips first (a hard cut of the old notes crackles on a phone), the re-read comes 70 ms later, the sound returns after it
-    if(playingRef.current && !imgDipRef.current){ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, 0.05); }catch(_){} setTimeout(()=>{ imgDipRef.current=true; setImgDipTick(x=>x+1); }, 70); setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ imgDipRef.current=false; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); } }catch(_){} }, 650); return; }   // never left quiet (the re-read may not come)
-    if(imgDipRef.current){ imgDipRef.current=false; setTimeout(()=>{ try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); }catch(_){} }, 200); }
+    if(playingRef.current && !imgDipRef.current){ _volDip(0.05); setTimeout(()=>{ imgDipRef.current=true; setImgDipTick(x=>x+1); }, 70); setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ imgDipRef.current=false; _volBack(0.18); } }catch(_){} }, 650); return; }   // never left quiet (the re-read may not come)
+    if(imgDipRef.current){ imgDipRef.current=false; setTimeout(()=>{ _volBack(0.18); }, 200); }
     // Did the READING DIRECTION change (vs just palette/mode/atmo)? A direction
     // change re-orders the scan, so playback must restart from the top rather
     // than resume mid-stream (resuming would jump to an unrelated cell). A
@@ -48337,10 +48341,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _feedNextLook = ()=>{
     if(viewMode==='image'){   // a new composer re-reads the picture: the sound dips under the change instead of crackling
       // the sound goes down BEFORE ✦ lets go (its release cuts the notes itself), the change comes once it is quiet
-      try{ const v=Tone.getDestination().volume; v.cancelScheduledValues(Tone.now()); v.rampTo(-60, 0.05); }catch(_){}
+      _volDip(0.05);
       setTimeout(()=>{ try{ imgSigFnRef.current && imgSigFnRef.current.release(); }catch(_){} }, 70);
       setTimeout(()=>{ _liteRollComposer(); }, 120);   // after ✦ has let go (its own clean-up would undo a composer set in the same moment)
-      setTimeout(()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.18); } }catch(_){} }, 700);
+      setTimeout(()=>{ _volBack(0.18); }, 700);
       return; }
     // the surprises decide for themselves: a painter or a fusion you hold in the Studio (gold, 📌) does not bind the next look here —
     // your painting keeps it on its own card (↓ brings it back as it was) and the Studio gets what is on screen when you go there
@@ -48360,7 +48364,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _feedRest = ()=>{ const L=feedLookRef.current; feedLookRef.current=null; if(!L) return;
     setStyle(L.style); setPainterStage(L.stage); setMode(L.mode); setPhaseIndex(L.phase); setJamOn(L.jamOn); setNotesMode(L.notesMode);
     if(L.comp!==undefined){ imgComposerRef.current=L.comp||null; setImgComposer(L.comp||null); setComposerStage(L.cstage||[]); } };
-  const _feedStop = ()=>{ try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.value=0; } }catch(_){} feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
+  const _feedStop = ()=>{ _volBack(0); feedTokRef.current++; if(feedLoaded!==null){ try{ stopAll(); }catch(_){} } setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; };
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return;
     if(feedAt>=0 && feedCards[feedAt] && feedCards[feedAt].piece==='own' && feedLoaded!==null){ feedPieceRef.current=false; try{ stashMode('image'); }catch(_){} try{ stashOutgoing('music'); }catch(_){} try{ stashMode('music'); }catch(_){} _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; return; }   // your own painting: kept as a draft, the home card shows it
@@ -48650,7 +48654,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // the first tap after opening the app only wakes the sound on iOS (it is still starting when the piece is in):
     // if the piece is not playing a moment later, it is started again — up to three times
     const tok=feedTokRef.current;
-    const _go=(n)=>{ if(feedTokRef.current!==tok) return; try{ const v=Tone.getDestination().volume; if(v.value<-1){ v.cancelScheduledValues(Tone.now()); v.rampTo(0, 0.12); } }catch(_){} try{ if(!playingRef.current && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
+    const _go=(n)=>{ if(feedTokRef.current!==tok) return; _volBack(0.12); try{ if(!playingRef.current && handlePauseClickRef.current) handlePauseClickRef.current(); }catch(_){}
       if(n<3) setTimeout(()=>{ if(feedTokRef.current===tok && !playingRef.current && feedPieceRef.current && !holdPausedRef.current){ try{ wakeAudio(); }catch(_){} _go(n+1); } }, 700);
       else setTimeout(()=>{ if(feedTokRef.current!==tok || playingRef.current || !feedPieceRef.current) return; if(!_acRunning()) setFeedNeedTap(true); else { try{ handlePauseClickRef.current && handlePauseClickRef.current(); }catch(_){} } }, 900); };   // 🔇 only when the sound really sleeps
     const tm=setTimeout(()=>{ if(feedStartRef.current!==F) return; feedStartRef.current=null; _go(1); }, 80);
