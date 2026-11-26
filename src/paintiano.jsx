@@ -6823,15 +6823,19 @@ function pc2_guernica(ctx,CW,CH,chords,lim,gc,ss,mode){
 //        two long arms lit from the left, each cut into its facets, no outline drawn round a limb. The quieter the piece,
 //        the lower the head; the register sets how deep the blue; the piece's trend tips the guitar; the strings are
 //        the voices; drawn plane by plane as the piece plays.
-function pc2_blue(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const A=_kd2Analyze(chords,gc,mode), S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW; const X=_hear(chords,A);
-  const r=_pcR(97600,ss); r(); const list=[]; const P=_PC_PAL;
-  const deep=isBW?[30,32,36]:[18,34,70], pale=isBW?[160,164,170]:[132,168,196];
-  const blue=(t,k)=>{ const {rgb}=S.col(t); const base=_pcMix(deep,pale,_pcClamp(A.ch.register*0.5+k,0,1)); return isBW?_pcFlat(rgb,base,0.85,true):_pcMix(base,rgb,0.16); };
+// (Nov 2026: the same figure, cut into the same planes, stood on every piece — only a tint changed. The figure stays his, but each
+// piece now has its own picture of him: its own cutting of the planes, the figure seen from the piece's side (turned to the left or
+// to the right) and from its distance (the whole bent man for a quiet piece, closer in for a forceful one), the head bowed twice as
+// far for a quiet piece, the blue from near black to a pale grey-blue by the piece's register, with more of its own colour in it.)
+function pc2_blue(ctx,CW,CH,chords,lim,gc,ss0,mode){
+  const ss=((ss0|0)+_mrPieceKey(chords))|0; const A=_kd2Analyze(chords,gc,mode), S=_pcSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW; const X=_hear(chords,A);
+  const r=_pcR(97600,ss); r(); const list=[]; const P=_PC_PAL; const flipX=r()<0.5, zoom=1+0.3*A.ch.energy*r(), zx=CW*(0.4+0.2*r()), zy=CH*(0.35+0.2*r()), rg=_pcClamp(A.ch.register,0,1);
+  const deep=isBW?[30,32,36]:_pcMix([10,20,50],[26,48,92],rg), pale=isBW?[160,164,170]:_pcMix([104,140,176],[160,190,210],rg);
+  const blue=(t,k)=>{ const {rgb}=S.col(t); const base=_pcMix(deep,pale,_pcClamp(A.ch.register*0.5+k,0,1)); return isBW?_pcFlat(rgb,base,0.85,true):_pcMix(base,rgb,0.2); };
   const INK=[8,14,30]; const g=(pts)=>_pgN(pts,CW,CH);
   const wall=[]; _pcCut([[0,0],[CW,0],[CW,CH],[0,CH]],r,CW*CH/6,0,1.5708,wall);
   wall.forEach(p=>{ const c=_pcCentre(p); list.push(_pgF(list.length,0,p,blue(c[0]/CW*0.2,0.05+(1-c[1]/CH)*0.3),{ink:0.3,inkCol:INK,hatch:0.3,hang:1.4,lw:Math.max(1,D*0.003)})); });
-  const bow=(1-A.ch.energy)*0.08;
+  const bow=(1-A.ch.energy)*0.15;
   // the figure, built of planes: legs, back, chest; the head bowed, its closed eye one short line
   const rr=_pcR(97700,ss); rr(); const part=(pts,t0,t1,k,minA,axis)=>_pcFacets(list,g(pts),rr,CW*CH*minA,1.2,t0,t1,(t,p,i)=>({col:blue(t,k+(0.5-_pcCentre(p)[0]/CW)*0.3+(rr()-.5)*0.14),hatch:0.4,hang:1.2+(rr()-.5)*0.6,ink:0.55,inkCol:INK,open:rr()<0.45?Math.floor(rr()*p.length):-1,lw:Math.max(1.1,D*0.0038)}),{axis:axis||1});
   part([[0.2,0.72],[0.72,0.69],[0.86,0.8],[0.92,0.97],[0.12,0.97],[0.1,0.86]],0.08,0.2,0.34,1/30,2);
@@ -6859,7 +6863,8 @@ function pc2_blue(ctx,CW,CH,chords,lim,gc,ss,mode){
   const fing=(x,y,a,n,len,t)=>{ for(let k=0;k<n;k++){ const aa=a+(k-(n-1)/2)*0.18, l=len*(0.8+0.2*Math.cos(k*1.7)); const P=[[x,y],[x+Math.cos(aa)*l*0.55,y+Math.sin(aa)*l*0.55],[x+Math.cos(aa+0.25)*l,y+Math.sin(aa+0.25)*l]];
     list.push({id:list.length,t:t+k*0.004,stroke:P,w:[D*0.015,D*0.013,D*0.01],close:false,col:INK}); list.push({id:list.length,t:t+k*0.004+0.001,stroke:P,w:[D*0.009,D*0.008,D*0.006],close:false,col:blue(t,0.85)}); } };
   fing(fm[0],fm[1],th-Math.PI/2+0.35,4,D*0.055,0.86); fing(hx+D*0.035,hy+D*0.008,th+Math.PI/2-0.3,4,D*0.05,0.89);
-  _pc2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+  ctx.save(); ctx.fillStyle=_pcCss ? _pcCss(deep) : 'rgb('+deep.map(v=>v|0)+')'; ctx.fillRect(0,0,CW,CH); ctx.translate(zx,zy); ctx.scale(zoom,zoom); ctx.translate(-zx,-zy); if(flipX){ ctx.translate(CW,0); ctx.scale(-1,1); }   // the piece's side and distance
+  _pc2Draw(ctx,list,reveal,D,ss); ctx.restore(); _setCurE(0.5);
 }
 // the facet engine's draw, plus three records the paintings above use: a plain
 // line, a brush stroke with a width per point, and stencil lettering; `news` fills a
