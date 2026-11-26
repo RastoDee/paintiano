@@ -48249,7 +48249,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return ()=>{ c=true; }; },[studioHome, myMusicSlots, myImgSlots]);
   const _feedMine = (kind, piece)=> typeof piece==='string' ? ((kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).find(x=>'m'+x.id===piece) || null) : null;
   const feedOwnTtlRef = useRef('');   // the title of your own painting, brought along to For You
-  const _feedTitle = (c)=> c ? (c.piece==='own' ? feedOwnTtlRef.current : typeof c.piece==='string' ? (c.kind==='img' ? ((_feedMine(c.kind, c.piece)||{}).n || '') : pfSongTitle((_feedMine(c.kind, c.piece)||{}).n || '')) : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
+  // a picture of yours named only by its file's code (iPhone's 24381ef5-…, IMG_1234 …) is called "Your picture" — as the Studio hides such names (26 Nov 2026)
+  const _feedImgName = (raw)=>{ const r=String(raw||'').replace(/\.[^.]+$/,'').trim();
+    const junk = !r || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r) || /^[0-9a-f]{16,}$/i.test(r.replace(/[-_]/g,'')) || /^(IMG|DSC|DCIM|PXL|Screenshot|image|photo|Foto|Bild)[-_ ]?[\d_-]+$/i.test(r) || /^\d{6,}$/.test(r.replace(/[-_ ]/g,''));
+    return junk ? _stT('chImg') : r; };
+  const _feedTitle = (c)=> c ? (c.piece==='own' ? feedOwnTtlRef.current : typeof c.piece==='string' ? (c.kind==='img' ? _feedImgName((_feedMine(c.kind, c.piece)||{}).n) : pfSongTitle((_feedMine(c.kind, c.piece)||{}).n || '')) : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
   const feedImgElRef = useRef({u:null, el:null});   // the picture under a feed picture's scan, for the card
   // the painting on the canvas, small, for a card that is left
   const feedDrawRef = useRef(()=>{});   // the interval draws with today's picture, not the one it started with
