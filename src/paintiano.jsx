@@ -48450,10 +48450,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     setFeedCards(arr); setFeedAt(arr.length-1); feedStepsRef.current=[]; setFeedIntro(null);
     _feedLoad(piece, sel, kind); _feedFlashNow();
   };
-  useEffect(()=>{ if(playing && feedAt>=0 && feedCards[feedAt]) feedPlayedRef.current=feedCards[feedAt].id; },[playing, feedAt]);
+  // it played to its end here: the moment the playing stops in For You (not a pause — that holds — and not a card that came already over)
+  const feedWasPlayRef = useRef(false);
+  useEffect(()=>{ const was=feedWasPlayRef.current; feedWasPlayRef.current=playing; if(was && !playing && studioHome && feedAt>=0) feedPlayedRef.current=Date.now(); },[playing]);
   useEffect(()=>{
     if(!studioHome || feedAt<0 || feedLoaded===null || feedFly) return;
-    const c=feedCards[feedAt]; if(!c || feedPlayedRef.current!==c.id) return;
+    const c=feedCards[feedAt]; if(!c || !feedPlayedRef.current || Date.now()-feedPlayedRef.current>10000) return;
     if(playing || anim || holdPaused || working || !chords.length || disp<chords.length || stChg || stShare || recording || demoReelOn) return;
     const tm=setTimeout(()=>{ if(playingRef.current || holdPausedRef.current) return; feedPlayedRef.current=null; _feedNextPiece(); }, 1400);
     return ()=>clearTimeout(tm);
