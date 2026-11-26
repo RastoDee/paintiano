@@ -10945,22 +10945,37 @@ function hk2_altar(ctx,CW,CH,chords,lim,gc,ss,mode){
   push({kind:'poly',t:0.99,pts:[[apex[0],apex[1]-sr*0.3],[apex[0]-sr*0.25,apex[1]+sr*0.15],[apex[0]+sr*0.25,apex[1]+sr*0.15]],col:[20,16,24]});
   _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
-// ── 3 · The Swan, No. 17 (1915) — the circle quartered on white; each quarter a
-//        section of the piece in its colour, the cube at the centre the tonic, the
-//        rays the voices.
-function hk2_quarters(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
-  const r=_hkR(84000,ss); r(); const list=[]; const push=f=>{ f.id=list.length; list.push(f); }; const K=[24,22,24], W=[248,245,238];
+// ── 3 · The Swan (1914–15) — her series of the two that meet. (Nov 2026: it was No. 17 alone, a small quartered circle with a
+//        cube in the middle of a white canvas, the same on every piece. Now the whole canvas is hers: split into the dark and the
+//        light half, as her Swans are, and the great circle across the split — its rings the piece's passages, each ring cut
+//        into the arcs of that passage's chords in their colours, the inner rings the first passages, the outer the last; the
+//        colours turn to their darker selves on the dark half. The number of rings, how finely they are cut and where the
+//        circle sits are the piece's; the cube at its heart is the tonic.)
+function hk2_quarters(ctx,CW,CH,chords,lim,gc,ss0,mode){
+  const ss=((ss0|0)+_mrPieceKey(chords))|0, A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
+  const r=_hkR(84000,ss); r(); const K=[24,22,24], W=[248,245,238], cn=A.cn, dens=A.ch ? A.ch.density : 0.4, sm=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x);
+  // the two halves: which way the canvas is split and where the line runs is the piece's
+  const tilt=(r()-0.5)*0.5+(r()<0.5 ? 0 : Math.PI/2)*0, split=0.46+0.08*r(), nx=Math.sin(tilt), ny=Math.cos(tilt), cx=CW*(0.5+(r()-0.5)*0.12), cy=CH*split;
+  const dark=(x,y)=>((x-cx)*nx+(y-cy)*ny)>0;
   ctx.fillStyle=_hkCss(W); ctx.fillRect(0,0,CW,CH);
-  const cx=CW*0.5, cy=CH*0.5, R=D*0.4; const P=_kd2Phrases(A,4); const Q=[0,1,2,3].map(i=>P[Math.min(P.length-1,i)]);
-  Q.forEach((p,i)=>{ const c=A.pcCol(p.pc,Math.round(p.top)); const col=isBW?_hkPastel(c,0.3,true):_hkMix(c,W,0.25); const a0=-1.5708+i*1.5708;
-    const pts=[[cx,cy]]; for(let k=0;k<=12;k++){ const a=a0+k/12*1.5708; pts.push([cx+Math.cos(a)*R,cy+Math.sin(a)*R]); } push({kind:'poly',t:0.05+i*0.22,pts,col:i%2?col:(isBW?[60,60,60]:_hkMix(col,K,0.7)),ring:K,w:D*0.003});
-    // inside each quarter: a smaller arc of the other colour, and the rays for its voices
-    const pts2=[[cx,cy]]; for(let k=0;k<=12;k++){ const a=a0+k/12*1.5708; pts2.push([cx+Math.cos(a)*R*0.55,cy+Math.sin(a)*R*0.55]); } push({kind:'poly',t:0.1+i*0.22,pts:pts2,col:i%2?(isBW?[200,200,200]:_hkMix(A.pcCol(p.pc2,60),W,0.3)):W,ring:K,w:D*0.002});
-    const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nn=(ev.length?Math.round(ev.reduce((s,e)=>s+e.nn,0)/ev.length):2)+Math.round((A.ch?A.ch.density:0.3)*7); for(let k=0;k<nn+1;k++){ const a=a0+(k+0.5)/(nn+1)*1.5708;   /* the voices, and more rays for a dense piece */ push({kind:'curve',t:0.15+i*0.22,pts:[[cx+Math.cos(a)*R*0.58,cy+Math.sin(a)*R*0.58],[cx+Math.cos(a)*R*0.98,cy+Math.sin(a)*R*0.98]],col:K,w:D*0.002}); } });
-  push({kind:'ring',t:0.9,x:cx,y:cy,r:R,col:K,w:D*0.004}); push({kind:'curve',t:0.9,pts:[[cx,cy-R],[cx,cy+R]],col:K,w:D*0.003}); push({kind:'curve',t:0.9,pts:[[cx-R,cy],[cx+R,cy]],col:K,w:D*0.003});
-  const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60); const q=D*0.07; push({kind:'poly',t:0.95,pts:[[cx-q,cy-q],[cx+q,cy-q],[cx+q,cy+q],[cx-q,cy+q]],col:tc,ring:K,w:D*0.003}); push({kind:'poly',t:0.96,pts:[[cx-q,cy-q],[cx-q*0.5,cy-q*1.5],[cx+q*1.5,cy-q*1.5],[cx+q,cy-q]],col:_hkMix(tc,W,0.4),ring:K,w:D*0.003}); push({kind:'poly',t:0.96,pts:[[cx+q,cy-q],[cx+q*1.5,cy-q*1.5],[cx+q*1.5,cy+q*0.5],[cx+q,cy+q]],col:_hkMix(tc,K,0.4),ring:K,w:D*0.003});
-  _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
+  ctx.save(); ctx.beginPath(); const far=Math.hypot(CW,CH)*1.5; ctx.moveTo(cx-ny*far, cy+nx*far); ctx.lineTo(cx+ny*far, cy-nx*far); ctx.lineTo(cx+ny*far+nx*far, cy-nx*far+ny*far); ctx.lineTo(cx-ny*far+nx*far, cy+nx*far+ny*far); ctx.closePath(); ctx.clip(); ctx.fillStyle=_hkCss(K); ctx.fillRect(0,0,CW,CH); ctx.restore();
+  // the rings: one per passage, cut into the arcs of its chords
+  const nR=Math.max(4, Math.min(8, Math.round(4+4*dens+Math.min(1,cn/600)))), P=_kd2Phrases(A,nR), n=Math.max(1,P.length), R=Math.min(CW*0.6, CH*0.4), r0=R*0.13, rot=r()*6.283;
+  const col=(c,dk)=>{ const q=isBW ? _hkPastel(c,0.25,true) : c; return dk ? _hkMix(_hkMix(q,W,0.15),K,0.62) : _hkMix(q,W,0.4); };   // her colours: soft and chalky on the light half, their deep selves on the dark
+  for(let i=0;i<n;i++){ const p=P[i], ra=r0+(R-r0)*i/n, rb=r0+(R-r0)*(i+1)/n, t0=0.04+0.86*i/n, k=sm((reveal-t0)/(0.86/n)); if(k<=0) break;
+    const ev=[]; for(let j=p.a;j<p.b;j++) if(A.ev[j]) ev.push(A.ev[j]); const m=Math.max(3, Math.min(Math.round(5+16*dens+i*1.5), ev.length||3)), a0=rot+i*0.7+r()*0.4;
+    for(let q=0;q<Math.ceil(m*k);q++){ const e=ev.length ? ev[Math.min(ev.length-1, Math.floor(q*ev.length/m))] : null, c=e ? A.pcCol(((Math.round(e.top)%12)+12)%12, Math.round(e.top)) : A.pcCol(p.pc, Math.round(p.top||60)), s0=a0+q/m*6.283, s1=a0+(q+1)/m*6.283;
+      // each arc in two parts where the split line crosses it: light side, dark side
+      const st=10; for(let u=0;u<st;u++){ const b0=s0+(s1-s0)*u/st, b1=s0+(s1-s0)*(u+1)/st+0.004, mid=(b0+b1)/2, rm=(ra+rb)/2, dk=dark(cx+Math.cos(mid)*rm, cy+Math.sin(mid)*rm);
+        ctx.beginPath(); ctx.arc(cx,cy,rb,b0,b1); ctx.arc(cx,cy,ra,b1,b0,true); ctx.closePath(); ctx.fillStyle=_hkCss(col(c,dk)); ctx.fill(); }
+      ctx.strokeStyle=_hkCss([24,22,24],0.55); ctx.lineWidth=Math.max(0.7,D*0.0018); ctx.beginPath(); ctx.moveTo(cx+Math.cos(s0)*ra, cy+Math.sin(s0)*ra); ctx.lineTo(cx+Math.cos(s0)*rb, cy+Math.sin(s0)*rb); ctx.stroke(); }
+    ctx.strokeStyle=_hkCss([130,124,118]); ctx.lineWidth=Math.max(0.9,D*0.0026); ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a0+6.283*k); ctx.stroke(); }
+  // the line of the split through the circle, and the cube at its heart (the tonic), light on one side and dark on the other
+  ctx.strokeStyle=_hkCss([130,124,118]); ctx.lineWidth=Math.max(1,D*0.003); ctx.beginPath(); ctx.moveTo(cx-ny*far, cy+nx*far); ctx.lineTo(cx+ny*far, cy-nx*far); ctx.stroke();
+  if(reveal>0.9){ const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60), q=r0*0.5, kk=sm((reveal-0.9)/0.08); ctx.globalAlpha=kk; const poly=(pts,c)=>{ ctx.beginPath(); pts.forEach((v,i)=>i ? ctx.lineTo(v[0],v[1]) : ctx.moveTo(v[0],v[1])); ctx.closePath(); ctx.fillStyle=_hkCss(c); ctx.fill(); ctx.strokeStyle=_hkCss(K); ctx.lineWidth=Math.max(1,D*0.003); ctx.stroke(); };
+    ctx.fillStyle=_hkCss(W); ctx.beginPath(); ctx.arc(cx,cy,r0,0,6.283); ctx.fill(); ctx.strokeStyle=_hkCss(K); ctx.lineWidth=Math.max(1,D*0.003); ctx.stroke();
+    poly([[cx-q,cy-q*0.6],[cx+q*0.5,cy-q*0.6],[cx+q*0.5,cy+q*0.9],[cx-q,cy+q*0.9]],tc); poly([[cx-q,cy-q*0.6],[cx-q*0.5,cy-q*1.1],[cx+q,cy-q*1.1],[cx+q*0.5,cy-q*0.6]],_hkMix(tc,W,0.45)); poly([[cx+q*0.5,cy-q*0.6],[cx+q,cy-q*1.1],[cx+q,cy+q*0.4],[cx+q*0.5,cy+q*0.9]],_hkMix(tc,K,0.45)); ctx.globalAlpha=1; }
+  _setCurE(0.5);
 }
 // ── 4 · The Tree of Knowledge (1913) — the symmetrical tree inside its almond: the
 //        trunk, a branch for every phrase, a leaf for every chord in the phrase's colour,
@@ -13239,21 +13254,27 @@ function mitchellPhaseDiptych(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   if(reveal>0.5) _mitchDrips(ctx, D, list, 4, ss, 9940);
 }
 
-// ── Mitchell D: Dark Central Mass — the 60s (Calvi, the Girolata triptych): not a ball but one heavy uneven mass, three tangles
-// of dark strokes run together, heavier at its top, a little off centre, light jabs through it and at its edge, drips below ──
+// ── Mitchell D: Dark Central Mass — the 60s (Calvi, the Girolata triptych): one heavy uneven mass of dark strokes, light jabs
+// through it and at its edge, drips below. (Nov 2026: it was a small clump in the middle of a bare canvas, the same on every
+// piece — three tangles at fixed places, sized by the canvas's short side. Now the mass is the piece: a tangle for each of its
+// passages, as heavy as the passage is loud, in that passage's own colours deepened; they run together down the canvas along a
+// course the piece sets, and fill most of it; the jabs of light come where it is loudest. Each piece its own mass.) ──
 function mitchellPhaseDarkMass(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
+  const ss0=sessionSeed|0, ss=(ss0+_mrPieceKey(chords))|0, isBW=mode==='bw', cn=chords.length, D=Math.sqrt(CW*CH)*0.82;
   const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
   _mitchGround(ctx,CW,CH,chords,'#e4ddcc','#d8d2c4',isBW);
   const drive=_mitchChar(chords), list=[], mr=_seedRnd(9945, ss, 0, 0); mr();
-  const pal=_mitchPal(chords,gc,isBW,0,cn).map((c,i)=> i<4 ? _mitchMix(c,[18,14,22],0.55) : c);
-  const ox=CW*(0.44+mr()*0.12), oy=CH*(0.38+mr()*0.08);
-  for(let k=0;k<3;k++){ const cx=ox+(k-1)*D*(0.15+mr()*0.06), cy=oy+(mr()-0.5)*D*0.14+(k===1?-D*0.04:D*0.03), R=D*(0.16+mr()*0.08);
-    _mitchKnot(list, D, cx, cy, R, Math.round((34+drive*14)*(k===1?1.3:1)), pal, ss, 9952+k*2, {spread:1.6, radial:0.15, tight:0.9, squash:0.8}); }
-  const lp=_mitchPal(chords,gc,isBW,Math.floor(cn/2),Math.ceil(cn/2)).map((c)=>_mitchMix(c,[250,246,236],0.35));
-  _mitchKnot(list, D, ox, oy, D*0.36, 18+Math.round(drive*8), lp, ss, 9951, {spread:2.0, radial:0.5, tight:1.0, squash:0.75});
+  const nK=Math.max(5, Math.min(8, Math.round(5+3*_mitchDens+drive))), ph=mr()*6.283, sway=0.1+0.1*mr(), tall=CH>CW*1.1;
+  const loud=(a,b)=>{ let v=0; for(let j=a;j<b && j<cn;j++){ const ns=(chords[j] && (chords[j].n||chords[j].notes))||[]; for(const x of ns){ const vv=(x && x.v!==undefined) ? x.v : 80; if(vv>v) v=vv; } } return Math.min(1,v/112); };
+  let top=0, ti=0; const K=[];
+  for(let k=0;k<nK;k++){ const a=Math.floor(k*cn/nK), b=Math.max(a+1,Math.floor((k+1)*cn/nK)), v=loud(a,b), u=(k+0.5)/nK, w=0.5+sway*Math.sin(ph+u*5.2)+(mr()-0.5)*0.12; if(v>top){ top=v; ti=k; }
+    K.push({a, n:b-a, v, cx:tall ? CW*w : CW*(0.16+0.68*u), cy:tall ? CH*(0.15+0.62*u) : CH*(w*0.8+0.05), R:D*(0.15+0.12*v+0.04*mr())}); }
+  K.forEach((q,k)=>{ const pal=_mitchPal(chords,gc,isBW,q.a,q.n).map((c,i)=> i<4 ? _mitchMix(c,[18,14,22],0.42+0.2*mr()) : c);
+    _mitchKnot(list, D, q.cx, q.cy, q.R, Math.round((30+drive*16)*(0.7+0.7*q.v)), pal, ss, 9952+k*2, {spread:1.6, radial:0.15, tight:0.95, squash:tall ? 0.85 : 0.8, len:1.15, w:1.15}); });
+  // her light jabs: the loudest passage's own colours near white, through the mass there and at its edge
+  { const q=K[ti], lp=_mitchPal(chords,gc,isBW,q.a,q.n).map((c)=>_mitchMix(c,[250,246,236],0.35)); _mitchKnot(list, D, q.cx, q.cy, q.R*1.7, 20+Math.round(drive*10), lp, ss, 9951, {spread:2.0, radial:0.5, tight:1.0, squash:0.8}); }
   _mitchDraw(ctx, list, reveal, ss);
-  if(reveal>0.5) _mitchDrips(ctx, D, list, 7, ss, 9960);
+  if(reveal>0.5) _mitchDrips(ctx, D, list, 9, ss, 9960);
 }
 
 // ── Mitchell E: Sunflowers (1990–91, her homage to Van Gogh): heavy warm masses high on the canvas, and out of each its dark (the
