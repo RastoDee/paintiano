@@ -9727,20 +9727,25 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     return;
   }
   if(pick===4){ // arrows over terraces
+    /* Nov 2026: the finished picture is unchanged, but it is no longer there from the first bar. Each terrace is the
+       colour of its own stretch of the piece and is brushed across, left to right, while that stretch plays, from the top
+       terrace down; an arrow is set once its passage has sounded AND the terraces it stands on are laid. */
     const _ad=(_ch?_ch.density:0.4), rows=Math.round(7+8*_ad);   // a dense piece: more terraces and more arrows
+    ground('#e9e0c9','#e2d7bc');
     for(let r=0;r<rows;r++){
-      const ni=Math.min(cn-1,(r*cn/rows)|0); const m=meta(ni);
+      const ni=Math.min(cn-1,(r*cn/rows)|0); const m=meta(ni); const si=r*cn/rows, ei=(r+1)*cn/rows, f=Math.max(0,Math.min(1,(N-si)/Math.max(1,ei-si))); if(f<=0) break;
       ctx.fillStyle=css(col(ni,0.55+m.vel*0.55),0.95);
-      ctx.fillRect(0,r*CH/rows,CW,CH/rows+1);
+      ctx.fillRect(0,r*CH/rows,CW*f,CH/rows+1);
     }
-    const nA=Math.max(5,Math.round(3+10*_ad)), per=Math.ceil(cn/nA);
+    const nA=Math.max(5,Math.round(3+10*_ad)), per=Math.ceil(cn/nA); let tPrev=0;
     for(let p=0;p<nA;p++){
-      const ai=Math.min(cn-1,p*per); if(ai>=N && p>0) break;
+      const ai=Math.min(cn-1,p*per);
       const bi=Math.min(cn-1,p*per+per-1);
       const up=chordTopness(bi)>chordTopness(ai);
       const m=meta(ai);
       const x=CW*(0.14+p*0.725/Math.max(1,nA-1)), y=CH*(0.5+(p%2?0.16:-0.16));
       const L=(CH*0.12+m.dur*CH*0.08)*(0.75+0.5*dnaE)*(nA>6?Math.sqrt(6/nA):1), dir=up?-1:1;
+      const need=Math.min(1,Math.ceil(Math.max(y,y+dir*L)/CH*rows)/rows), tA=Math.max(ai/cn,need,tPrev); tPrev=tA; if(N<cn && N/cn<tA) break;
       ctx.fillStyle='rgba(20,14,10,.82)';
       ctx.fillRect(x-S*0.009, Math.min(y,y+dir*L*0.62), S*0.018, L*0.62);
       ctx.beginPath(); ctx.moveTo(x,y+dir*L); ctx.lineTo(x-S*0.03,y+dir*L*0.6); ctx.lineTo(x+S*0.03,y+dir*L*0.6); ctx.closePath(); ctx.fill();
