@@ -18181,7 +18181,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _FEED_NAMES = BUILTIN_NAMES;
   // the first screen's painting: THIS piece in THIS look — a tap paints it right there (no slide, the picture melts into it); the first swipe up brings the arc
   const _FEED_FIRST = { piece:PF_FIRST.piece, sel:{ style:PF_FIRST.style, phase:PF_FIRST.phase, mode:'harmony', notes:false, stage:[], sig:false } };
-  feedFirstRef.current = (feedAt>=0 && feedLoaded!==null && !!(feedCards[feedAt] && feedCards[feedAt].first)) || (firstKeptRef.current && feedAt<0 && style===PF_FIRST.style && (phaseIndex|0)===PF_FIRST.phase && !painterStage.length && !sigActive);
+  // the first screen's painting stays itself wherever it waits — kept in the Studio, on Home and back from it, after a relaunch: its piece in its look is that painting, in full
+  // (before: only until the song changed hands, so on Free a tap on Home brought it back cut to the free variants — another picture than the one on Home)
+  const _firstPiece = loadedSource==='midi' && String((info && info.title)||'')===BUILTIN_PIECES[PF_FIRST.piece].name;
+  feedFirstRef.current = (feedAt>=0 && feedLoaded!==null && !!(feedCards[feedAt] && feedCards[feedAt].first)) || ((firstKeptRef.current || _firstPiece) && feedAt<0 && style===PF_FIRST.style && (phaseIndex|0)===PF_FIRST.phase && !painterStage.length && !sigActive);
   const _FEED_IMGS = (typeof SAMPLE_IMAGES!=='undefined') ? SAMPLE_IMAGES : [];
   const _feedKind = ()=>{ const h=_homeCurV(); return (h && (h.k==='image' || (!h.k && h.src==='image'))) ? 'img' : 'music'; };
   // For you deals from your My Music / My Images too (ids only; the file is read when the card loads)
