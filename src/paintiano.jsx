@@ -5094,9 +5094,10 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // 3 Blue Poles · 4 Convergence · 5 Number 14 (black pouring) — the _pol2 skeins, read
   // from the music · 6 Sparse (the open web below) · 7 White Light. Free: 0 and 1.
   {
-    // VARIANT: 0 What he heard (_pkListen, generative) · 1 Classic drip · 2 Autumn Rhythm · 3 Lavender Mist · 4 Blue Poles · 5 Convergence · 6 Number 14 · 7 White Light (Sparse retired, approved). Free: 0 and 1.
+    // VARIANT: 0 What he heard (_pkListen, generative) · 1 Classic drip · 2 Autumn Rhythm · 3 Lavender Mist · 4 Blue Poles · 5 Convergence · 6 Shimmering Substance (Nov 2026; Number 14 retired, code kept) · 7 White Light (Sparse retired, approved). Free: 0 and 1.
     const _pn=_capN(8); const _ppick0=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_ppick0===0){ _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ppick0===6){ _pkShimmer(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Shimmering Substance (Nov 2026; Number 14 retired, code kept)
     const _ppick=[0,1,2,3,4,5,7][_ppick0-1];
     if(_ppick>=1&&_ppick<=5){ _pol2Paint(_ppick,ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_ppick===7){ pollockPhaseWhiteLight(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -5659,26 +5660,29 @@ function _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode){
   const bw=mode==='bw', A=_kd2Analyze(chords,gc,mode), cn=A.cn, D=Math.min(CW,CH), played=Math.max(1,Math.min(cn,lim));
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
   ctx.fillStyle=bw?'rgb(226,224,218)':'rgb(226,210,172)'; ctx.fillRect(0,0,CW,CH); if(!cn) return;
-  const paint=(c,l)=>bw?(()=>{ const g=255*l; return [g,g,g]; })():_bhxPigment(c,0.45,0.78,0,1,0.04,0.5,l);
+  const MUR=[[222,176,62],[62,138,140],[214,128,134],[86,104,168],[186,74,52],[236,224,192],[120,150,90]];   // ochre, teal, rose, blue, red, cream, green of the Mural
+  const paint=(c,l)=>{ if(bw){ const g=255*l; return [g,g,g]; } const p0=_bhxPigment(c,0.45,0.78,0,1,0.04,0.5,l); let best=MUR[0], bd=1e9; for(const m of MUR){ const d2=(m[0]-p0[0])**2+(m[1]-p0[1])**2+(m[2]-p0[2])**2; if(d2<bd){ bd=d2; best=m; } } return mix(p0,best,0.65); };
   const BLK=bw?[20,20,20]:[24,20,20], WHT=bw?[244,244,240]:[244,238,222];
   const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
   const tops=A.ev.filter(Boolean).map(e=>e.top).sort((a,b)=>a-b), tLo=tops[Math.floor(tops.length*0.05)]||48, tHi=tops[Math.floor(tops.length*0.95)]||84;
   const ds=A.ev.filter(Boolean).map(e=>e.dur).sort((a,b)=>a-b), dMed=ds[ds.length>>1]||1;
-  const R=3, rh=CH/R, pos=(u)=>{ const f=clamp(u,0,0.9999)*R, row=Math.floor(f); return [CW*(0.02+0.96*(f-row)), row]; };
+  /* Nov 2026: on a phone the score is two friezes, not three (three cut his stampede into strips of grass); the figures
+     larger and heavier, the swathes in the colours of the Mural itself */
+  const R=CH>CW*1.15?2:3, rh=CH/R, pos=(u)=>{ const f=clamp(u,0,0.9999)*R, row=Math.floor(f); return [CW*(0.02+0.96*(f-row)), row]; };
   const items=[]; let id=0; const put=(i,fn)=>items.push({i,id:id++,fn});
   // the swathes: a passage a few broad strokes of its colour behind the figures, upright and slanting as his were
   const P=_kd2Phrases(A,Math.round(clamp(9+A.phrases.length*0.4,12,30)));
   P.forEach((p,k)=>{ const r=_seedRnd(93100+k,ss,0,0); r(); const [x0,row]=pos(p.t0), [x1,row1]=pos(Math.max(p.t0,p.t1-0.001)), xa=x0, xb=row1===row?x1:CW*0.98, y0=row*rh;
     const n=2+Math.floor(r()*3), base=A.pcCol(p.pc,60);
     for(let j=0;j<n;j++){ const x=xa+(xb-xa)*(j+0.5)/n+(r()-0.5)*CW*0.03, w=Math.max(D*0.04,(xb-xa)/n*(0.9+0.5*r())), col=r()<0.12?WHT:paint(r()<0.7?base:A.pcCol(p.pc2!=null?p.pc2:p.pc,60),0.42+0.3*r()), lean=(r()-0.5)*0.5, pts=[];
-      for(let s=0;s<=8;s++){ const u=s/8; pts.push([x+lean*rh*(u-0.5)+Math.sin(u*3+k)*w*0.15, y0+rh*(0.04+0.92*u),1]); }
+      for(let s=0;s<=8;s++){ const u=s/8; pts.push([x+lean*rh*(u-0.5)+Math.sin(u*3+k)*w*0.15, y0+rh*(R===2?-0.03+1.06*u:0.04+0.92*u),1]); }   /* on a phone the two friezes run into each other, no bare band between */
       put(p.a,()=>_pkRibbon(ctx,pts,w,col,0.78)); } });
   // the figures: a beat each, rising through the frieze, swaying with the melody
-  const nF=Math.round(clamp(cn/3,36,110)); let prevM=0.5;
+  const nF=Math.round(clamp(cn/3,30,110)*(R===2?0.62:1)); let prevM=0.5;
   for(let k=0;k<nF;k++){ const i=Math.min(cn-1,Math.floor((k+0.5)*cn/nF)), e=A.ev[i]; if(!e) continue; const r=_seedRnd(93300+k,ss,0,0); r();
     const f=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1), m=clamp((e.top-tLo)/Math.max(1,tHi-tLo),0,1), [x,row]=pos(i/cn), y0=row*rh, y1=y0+rh;
     let lo=0,nn=0; for(let q=Math.max(0,i-4);q<=Math.min(cn-1,i+4);q++){ const o=A.ev[q]; if(!o||q===i) continue; nn++; if(o.v<e.v) lo++; } const acc=nn&&lo/nn>0.85;
-    const sway=(m-prevM)*rh*0.9+(r()-0.5)*rh*0.12, bend=(k%2?1:-1)*rh*(0.08+0.12*r()); prevM=m; const w=D*(0.007+0.017*f), pts=[];
+    const sway=(m-prevM)*rh*0.9+(r()-0.5)*rh*0.12, bend=(k%2?1:-1)*rh*(0.08+0.12*r()); prevM=m; const w=D*(0.007+0.017*f)*(R===2?1.45:1), pts=[];
     const ya=y1-rh*(0.04+0.1*r()), yb=y0+rh*(0.03+0.12*(1-m)+0.06*r());
     for(let s=0;s<=16;s++){ const u=s/16; pts.push([x+sway*u+bend*Math.sin(Math.PI*u)+Math.sin(u*9+k)*w*0.6, ya+(yb-ya)*u, 0.8+0.4*Math.sin(u*5+k)]); }
     put(i,()=>_pkRibbon(ctx,pts,w,BLK,0.9));
@@ -5703,8 +5707,66 @@ function _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode){
 //   the pour         wide and pooling where the piece is slow and loud (enamel with body), fine and spattered where
 //                    it is quick; a pool at every long note; the spatter as dense as the piece
 // ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// POLLOCK LISTENS (Nov 2026) — Sounds in the Grass: Shimmering Substance (1946), the series whose very name is what he
+// heard. Not a web: the canvas laid all over with short thick strokes of paint straight from the tube, cream and white
+// and yellow with the piece's colours worked in, turning in slow eddies; and in it the suns — rings of strokes round a
+// bright disc. Every note is a stroke, laid as it sounds: as long as the note is held, as thick as it is loud, turned
+// with the eddy it falls in, its colour the chord's (a cream or white between them, as he mixed); the loudest passages
+// are the suns, each an eddy's eye. Stroke by stroke as the piece plays.
+// ═══════════════════════════════════════════════════════════════════════════
+function _pkShimmer(ctx,CW,CH,chords,lim,gc,ss,mode){
+  /* Rebuilt against the painting itself (MoMA, Nov 2026): no eddies and no suns — the raw canvas, its weave showing, washed
+     thin in pale blue and rose; under everything a drawing of short black strokes; a few flat dabs of solid colour (red,
+     cobalt, violet); and over it all the paint from the tube pushed about with the knife: thick, matt crescents and hooks
+     turning every way, white and cream most of all and yellow, the other colours streaked into them unmixed, their edges
+     torn, a ridge of paint along the outer curve, the dry end breaking into strands. The piece: the black drawing is its
+     bass, the dabs its loudest passages, every crescent a note — as big as it is held, as heavy as it is loud. */
+  const bw=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH); if(!cn) return;
+  const A=_kd2Analyze(chords,gc,mode), dens=A.ch?A.ch.density:0.4, cl=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+  const WHITE=[244,240,228], CREAM=bw?[226,224,218]:[236,226,200], YEL=bw?[200,200,196]:[232,196,40], INK=[34,30,34], CANVAS=bw?[214,212,206]:[220,214,198];
+  const HIS=[[206,52,46],[226,190,36],[34,58,150],[96,52,110],[224,120,40],[96,150,70],[226,150,160],[120,168,214]];   // his tube colours
+  const tube=(c)=>{ if(bw){ const v=c[0]*0.3+c[1]*0.59+c[2]*0.11; return [v,v,v]; } let best=HIS[0], bd=1e9; for(const h of HIS){ const d2=(h[0]-c[0])**2+(h[1]-c[1])**2+(h[2]-c[2])**2; if(d2<bd){ bd=d2; best=h; } } return mix(c,best,0.65); };
+  const chordCol=(i)=>tube(_picChord(chords,cl(i,0,cn-1),gc,bw).rgb);
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  // the raw canvas and its weave
+  ctx.fillStyle=css(CANVAS); ctx.fillRect(0,0,CW,CH);
+  { const st=Math.max(2,D*0.0065); ctx.lineWidth=Math.max(0.5,st*0.35); for(let x=0;x<CW;x+=st){ ctx.strokeStyle=css((x/st|0)%2?[255,255,255]:[150,140,120],0.03); ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,CH); ctx.stroke(); } for(let y=0;y<CH;y+=st){ ctx.strokeStyle=css((y/st|0)%2?[255,255,255]:[150,140,120],0.03); ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(CW,y); ctx.stroke(); } }
+  const its=[]; const at=(i,z,f)=>its.push({i,z,f});
+  const jag=(r,k)=>(r()-0.5)*k;
+  // the thin washes: pale blue and rose rubbed in, a passage each
+  { const P=A.phrases; P.forEach((q,k)=>{ if(k%2) return; const r=_seedRnd(62000+k,ss,0,0); r(); const c=mix(chordCol(q.a),WHITE,0.55), x=CW*r(), y=CH*r(), rw=D*(0.12+0.12*r()), rh=D*(0.06+0.08*r()), an=r()*3.14;
+    at(q.a,0,()=>{ ctx.save(); ctx.translate(x,y); ctx.rotate(an); for(let s=0;s<6;s++){ ctx.strokeStyle=css(c,0.14); ctx.lineWidth=rh*0.4; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(-rw/2+jag(r,rw*0.2),-rh/2+s*rh/5+jag(r,rh*0.1)); ctx.lineTo(rw/2+jag(r,rw*0.2),-rh/2+s*rh/5+jag(r,rh*0.1)); ctx.stroke(); } ctx.restore(); }); }); }
+  // the black drawing: short dry strokes of black, angular, the bass of the piece
+  { const nB=Math.round(cl(40+90*dens,40,130)); for(let k=0;k<nB;k++){ const i=Math.min(cn-1,Math.floor((k+0.5)*cn/nB)); const r=_seedRnd(62100+k,ss,0,0); r(); const x=CW*(-0.03+1.06*r()), y=CH*(-0.03+1.06*r()), n=1+Math.floor(r()*3), L=D*(0.03+0.06*r()), lw=D*(0.003+0.004*r()); const pts=[[x,y]]; let a=r()*6.28; for(let s=0;s<n;s++){ a+=(r()-0.5)*2.2; const q=pts[pts.length-1]; pts.push([q[0]+Math.cos(a)*L/n*(0.6+0.8*r()),q[1]+Math.sin(a)*L/n*(0.6+0.8*r())]); }
+    at(i,1,()=>{ ctx.lineCap='round'; ctx.lineJoin='miter'; for(let h=0;h<3;h++){ const o=(h-1)*lw*0.35; ctx.strokeStyle=css(INK,h===1?0.75:0.35); ctx.lineWidth=lw*(h===1?0.7:0.35); ctx.beginPath(); pts.forEach((q,m)=>m?ctx.lineTo(q[0]+o,q[1]-o):ctx.moveTo(q[0]+o,q[1]-o)); ctx.stroke(); } }); } }
+  // the flat dabs of solid colour: the loudest passages
+  { const P=_kd2Events(A,Math.round(cl(10+24*dens,10,34))).filter(e=>e.acc||e.v>=vHi*0.9).map(e=>({a:e.i,vmax:e.v})); P.forEach((q,k)=>{ const r=_seedRnd(62200+k,ss,0,0); r(); const c=chordCol(q.a), x=CW*(0.04+0.92*r()), y=CH*(0.04+0.92*r()), R=D*(0.012+0.02*(q.vmax||0.6)), pts=[]; for(let s=0;s<14;s++){ const a=s/14*6.2832; pts.push([x+Math.cos(a)*R*(0.75+0.4*r()),y+Math.sin(a)*R*(0.7+0.4*r())]); }
+    at(q.a,2,()=>{ ctx.fillStyle=css(c,0.94); ctx.beginPath(); pts.forEach((p,m)=>m?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill(); ctx.save(); ctx.clip(); ctx.lineWidth=Math.max(0.5,D*0.002); for(let s=0;s<10;s++){ ctx.strokeStyle=css(s%2?mix(c,WHITE,0.3):mix(c,[0,0,0],0.2),0.3); const yy=y-R+s*R/5; ctx.beginPath(); ctx.moveTo(x-R,yy+jag(r,R*0.2)); ctx.lineTo(x+R,yy+jag(r,R*0.2)); ctx.stroke(); } ctx.restore(); }); }); }
+  // the crescents of paint from the tube, worked with the knife
+  const cres=(cx,cy,R,a0,span,w,base,streak,dir)=>{ const sr=_seedRnd(Math.round(cx*11+cy*5)+62300,ss,0,0); sr(); const N=16, O=[], I=[];
+    for(let s=0;s<=N;s++){ const u=s/N, a=a0+dir*span*u, th=w*(u<0.15?0.55+3*u:1-0.75*Math.pow((u-0.15)/0.85,1.3))*(0.85+0.3*sr()), rr=R*(1+0.12*Math.sin(u*4+a0)); O.push([cx+Math.cos(a)*(rr+th/2)+jag(sr,w*0.18),cy+Math.sin(a)*(rr+th/2)+jag(sr,w*0.18),a]); I.push([cx+Math.cos(a)*(rr-th/2)+jag(sr,w*0.18),cy+Math.sin(a)*(rr-th/2)+jag(sr,w*0.18),a]); }
+    const band=(dx,dy)=>{ ctx.beginPath(); O.forEach((p,m)=>m?ctx.lineTo(p[0]+dx,p[1]+dy):ctx.moveTo(p[0]+dx,p[1]+dy)); for(let m=I.length-1;m>=0;m--) ctx.lineTo(I[m][0]+dx,I[m][1]+dy); ctx.closePath(); };
+    band(w*0.08,w*0.12); ctx.fillStyle=css(mix(base,[60,46,30],0.55),0.3); ctx.fill();
+    band(0,0); ctx.fillStyle=css(base,0.97); ctx.fill();
+    ctx.save(); band(0,0); ctx.clip(); ctx.lineCap='round';
+    const ns=2+Math.floor(sr()*3); for(let k=0;k<ns;k++){ const f=0.15+0.7*sr(), s0=Math.floor(N*sr()*0.4), s1=Math.min(N,s0+4+Math.floor(sr()*N*0.6)); const col=k===0?streak:(sr()<0.5?mix(base,WHITE,0.5):mix(streak,base,0.5));
+      ctx.strokeStyle=css(col,0.75); ctx.lineWidth=Math.max(0.6,w*(0.1+0.14*sr())); ctx.beginPath(); for(let s=s0;s<=s1;s++){ const p=O[s], q=I[s], x=q[0]+(p[0]-q[0])*f, y=q[1]+(p[1]-q[1])*f; s===s0?ctx.moveTo(x,y):ctx.lineTo(x,y); } ctx.stroke(); }   /* the other colour streaked in, unmixed */
+    ctx.restore();
+    ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle=css(mix(base,[255,253,246],0.55),0.85); ctx.lineWidth=Math.max(0.7,w*0.16); ctx.beginPath(); O.slice(0,Math.round(N*0.8)).forEach((p,m)=>m?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();   /* the ridge along the outer curve */
+    ctx.strokeStyle=css(mix(base,[70,56,40],0.5),0.35); ctx.lineWidth=Math.max(0.6,w*0.08); ctx.beginPath(); I.slice(0,Math.round(N*0.7)).forEach((p,m)=>m?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
+    const e=O[N], ee=I[N], ta=e[2]+dir*Math.PI/2; for(let k=0;k<3;k++){ const f=(k+0.5)/3, sx=ee[0]+(e[0]-ee[0])*f, sy=ee[1]+(e[1]-ee[1])*f, l=w*(0.6+1.2*sr()); ctx.strokeStyle=css(base,0.8); ctx.lineWidth=Math.max(0.5,w*0.1); ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx+Math.cos(ta)*l,sy+Math.sin(ta)*l); ctx.stroke(); } };   /* the dry end in strands */
+  const nC=Math.round(cl(650+1100*dens,650,1700));   /* the paint closes over the canvas, small loops all over, the fuller the piece the more */
+  for(let k=0;k<nC;k++){ const i=Math.min(cn-1,Math.floor((k+0.5)*cn/nC)), e=A.ev[i]||A.ev.find(Boolean); const r=_seedRnd(62400+k,ss,0,0); r(); const f=e?cl((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1):0.5, du=cl((e&&e.dur)||0.5,0.1,2);
+    const x=CW*(-0.05+1.1*r()), y=CH*(-0.05+1.1*r()), R=D*(0.024+0.028*du/2+0.02*r()), span=1.3+3.4*r()*r(), w=D*(0.016+0.016*f+0.006*r()), u=r(), cc=chordCol(i), edgeK=Math.min(x,CW-x,y,CH-y)/D;
+    const toEdge=edgeK<0.07?0.25:0, base=u<0.5-toEdge?mix(WHITE,cc,0.05):u<0.62-toEdge?mix(CREAM,cc,0.1):u<0.82-toEdge?mix(YEL,cc,0.08):mix(cc,WHITE,0.12),   /* his whites and yellows; the colours gather at the edges */ streak=u<0.6?mix(cc,WHITE,0.15):mix(WHITE,cc,0.2);
+    at(i,3,()=>cres(x,y,R,r()*6.28,span,w,base,streak,r()<0.5?1:-1)); }
+  its.sort((a,b)=>a.i-b.i||a.z-b.z); for(const it of its){ if(it.i>=played) break; it.f(); }
+  try{ globalThis.__PK_LISTEN={v:'shimmer2',crescents:nC}; }catch(_){}
+  _setCurE(0.5);
+}
 function _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
-  return _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode);   // What he heard is his Mural now; the walk round the canvas below retired (code kept)
+  return _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode);   // What he heard is his Mural; the walk round the canvas below retired (code kept)   // What he heard is his Mural now; the walk round the canvas below retired (code kept)
   const bw=mode==='bw'; const A0=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A0); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A0.ch?A0.ch.register:0.5, dens=A0.ch?A0.ch.density:0.3;
   const black = !major && loud>0.6, white = loud<0.5 && reg>0.55 && !black;
   try{ globalThis.__PK_LISTEN={black,white,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
@@ -21441,7 +21503,7 @@ const ARTIST_VARIANTS = {
     {ground:'#ded0c4',mark:{drip:.7,splat:.3},size:[.004,.02],alpha:.7,layout:{scatter:.6,flow:.4},density:.7,layers:2,tone:'pastel'},
     {ground:'#e2d6ba',mark:{drip:.7,vband:.15,splat:.15},size:[.006,.04],layout:{flow:.7,scatter:.3},density:.6,layers:2},
     {ground:'#ece8de',mark:{drip:.85,splat:.15},size:[.008,.04],layout:{flow:.7,scatter:.3},density:.8,layers:2},   // Convergence: an all-over web of thick colour skeins, black through them, white last
-    {ground:'#d6c6a6',mark:{drip:1},size:[.012,.05],alpha:.9,layout:{flow:1},density:.3,layers:1,tone:'dark'},
+    {ground:'#ece4cc',mark:{arc:.8,dot:.2},size:[.01,.04],layout:{scatter:1},density:.9,tone:'pastel'},   // Shimmering Substance: small loops of tube paint all over, whites and yellows
     {ground:'#2a2420',mark:{drip:1},size:[.006,.03],layout:{flow:1},density:.6,layers:2,tone:'pastel'},
   ],
   bloom: [   // slot order = solo phases: What he heard, field, Blue Balls, edge, Big Red, Hanging, Matrix, Mandala
