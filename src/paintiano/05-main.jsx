@@ -18187,7 +18187,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     return ()=>{ c=true; }; },[studioHome, myMusicSlots, myImgSlots]);
   const _feedMine = (kind, piece)=> typeof piece==='string' ? ((kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).find(x=>'m'+x.id===piece) || null) : null;
   const feedOwnTtlRef = useRef('');   // the title of your own painting, brought along to For You
-  const _feedTitle = (c)=> c ? (c.piece==='own' ? feedOwnTtlRef.current : typeof c.piece==='string' ? (c.kind==='img' ? ((_feedMine(c.kind, c.piece)||{}).n || '') : pfSongTitle((_feedMine(c.kind, c.piece)||{}).n || '')) : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
+  // a picture of yours named only by its file's code (iPhone's 24381ef5-…, IMG_1234 …) is called "Your picture" — as the Studio hides such names (26 Nov 2026)
+  const _feedImgName = (raw)=>{ const r=String(raw||'').replace(/\.[^.]+$/,'').trim();
+    const junk = !r || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r) || /^[0-9a-f]{16,}$/i.test(r.replace(/[-_]/g,'')) || /^(IMG|DSC|DCIM|PXL|Screenshot|image|photo|Foto|Bild)[-_ ]?[\d_-]+$/i.test(r) || /^\d{6,}$/.test(r.replace(/[-_ ]/g,''));
+    return junk ? _stT('chImg') : r; };
+  const _feedTitle = (c)=> c ? (c.piece==='own' ? feedOwnTtlRef.current : typeof c.piece==='string' ? (c.kind==='img' ? _feedImgName((_feedMine(c.kind, c.piece)||{}).n) : pfSongTitle((_feedMine(c.kind, c.piece)||{}).n || '')) : c.kind==='img' ? ((_FEED_IMGS[c.piece] && _FEED_IMGS[c.piece].t) || '') : _FEED_NAMES[c.piece]) : '';
   const feedImgElRef = useRef({u:null, el:null});   // the picture under a feed picture's scan, for the card
   // the painting on the canvas, small, for a card that is left
   const feedDrawRef = useRef(()=>{});   // the interval draws with today's picture, not the one it started with
@@ -18210,11 +18214,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the look on screen, to keep with a card
   feedDrawRef.current = _feedDraw;
   const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive, look:_stLookNow() });   // look: the whole look (a drawn painter, its variant, a fusion's members and variants) — back and forth it comes back the same
-  // the piece: the first-run card's Liebestraum; otherwise one at random from today's built-in pieces (pictures), not the one on the home card.
-  // Never yours from My Music / My Images (26 Nov 2026: For You is the app's surprise — your own photo turned up there, under its file's code name; 4–26 Nov they were in the draw)
+  // the piece: the first-run card's Liebestraum; otherwise one at random from the built-in pieces and yours (My Music / My Images), not the one on the home card
   const _feedPiece = (kind)=>{ const homeArt=_homeCur(); const hn=String((homeArt && homeArt.t)||'').toLowerCase();
     const same=(n)=>{ const a=String(n||'').toLowerCase(); return !!hn && !!a && (a===hn || a.startsWith(hn) || hn.startsWith(a)); };
-    const c=(kind==='img' ? _FEED_IMGS.map((x,i)=>(same(x && x.t) || !dayImages.includes(i)) ? -1 : i) : _FEED_NAMES.map((x,i)=>(same(x) || !dayPieces.includes(i)) ? -1 : i)).filter(i=>i>=0);   // today's three only
+    const mine=(kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).filter(x=>!same(x.n)).map(x=>'m'+x.id);
+    const c=(kind==='img' ? _FEED_IMGS.map((x,i)=>(same(x && x.t) || !dayImages.includes(i)) ? -1 : i) : _FEED_NAMES.map((x,i)=>(same(x) || !dayPieces.includes(i)) ? -1 : i)).filter(i=>i>=0).concat(mine);   // today's three only
     if(kind!=='img' && !feedDayRef.current && c.includes(pieceOfDay)){ feedDayRef.current='now'; return pieceOfDay; }   // the first swipe of the session: the painting of the day
     return c.length ? c[(Math.random()*c.length)|0] : 0; };
   const feedDayRef = useRef(false);
