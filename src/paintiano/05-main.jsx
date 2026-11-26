@@ -18306,8 +18306,30 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // leaving the feed for a source circle, the menu or the favorites: the home card is on top again
   const _feedExit = ()=>{ if(feedAt<0 && feedLoaded===null) return;
     if(feedAt>=0 && feedCards[feedAt] && feedCards[feedAt].piece==='own' && feedLoaded!==null){ feedPieceRef.current=false; try{ stashMode('image'); }catch(_){} try{ stashOutgoing('music'); }catch(_){} try{ stashMode('music'); }catch(_){} _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; return; }   // your own painting: kept as a draft, the home card shows it
-    // after the first surprise the colour card never comes back: with no painting of yours, the home keeps the surprise you just left
-    if(!homeArt && feedAt>=0 && feedCards[feedAt] && feedLoaded!==null){ try{ const c=feedCards[feedAt], u=(c.kind!=='img' && _canvasBlank(canvasRef.current) && _fullPaintUrl()) || _feedSnap(); if(u){ const isI=c.kind==='img'; const o={ u, src:isI?'image':'music', k:isI?'image':'music', t:_feedTitle(c), l:(()=>{ try{ return _vidLine(); }catch(_){ return ''; } })(), r:typeof c.piece==='string' ? {s:isI?'mi':'mm', id:((_feedMine(c.kind, c.piece)||{}).id)} : isI ? {s:'img', i:c.piece} : {s:'midi', i:c.piece} }; setHomeArt(o); try{ localStorage.setItem('paintiano_home_art', JSON.stringify(o)); }catch(_){} } }catch(_){} } _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
+    // a For You painting never becomes the home card: Home shows only what you painted in the Studio (Nov 2026; before, with no painting of yours, Home kept the surprise you had just left)
+    _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
+  // ✦ Change in For You → Music / Image: For You waits behind the picker, stopped, its painting still on screen —
+  // closed with nothing picked, it comes back on the same painting; something picked opens in the Studio and For You's card goes (the home never takes it)
+  const feedParkRef = useRef(null);
+  const fileDlgRef = useRef(0);   // a file dialog was just opened: For You does not start over it, what is picked there loads as always
+  useEffect(()=>{ const f=(e)=>{ try{ const el=e.target; if(el && el.tagName==='INPUT' && el.type==='file') fileDlgRef.current=Date.now(); }catch(_){} }; document.addEventListener('click', f, true); return ()=>document.removeEventListener('click', f, true); },[]);
+  const _feedPark = ()=>{ try{ const c=feedCards[feedAt]; if(feedAt<0 || !c || c.piece==='own' || feedLoaded===null) return false;
+    const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine();
+    const cards=feedCards.map(x=>x.id===c.id ? {...x, u:u0||x.u, sel:sel0, l:l0, pu:null, dir:'none'} : x);
+    feedParkRef.current={ at:feedAt, cards, open:false };
+    _feedStop(); _feedRest(); setFeedIntro(null); setFeedCards(cards); return true; }catch(_){ feedParkRef.current=null; return false; } };
+  useEffect(()=>{ const P=feedParkRef.current; if(!P) return;
+    if(feedLoaded!==null){ feedParkRef.current=null; return; }   // For You plays again (its card tapped)
+    const _gone=()=>{ feedParkRef.current=null; setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; };
+    if(!studioHome || !forceSetup || working){ _gone(); return; }   // something was picked: it opens in the Studio, For You's card goes
+    if(pickMode || showMine || stChg || navMenuOpen || showMoodMenu){ P.open=true; return; }
+    if(!P.open) return;   // the picker has not opened yet
+    const tm=setTimeout(()=>{ if(feedParkRef.current!==P) return;
+      if(Date.now()-fileDlgRef.current<5000){ P.open=false; return; }   // a file is being picked: its card waits, stopped (a tap plays it)
+      feedParkRef.current=null; const c=P.cards[P.at]; if(!c){ _gone(); return; }
+      feedPlayedRef.current=null; setLhBack(false); setFeedCards(P.cards); setFeedAt(P.at); _feedLoad(c.piece, c.sel || (c.kind==='img' ? {img:true} : {sig:true}), c.kind); _feedFlashNow(); }, 450);
+    return ()=>clearTimeout(tm);
+  },[studioHome, forceSetup, feedLoaded, working, pickMode, showMine, stChg, navMenuOpen, showMoodMenu]);
   const _feedHintBump = ()=>{ setFeedHintN(n=>{ const v=n+1; try{ localStorage.setItem('paintiano_feed_hint_n', String(v)); }catch(_){} return v; }); };
   const _feedFlashNow = ()=>{ setFeedFlash(Date.now()); };
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
@@ -18394,14 +18416,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   useEffect(()=>{
     if(!studioHome || feedAt<0 || feedLoaded===null || feedFly) return;
     const c=feedCards[feedAt]; if(!c || !feedPlayedRef.current || Date.now()-feedPlayedRef.current>10000) return;
-    if(playing || anim || holdPaused || working || !chords.length || disp<chords.length || stChg || stShare || recording || demoReelOn) return;
+    if(playing || anim || holdPaused || working || !chords.length || disp<chords.length || stChg || stShare || showMine || recording || demoReelOn) return;
     const tm=setTimeout(()=>{ if(playingRef.current || holdPausedRef.current) return; feedPlayedRef.current=null; _feedNextPiece(); }, 1400);
     return ()=>clearTimeout(tm);
-  },[studioHome, feedAt, feedLoaded, feedFly, feedCards, playing, anim, holdPaused, working, chords, disp, stChg, stShare, recording, demoReelOn]);
+  },[studioHome, feedAt, feedLoaded, feedFly, feedCards, playing, anim, holdPaused, working, chords, disp, stChg, stShare, showMine, recording, demoReelOn]);
   const _feedTab = (k)=>{ const w=String(t(k==='img' ? 'image' : 'music')||'').replace(/[^\p{L}\s]/gu,'').trim(); return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); };
   const _feedIsLoaded = (c)=> !!c && feedLoaded!==null && (c.kind==='img' ? feedLoaded==='i'+c.piece : feedLoaded===c.piece);
   const _feedGo = (c)=>{ if(_feedIsLoaded(c)){ if(c.sel) _feedApply(c.sel); return; } _feedLoad(c.piece, c.sel || (c.kind==='img' ? {img:true} : {sig:true}), c.kind); };
-  // ↓ during a surprise: back, as on TikTok — the previous surprise; from the first one your own painting (the tap goes on with it)
+  // ↓ during a surprise: back, as on TikTok — the previous surprise; from the first one the quiet first screen
   const _feedBack = (q)=>{   // q: quiet (a finger dragged it)
     if(feedAt<0 || feedFly) return;
     if(feedAt>0){ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(), id0=feedCards[feedAt].id, idP=feedCards[feedAt-1].id;
@@ -18410,13 +18432,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const pv=feedCards[feedAt-1]; setFeedAt(feedAt-1); setFeedIntro(null); _feedGo(pv); if(!q){ _feedFlashNow(); _stBuzz(8); }
       if(holdPausedRef.current && feedLoaded!==null) setTimeout(()=>{ if(holdPausedRef.current && !playingRef.current && handlePauseClickRef.current){ try{ handlePauseClickRef.current(); }catch(_){} } }, 220);
       return; }
-    const c=feedCards[feedAt], mine = c && (c.kind==='img' ? 'image' : 'music'), own = !!mine && (c.piece==='own' || (mine==='image' ? hasImageDraft : hasMusicDraft));   // your own painting brought from the Studio: ↓ puts it on the home card
-    if(!own && !homeArt){ _feedOff(); return; }   // nothing of yours behind the first painting: ↓ goes on back, into the quiet first screen (Nov 2026; before: the card only gave)
-    if(false){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }   // nothing of yours yet: the card just gives
-    // ↑ again brings back these same surprises, from this card (as ↓ then ↑ does between cards) — not a new piece
-    try{ const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine(); const cs=feedCards.filter(x=>x.piece!=='own'); feedResumeRef.current = cs.length ? { kind:_feedKind(), cards:cs.map(x=>x.id===c.id ? {...x, u:u0||x.u, sel:sel0, l:l0, pu:null, dir:'u'} : x) } : null; }catch(_){ feedResumeRef.current=null; }
-    setFeedIntro(null); if(!q){ setFeedFly({k:Date.now(), u:_feedSnap(), t:_feedTitle(c), l:'', dir:'down'}); setTimeout(()=>setFeedFly(null), 340); }
-    _feedExit(); if(own) setHomeSide(mine); if(!q) _stBuzz(8);
+    _feedOff();   // the first painting: ↓ always goes into the quiet first screen (26 Nov 2026; before, with a painting of yours it went onto the home card)
   };
   // THE FEED UNDER THE FINGER (as IG / TikTok): the card follows the finger and the next one comes with it; let go and it lands
   // with the finger's own speed (a spring) — or, not far enough and not thrown, it goes back. How the card you go to is shown:
@@ -20205,18 +20221,18 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               <div className="pf-st-bar" style={{bottom:'calc(env(safe-area-inset-bottom, 0px) + 26px)',zIndex:6}}>
                 {FC && feedUpCue && !feedFly && (<div className="pf-st-tipup rm" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT(viewMode==='image' ? 'tipUpImg' : 'tipUp')}</div>)}
                 {(_mt || _ml || _sTap) && (<div className={'pf-st-meta'+((metaHide || stTip==='chg' || (FC && feedPeek>0))?' hide':'')}>{_isDay && _mt && (<div className="pf-st-meta-d">{_stT('today')}</div>)}{_mt && (FC && _fL ? (<div className="pf-st-meta-t pf-st-take" role="button" tabIndex={0} onClick={(e)=>{ e.stopPropagation(); _feedTake(); }}><span>{_mt}</span></div>) : (<div className="pf-st-meta-t">{_mt}</div>))}{(_ml || _sTap) && (<div className="pf-st-meta-l">{_sTap ? (()=>{ const x=_stT('supTap'); return x.charAt(0).toUpperCase()+x.slice(1); })() : _ml}</div>)}</div>)}
-                <div className="pf-st-acts">
+                {(FC || _smp) && (<div className="pf-st-acts">   {/* Home (your painting waiting) has none: only the painting, its name and the menu — ▶ ♥ ✦ Change and share are in the Studio, a tap away */}
                   <button type="button" className={'pf-st-act pf-st-fav'+(_heartOn?' on':'')+((_fL && stFavPend && !favReadyAny)?' pend':'')+(_hA?'':' off')} disabled={!_hA} aria-hidden={!_hA || undefined} onClick={(e)=>{ e.stopPropagation(); _stBuzz(10); if(!_fL){ _hArm('fav'); return; } if(favReadyAny){ _favToggleAny(); setStFavPend(false); } else { setFeedHeart(Date.now()); setStFavPend(true); } }} aria-label={_heartOn ? _favT('del') : _favT('add')} aria-pressed={!!_heartOn}><svg width="19" height="19" viewBox="0 0 24 24" fill={_heartOn?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
                   {!liveHomeOn && (<span className="pf-st-tipw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-chg'+((stTip==='chg' || btlChgGlow || (zcK===3 && (pfStepEff===0 || zcReplay)))?' glow':'')} onClick={(e)=>{ e.stopPropagation(); _tipDone('chg'); if(FC && _fL){ setStChg('paint'); return; } setStChg('music'); }}   /* a playing painting: yours in the Studio, and the one ✦ Change sheet opens there on Painter (Look · This painting) — never straight into the tray */><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" fill="currentColor"/></svg>{_stT('chg')}</button></span>)}   {/* the first screen has no Change: one thing to do there — tap, and it paints with sound (For You, where Change is). The Studio tab is up at the top */}
                   <button type="button" className={'pf-st-act'+(_hA?'':' off')} disabled={!_hA} aria-hidden={!_hA || undefined} onClick={(e)=>{ e.stopPropagation(); _stBuzz(8); if(!_fL){ _hArm('share'); return; } _feedOpen(); setTimeout(()=>setStShare(true), 380); }} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
-                </div>
+                </div>)}
               </div>); })()}
             {/* ✦ CHANGE at home: the six ways in (Music · Image), the painter of a surprise, Mine */}
             {stChg && (()=>{
               const _on = (k)=> FC ? k===(FC.kind==='img' ? 'image' : 'music') : (!_smp && _canPlay && k===kind);
               // a way with a painting waiting (a dot) goes back to it; otherwise it picks something new
               const _go = (k)=>()=>{ if(SRC[k].off) return; setStChg(null); const on=_on(k), back=!!SRC[k].d && !on;
-                if(FC){ _feedExit(); setTimeout(()=>{ const T=feedTileRef.current; if(T){ if(back) T.t(k); else T.f(k); } }, 120); return; }
+                if(FC){ if(!back && (k==='music' || k==='image') && _feedPark()){ setTimeout(()=>{ const T=feedTileRef.current; if(T) T.f(k); }, 120); return; } _feedExit(); setTimeout(()=>{ const T=feedTileRef.current; if(T){ if(back) T.t(k); else T.f(k); } }, 120); return; }
                 if(back) _tap(k); else _fresh(k); };
               const _row = (k, t1, s1)=>({k, ic:_sv(SRC[k].p, 20), g:SRC[k].g, t:t1, s:s1, ok:!SRC[k].off, dot:!!SRC[k].d && !_on(k), go:_go(k)});
               const _isImg = !!(FC && FC.kind==='img');
@@ -20249,7 +20265,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   </div>
                   <div className="pf-chg-chips">
                     <button type="button" className="pf-chg-chip" aria-pressed={!muted} onClick={()=>{ setMuted(m=>!m); try{ wakeAudio(); }catch(_){} }}>{muted ? _sv(<><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M23 9l-6 6M17 9l6 6"/></>, 15) : _sv(<><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></>, 15)}{muted ? _stT('sndOff') : _stT('sndOn')}</button>   {/* the sound, wherever it was turned off */}
-                    <button type="button" className="pf-chg-chip" onClick={()=>{ setStChg(null); _feedExit(); _mineOpen('all'); }}>{_sv(<><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></>, 15)}{_stT('mine')}</button>
+                    <button type="button" className="pf-chg-chip" onClick={()=>{ setStChg(null); _mineOpen('all'); }}>{_sv(<><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></>, 15)}{_stT('mine')}</button>
                   </div>
                 </div>
               </>); })()}
