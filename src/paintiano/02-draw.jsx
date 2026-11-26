@@ -7463,10 +7463,18 @@ function _dl2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
           items.push({t:(u0+u1)/2,z:1,f:(ctx)=>{ ctx.fillStyle=_dlCss(q,0.95); ctx.beginPath(); ctx.moveTo(x0-w2,y0); ctx.quadraticCurveTo(x0-w2*1.2,(y0+y1)/2,x1-w2*0.8,y1); ctx.quadraticCurveTo(x1,y1-(y0-y1)*0.25,x1+w2*0.8,y1); ctx.quadraticCurveTo(x0+w2*1.2,(y0+y1)/2,x0+w2,y0); ctx.closePath(); ctx.fill(); }}); }
         items.push({t:g.t1,z:2,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream,0.95); ctx.beginPath(); ctx.arc(x+lean,base-hgt-bw2*0.5,bw2*0.42,0,6.2832); ctx.fill(); }}); });
       break; }
-    default: { // Le Premier Disque 1913 — the piece as the first disc: seven rings from the centre outward, each a seventh of the piece, each cut into its four quarters
-      ctx.fillStyle=_dlCss(bw?[60,60,62]:_dlMix(S.col(0.5),[52,48,60],0.8)); ctx.fillRect(0,0,W,H); const R=D*0.47, x=W/2, y=H/2;
-      items.push({t:0,z:0,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream); ctx.beginPath(); ctx.arc(x,y,R*1.02,0,6.2832); ctx.fill(); }});
-      _dl2Disc(items,S,x,y,R,0,1,{q:4,K:7,z:1,rot:0.7854,spin:0});
+    default: { // Le Premier Disque 1913 — the piece as the first disc. (Nov 2026: it was one disc in the middle of a dark ground, seven
+      // equal rings in four quarters, the same on every piece — only the order of its colours changed. Now the disc is larger than the
+      // canvas and the canvas cuts it, as a close view of his tondo: where its centre lies is the piece's; a ring for each passage,
+      // as wide as the passage is loud; the inner rings in his four quarters, the outer cut finer the denser the piece; each ring
+      // turned a little against the last by the passage's register. The corners the disc leaves show the dark ground.)
+      const kk=((ss|0)+_mrPieceKey(chords))|0, rq=_dlR(90500,kk); rq();
+      ctx.fillStyle=_dlCss(bw?[60,60,62]:_dlMix(S.col(0.5),[52,48,60],0.8)); ctx.fillRect(0,0,W,H);
+      const R=Math.max(W,H)*(0.56+0.1*rq()), x=W*(0.5+(rq()-0.5)*0.5), y=H*(0.5+(rq()-0.5)*0.36), dens=A.ch ? A.ch.density : 0.4;
+      items.push({t:0,z:0,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream); ctx.beginPath(); ctx.arc(x,y,R*1.015,0,6.2832); ctx.fill(); }});
+      const G=S.groups(_dlClamp(Math.round(5+4*dens+nP/12),5,10)), n=G.length; let tot=0; const wd=G.map(g=>{ const w=0.6+0.9*g.vmax; tot+=w; return w; }); let acc=0, rot=rq()*6.2832;
+      G.forEach((g,i)=>{ const r0=R*acc/tot; acc+=wd[i]; const r1=R*acc/tot, q=i<2 ? 4 : _dlClamp(4*Math.round(1+dens*2.2*(i/n)+0.3),4,12); rot+=(g.reg-0.5)*1.1+(i%2 ? 6.2832/q/2 : 0);
+        const cols=_dl2Cols(S,g.t0,g.t1,q,i%2===1), rr=rot; items.push({t:g.t0,z:1,f:(ctx)=>_dl2Ring(ctx,x,y,r0,r1,cols,rr)}); });
       break; }
   }
   _dl2Draw(ctx,items,reveal); _setCurE(0.5);
