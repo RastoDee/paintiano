@@ -14621,7 +14621,7 @@ function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     const _pn=_capN(7); const pick=((phaseIndex|0)%_pn+_pn)%_pn;
     if(pick===0){ _mrListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(pick===1){ _mrListenOld(ctx,CW,CH,chords,lim,gc,ss,mode,true); return; }   // Miró's world (the old Constellations below retired, code kept)
-    if(pick===2){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(pick===2){ miroPhaseAzure(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // The Gold of the Azure (Bright sparse, miroPhaseB, retired, code kept)
     if(pick===3){ miroPhaseLate(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // his late canvases (the Blue triptych, miroPhaseBlue, retired, code kept)
     if(pick===4){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(pick===5){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -15155,6 +15155,46 @@ function _miroAccentRGB(slot, chord, gc, isBW, chords){
   const c = gc(m, 100);
   if(!Array.isArray(c)) return fallback[slot] || fallback.RED;
   return [c[0]|0, c[1]|0, c[2]|0];
+}
+
+// ── Miró B: The Gold of the Azure (Nov 2026; in place of Bright sparse, miroPhaseB — the same skeleton of marks on every piece,
+// only its colours changing). His painting of 1967: one field of pure colour brushed thin, a great soft form of another colour
+// scrubbed into it, and round them his black — fine lines that end in dots, stars, a few small patches of colour. Here the field
+// is the piece's own main colour, the great forms its loudest passages in their colours (one, two or three, where the piece puts
+// them), the lines its melody passing from dot to dot. Every piece is another picture, not another tint. It paints with the
+// music: the field, the forms scrubbed in as their passages come, the line growing from dot to dot.
+function miroPhaseAzure(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length; if(!cn) return; const N=Math.max(1,Math.min(cn,lim)), rv=N/cn, D=Math.min(CW,CH);
+  const P=_miroPal(isBW, gc, chords); let sc=null; try{ sc=computeSongCharacter(chords); }catch(_){ sc=null; }
+  const dens=sc ? sc.density : 0.4, cl=(v)=>Math.max(0,Math.min(255,Math.round(v))), sm=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x), blk=`${P.BLK[0]},${P.BLK[1]},${P.BLK[2]}`;
+  const grey=(c)=>{ const v=Math.round(c[0]*0.299+c[1]*0.587+c[2]*0.114); return [v,v,v]; };
+  const top=(j)=>{ const ns=(chords[j] && (chords[j].n||chords[j].notes))||[]; let t=-1, v=0; for(const x of ns){ const m=(x && x.m!==undefined) ? x.m : x, vv=(x && x.v!==undefined) ? x.v : 80; if(+m>t) t=+m; if(vv>v) v=vv; } return [t,v]; };
+  // the piece's colours by how much they sound: the first is the field, the others the forms and patches
+  const cnt=new Array(12).fill(0); for(let j=0;j<cn;j++){ const t=top(j); if(t[0]>=0) cnt[((t[0]%12)+12)%12]+=1+t[1]/127; }
+  const order=[...Array(12).keys()].sort((a,b)=>cnt[b]-cnt[a]).filter(k=>cnt[k]>0); const colPc=(k)=>{ let c=gc(60+k,112); c=Array.isArray(c) ? [c[0]|0,c[1]|0,c[2]|0] : [225,195,25]; return isBW ? grey(c) : c; };
+  const field=colPc(order[0]!==undefined ? order[0] : 0), far=(c)=>Math.abs(c[0]-field[0])+Math.abs(c[1]-field[1])+Math.abs(c[2]-field[2]);
+  const others=order.slice(1).map(colPc).filter(c=>far(c)>150); while(others.length<3) others.push(others.length ? [255-field[0],255-field[1],255-field[2]] : (isBW ? [70,70,70] : [28,65,200]));
+  // the field: brushed thin, lighter and deeper in turns — made of long soft strokes
+  ctx.fillStyle=`rgb(${field})`; ctx.fillRect(0,0,CW,CH); const r=_seedRnd(7501,ss,cn,0); ctx.lineCap='round';
+  for(let i=0;i<150;i++){ const x=r()*CW, y=r()*CH, a=(r()-0.5)*1.2, L=D*(0.2+r()*0.5), k=(r()-0.5)*2, c=field.map(v=>cl(v+k*26)); ctx.strokeStyle=`rgba(${c},${0.10+r()*0.10})`; ctx.lineWidth=D*(0.02+r()*0.06); ctx.beginPath(); ctx.moveTo(x,y); ctx.quadraticCurveTo(x+Math.cos(a)*L*0.5, y+Math.sin(a)*L*0.5+(r()-0.5)*L*0.2, x+Math.cos(a)*L, y+Math.sin(a)*L); ctx.stroke(); }
+  // the great forms: the loudest passages (1–3), each scrubbed in with the brush, soft at its edge
+  const nW=8, win=[]; for(let i=0;i<nW;i++){ const a=Math.floor(i*cn/nW), b=Math.floor((i+1)*cn/nW); let e=0; for(let j=a;j<b;j++) e+=top(j)[1]; win.push({i, a, e:e/Math.max(1,b-a)}); }
+  const nF=dens<0.3 ? 1 : dens<0.55 ? 2 : 3, forms=win.slice().sort((p,q)=>q.e-p.e).slice(0,nF).sort((p,q)=>p.i-q.i), placed=[];
+  forms.forEach((f,fi)=>{ let bx=0, by=0, bd=-1; for(let t=0;t<10;t++){ const qx=(0.22+0.56*r())*CW, qy=(0.16+0.68*r())*CH; let md=1e9; for(const p of placed) md=Math.min(md,Math.hypot(qx-p[0],qy-p[1])); if(!placed.length) md=r(); if(md>bd){ bd=md; bx=qx; by=qy; } } placed.push([bx,by]);
+    const R=D*(fi===0 ? 0.3 : 0.2)*(0.85+0.3*r()), ex=0.75+0.6*r(), rot=r()*3.14, c=others[fi%others.length], t0=0.05+0.8*f.a/cn, k=sm((rv-t0)/0.12), nS=Math.round(260*k), rf=_seedRnd(7511+fi,ss,cn,0);
+    for(let j=0;j<nS;j++){ const an=rf()*6.283, rr=Math.sqrt(rf())*R, lx=Math.cos(an)*rr*ex, ly=Math.sin(an)*rr, x=bx+lx*Math.cos(rot)-ly*Math.sin(rot), y=by+lx*Math.sin(rot)+ly*Math.cos(rot), sa=rot+(rf()-0.5)*1.4, L=R*(0.25+0.5*rf()), sh=(rf()-0.5)*40;
+      ctx.strokeStyle=`rgba(${c.map(v=>cl(v+sh))},${0.32+0.3*rf()})`; ctx.lineWidth=R*(0.06+0.12*rf()); ctx.beginPath(); ctx.moveTo(x-Math.cos(sa)*L/2,y-Math.sin(sa)*L/2); ctx.lineTo(x+Math.cos(sa)*L/2,y+Math.sin(sa)*L/2); ctx.stroke(); } });
+  // the melody: a fine black line passing from dot to dot, in the order the piece plays — its dots as large as their moments are loud
+  const M=Math.max(7, Math.min(16, Math.round(7+9*dens))), pts=[]; const rp=_seedRnd(7521,ss,cn,0);
+  for(let i=0;i<M;i++){ const j=Math.min(cn-1, Math.floor((i+0.5)*cn/M)), t=top(j); let bx=0, by=0, bd=-1; for(let q=0;q<6;q++){ const qx=(0.08+0.84*rp())*CW, qy=(0.07+0.86*rp())*CH; let md=1e9; for(const p of pts) md=Math.min(md,Math.hypot(qx-p.x,qy-p.y)); if(!pts.length) md=rp(); if(md>bd){ bd=md; bx=qx; by=qy; } } pts.push({x:bx, y:by, v:Math.min(1,t[1]/112), t0:0.08+0.88*i/M, pc:((t[0]%12)+12)%12}); }
+  ctx.strokeStyle=`rgb(${blk})`; ctx.lineWidth=Math.max(1.1, D*0.004); ctx.lineJoin='round';
+  for(let i=0;i<M-1;i++){ const a=pts[i], b=pts[i+1], k=sm((rv-a.t0)/(0.88/M)); if(k<=0) break; if(i%3===2) continue;   // the line lifts now and then: several threads, not one tangle
+    const rl=_seedRnd(7531+i,ss,cn,0), mx=(a.x+b.x)/2+(rl()-0.5)*D*0.3, my=(a.y+b.y)/2+(rl()-0.5)*D*0.3; ctx.beginPath(); ctx.moveTo(a.x,a.y); const st=24; for(let q=1;q<=Math.round(st*k);q++){ const u=q/st; ctx.lineTo((1-u)*(1-u)*a.x+2*u*(1-u)*mx+u*u*b.x, (1-u)*(1-u)*a.y+2*u*(1-u)*my+u*u*b.y); } ctx.stroke(); }
+  for(let i=0;i<M;i++){ const p=pts[i], k=sm((rv-p.t0)/0.03); if(k<=0) continue; const rd=_seedRnd(7551+i,ss,cn,0), kind=rd(), R=D*(0.012+0.03*p.v)*k;
+    if(kind<0.2){ ctx.lineWidth=Math.max(1.2,D*0.006); const a0=rd()*3.14, Rs=R*1.5; for(let j=0;j<4;j++){ const an=a0+j*Math.PI/4; ctx.beginPath(); ctx.moveTo(p.x-Math.cos(an)*Rs,p.y-Math.sin(an)*Rs); ctx.lineTo(p.x+Math.cos(an)*Rs,p.y+Math.sin(an)*Rs); ctx.stroke(); } ctx.lineWidth=Math.max(1.1, D*0.004); }   // a star
+    else if(kind<0.42){ const c=colPc(p.pc); ctx.fillStyle=`rgb(${far(c)>120 ? c : others[i%others.length]})`; ctx.beginPath(); ctx.arc(p.x,p.y,R*1.5,0,6.283); ctx.fill(); ctx.stroke(); }   // a small patch of the note's colour, ringed in black
+    else { ctx.fillStyle=`rgb(${blk})`; ctx.beginPath(); ctx.ellipse(p.x,p.y,R,R*(0.85+0.2*rd()),rd()*3,0,6.283); ctx.fill(); } }
+  try{ _setCurE(0.5); }catch(_){}
 }
 
 // ── Miró C: the late canvases (Nov 2026; in place of the Blue triptych, miroPhaseBlue below — a few marks on a flat blue, too thin,
