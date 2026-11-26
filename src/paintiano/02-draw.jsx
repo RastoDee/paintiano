@@ -9636,9 +9636,14 @@ function _hgFigure(x,y,s,kind,dir,rnd,amt){ const P=_HG_POSES[kind]||_HG_POSES.d
   P.legs.forEach(([a1,a2],i)=>{ const o=(i?1:-1)*0.12*s*(P.lean>3?-1:1)*-1; const H=[hip[0]-px*o*dir, hip[1]-py*o*dir]; const k=at(H,m(j(a1)),0.68), f=at(k,m(j(a2)),0.66); limbs.push([H,k,f]); bones.push({a:H,b:k,w:0.36},{a:k,b:f,w:0.36}); });
   return {bones, head:[head[0],head[1],0.35], s, hip, neck, limbs, x, y, dir, kind}; }
 // drawn as he drew: the black line all round, then the colour inside it; chalk: only the line, the inside the ground's
-function _hgDraw(ctx,F,col,ink,ol,inside){ const s=F.s, O=ol*s; ctx.lineCap='round'; ctx.lineJoin='round';
-  const pass=(c,extra)=>{ ctx.strokeStyle=_hgCss(c); for(const b of F.bones){ ctx.lineWidth=b.w*s+extra; ctx.beginPath(); ctx.moveTo(b.a[0],b.a[1]); ctx.lineTo(b.b[0],b.b[1]); ctx.stroke(); }
-    ctx.fillStyle=_hgCss(c); ctx.beginPath(); ctx.arc(F.head[0],F.head[1],F.head[2]*s+extra/2,0,6.2832); ctx.fill(); };
+/* _HG_GROW (Nov 2026): a figure can be drawn part-grown, the way a body sprouts — the trunk rising from the hip, the
+   head swelling on the neck, then the upper arms and thighs reaching out, then the forearms and shins; 1 = whole. Set
+   it just before the call and back to 1 after. */
+let _HG_GROW=1;
+function _hgDraw(ctx,F,col,ink,ol,inside){ const s=F.s, O=ol*s; ctx.lineCap='round'; ctx.lineJoin='round'; const g=_HG_GROW, w=(a,b2)=>Math.max(0,Math.min(1,(g-a)/(b2-a)));
+  const part=(i)=>g>=1?1:i===0?w(0,0.3):(i%2===1)?w(0.3,0.62):w(0.62,0.95), hd=g>=1?1:w(0.24,0.5);   /* bones: the trunk, then (upper, lower) for each arm and leg */
+  const pass=(c,extra)=>{ ctx.strokeStyle=_hgCss(c); F.bones.forEach((b,i)=>{ const f=part(i); if(f<=0) return; ctx.lineWidth=b.w*s+extra; ctx.beginPath(); ctx.moveTo(b.a[0],b.a[1]); ctx.lineTo(b.a[0]+(b.b[0]-b.a[0])*f,b.a[1]+(b.b[1]-b.a[1])*f); ctx.stroke(); });
+    if(hd>0){ ctx.fillStyle=_hgCss(c); ctx.beginPath(); ctx.arc(F.head[0],F.head[1],(F.head[2]*s)*hd+extra/2,0,6.2832); ctx.fill(); } };
   pass(ink,2*O); pass(inside||col,0); }
 // the lines of motion: short thick dashes radiating from a centre over an arc
 function _hgRays(ctx,cx,cy,r0,r1,n,a0,span,ink,w){ ctx.strokeStyle=_hgCss(ink); ctx.lineWidth=w; ctx.lineCap='round'; for(let i=0;i<n;i++){ const a=a0+(span>=6.2?i/n:(n>1?i/(n-1)-0.5:0))*span; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0); ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1); ctx.stroke(); } }
@@ -9664,8 +9669,8 @@ function _hgMarks(ctx,F,ink,O,kind){ const s=F.s; ctx.strokeStyle=_hgCss(ink); c
 // a figure with everything: o={col, ink, O, pat:'dash'|'cross'|'stripe', patInk, hole:groundColour, inside (outline only), motion, tv:screenColour}
 function _hgFig(ctx,kind,x,y,s,dir,rot,seed,o){ const r=_hgR(seed,3); const F=_hgFigure(0,0.25*s,s,kind,dir,r,1); ctx.save(); ctx.translate(x,y); if(rot) ctx.rotate(rot);
   _hgDraw(ctx,F,o.col,o.ink,o.O/s,o.inside);
-  if(o.pat) _hgMarks(ctx,F,o.patInk||o.ink,o.O,o.pat);
-  if(o.hole){ const t=F.bones[0]; const hx=(t.a[0]*0.45+t.b[0]*0.55), hy=(t.a[1]*0.45+t.b[1]*0.55); ctx.fillStyle=_hgCss(o.hole); ctx.strokeStyle=_hgCss(o.ink); ctx.lineWidth=o.O*1.6; ctx.beginPath(); ctx.arc(hx,hy,s*0.15,0,6.2832); ctx.fill(); ctx.stroke(); }
+  if(o.pat && _HG_GROW>=1) _hgMarks(ctx,F,o.patInk||o.ink,o.O,o.pat);
+  if(o.hole && _HG_GROW>=1){ const t=F.bones[0]; const hx=(t.a[0]*0.45+t.b[0]*0.55), hy=(t.a[1]*0.45+t.b[1]*0.55); ctx.fillStyle=_hgCss(o.hole); ctx.strokeStyle=_hgCss(o.ink); ctx.lineWidth=o.O*1.6; ctx.beginPath(); ctx.arc(hx,hy,s*0.15,0,6.2832); ctx.fill(); ctx.stroke(); }
   if(o.tv){ const h=F.head; const w=s*0.95, hh=s*0.72; ctx.fillStyle=_hgCss(o.ink); ctx.beginPath(); ctx.roundRect?ctx.roundRect(h[0]-w/2-o.O,h[1]-hh/2-o.O,w+2*o.O,hh+2*o.O,s*0.1):ctx.rect(h[0]-w/2-o.O,h[1]-hh/2-o.O,w+2*o.O,hh+2*o.O); ctx.fill();
     ctx.fillStyle=_hgCss(o.col||_HG_WHT); ctx.fillRect(h[0]-w/2,h[1]-hh/2,w,hh); ctx.fillStyle=_hgCss(o.tv); ctx.fillRect(h[0]-w*0.36,h[1]-hh*0.32,w*0.6,hh*0.64); ctx.strokeStyle=_hgCss(o.ink); ctx.lineWidth=o.O*1.2; ctx.strokeRect(h[0]-w*0.36,h[1]-hh*0.32,w*0.6,hh*0.64);
     ctx.beginPath(); ctx.moveTo(h[0]-w*0.1,h[1]-hh/2); ctx.lineTo(h[0]-w*0.32,h[1]-hh*1.05); ctx.moveTo(h[0]+w*0.1,h[1]-hh/2); ctx.lineTo(h[0]+w*0.3,h[1]-hh*1.05); ctx.stroke(); }
@@ -9865,9 +9870,9 @@ function haringGiant(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const kind= X.energy>0.7 ? (X.leaps>0.5?'jump':'cheer') : X.energy>0.45 ? (X.leaps>0.5?'run':'dance') : (h.reg>0.55?'wave':'reach');
   const s=Math.min(CH*0.17,CW*0.27), gx=CW*0.52, gy=CH*0.5; const big=_hgOn(st[2]||_HG_PAL[1],bg,isBW); const Ops=_mtOps();
   Ops.at(0,()=>_hgBG(ctx,CW,CH,'split',bg,bg2,_HG_BLK,D,67000+ss));
-  /* Nov 2026: the giant used to stand complete from the first bar. Now he rises from the ground through the first 45 % of the piece (feet first, the head last), and only then do his rays break out, one by one to the end; the finished picture is unchanged */
+  /* Nov 2026: the giant used to stand complete from the first bar. Now he grows through the first 45 % of the piece (the trunk, the head, then the limbs reaching out; his dashes when he stands), and only then do his rays break out, one by one to the end; the finished picture is unchanged */
   const gUp=Math.min(1,reveal/0.45);
-  Ops.at(0.02,()=>{ ctx.save(); ctx.beginPath(); ctx.rect(0,(gy+s*2.6)-gUp*s*5.4,CW,CH); ctx.clip(); _hgFig(ctx,kind,gx,gy,s,(ss&1)?1:-1,0,67100+ss,{col:big,ink:_HG_BLK,O:O*1.3,pat:'dash',hole:X.major?null:bg2,motion:0}); ctx.restore(); });
+  Ops.at(0.02,()=>{ _HG_GROW=gUp; try{ _hgFig(ctx,kind,gx,gy,s,(ss&1)?1:-1,0,67100+ss,{col:big,ink:_HG_BLK,O:O*1.3,pat:'dash',hole:X.major?null:bg2,motion:0}); } finally { _HG_GROW=1; } });
   const E=_kd2Events(A,40).filter(isAcc); const nR=Math.max(9,Math.min(20,E.length+9));
   for(let k=0;k<nR;k++){ const a=-Math.PI/2+(k/nR-0.5)*Math.PI*1.3; Ops.at(0.46+0.54*(k+0.5)/nR, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.3; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(gx+Math.cos(a)*s*2.1,gy-s*0.5+Math.sin(a)*s*2.1); ctx.lineTo(gx+Math.cos(a)*s*2.45,gy-s*0.5+Math.sin(a)*s*2.45); ctx.stroke(); }); }
   const G=_kd2Phrases(A,4); const sm=s*0.32; const c=(i)=>_hgOn(_hgAt(chords,Math.floor(((G[i]||G[0]).a+(G[i]||G[0]).b)/2),gc,isBW),bg,isBW);
@@ -9906,13 +9911,15 @@ function haringPoster(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const Ops=_mtOps(); Ops.at(0,()=>_hgGround(ctx,CW,CH,bg,ss));
   const s=two?Math.min(CH*0.14,CW*0.19):Math.min(CH*0.17,CW*0.3); const figs=two?[[CW*0.3,1],[CW*0.7,-1]]:[[CW*0.5,r()<0.5?1:-1]]; const fy=CH*0.52;
   figs.forEach(([fx,dir],i)=>{ const col=_hgOn(st[1+i]||_hgPastel(_HG_PAL[(i*3+2)%8]),bg,isBW); const k2=two&&i===1?(kind==='hold'?'wave':kind==='jump'?'dance':kind):kind;
-    Ops.at(i*0.12, ()=>_hgPut(ctx,k2,fx,fy,s,dir,0,col,_HG_BLK,O,63100+i+ss,0)); });
+    /* Nov 2026: a figure used to stand complete at once, and then little happened. Now each grows as a body sprouts (trunk, head, limbs reaching out) — the first through the first quarter of the piece, the second through the next — and the rays break out only once the figures stand; the finished poster is unchanged */
+    const f0=two?i*0.25:0, f1=two?f0+0.25:0.4, up=Math.max(0,Math.min(1,(reveal-f0)/(f1-f0)));
+    Ops.at(f0, ()=>{ if(up<=0) return; _HG_GROW=up; try{ _hgPut(ctx,k2,fx,fy,s,dir,0,col,_HG_BLK,O,63100+i+ss,0); } finally { _HG_GROW=1; } }); });
   // the rays: one ring of dashes round each figure, a dash per accent as the piece reaches it
   const E=_kd2Events(A,40).filter(isAcc); const nR=Math.max(8,Math.min(22,E.length+8));
-  figs.forEach(([fx],i)=>{ for(let k=0;k<nR;k++){ const t=(k+0.5)/nR; const a=-Math.PI/2+(k/nR)*6.2832*(two?0.5:1)-(two?Math.PI*0.5:0)+(two&&i?Math.PI:0); const cx=fx, cy=fy-s*0.4; const R0=s*1.85, R1=s*(2.1+0.25*X.energy);
+  figs.forEach(([fx],i)=>{ for(let k=0;k<nR;k++){ const t0r=two?0.5:0.4, t=t0r+(1-t0r)*(k+0.5)/nR; const a=-Math.PI/2+(k/nR)*6.2832*(two?0.5:1)-(two?Math.PI*0.5:0)+(two&&i?Math.PI:0); const cx=fx, cy=fy-s*0.4; const R0=s*1.85, R1=s*(2.1+0.25*X.energy);
     Ops.at(t, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.25; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*R0,cy+Math.sin(a)*R0*1.08); ctx.lineTo(cx+Math.cos(a)*R1,cy+Math.sin(a)*R1*1.08); ctx.stroke(); }); } });
   // the little marks of motion off the hands and feet, quicker pieces more
-  figs.forEach(([fx,dir],i)=>{ Ops.at(0.5+i*0.1, ()=>{ const F=_hgFigure(fx,fy+0.25*s,s,two&&i===1?(kind==='hold'?'wave':kind==='jump'?'dance':kind):kind,dir,_hgR(63100+i+ss,3),1); _hgMotion(ctx,F,_HG_BLK,O*1.1,0.3+0.6*X.pace,_hgR(63200+i,ss)); }); });
+  figs.forEach(([fx,dir],i)=>{ Ops.at(0.62+i*0.1, ()=>{ const F=_hgFigure(fx,fy+0.25*s,s,two&&i===1?(kind==='hold'?'wave':kind==='jump'?'dance':kind):kind,dir,_hgR(63100+i+ss,3),1); _hgMotion(ctx,F,_HG_BLK,O*1.1,0.3+0.6*X.pace,_hgR(63200+i,ss)); }); });
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'poster',kind,two}; }catch(_){} _setCurE(0.5);
 }
 
