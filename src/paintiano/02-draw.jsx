@@ -1412,14 +1412,16 @@ function _rkBlackGrey(ctx,CW,CH,chords,lim,gc,ss,mode){
   const spanOf=(P)=>P.length?{t0:P[0].t0,t1:P[P.length-1].t1,t:(P[0].t0+P[P.length-1].t1)/2,dur:P.reduce((s,p)=>s+p.n,0)/cn,reg:A.reg(P.reduce((s,p)=>s+p.top,0)/P.length),v:P.reduce((s,p)=>s+p.v,0)/P.length,vmax:Math.max(...P.map(p=>p.vmax)),n:P.reduce((s,p)=>s+p.n,0)}:S.span(0,1);
   const gT=spanOf(hi.length?hi:A.phrases), gB=spanOf(lo.length?lo:A.phrases);
   const base=under<0.34?[44,30,22]:under<0.67?[22,26,40]:[34,24,38];   /* brown, blue or violet under the black */
-  const dark=bw?[24,24,24]:_rkMix(_rkMix(_rkTone(S.avg(0,1),0.04,bw),base,0.55),[14,13,14],0.25), grey=bw?[150,150,150]:_rkMix(_rkTone(S.avg(0,1),0.5,bw),_rkMix([150,146,134],[140,146,158],warm),0.72);
+  const dark=bw?[24,24,24]:_rkMix(_rkMix(_rkTone(S.avg(0,1),0.04,bw),base,0.7),[14,13,14],0.35), grey=bw?[150,150,150]:_rkMix(_rkTone(S.avg(0,1),0.5,bw),_rkMix([156,150,136],[142,146,154],warm),0.87);   /* the series is nearly without colour: the piece only breathes on the grey */
   list.push({id:list.length,t:gT.t0,x:m,y:m,w:CW-2*m,h:hy-m,col:dark,a:0.95,feather:D*0.002,k:1,ss}); list.push({id:list.length,t:gB.t0,x:m,y:hy,w:CW-2*m,h:CH-m-hy,col:grey,a:0.95,feather:D*0.002,k:1,ss});
-  _rk2Field(list,S,m,m,CW-2*m,hy-m,gT,0.05,{D,ss,feather:D*0.004,K:9,core:0,streaks:4,pull:[dark,0.85],halo:false});
-  _rk2Field(list,S,m,hy,CW-2*m,CH-m-hy,gB,0.5,{D,ss,feather:D*0.004,K:9,core:0,streaks:4,pull:[grey,0.9],halo:false});
+  _rk2Field(list,S,m,m,CW-2*m,hy-m,gT,0.05,{D,ss,feather:D*0.004,K:9,core:0,streaks:4,pull:[dark,0.85],halo:false,alpha:0.4});
+  _rk2Field(list,S,m,hy,CW-2*m,CH-m-hy,gB,0.5,{D,ss,feather:D*0.004,K:9,core:0,streaks:4,pull:[grey,0.9],halo:false,alpha:0.35});
   { const W=CW-2*m, LH=CH-m-hy, UH=hy-m; const P=A.phrases, vs=P.map(q=>q.v).slice().sort((a,c)=>a-c), vMid=vs[vs.length>>1]||0.5, st=Math.max(1,Math.ceil(P.length/26));
-    for(let i=0;i<P.length;i+=st){ const q=P[i], r=_rkR(64750+i,ss); r(); const rg=A.reg(q.top), up=q.v>=vMid, ins=D*0.05, w=(W-2*ins)*(0.45+0.55*r()), x=m+ins+(W-2*ins-w)*r();
-      const h=LH*(0.08+0.16*r()), y=hy+ins*0.6+(LH-h-ins*1.2)*_rkClamp(1-rg+(r()-0.5)*0.3,0,1); list.push({id:list.length,t:q.t0+0.002,x,y,w,h,col:bw?(up?[190,190,190]:[120,120,120]):_rkMix(grey,up?[226,222,214]:dark,up?0.5:0.35),a:0.12+0.16*Math.abs(q.v-vMid)*2,feather:D*0.045,k:0.5,ss});
-      const h2=UH*(0.14+0.24*r()), y2=m+ins*0.6+(UH-h2-ins*1.2)*_rkClamp(1-rg+(r()-0.5)*0.3,0,1); list.push({id:list.length,t:q.t0+0.003,x:m+ins+(W-2*ins-w)*r(),y:y2,w,h:h2,col:bw?[50,50,50]:_rkMix(dark,_rkTone(S.avg(q.t0,q.t1),0.2,bw),0.3),a:0.05+0.07*q.v,feather:D*0.06,k:0.5,ss}); }
+    for(let i=0;i<P.length;i+=st){ const q=P[i], r=_rkR(64750+i,ss); r(); const rg=A.reg(q.top), up=q.v>=vMid, ins=D*0.1, slope=(r()-0.5)*0.3, nb=4+Math.floor(r()*4), x0=m+ins+(W-2*ins)*0.5*r(), len=(W-2*ins)*(0.35+0.5*r());
+      /* a passage is one loose sweep of the brush: a run of soft clouds on a slant, lighter where the piece is loud */
+      const yc=hy+ins+(LH-2*ins)*_rkClamp(1-rg+(r()-0.5)*0.4,0,1), cl=bw?(up?[190,190,190]:[120,120,120]):_rkMix(grey,up?[226,222,214]:dark,up?0.5:0.3), al=0.1+0.14*Math.abs(q.v-vMid)*2;
+      for(let k=0;k<nb;k++){ const f=k/(nb-1), w=len/nb*(1.3+0.8*r()), h=LH*(0.07+0.1*r()), cx=Math.min(m+W-ins-w/2,x0+len*f), cy=_rkClamp(yc+len*slope*(f-0.5)+(r()-0.5)*h*0.8,hy+ins*0.5+h/2,CH-m-ins*0.5-h/2); list.push({id:list.length,t:q.t0+(q.t1-q.t0)*f*0.8+0.002,x:cx-w/2,y:cy-h/2,w,h,col:cl,a:al*(0.7+0.5*r()),feather:D*0.045,k:0.35,ss}); }
+      if(!(i%(st*2))){ const w=(W-2*ins)*(0.4+0.4*r()), h2=UH*(0.2+0.25*r()); list.push({id:list.length,t:q.t0+0.003,x:m+ins+(W-2*ins-w)*r(),y:m+ins*0.6+(UH-h2-ins*1.2)*r(),w,h:h2,col:bw?[46,46,46]:_rkMix(dark,base,0.5),a:0.06+0.06*q.v,feather:D*0.07,k:0.4,ss}); } }
     list.push({id:list.length,t:Math.max(gT.t0,gB.t0)+0.01,x:m+D*0.03,y:hy+D*0.012,w:W-D*0.06,h:LH*0.09,col:bw?[196,196,196]:_rkMix(grey,[232,228,220],0.5),a:0.28,feather:D*0.025,k:0.5,ss}); }   /* the light that lies along the horizon */
   _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
 }
