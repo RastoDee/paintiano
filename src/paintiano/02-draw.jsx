@@ -1404,14 +1404,23 @@ function _rkChapel(ctx,CW,CH,chords,lim,gc,ss,mode){
 function _rkBlackGrey(ctx,CW,CH,chords,lim,gc,ss,mode){
   const S=_rk2Setup(chords,gc,mode), cn=S.cn, bw=S.isBW, D=Math.min(CW,CH), reveal=Math.max(1,Math.min(cn,lim))/cn, list=[], A=S.A;
   ctx.fillStyle=bw?'rgb(238,238,236)':'rgb(238,236,230)'; ctx.fillRect(0,0,CW,CH);
-  const m=CW*0.07, hy=CH*_rkClamp(0.42+0.22*(1-S.regAll),0.38,0.66);
+  /* the piece's own canvas of the series (Nov 2026): the horizon anywhere from a third to nearly three quarters down, the
+     white margin narrower or wider, the dark a black gone brown, blue or violet, the grey warm or cool — and the lower
+     field brushed passage by passage, lighter where the piece is loud, so its weather is the piece's */
+  const pr=_seedRnd(64700,_mrPieceKey(chords),0,0); pr(); const m=CW*(0.05+0.045*pr()), hy=CH*_rkClamp(0.3+0.42*(0.25*(1-S.regAll)+0.75*pr()),0.3,0.72), warm=pr(), under=pr();
   const hi=A.phrases.filter(p=>A.reg(p.top)>=S.regAll), lo=A.phrases.filter(p=>A.reg(p.top)<S.regAll);
   const spanOf=(P)=>P.length?{t0:P[0].t0,t1:P[P.length-1].t1,t:(P[0].t0+P[P.length-1].t1)/2,dur:P.reduce((s,p)=>s+p.n,0)/cn,reg:A.reg(P.reduce((s,p)=>s+p.top,0)/P.length),v:P.reduce((s,p)=>s+p.v,0)/P.length,vmax:Math.max(...P.map(p=>p.vmax)),n:P.reduce((s,p)=>s+p.n,0)}:S.span(0,1);
   const gT=spanOf(hi.length?hi:A.phrases), gB=spanOf(lo.length?lo:A.phrases);
-  const dark=bw?[24,24,24]:_rkTone(S.avg(0,1),0.04,bw), grey=bw?[150,150,150]:_rkMix(_rkTone(S.avg(0,1),0.5,bw),[146,148,152],0.86);
+  const base=under<0.34?[44,30,22]:under<0.67?[22,26,40]:[34,24,38];   /* brown, blue or violet under the black */
+  const dark=bw?[24,24,24]:_rkMix(_rkMix(_rkTone(S.avg(0,1),0.04,bw),base,0.55),[14,13,14],0.25), grey=bw?[150,150,150]:_rkMix(_rkTone(S.avg(0,1),0.5,bw),_rkMix([150,146,134],[140,146,158],warm),0.72);
   list.push({id:list.length,t:gT.t0,x:m,y:m,w:CW-2*m,h:hy-m,col:dark,a:0.95,feather:D*0.002,k:1,ss}); list.push({id:list.length,t:gB.t0,x:m,y:hy,w:CW-2*m,h:CH-m-hy,col:grey,a:0.95,feather:D*0.002,k:1,ss});
   _rk2Field(list,S,m,m,CW-2*m,hy-m,gT,0.05,{D,ss,feather:D*0.004,K:9,core:0,streaks:4,pull:[dark,0.85],halo:false});
   _rk2Field(list,S,m,hy,CW-2*m,CH-m-hy,gB,0.5,{D,ss,feather:D*0.004,K:9,core:0,streaks:4,pull:[grey,0.9],halo:false});
+  { const W=CW-2*m, LH=CH-m-hy, UH=hy-m; const P=A.phrases, vs=P.map(q=>q.v).slice().sort((a,c)=>a-c), vMid=vs[vs.length>>1]||0.5, st=Math.max(1,Math.ceil(P.length/26));
+    for(let i=0;i<P.length;i+=st){ const q=P[i], r=_rkR(64750+i,ss); r(); const rg=A.reg(q.top), up=q.v>=vMid, ins=D*0.05, w=(W-2*ins)*(0.45+0.55*r()), x=m+ins+(W-2*ins-w)*r();
+      const h=LH*(0.08+0.16*r()), y=hy+ins*0.6+(LH-h-ins*1.2)*_rkClamp(1-rg+(r()-0.5)*0.3,0,1); list.push({id:list.length,t:q.t0+0.002,x,y,w,h,col:bw?(up?[190,190,190]:[120,120,120]):_rkMix(grey,up?[226,222,214]:dark,up?0.5:0.35),a:0.12+0.16*Math.abs(q.v-vMid)*2,feather:D*0.045,k:0.5,ss});
+      const h2=UH*(0.14+0.24*r()), y2=m+ins*0.6+(UH-h2-ins*1.2)*_rkClamp(1-rg+(r()-0.5)*0.3,0,1); list.push({id:list.length,t:q.t0+0.003,x:m+ins+(W-2*ins-w)*r(),y:y2,w,h:h2,col:bw?[50,50,50]:_rkMix(dark,_rkTone(S.avg(q.t0,q.t1),0.2,bw),0.3),a:0.05+0.07*q.v,feather:D*0.06,k:0.5,ss}); }
+    list.push({id:list.length,t:Math.max(gT.t0,gB.t0)+0.01,x:m+D*0.03,y:hy+D*0.012,w:W-D*0.06,h:LH*0.09,col:bw?[196,196,196]:_rkMix(grey,[232,228,220],0.5),a:0.28,feather:D*0.025,k:0.5,ss}); }   /* the light that lies along the horizon */
   _rkDraw(ctx,list,reveal,ss); _setCurE(0.5);
 }
 // ── VARIANT: 0 No. 61 (Rust and Blue) 1953 · 1 Orange and Yellow 1956 · 2 White Center 1950 ·
