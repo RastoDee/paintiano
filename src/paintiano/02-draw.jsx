@@ -2740,9 +2740,10 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // 3 Blue Poles · 4 Convergence · 5 Number 14 (black pouring) — the _pol2 skeins, read
   // from the music · 6 Sparse (the open web below) · 7 White Light. Free: 0 and 1.
   {
-    // VARIANT: 0 What he heard (_pkListen, generative) · 1 Classic drip · 2 Autumn Rhythm · 3 Lavender Mist · 4 Blue Poles · 5 Convergence · 6 Shimmering Substance (Nov 2026; Number 14 retired, code kept) · 7 White Light (Sparse retired, approved). Free: 0 and 1.
+    // VARIANT: 0 What he heard (_pkListen, generative) · 1 Classic drip · 2 Autumn Rhythm · 3 The Deep (Nov 2026; Lavender Mist retired, code kept) · 4 Blue Poles · 5 Convergence · 6 Shimmering Substance (Nov 2026; Number 14 retired, code kept) · 7 White Light (Sparse retired, approved). Free: 0 and 1.
     const _pn=_capN(8); const _ppick0=((phaseIndex|0)%_pn+_pn)%_pn;
     if(_ppick0===0){ _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(_ppick0===3){ pollockDeep(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // The Deep (Nov 2026; Lavender Mist retired, code kept)
     if(_ppick0===6){ _pkShimmer(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // Shimmering Substance (Nov 2026; Number 14 retired, code kept)
     const _ppick=[0,1,2,3,4,5,7][_ppick0-1];
     if(_ppick>=1&&_ppick<=5){ _pol2Paint(_ppick,ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -3409,6 +3410,55 @@ function _pkShimmer(ctx,CW,CH,chords,lim,gc,ss,mode){
     at(i,3,()=>cres(x,y,R,r()*6.28,span,w,base,streak,r()<0.5?1:-1)); }
   its.sort((a,b)=>a.i-b.i||a.z-b.z); for(const it of its){ if(it.i>=played) break; it.f(); }
   try{ globalThis.__PK_LISTEN={v:'shimmer2',crescents:nC}; }catch(_){}
+  _setCurE(0.5);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// POLLOCK — THE DEEP (1953): not a web at all. A field of thick white and grey brushed and knifed over the whole canvas,
+// and down its middle a black chasm opening, the white folding over its lips. Here the chasm is the piece's darkness:
+// it opens from the top down as the piece goes, as wide at each moment as the music is low and quiet and minor there;
+// the white is every note laid around it, as heavy and as white as the note is loud, a quiet one greyer, the piece's
+// colours only a breath in it; the white spills over the chasm's edges where the music climbs back.
+// ═══════════════════════════════════════════════════════════════════════════
+function pollockDeep(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const bw=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH); if(!cn) return;
+  const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), dens=A.ch?A.ch.density:0.4, cl=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+  const WHITE=[246,244,236], GREY=[178,176,172], INK=[16,15,18];
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  // the darkness over time: low, quiet, minor — smoothed
+  const K=36, dk=new Array(K).fill(0), wt=new Array(K).fill(0); for(let i=0;i<cn;i++){ const e=A.ev[i]; if(!e) continue; const k=Math.min(K-1,Math.floor(i/cn*K)); dk[k]+=(1-A.reg(e.top))*0.6+(1-cl((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1))*0.4; wt[k]++; }
+  for(let k=0;k<K;k++) dk[k]=wt[k]?dk[k]/wt[k]:(k?dk[k-1]:0.5); for(let p=0;p<3;p++) for(let k=1;k<K-1;k++) dk[k]=(dk[k-1]+dk[k]*2+dk[k+1])/4;
+  let mn=1,mx=0; dk.forEach(v=>{ if(v<mn) mn=v; if(v>mx) mx=v; }); const dark=(u)=>{ const x=cl(u,0,1)*(K-1), k=Math.min(K-2,Math.floor(x)); const v=dk[k]+(dk[k+1]-dk[k])*(x-k); return mx>mn+0.02?(v-mn)/(mx-mn):0.5; };
+  const gloom=cl(0.35+0.5*(X.major?0:1)*0.6+0.3*(1-(A.ch?A.ch.register:0.5)),0.3,1);   // how far the chasm opens at all
+  const pr=_seedRnd(63500,_mrPieceKey(chords),0,0); pr(); const cx0=CW*(0.44+0.12*pr()), lean=(pr()-0.5)*0.2, ph=[pr()*6.28,pr()*6.28,pr()*6.28,pr()*6.28];
+  const CREAM=bw?[234,234,230]:[238,234,218], BLUEG=bw?[176,178,180]:[168,182,190], YEL=bw?[200,200,196]:[214,198,92];
+  const its=[]; const at=(t,z,f)=>its.push({t,z,f});
+  const soft=(x,y,rx,ry,rot,c,a)=>{ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.scale(1,ry/rx); const g=ctx.createRadialGradient(0,0,0,0,0,rx); g.addColorStop(0,css(c,a)); g.addColorStop(0.7,css(c,a*0.6)); g.addColorStop(1,css(c,0)); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,rx,0,6.2832); ctx.fill(); ctx.restore(); };
+  const blob=(x,y,R,c,a,seed)=>{ const r=_seedRnd(seed,ss,0,0); r(); ctx.fillStyle=css(c,a); ctx.beginPath(); for(let s=0;s<12;s++){ const an=s/12*6.2832, rr=R*(0.6+0.6*r()); s?ctx.lineTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr*0.8):ctx.moveTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr*0.8); } ctx.closePath(); ctx.fill(); };
+  // the white ground, laid soft and thick: cream, mottled whiter and duller, from the first bar
+  ctx.fillStyle=css(CREAM); ctx.fillRect(0,0,CW,CH);
+  { const r=_seedRnd(63550,ss,0,0); r(); for(let k=0;k<70;k++){ const x=CW*r(), y=CH*r(), R=D*(0.08+0.18*r()); soft(x,y,R,R*(0.5+0.5*r()),r()*3.14,r()<0.6?[252,250,244]:[222,218,200],0.35); } }
+  // the chasm: opening from the top down as the piece goes, as wide as the music is dark there; its lips ragged
+  const NR=70, y0=CH*0.05, y1=CH*0.97, rows=[];
+  for(let k=0;k<=NR;k++){ const u=k/NR, y=y0+(y1-y0)*u, env=Math.pow(Math.sin(Math.PI*cl(0.02+u*1.0,0,1)),0.5), w=Math.min(CW*0.6,D*(0.05+0.5*gloom*(0.25+0.75*dark(u))))*env, c=cx0+CW*lean*(u-0.5)+Math.sin(u*4.2+ph[0])*CW*0.04;
+    const nl=1+0.35*Math.sin(u*23+ph[1])+0.2*Math.sin(u*57+ph[2]), nr=1+0.35*Math.sin(u*19+ph[3])+0.2*Math.sin(u*61+ph[1]); rows.push({u,y,c,w,l:c-w*0.5*nl,rr:c+w*0.5*nr}); }
+  for(let k=0;k<NR;k++){ const a=rows[k], b2=rows[k+1]; at(a.u,1,()=>{ ctx.fillStyle=css(INK); ctx.beginPath(); ctx.moveTo(a.l,a.y); ctx.lineTo(a.rr,a.y); ctx.lineTo(b2.rr,b2.y+1.5); ctx.lineTo(b2.l,b2.y+1.5); ctx.closePath(); ctx.fill(); });
+    // its lips scumbled: the white dragged dry over the black, a grey haze where it is thin, a few dry strands
+    const r=_seedRnd(63650+k,ss,0,0); r(); for(let s=0;s<2;s++){ const side=s?1:-1, ex=side<0?a.l:a.rr, x=ex+side*a.w*(0.02+0.12*r()), y=(a.y+b2.y)/2, c=mix(BLUEG,[96,100,108],0.5*r());
+      at(a.u+0.001,2,()=>{ soft(x,y,D*(0.03+0.03*r()),D*(0.05+0.04*r()),(r()-0.5)*0.6,c,0.42); ctx.strokeStyle=css(mix(CREAM,[140,140,140],0.35*r()),0.45); ctx.lineCap='round'; ctx.lineWidth=Math.max(0.6,D*0.002); for(let q=0;q<3;q++){ const yy=y+(r()-0.5)*D*0.03, L=D*(0.03+0.05*r()); ctx.beginPath(); ctx.moveTo(ex-side*L*0.6,yy); ctx.quadraticCurveTo(ex,yy+(r()-0.5)*D*0.02,ex+side*L*0.5,yy+(r()-0.5)*D*0.02); ctx.stroke(); } }); } }
+  // the white coming back into it: islands where the piece is loud, laid as the passage sounds
+  const ev=_kd2Events(A,Math.round(cl(60+120*dens,60,180)));
+  ev.filter(e=>e.v>=vHi*0.85).slice(0,9).forEach((e,k)=>{ const kk=cl(Math.round(e.t*NR),0,NR), rw=rows[kk]; if(rw.w<D*0.05) return; const r=_seedRnd(63750+k,ss,0,0); r(); const x=rw.c+(r()-0.5)*rw.w*0.5, R=Math.min(rw.w*0.35,D*(0.025+0.035*r()));
+    at(e.t+0.002,3,()=>{ blob(x,rw.y,R,[246,244,236],0.92,63760+k); soft(x,rw.y,R*1.8,R*1.4,0,[200,204,208],0.25); }); });
+  // the white poured over the black: thin lines that wander and fork, one at every high note
+  ev.filter(e=>A.reg(e.top)>0.45).forEach((e,k)=>{ const r=_seedRnd(63800+k,ss,0,0); r(); const kk=cl(Math.round(e.t*NR),0,NR), rw=rows[kk]; let x=rw.c+(r()-0.5)*rw.w*0.6, y=rw.y, an=r()*6.28; const pts=[[x,y]], n=8+Math.floor(r()*12), st=D*(0.012+0.012*r());
+    for(let s=0;s<n;s++){ an+=(r()-0.5)*1.4; x+=Math.cos(an)*st; y+=Math.sin(an)*st; pts.push([x,y]); }
+    at(e.t+0.003,4,()=>{ ctx.strokeStyle=css([244,242,234],0.9); ctx.lineWidth=Math.max(0.7,D*(0.0025+0.003*r())); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); pts.forEach((p,m)=>m?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); }); });
+  // across the white: grey-blue shadows and small flecks of yellow at the accents
+  ev.forEach((e,k)=>{ const r=_seedRnd(63900+k,ss,0,0); r(); let x=CW*r(), y=CH*r(); const kk=cl(Math.round((y-y0)/(y1-y0)*NR),0,NR); if(x>rows[kk].l-D*0.04&&x<rows[kk].rr+D*0.04) return;
+    if(e.acc&&r()<0.55){ const c=bw?YEL:mix(YEL,_picChord(chords,e.i,gc,bw).rgb,0.15), R=D*(0.012+0.016*r()); at(e.t,3,()=>{ soft(x,y,R*2.2,R*1.6,r()*3.14,c,0.3); blob(x,y,R,c,0.45,63950+k); }); }
+    else if(r()<0.5) at(e.t,0,()=>soft(x,y,D*(0.08+0.1*r()),D*(0.04+0.06*r()),r()*3.14,BLUEG,0.14)); });
+  its.sort((a,b)=>a.t-b.t||a.z-b.z); const reveal=played/cn; for(const it of its){ if(it.t>reveal+1e-9 && it.t>0) break; it.f(); }
+  try{ globalThis.__PK_DEEP={gloom}; }catch(_){}
   _setCurE(0.5);
 }
 function _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
@@ -19146,7 +19196,7 @@ const ARTIST_VARIANTS = {
     {ground:'#e2d2ac',mark:{vband:.4,arc:.35,drip:.25},size:[.03,.12],layout:{stack:.6,grid:.4},density:.6},   // What he heard: his Mural, black figures rising through friezes over swathes of colour
     {mark:{drip:.75,splat:.25},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.6,layers:2},
     {ground:'#e2d6ba',mark:{drip:.8,splat:.2},size:[.006,.03],layout:{flow:.8,scatter:.2},density:.7,layers:2},
-    {ground:'#ded0c4',mark:{drip:.7,splat:.3},size:[.004,.02],alpha:.7,layout:{scatter:.6,flow:.4},density:.7,layers:2,tone:'pastel'},
+    {ground:'#c8c6c2',mark:{brush:.85,vband:.15},size:[.03,.1],layout:{scatter:1},density:.8,tone:'pastel'},   // The Deep: white knifed over grey, a black chasm down the middle
     {ground:'#e2d6ba',mark:{drip:.7,vband:.15,splat:.15},size:[.006,.04],layout:{flow:.7,scatter:.3},density:.6,layers:2},
     {ground:'#ece8de',mark:{drip:.85,splat:.15},size:[.008,.04],layout:{flow:.7,scatter:.3},density:.8,layers:2},   // Convergence: an all-over web of thick colour skeins, black through them, white last
     {ground:'#ece4cc',mark:{arc:.8,dot:.2},size:[.01,.04],layout:{scatter:1},density:.9,tone:'pastel'},   // Shimmering Substance: small loops of tube paint all over, whites and yellows
