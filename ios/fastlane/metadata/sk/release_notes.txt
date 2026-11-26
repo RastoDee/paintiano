@@ -1,5 +1,3 @@
-Novinky v 1.3
-• Celá kniha v appke: všetkých 14 kapitol Knihy o zlatej hudbe aj s obrazmi — pre Pro a Pro AI.
-• Podrž prst na fúzii: uvidíš, ktorý maliar dáva čo.
-• Tvoje vlastné skladby majú poriadne názvy: Názov — Interpret.
-• Opravy a vylepšenia.
+Novinky vo verzii 1.3.1
+• Nové minútové video v Sprievodcovi ukáže, ako Paintiano funguje.
+• Opravené: výber jazyka opäť vyzerá správne a úvodná maľba sa maľuje vo svojej skutočnej veľkosti.

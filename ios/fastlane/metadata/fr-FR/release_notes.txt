@@ -1,5 +1,3 @@
-Nouveautés de la 1.3
-• Le livre entier dans l’app : les 14 chapitres du Livre de la musique dorée, avec images — pour Pro et Pro AI.
-• Appui long sur une fusion : vois quel peintre apporte quoi.
-• Tes propres morceaux portent enfin un vrai nom : Titre — Artiste.
-• Corrections et améliorations.
+Nouveautés de la 1.3.1
+• Une nouvelle vidéo d’une minute dans le Guide montre comment fonctionne Paintiano.
+• Corrigé : le choix de la langue s’affiche de nouveau correctement, et la première peinture est peinte à sa vraie taille.

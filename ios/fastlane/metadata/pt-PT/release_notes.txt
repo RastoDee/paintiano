@@ -1,5 +1,3 @@
-Novidades da 1.3
-• O livro inteiro na app: os 14 capítulos de O livro da música dourada, com imagens — para Pro e Pro AI.
-• Mantém premida uma fusão: vê que pintor dá o quê.
-• As tuas próprias músicas têm finalmente um nome a sério: Título — Artista.
-• Correções e melhorias.
+Novidades na 1.3.1
+• Um novo vídeo de um minuto no Guia mostra como funciona o Paintiano.
+• Corrigido: a escolha do idioma volta a aparecer corretamente e a primeira pintura é pintada no seu tamanho real.

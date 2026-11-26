@@ -1,5 +1,3 @@
-Neu in 1.3
-• Das ganze Buch in der App: alle 14 Kapitel von „Das Buch der goldenen Musik“, mit Bildern — für Pro und Pro AI.
-• Eine Fusion gedrückt halten: sehen, welcher Maler was beisteuert.
-• Deine eigenen Songs heißen jetzt richtig: Titel — Interpret.
-• Korrekturen und Feinschliff.
+Neu in 1.3.1
+• Ein neues einminütiges Video in der Anleitung zeigt, wie Paintiano funktioniert.
+• Behoben: Die Sprachauswahl sieht wieder richtig aus, und das erste Bild wird in seiner richtigen Größe gemalt.
