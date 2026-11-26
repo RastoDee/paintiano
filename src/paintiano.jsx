@@ -5233,7 +5233,11 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
      piece now pours as many skeins as leave the canvas breathing at the end (some 55 for a quiet piece, 130 for a
      torrent), so the first bars are a few lines on bare canvas and the web closes with the music. */
   const _passCharMul0 = 0.46 + 1.08*_charDrive;                            // 0.46..1.54 (amplified ×1.8)
-  const _passCharMul = _passCharMul0 * Math.min(1, (55 + 75*_charDrive) / Math.max(1, passMaxFull*_passCharMul0));
+  /* and how full the web is follows how full the music is: a sparse piece (Gymnopédie) a score of skeins on open
+     canvas, thinner, with fewer specks and pools; a dense one (the Fifth, Prometheus) the closed web as before */
+  const _pDens = _ch ? _ch.density : 0.5;
+  const _passCharMul = _passCharMul0 * Math.min(1, Math.min(55 + 75*_charDrive, 14 + 130*Math.pow(_pDens,1.3)) / Math.max(1, passMaxFull*_passCharMul0));
+  const _pSplat = Math.min(1, 0.3 + 1.1*_pDens);
   const passCount = Math.max(4, Math.round(
     (pollVariant === 1 ? passCount0 * 0.55 : passCount0) * _passCharMul
   ));
@@ -5244,7 +5248,7 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const passCountFull = Math.max(4, Math.round(
     (pollVariant === 1 ? passMaxFull * 0.55 : passMaxFull) * _passCharMul
   ));
-  const _pollWidthMul = (pollVariant === 1 ? 1.8 : 1.0) * (0.73 + 0.54*_charDrive);
+  const _pollWidthMul = (pollVariant === 1 ? 1.8 : 1.0) * (0.73 + 0.54*_charDrive) * (0.6 + 0.4*Math.min(1, _pDens/0.6));
 
   // Map pass index → chord index. The first pass corresponds to the first
   // chord, last pass corresponds to the last chord of the SONG, evenly
@@ -5439,10 +5443,11 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
       const speckRadius = sizeRoll < 0.85 ? lineWidth * (0.10 + rnd()*0.25)  // tiny
                        : sizeRoll < 0.97 ? lineWidth * (0.35 + rnd()*0.55)   // small
                        : lineWidth * (0.7 + rnd()*1.2);                       // occasional bigger
-      ctx.fillStyle = colBase + (0.70 + rnd()*0.25).toFixed(2) + ')';
+      const _sa = (0.70 + rnd()*0.25).toFixed(2);
+      if(sp < speckCount*_pSplat){ ctx.fillStyle = colBase + _sa + ')';
       ctx.beginPath();
       ctx.arc(sx, sy, speckRadius, 0, Math.PI*2);
-      ctx.fill();
+      ctx.fill(); }
     }
 
     // === FAT BLOBS -- 0-2 per pass where paint pooled ===
@@ -5454,10 +5459,10 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
       const t = 0.2 + rnd()*0.6;
       const pt = sampleAt(points, t);
       const blobRadius = lineWidth * (1.8 + rnd()*2.5);
-      ctx.fillStyle = colBase + '0.92)';
+      if(bl < blobCount*_pSplat){ ctx.fillStyle = colBase + '0.92)';
       ctx.beginPath();
       ctx.arc(pt.x, pt.y, blobRadius, 0, Math.PI*2);
-      ctx.fill();
+      ctx.fill(); }
     }
   }
 }
