@@ -9163,7 +9163,10 @@ function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   { const base=isBW?[226,222,212]:[238,224,184], hi=isBW?[244,242,236]:[248,238,206], lo=isBW?[200,196,186]:[222,198,140];
     ctx.fillStyle=_kmCss(_kmMix(base,lo,0.5)); ctx.fillRect(0,0,CW,CH); const nx=Math.round(CW/(D*0.032)), ny=Math.round(CH/(D*0.032)), sw=CW/nx, sh=CH/ny;
     for(let i=0;i<nx;i++) for(let j=0;j<ny;j++){ const r=rr(59000+i*131+j); ctx.fillStyle=_kmCss(_kmMix(_kmMix(base,hi,r()*0.7),lo,r()*0.4)); ctx.fillRect(i*sw+0.4,j*sh+0.4,sw-0.4,sh-0.4); } }
-  const cx=CW*(0.5+(r0()-.5)*0.04), base=CH*0.9, top=CH*0.12, tw=D*0.035;
+  /* the piece's own tree: 0 the tall tree, 1 the low fork (few great curls sweeping up), 2 the swaying trunk, 3 the tree at one side of the frieze; the two sides never the same */
+  const pr=_seedRnd(59900,_mrPieceKey(chords),0,0); pr(); const arch=Math.floor(pr()*4)%4, sideS=pr()<0.5?-1:1, sway=arch===2?(0.07+0.07*pr())*sideS:(pr()-0.5)*0.03, sideK=[0.72+0.4*pr(),0.72+0.4*pr()], birdAt=pr();
+  const cx=CW*(0.5+(arch===3?0.17*sideS:(r0()-.5)*0.04)), base=CH*0.9, top=CH*(arch===1?0.3:0.12), tw=D*(arch===1?0.045:0.035);
+  const tx=(u)=>cx+CW*sway*Math.sin(Math.PI*u)*(1-0.3*u);   /* the trunk's line */
   const ops=[]; const push=(t,f)=>ops.push([t,f]);
   // a band along points, tapering; gold, a black edge, a light line
   const band=(P,W)=>{ const L=[],R=[]; for(let i=0;i<P.length;i++){ const a=P[Math.max(0,i-1)], b=P[Math.min(P.length-1,i+1)]; let dx=b[0]-a[0], dy=b[1]-a[1]; const dl=Math.hypot(dx,dy)||1; dx/=dl; dy/=dl; const w=W[i]/2; L.push([P[i][0]-dy*w,P[i][1]+dx*w]); R.push([P[i][0]+dy*w,P[i][1]-dx*w]); }
@@ -9175,13 +9178,14 @@ function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   { const step=Math.max(1,Math.ceil(cn/(major?150:80))); for(let i=0;i<cn;i+=step){ const t=i/cn; push(t,()=>{ const r=rr(59100+i); const a=Math.PI+0.1+r()*(Math.PI-0.2), d=Math.sqrt(r())*0.92; const x=cx+Math.cos(a)*CW*0.3*d, y=base+CH*0.04+Math.sin(a)*CH*0.065*d; const s=D*0.008*(0.8+0.5*r());
       ctx.fillStyle=_kmCss(_kmMix(jwi(i),WHT,0.15)); for(let q=0;q<5;q++){ const b=q*1.2566; ctx.beginPath(); ctx.arc(x+Math.cos(b)*s,y+Math.sin(b)*s,s*0.6,0,6.2832); ctx.fill(); } ctx.fillStyle=_kmCss(GOLD); ctx.beginPath(); ctx.arc(x,y,s*0.4,0,6.2832); ctx.fill(); }); } }
   // the trunk, a gold band set with triangles
-  push(0.02,()=>{ const M=30, P=[], W=[]; for(let k=0;k<=M;k++){ P.push([cx,base-(base-top)*k/M]); W.push(tw*2*(1-0.4*k/M)); } band(P,W);
-    const nt=12; for(let i=0;i<nt;i++){ const y=base-(base-top)*(i+0.5)/nt, w=tw*(0.9-0.3*i/nt); ctx.fillStyle=_kmCss(i%2?BLK:WHT); ctx.beginPath(); ctx.moveTo(cx-w*0.6,y+w*0.5); ctx.lineTo(cx,y-w*0.6); ctx.lineTo(cx+w*0.6,y+w*0.5); ctx.closePath(); ctx.fill(); } });
+  push(0.02,()=>{ const M=30, P=[], W=[]; for(let k=0;k<=M;k++){ P.push([tx(k/M),base-(base-top)*k/M]); W.push(tw*2*(1-0.4*k/M)); } band(P,W);
+    const nt=12; for(let i=0;i<nt;i++){ const y=base-(base-top)*(i+0.5)/nt, w=tw*(0.9-0.3*i/nt), x0=tx((i+0.5)/nt); ctx.fillStyle=_kmCss(i%2?BLK:WHT); ctx.beginPath(); ctx.moveTo(x0-w*0.6,y+w*0.5); ctx.lineTo(x0,y-w*0.6); ctx.lineTo(x0+w*0.6,y+w*0.5); ctx.closePath(); ctx.fill(); } });
   // branch pairs, one for every passage
-  const nb=Math.round((5+Math.round(r0()*3))*_dW(dens)); const G=_kd2Phrases(A,Math.max(3,nb)); const npair=G.length;
-  for(let k=0;k<npair;k++){ const q=G[k]; const t=q.t0, by=base-(base-top)*(0.12+0.8*k/npair), cr=D*(0.06+0.035*(1-k/npair))*(0.75+0.5*(q.vmax||0.6))*(0.85+r0()*0.25), reach=Math.min(CW*0.49-cr*0.6, CW*(0.52-0.26*k/npair)*(0.9+r0()*0.15)), drop=CH*(0.03+r0()*0.04);   // the branches reach out to the edges of the frieze
+  const nb=Math.round((5+Math.round(r0()*3))*_dW(dens)*(arch===1?0.6:1)); const G=_kd2Phrases(A,Math.max(3,nb)); const npair=G.length;
+  for(let k=0;k<npair;k++){ const q=G[k]; const t=q.t0, bu=0.12+0.8*k/npair, by=base-(base-top)*bu, bx0=tx(bu), cr0=D*(0.06+0.035*(1-k/npair))*(0.75+0.5*(q.vmax||0.6))*(0.85+r0()*0.25)*(arch===1?1.35:1), reach0=CW*(0.52-0.26*k/npair)*(0.9+r0()*0.15), drop0=CH*(0.03+r0()*0.04)*(arch===1?2.6+1.6*k/npair:1);   // the branches reach out to the edges of the frieze
     const turns=1.7+0.9*Math.min(1,(q.b-q.a)/30);
-    for(const sgn of [-1,1]) push(t,()=>{ const ex=cx+sgn*reach, ey=by-drop; const c1=[cx+sgn*reach*0.35,by-drop*2.4], c2=[cx+sgn*reach*0.7,by+drop*0.8];
+    for(const sgn of [-1,1]){ const sk=sideK[sgn<0?0:1]*(0.88+0.24*pr()), cr=cr0*(0.8+0.4*pr())*Math.min(1.15,sk+0.15), room=(sgn<0?bx0:CW-bx0)-CW*0.01-cr*0.6, reach=Math.max(cr*1.2,Math.min(room, reach0*sk*(arch===3?(sgn===sideS?0.6:1.75):1))), drop=drop0*(0.7+0.6*pr()); const cx=bx0;
+     push(t,()=>{ const ex=cx+sgn*reach, ey=by-drop; const c1=[cx+sgn*reach*0.35,by-drop*(arch===1?0.5:2.4)], c2=[cx+sgn*reach*0.7,by+drop*(arch===1?-0.2:0.8)];
       const P=[]; const M1=36; for(let j=0;j<=M1;j++){ const u=j/M1, v=1-u; P.push([v*v*v*cx+3*v*v*u*c1[0]+3*v*u*u*c2[0]+u*u*u*ex, v*v*v*by+3*v*v*u*c1[1]+3*v*u*u*c2[1]+u*u*u*ey]); }
       // the curl continues the branch: around a centre beside its end, turning in
       const ta=Math.atan2(P[M1][1]-P[M1-1][1],P[M1][0]-P[M1-1][0]); const dir=sgn; const ccx=ex+Math.cos(ta-dir*Math.PI/2)*cr, ccy=ey+Math.sin(ta-dir*Math.PI/2)*cr; const a0=Math.atan2(ey-ccy,ex-ccx);
@@ -9197,9 +9201,9 @@ function klimtPhaseSerpents(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
       for(let j=0;j<3;j++){ const lx=cx+sgn*reach*(0.62+j*0.1), ly=by+drop*0.1+D*0.03; ctx.fillStyle=_kmCss(j%2?jwi(q.a+j):BLK); ctx.beginPath(); ctx.moveTo(lx-D*0.012,ly); ctx.lineTo(lx+D*0.012,ly); ctx.lineTo(lx,ly+D*0.035); ctx.closePath(); ctx.fill(); }
       _kmCurl(ctx,cx+sgn*reach*0.25,by-drop*1.6,cr*0.4,2,-sgn,GOLD,D*0.006,null); _kmCurl(ctx,cx+sgn*reach*0.25,by-drop*1.6,cr*0.4,2,-sgn,LINE,Math.max(0.6,D*0.0014),null);
       // its jewel on the trunk
-      ctx.fillStyle=_kmCss(jwi(q.a)); ctx.beginPath(); ctx.arc(cx,by,tw*0.32,0,6.2832); ctx.fill(); }); }
+      ctx.fillStyle=_kmCss(jwi(q.a)); ctx.beginPath(); ctx.arc(cx,by,tw*0.32,0,6.2832); ctx.fill(); }); } }
   // the black bird at the top of the tree
-  push(0.95,()=>{ const bx=cx+D*0.02, by=top-D*0.02, s=D*0.04; ctx.fillStyle=_kmCss(BLK); ctx.beginPath(); ctx.ellipse(bx,by,s*1.2,s*0.55,-0.25,0,6.2832); ctx.fill();
+  push(0.95,()=>{ const bx=tx(1)+D*0.02, by=top-D*0.02, s=D*0.04*(arch===1?1.25:1); ctx.fillStyle=_kmCss(BLK); ctx.beginPath(); ctx.ellipse(bx,by,s*1.2,s*0.55,-0.25,0,6.2832); ctx.fill();
     ctx.beginPath(); ctx.arc(bx+s*1.1,by-s*0.55,s*0.38,0,6.2832); ctx.fill(); ctx.beginPath(); ctx.moveTo(bx+s*1.4,by-s*0.6); ctx.lineTo(bx+s*1.95,by-s*0.45); ctx.lineTo(bx+s*1.4,by-s*0.35); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(bx-s*1.0,by); ctx.lineTo(bx-s*2.0,by+s*0.6); ctx.lineTo(bx-s*1.7,by-s*0.1); ctx.closePath(); ctx.fill(); ctx.fillStyle=_kmCss(GOLD); ctx.beginPath(); ctx.arc(bx+s*1.2,by-s*0.62,s*0.08,0,6.2832); ctx.fill(); });
   ops.sort((a,b)=>a[0]-b[0]); for(const [t,f] of ops){ if(t>reveal+1e-9 && t>0) break; f(); }
