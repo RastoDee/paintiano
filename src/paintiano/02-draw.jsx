@@ -1779,22 +1779,25 @@ function matisseVence(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const stone=isBW?[236,234,228]:[240,236,226], ground=_mtDeep(st,isBW); const leaf=isBW?[230,230,224]:(()=>{ const b=_mtBright(st,false); return _mtLum(b)>0.55?b:_mtPastel(_MT_PIG[0]); })();
   const blade=isBW?[120,120,118]:(()=>{ for(const p of st){ if(!_mtSame(p,ground)&&!_mtSame(p,leaf)&&p!==_MT_WHITE&&_mtLum(p)<0.6) return p; } return _mtPastel(_MT_PIG[8]); })();
   const lead=isBW?'rgba(40,40,44,0.9)':'rgba(46,40,44,0.92)', leadW=Math.max(1,D*0.0025);
-  const land=CW>CH*1.1, n=land?5:3, mx=CW*0.08, gw=CW*0.045, top=CH*0.05, bot=CH*(land?0.74:0.8), lw=(CW-2*mx-(n-1)*gw)/n, lh=bot-top, fy=bot+CH*0.03, fl=CH-fy;
-  const lancet=(x)=>{ const P=[]; P.push([x,bot],[x,top+lw/2]); for(let k=1;k<16;k++){ const a=Math.PI+k/16*Math.PI; P.push([x+lw/2+Math.cos(a)*lw/2, top+lw/2+Math.sin(a)*lw/2]); } P.push([x+lw,top+lw/2],[x+lw,bot]); return P; };
+  /* the piece's own windows: how many lancets (the two wide ones of the apse to the narrow row of the nave), how their heads step, which leaf is cut, whether the blades stand */
+  const pr=_seedRnd(55900,_mrPieceKey(chords),0,0); pr(); const nPick=[2,3,3,4,5][Math.floor(pr()*5)%5], stepK=Math.floor(pr()*4)%4, leafKind=['lobed','lobed','feuille','algae'][Math.floor(pr()*4)%4], bladesOn=pr()<0.7, stepH=0.05+0.07*pr();
+  const land=CW>CH*1.1, n=land?5:nPick, mx=CW*0.08, gw=CW*(n>=4?0.03:0.045), top=CH*0.05, bot=CH*(land?0.74:0.8), lw=(CW-2*mx-(n-1)*gw)/n, lh=bot-top, fy=bot+CH*0.03, fl=CH-fy;
+  const topOf=(j)=>{ const u=n>1?j/(n-1):0.5, c=Math.abs(u-0.5)*2; return top+lh*stepH*(stepK===1?c:stepK===2?1-c:stepK===3?u:0); };   /* equal · the middle tallest · the sides tallest · rising */
+  const lancet=(x,top)=>{ const P=[]; P.push([x,bot],[x,top+lw/2]); for(let k=1;k<16;k++){ const a=Math.PI+k/16*Math.PI; P.push([x+lw/2+Math.cos(a)*lw/2, top+lw/2+Math.sin(a)*lw/2]); } P.push([x+lw,top+lw/2],[x+lw,bot]); return P; };
   // every lancet's glass: its ground, its two green blades, its leaves — drawn on the wall, and once more as the light on the floor
-  const L=[]; for(let j=0;j<n;j++){ const x=mx+j*(lw+gw); const a=Math.floor(j*cn/n), b=Math.floor((j+1)*cn/n); const h=_mtHearSpan(A,a,b); const r=_mtR(55100+j,ss);
+  const L=[]; for(let j=0;j<n;j++){ const x=mx+j*(lw+gw), lt=topOf(j); const a=Math.floor(j*cn/n), b=Math.floor((j+1)*cn/n); const h=_mtHearSpan(A,a,b); const r=_mtR(55100+j,ss);
     const gr=isBW?ground:(()=>{ const d=_mtDeep(_mtStats(chords,gc,isBW,a,b),isBW); return _mtLum(d)<0.5 && !_mtSame(d,blade) && !_mtSame(d,leaf) ? d : ground; })();   // the part's own deep glass
     const hd=(p,q)=>Math.abs(((_mtHue(p)-_mtHue(q))%360+540)%360-180), apart=(p)=>hd(p,gr)>=40||Math.abs(_mtLum(p)-_mtLum(gr))>=0.15;
     const bl=isBW?blade:(apart(blade)?blade:(st.concat([_MT_PIG[8],_MT_PIG[5],_MT_PIG[9]].map(_mtPastel)).find(p=>!_mtSame(p,leaf)&&!_mtSame(p,_MT_WHITE)&&!_mtSame(p,_MT_BLACK)&&_mtLum(p)<0.65&&apart(p))||blade));   // the blades stand off the glass
-    const blades=[-1,1].map(sd=>{ const bh=lh*(0.36+0.46*h.vmax)*(0.8+0.35*r()); return [_mtFinger(_mtSpine(x+lw/2+sd*lw*0.37,bot+lw*0.1,-Math.PI/2+sd*0.03,bh,sd*(r()-.3)*0.25,16),lw*(0.08+0.04*r()),0.1)]; });
-    const E=[]; const want=Math.max(3,Math.min(land?7:6,Math.round(3+X.pace*1.5+(A.ch?A.ch.density:0.3)*3.5))); const step=Math.max(1,Math.floor((b-a)/want)); for(let i=a;i<b && E.length<want;i+=step){ if(A.ev[i]) E.push(A.ev[i]); }
-    const order=E.map((e,i)=>i).sort((p,q)=>E[q].top-E[p].top||p-q); const leaves=[]; const y0=top+lw*0.6, y1=bot-lw*0.5;
+    const blades=(bladesOn?[-1,1]:[]).map(sd=>{ const bh=lh*(0.36+0.46*h.vmax)*(0.8+0.35*r()); return [_mtFinger(_mtSpine(x+lw/2+sd*lw*0.37,bot+lw*0.1,-Math.PI/2+sd*0.03,bh,sd*(r()-.3)*0.25,16),lw*(0.08+0.04*r()),0.1)]; });
+    const E=[]; const want=Math.max(3,Math.min(land?7:(n<=2?5:n>=5?8:6),Math.round((3+X.pace*1.5+(A.ch?A.ch.density:0.3)*3.5)*(n>=5?1.3:1)))); const step=Math.max(1,Math.floor((b-a)/want)); for(let i=a;i<b && E.length<want;i+=step){ if(A.ev[i]) E.push(A.ev[i]); }
+    const order=E.map((e,i)=>i).sort((p,q)=>E[q].top-E[p].top||p-q); const leaves=[]; const y0=lt+lw*0.6, y1=bot-lw*0.5;
     // the leaves climb as the notes lie: a wide interval leaves a wide gap
     const gaps=[0]; for(let k=1;k<order.length;k++) gaps.push(gaps[k-1]+7+Math.min(8,E[order[k-1]].top-E[order[k]].top)); const span=gaps[gaps.length-1]||1;
     const swing=lw*(0.05+Math.min(0.1,h.leap*0.012));
-    order.forEach((ei,k)=>{ const e=E[ei]; const side=((k+j)%2?1:-1); const s=lw*(0.27+0.2*Math.min(1,e.v))*(0.92+0.16*r()); const ly=order.length>1?y0+(y1-y0)*gaps[k]/span:(y0+y1)/2;
-      leaves.push({e,polys:_mtShapePolys('lobed',x+lw/2+side*swing,ly,s,side*(0.22+0.2*r())+h.dir*0.04,55300+j*31+k+ss,1)}); });
-    L.push({x,a,b,P:lancet(x),blades,leaves,gr,bl}); }
+    order.forEach((ei,k)=>{ const e=E[ei]; const side=((k+j)%2?1:-1); const s=lw*(0.27+0.2*Math.min(1,e.v))*(0.92+0.16*r())*(n<=2?0.8:n>=5?1.15:1)*(leafKind==='lobed'?1:leafKind==='feuille'?1.0:1.25); const ly=order.length>1?y0+(y1-y0)*gaps[k]/span:(y0+y1)/2;
+      leaves.push({e,polys:_mtShapePolys(leafKind,x+lw/2+side*swing,ly,s,side*(0.22+0.2*r())+h.dir*0.04,55300+j*31+k+ss,1)}); });
+    L.push({x,a,b,top:lt,P:lancet(x,lt),blades,leaves,gr,bl}); }
   const glass=(c,l,withLead)=>{ c.save(); c.beginPath(); _mtPoly(c,l.P); c.clip(); c.fillStyle=_mtCss(l.gr); c.fillRect(l.x-2,top-2,lw+4,lh+4);
     const g=c.createLinearGradient(l.x,top,l.x+lw,top); g.addColorStop(0,'rgba(255,255,255,0.09)'); g.addColorStop(0.5,'rgba(255,255,255,0)'); g.addColorStop(1,'rgba(0,0,0,0.09)'); c.fillStyle=g; c.fillRect(l.x,top,lw,lh);
     for(const B of l.blades) _mtPaper(c,B,l.bl,D,null,{shadow:0,lead:withLead?lead:null,leadW});
@@ -1807,7 +1810,7 @@ function matisseVence(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     O.at(l.a/cn, ()=>{ ctx.save(); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.clip(); ctx.fillStyle=_mtCss(l.gr); ctx.fillRect(l.x-2,top-2,lw+4,lh+4); for(const B of l.blades) _mtPaper(ctx,B,l.bl,D,null,{shadow:0,lead,leadW}); ctx.restore(); });
     l.leaves.forEach((f,k)=>O.at(f.e.i/cn, ()=>{ ctx.save(); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.clip(); _mtPaper(ctx,f.polys,leaf,D,null,{shadow:0,lead,leadW}); ctx.restore(); }));
     // the part is over: the lead closes the lancet, and its light falls on the floor, slanting, soft
-    O.at(l.b/cn-1e-6, ()=>{ glass(ctx,l,true); ctx.save(); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.clip(); ctx.strokeStyle=lead; ctx.lineWidth=Math.max(1,D*0.0035); const nb=Math.max(3,Math.round(lh/lw*0.9)); for(let k=1;k<nb;k++){ const yy=top+lw*0.5+(lh-lw*0.5)*k/nb; ctx.beginPath(); ctx.moveTo(l.x,yy); ctx.lineTo(l.x+lw,yy); ctx.stroke(); } ctx.restore();
+    O.at(l.b/cn-1e-6, ()=>{ glass(ctx,l,true); ctx.save(); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.clip(); ctx.strokeStyle=lead; ctx.lineWidth=Math.max(1,D*0.0035); const nb=Math.max(3,Math.min(7,Math.round((bot-l.top)/lw*0.9))); for(let k=1;k<nb;k++){ const yy=l.top+lw*0.5+(bot-l.top-lw*0.5)*k/nb; ctx.beginPath(); ctx.moveTo(l.x,yy); ctx.lineTo(l.x+lw,yy); ctx.stroke(); } ctx.restore();
       ctx.save(); ctx.beginPath(); _mtPoly(ctx,l.P); ctx.strokeStyle=lead; ctx.lineWidth=Math.max(1.5,D*0.007); ctx.stroke(); ctx.restore();
       try{ const q=2, w=Math.max(8,Math.ceil(CW/q)), hh=Math.max(8,Math.ceil(fl/q)); const mk=()=>(typeof OffscreenCanvas!=='undefined') ? new OffscreenCanvas(w,hh) : Object.assign(document.createElement('canvas'),{width:w,height:hh});
         const cv=mk(), c=cv.getContext('2d'); const sy=fl*0.86/lh, sk=lw*0.45; c.setTransform(1/q,0,(-sk/lh)/q,sy/q,(sk*(1+top/lh)+lw*0.08)/q,(-top*sy+fl*0.05)/q); glass(c,l,false);
