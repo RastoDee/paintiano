@@ -7374,14 +7374,14 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   if(pick===4){ // arrows over terraces
     /* Nov 2026: the finished picture is unchanged, but it is no longer there from the first bar. Each terrace is the
-       colour of its own stretch of the piece and is brushed across, left to right, while that stretch plays, from the top
-       terrace down; an arrow is set once its passage has sounded AND the terraces it stands on are laid. */
+       colour of its own stretch of the piece and is laid whole, edge to edge, the moment that stretch begins, from the top
+       terrace down (no half-painted band); an arrow is set once its passage has sounded AND the terraces it stands on are laid. */
     const _ad=(_ch?_ch.density:0.4), rows=Math.round(7+8*_ad);   // a dense piece: more terraces and more arrows
     ground('#e9e0c9','#e2d7bc');
     for(let r=0;r<rows;r++){
-      const ni=Math.min(cn-1,(r*cn/rows)|0); const m=meta(ni); const si=r*cn/rows, ei=(r+1)*cn/rows, f=Math.max(0,Math.min(1,(N-si)/Math.max(1,ei-si))); if(f<=0) break;
+      const ni=Math.min(cn-1,(r*cn/rows)|0); const m=meta(ni); if(r>0 && N<=r*cn/rows) break;
       ctx.fillStyle=css(col(ni,0.55+m.vel*0.55),0.95);
-      ctx.fillRect(0,r*CH/rows,CW*f,CH/rows+1);
+      ctx.fillRect(0,r*CH/rows,CW,CH/rows+1);
     }
     const nA=Math.max(5,Math.round(3+10*_ad)), per=Math.ceil(cn/nA); let tPrev=0;
     for(let p=0;p<nA;p++){
@@ -9865,9 +9865,11 @@ function haringGiant(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const kind= X.energy>0.7 ? (X.leaps>0.5?'jump':'cheer') : X.energy>0.45 ? (X.leaps>0.5?'run':'dance') : (h.reg>0.55?'wave':'reach');
   const s=Math.min(CH*0.17,CW*0.27), gx=CW*0.52, gy=CH*0.5; const big=_hgOn(st[2]||_HG_PAL[1],bg,isBW); const Ops=_mtOps();
   Ops.at(0,()=>_hgBG(ctx,CW,CH,'split',bg,bg2,_HG_BLK,D,67000+ss));
-  Ops.at(0.02,()=>_hgFig(ctx,kind,gx,gy,s,(ss&1)?1:-1,0,67100+ss,{col:big,ink:_HG_BLK,O:O*1.3,pat:'dash',hole:X.major?null:bg2,motion:0}));
+  /* Nov 2026: the giant used to stand complete from the first bar. Now he rises from the ground through the first 45 % of the piece (feet first, the head last), and only then do his rays break out, one by one to the end; the finished picture is unchanged */
+  const gUp=Math.min(1,reveal/0.45);
+  Ops.at(0.02,()=>{ ctx.save(); ctx.beginPath(); ctx.rect(0,(gy+s*2.6)-gUp*s*5.4,CW,CH); ctx.clip(); _hgFig(ctx,kind,gx,gy,s,(ss&1)?1:-1,0,67100+ss,{col:big,ink:_HG_BLK,O:O*1.3,pat:'dash',hole:X.major?null:bg2,motion:0}); ctx.restore(); });
   const E=_kd2Events(A,40).filter(isAcc); const nR=Math.max(9,Math.min(20,E.length+9));
-  for(let k=0;k<nR;k++){ const a=-Math.PI/2+(k/nR-0.5)*Math.PI*1.3; Ops.at((k+0.5)/nR, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.3; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(gx+Math.cos(a)*s*2.1,gy-s*0.5+Math.sin(a)*s*2.1); ctx.lineTo(gx+Math.cos(a)*s*2.45,gy-s*0.5+Math.sin(a)*s*2.45); ctx.stroke(); }); }
+  for(let k=0;k<nR;k++){ const a=-Math.PI/2+(k/nR-0.5)*Math.PI*1.3; Ops.at(0.46+0.54*(k+0.5)/nR, ()=>{ ctx.strokeStyle=_hgCss(_HG_BLK); ctx.lineWidth=O*1.3; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(gx+Math.cos(a)*s*2.1,gy-s*0.5+Math.sin(a)*s*2.1); ctx.lineTo(gx+Math.cos(a)*s*2.45,gy-s*0.5+Math.sin(a)*s*2.45); ctx.stroke(); }); }
   const G=_kd2Phrases(A,4); const sm=s*0.32; const c=(i)=>_hgOn(_hgAt(chords,Math.floor(((G[i]||G[0]).a+(G[i]||G[0]).b)/2),gc,isBW),bg,isBW);
   if(G[0]) Ops.at(G[0].t0, ()=>{ _hgLadder(ctx,CW*0.12,CH*0.95,CH*0.45,D*0.06,_HG_BLK,O); _hgFig(ctx,'reach',CW*0.12,CH*0.66,sm,1,-0.2,67200+ss,{col:c(0),ink:_HG_BLK,O,motion:0.4}); });
   if(G[1]) Ops.at(G[1].t0, ()=>_hgRoundDog(ctx,gx+s*1.2,CH*0.96-1.6*sm*1.3,sm*1.3,-1,_hgOn(c(1),bg2,isBW),_HG_BLK,O));
