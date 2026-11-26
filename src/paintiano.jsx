@@ -9310,7 +9310,10 @@ function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the breaking out: the climax and the widest leap, when they stand out
   const out=[]; if(L.length){ let c=L[0], w=L[0]; for(const l of L){ if(l.loud>c.loud) c=l; if(l.hp.leap>w.hp.leap) w=l; } if(c.loud>=0.98) out.push(c); if(w!==c&&w.hp.leap>7) out.push(w); }
   // the cells: the canvas cut by every line that has sounded
-  let cells=[[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]]; for(const l of on){ const nxt=[]; for(const p of cells){ const [a,b]=_lcSplit(p,l.px,l.py,l.nx,l.ny); if(a) nxt.push(a); if(b) nxt.push(b); } cells=nxt; }
+  /* Nov 2026: the finished picture is unchanged, but it no longer recolours itself on the way. The facets and their
+     colours are those of the whole piece from the first bar (they used to be recomputed from the lines sounded so far,
+     so each new line repainted half the canvas); a facet is painted when the passage it belongs to begins to sound. */
+  let cells=[[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]]; for(const l of L){ const nxt=[]; for(const p of cells){ const [a,b]=_lcSplit(p,l.px,l.py,l.nx,l.ny); if(a) nxt.push(a); if(b) nxt.push(b); } cells=nxt; }
   const K=_lcEntry({g:'K',solid:true}), Wt=_lcEntry({g:'W',solid:true});
   const mixc=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], grey=(c)=>{ const v=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [v,v,v]; };
   // the colours of this series: the passage's hue — held soft (teal, rose, lavender, olive) in the quieter passages, strong (deep blue, red, magenta, yellow) in the loud ones; never neon
@@ -9318,9 +9321,9 @@ function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
   const rgbH=(h,s2,l)=>{ const C=(1-Math.abs(2*l-1))*s2, X2=C*(1-Math.abs((h/60)%2-1)), m2=l-C/2; const [r,g,b]=h<60?[C,X2,0]:h<120?[X2,C,0]:h<180?[0,C,X2]:h<240?[0,X2,C]:h<300?[X2,0,C]:[C,0,X2]; return [(r+m2)*255,(g+m2)*255,(b+m2)*255]; };
   const tone=(c,L,strong)=>{ if(isBW) return grey(mixc(c,L>0.5?_LC_WHT:[20,20,20],Math.abs(L-0.5))); const [h,s2]=hsl(c); return strong?rgbH(h,_lcClamp(s2,0.6,0.78),L<0.4?0.28:(h>=40&&h<75)?0.5:(h>=75&&h<175)?0.34:0.44):rgbH(h,_lcClamp(s2*0.55,0.14,0.48),L); };   // the loud passages in strong colour, as his deep blues, reds and magentas; the rest held soft
   const colOf=(l)=>_picChord(chords,Math.min(cn-1,Math.floor((l.a+l.b)/2)),gc,isBW).rgb;
-  const strongL=on.slice().sort((p,q)=>q.loud-p.loud).slice(0,on.length>4?2:1);   // only the loudest passages in strong colour
-  const fillOf=(cell)=>{ let cx=0,cy=0; for(const p of cell){ cx+=p[0]; cy+=p[1]; } cx/=cell.length; cy/=cell.length; let best=null,bd=1e18; for(const l of on){ const d=Math.abs((cx-l.px)*l.nx+(cy-l.py)*l.ny); if(d<bd){ bd=d; best=l; } }
-    if(!best) return {f:_LC_WHT}; const h=_lcR(83100+Math.round(cx/7)*131+Math.round(cy/7)*17,ss); h(); const u=h(), l=best, c=colOf(l), st=strongL.includes(l), soft=st?tone(c,0.48,true):tone(c,0.62+0.12*(1-l.loud)), deep=tone(c,0.26,st);
+  const strongL=L.slice().sort((p,q)=>q.loud-p.loud).slice(0,L.length>4?2:1);   // only the loudest passages in strong colour
+  const fillOf=(cell)=>{ let cx=0,cy=0; for(const p of cell){ cx+=p[0]; cy+=p[1]; } cx/=cell.length; cy/=cell.length; let best=null,bd=1e18; for(const l of L){ const d=Math.abs((cx-l.px)*l.nx+(cy-l.py)*l.ny); if(d<bd){ bd=d; best=l; } }
+    if(!best || played<best.a) return {f:_LC_WHT};   /* its passage has not begun: bare canvas */ const h=_lcR(83100+Math.round(cx/7)*131+Math.round(cy/7)*17,ss); h(); const u=h(), l=best, c=colOf(l), st=strongL.includes(l), soft=st?tone(c,0.48,true):tone(c,0.62+0.12*(1-l.loud)), deep=tone(c,0.26,st);
     if(u<0.12) return {f:_LC_WHT}; if(u>0.96) return {f:_LC_BLK};
     if(l.hp.v<0.34) return u<0.55?{dots:deep,on:_LC_WHT}:{metal:1};
     if(l.lp>0.5&&u<0.7) return {stripes:u<0.4?_LC_BLK:deep,on:u<0.55?_LC_WHT:soft};
