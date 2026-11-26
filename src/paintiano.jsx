@@ -15189,26 +15189,22 @@ function miroPhaseLate(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     // his hand: the brush lands heavy, is pulled thin, presses again and runs dry in hairs — a straight slash, an arc, or a slash that hooks at its end
     const x0=(0.1+0.8*rb())*CW, y0=(0.06+0.86*((i+rb())/nB))*CH, a0=rb()*6.283, L=D*(0.5+0.65*rb()), kind=Math.floor(rb()*3), dir=rb()<0.5 ? 1 : -1, W=D*(0.02+0.036*v)*(0.85+0.3*rb()), f1=5+7*rb(), p1=rb()*6.283, hk=0.55+0.2*rb();
     if(k<=0){ continue; }
-    // the stroke as paint, not as a flat shape (as Mitchell's and Monet's are laid): a ribbon of thick black with a shadow under one
-    // edge, a sheen along the other where the wet paint catches the light, and the hairs of the brush drawn through it — parting at the dry end
-    const steps=Math.max(40, Math.round(L/(D*0.0045))), upto=Math.round(steps*k); let x=x0, y=y0; const px=[], py=[], pw=[], pa=[], spl=[];
+    // the stroke as he made it: flat, matt black — no relief, no sheen (thick paint is Mitchell's and Monet's, not his). Its life is in the
+    // hand and in the brush running dry: it is laid as the hairs of the brush side by side, solid where the brush is full; as it empties
+    // the hairs break, the canvas and the colour under it show through, the edges fray, and at the end only a few hairs run on
+    const steps=Math.max(40, Math.round(L/(D*0.006))), upto=Math.round(steps*k); let x=x0, y=y0; const px=[], py=[], pw=[], pa=[], spl=[];
     for(let s2=0;s2<=upto;s2++){ const u=s2/steps, an=a0+dir*(kind===0 ? 0.35*u : kind===1 ? 2.3*u : (u>hk ? 3.4*(u-hk)/(1-hk)*(u-hk)/(1-hk)+0.2*u : 0.2*u))+0.05*Math.sin(u*31+i);
-      const press=(0.55+0.45*(0.5+0.5*Math.sin(p1+u*f1*0.55)))*(1.2-0.7*u)*(u<0.05 ? 0.7+0.3*u/0.05 : 1), w=W*press;
-      x+=Math.cos(an)*L/steps; y+=Math.sin(an)*L/steps; px.push(x); py.push(y); pw.push(Math.max(0.6,w)); pa.push(an);
-      const q1=rb(), q2=rb(), q3=rb(); if(v>0.45 && u<0.8 && q1<0.04*v) spl.push([x+Math.cos(q2*6.283)*w*(1.8+5*q3), y+Math.sin(q2*6.283)*w*(1.8+5*q3), D*(0.0025+0.006*q3), 0]); if(v>0.6 && press>0.8 && u<0.7 && q1>0.99) spl.push([x, y, D*0.0045, D*(0.05+0.14*q2)]); }
-    for(let it=0;it<3;it++){ const q=pw.slice(); for(let j=0;j<q.length;j++) pw[j]=(q[Math.max(0,j-2)]+q[Math.max(0,j-1)]+q[j]+q[Math.min(q.length-1,j+1)]+q[Math.min(q.length-1,j+2)])/5; }   // the swell of the brush, never a notch
-    const n=px.length; if(n>2){ const body=Math.min(n-1, Math.round(steps*0.8));   // the full paint as far as 0.8 of its way; beyond it only hairs
-      const rib=(ox,oy,sc,sh)=>{ ctx.beginPath(); for(let j=0;j<=body;j++){ const h=pw[j]*sc, o=pw[j]*sh; const X=px[j]+ox-Math.sin(pa[j])*(o-h), Y=py[j]+oy+Math.cos(pa[j])*(o-h); j ? ctx.lineTo(X,Y) : ctx.moveTo(X,Y); } for(let j=body;j>=0;j--){ const h=pw[j]*sc, o=pw[j]*sh; ctx.lineTo(px[j]+ox-Math.sin(pa[j])*(o+h), py[j]+oy+Math.cos(pa[j])*(o+h)); } ctx.closePath(); ctx.fill(); };
-      ctx.fillStyle='rgba(20,14,10,0.30)'; rib(W*0.16, W*0.22, 1.04, 0);          // its shadow on the canvas: the paint stands off it
-      ctx.fillStyle=`rgb(${blk})`; rib(0,0,1,0); ctx.beginPath(); ctx.arc(px[0],py[0],pw[0],0,6.283); ctx.fill();
-      ctx.fillStyle=isBW ? 'rgba(150,150,150,0.30)' : 'rgba(96,104,140,0.34)'; rib(0,0,0.2,-0.5);   // the sheen along its lit edge
-      ctx.fillStyle='rgba(0,0,0,0.55)'; rib(0,0,0.14,0.62);                       // and the deep edge
-      ctx.lineCap='round'; const hairs=7; for(let h=0;h<hairs;h++){ const o=(h-(hairs-1)/2)/(hairs/2)*0.82, lit=h%2===0, rh=_seedRnd(7451+i*11+h,ss,cn,0);   // the hairs: lighter and darker streaks through the paint, broken, running on past it and thinning out
-        ctx.strokeStyle=lit ? (isBW ? 'rgba(200,200,200,0.14)' : 'rgba(150,158,190,0.17)') : 'rgba(0,0,0,0.6)'; let pen=false, on=true; ctx.beginPath();
-        for(let j=0;j<n;j++){ const u=j/steps, q=rh(); if(u>0.8){ if(on && q<(u-0.8)*0.9+0.02) on=false; } else if(on){ if(q<(lit ? 0.035 : 0.006)) on=false; } else if(q<0.09) on=true;   /* long streaks with a few breaks; past the paint they give out one by one */ const X=px[j]-Math.sin(pa[j])*pw[j]*o, Y=py[j]+Math.cos(pa[j])*pw[j]*o;
-          if(on){ if(pen) ctx.lineTo(X,Y); else { ctx.moveTo(X,Y); pen=true; } } else pen=false; }
-        ctx.lineWidth=Math.max(0.7, W*(lit ? 0.07 : 0.16)); ctx.stroke(); }
-      ctx.fillStyle=`rgb(${blk})`; for(const q of spl){ if(q[3]){ ctx.fillRect(q[0]-D*0.002, q[1], D*0.004, q[3]); ctx.beginPath(); ctx.arc(q[0], q[1]+q[3], q[2], 0, 6.283); ctx.fill(); } else { ctx.beginPath(); ctx.arc(q[0],q[1],q[2],0,6.283); ctx.fill(); } } } }   // spatter off a fast, loud stroke; a drip running down where it pressed
+      const press=(0.3+0.7*Math.pow(0.5+0.5*Math.sin(p1+u*f1),1.5))*(1.3-0.8*u)*(u<0.05 ? 0.75+0.25*u/0.05 : 1), w=W*press;   // lands heavy, is pulled thin, presses again
+      x+=Math.cos(an)*L/steps; y+=Math.sin(an)*L/steps; px.push(x); py.push(y); pw.push(Math.max(0.7,w)); pa.push(an);
+      const q1=rb(), q2=rb(), q3=rb(); if(v>0.45 && u<0.8 && q1<0.05*v) spl.push([x+Math.cos(q2*6.283)*w*(1.8+5*q3), y+Math.sin(q2*6.283)*w*(1.8+5*q3), D*(0.0025+0.006*q3), 0]); if(v>0.6 && press>0.85 && u<0.6 && q1>0.992) spl.push([x, y, D*0.004, D*(0.05+0.14*q2)]); }
+    for(let it=0;it<2;it++){ const q=pw.slice(); for(let j=0;j<q.length;j++) pw[j]=(q[Math.max(0,j-1)]+q[j]+q[Math.min(q.length-1,j+1)])/3; }
+    const n=px.length; if(n>2){ ctx.strokeStyle=`rgb(${blk})`; ctx.fillStyle=`rgb(${blk})`; ctx.lineCap='round'; const H=11;
+      ctx.beginPath(); ctx.arc(px[0],py[0],pw[0]*0.96,0,6.283); ctx.fill();   // where the loaded brush lands
+      for(let h=0;h<H;h++){ const o=(h-(H-1)/2)/((H-1)/2), rh=_seedRnd(7451+i*13+h,ss,cn,0), edge=Math.abs(o)*Math.abs(o)*Math.abs(o); let on=true;
+        for(let j=0;j<n-1;j++){ const u=j/steps, q=rh(), dry=u<0.4 ? 0.004+0.03*edge : (u-0.4)*(u-0.4)*1.5+0.05*edge+(1-Math.min(1,pw[j]/W))*0.05;
+          if(on){ if(q<dry) on=false; } else if(q<Math.max(0.03, 0.5-u*0.62)) on=true; if(!on) continue;
+          const w0=pw[j]*0.94, w1=pw[j+1]*0.94; ctx.lineWidth=Math.max(0.8, (w0+w1)/(H-1)*1.3); ctx.beginPath(); ctx.moveTo(px[j]-Math.sin(pa[j])*w0*o, py[j]+Math.cos(pa[j])*w0*o); ctx.lineTo(px[j+1]-Math.sin(pa[j+1])*w1*o, py[j+1]+Math.cos(pa[j+1])*w1*o); ctx.stroke(); } }
+      for(const q of spl){ if(q[3]){ ctx.fillRect(q[0]-D*0.002, q[1], D*0.004, q[3]); ctx.beginPath(); ctx.arc(q[0], q[1]+q[3], q[2], 0, 6.283); ctx.fill(); } else { ctx.beginPath(); ctx.arc(q[0],q[1],q[2],0,6.283); ctx.fill(); } } } }   // spatter off a fast, loud stroke; a drip running down where it pressed
   // his signs between: stars and dots, as the piece goes on
   const nG=Math.max(4, Math.round(5+7*dens)); ctx.strokeStyle=`rgb(${blk})`; ctx.lineCap='round';
   for(let i=0;i<nG;i++){ const rg=_seedRnd(7471+i,ss,cn,0), t0=0.15+0.8*i/nG; if(rv<t0) continue; const x=(0.08+0.84*rg())*CW, y=(0.06+0.88*rg())*CH, R=D*(0.022+0.022*rg());
