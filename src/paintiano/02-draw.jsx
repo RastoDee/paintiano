@@ -10885,21 +10885,27 @@ function mitchellPhaseDiptych(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
   if(reveal>0.5) _mitchDrips(ctx, D, list, 4, ss, 9940);
 }
 
-// ── Mitchell D: Dark Central Mass — the 60s (Calvi, the Girolata triptych): not a ball but one heavy uneven mass, three tangles
-// of dark strokes run together, heavier at its top, a little off centre, light jabs through it and at its edge, drips below ──
+// ── Mitchell D: Dark Central Mass — the 60s (Calvi, the Girolata triptych): one heavy uneven mass of dark strokes, light jabs
+// through it and at its edge, drips below. (Nov 2026: it was a small clump in the middle of a bare canvas, the same on every
+// piece — three tangles at fixed places, sized by the canvas's short side. Now the mass is the piece: a tangle for each of its
+// passages, as heavy as the passage is loud, in that passage's own colours deepened; they run together down the canvas along a
+// course the piece sets, and fill most of it; the jabs of light come where it is loudest. Each piece its own mass.) ──
 function mitchellPhaseDarkMass(ctx, CW, CH, chords, lim, gc, sessionSeed, mode){
-  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH);
+  const ss0=sessionSeed|0, ss=(ss0+_mrPieceKey(chords))|0, isBW=mode==='bw', cn=chords.length, D=Math.sqrt(CW*CH)*0.82;
   const reveal=Math.max(0, Math.min(1, Math.max(1,Math.min(cn,lim))/cn));
   _mitchGround(ctx,CW,CH,chords,'#e4ddcc','#d8d2c4',isBW);
   const drive=_mitchChar(chords), list=[], mr=_seedRnd(9945, ss, 0, 0); mr();
-  const pal=_mitchPal(chords,gc,isBW,0,cn).map((c,i)=> i<4 ? _mitchMix(c,[18,14,22],0.55) : c);
-  const ox=CW*(0.44+mr()*0.12), oy=CH*(0.38+mr()*0.08);
-  for(let k=0;k<3;k++){ const cx=ox+(k-1)*D*(0.15+mr()*0.06), cy=oy+(mr()-0.5)*D*0.14+(k===1?-D*0.04:D*0.03), R=D*(0.16+mr()*0.08);
-    _mitchKnot(list, D, cx, cy, R, Math.round((34+drive*14)*(k===1?1.3:1)), pal, ss, 9952+k*2, {spread:1.6, radial:0.15, tight:0.9, squash:0.8}); }
-  const lp=_mitchPal(chords,gc,isBW,Math.floor(cn/2),Math.ceil(cn/2)).map((c)=>_mitchMix(c,[250,246,236],0.35));
-  _mitchKnot(list, D, ox, oy, D*0.36, 18+Math.round(drive*8), lp, ss, 9951, {spread:2.0, radial:0.5, tight:1.0, squash:0.75});
+  const nK=Math.max(5, Math.min(8, Math.round(5+3*_mitchDens+drive))), ph=mr()*6.283, sway=0.1+0.1*mr(), tall=CH>CW*1.1;
+  const loud=(a,b)=>{ let v=0; for(let j=a;j<b && j<cn;j++){ const ns=(chords[j] && (chords[j].n||chords[j].notes))||[]; for(const x of ns){ const vv=(x && x.v!==undefined) ? x.v : 80; if(vv>v) v=vv; } } return Math.min(1,v/112); };
+  let top=0, ti=0; const K=[];
+  for(let k=0;k<nK;k++){ const a=Math.floor(k*cn/nK), b=Math.max(a+1,Math.floor((k+1)*cn/nK)), v=loud(a,b), u=(k+0.5)/nK, w=0.5+sway*Math.sin(ph+u*5.2)+(mr()-0.5)*0.12; if(v>top){ top=v; ti=k; }
+    K.push({a, n:b-a, v, cx:tall ? CW*w : CW*(0.16+0.68*u), cy:tall ? CH*(0.15+0.62*u) : CH*(w*0.8+0.05), R:D*(0.15+0.12*v+0.04*mr())}); }
+  K.forEach((q,k)=>{ const pal=_mitchPal(chords,gc,isBW,q.a,q.n).map((c,i)=> i<4 ? _mitchMix(c,[18,14,22],0.42+0.2*mr()) : c);
+    _mitchKnot(list, D, q.cx, q.cy, q.R, Math.round((30+drive*16)*(0.7+0.7*q.v)), pal, ss, 9952+k*2, {spread:1.6, radial:0.15, tight:0.95, squash:tall ? 0.85 : 0.8, len:1.15, w:1.15}); });
+  // her light jabs: the loudest passage's own colours near white, through the mass there and at its edge
+  { const q=K[ti], lp=_mitchPal(chords,gc,isBW,q.a,q.n).map((c)=>_mitchMix(c,[250,246,236],0.35)); _mitchKnot(list, D, q.cx, q.cy, q.R*1.7, 20+Math.round(drive*10), lp, ss, 9951, {spread:2.0, radial:0.5, tight:1.0, squash:0.8}); }
   _mitchDraw(ctx, list, reveal, ss);
-  if(reveal>0.5) _mitchDrips(ctx, D, list, 7, ss, 9960);
+  if(reveal>0.5) _mitchDrips(ctx, D, list, 9, ss, 9960);
 }
 
 // ── Mitchell E: Sunflowers (1990–91, her homage to Van Gogh): heavy warm masses high on the canvas, and out of each its dark (the
