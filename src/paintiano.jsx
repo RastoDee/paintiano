@@ -9310,7 +9310,6 @@ function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
   // the breaking out: the climax and the widest leap, when they stand out
   const out=[]; if(L.length){ let c=L[0], w=L[0]; for(const l of L){ if(l.loud>c.loud) c=l; if(l.hp.leap>w.hp.leap) w=l; } if(c.loud>=0.98) out.push(c); if(w!==c&&w.hp.leap>7) out.push(w); }
   // the cells: the canvas cut by every line that has sounded
-  let cells=[[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]]; for(const l of on){ const nxt=[]; for(const p of cells){ const [a,b]=_lcSplit(p,l.px,l.py,l.nx,l.ny); if(a) nxt.push(a); if(b) nxt.push(b); } cells=nxt; }
   const K=_lcEntry({g:'K',solid:true}), Wt=_lcEntry({g:'W',solid:true});
   const mixc=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], grey=(c)=>{ const v=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [v,v,v]; };
   // the colours of this series: the passage's hue — held soft (teal, rose, lavender, olive) in the quieter passages, strong (deep blue, red, magenta, yellow) in the loud ones; never neon
@@ -9318,15 +9317,22 @@ function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
   const rgbH=(h,s2,l)=>{ const C=(1-Math.abs(2*l-1))*s2, X2=C*(1-Math.abs((h/60)%2-1)), m2=l-C/2; const [r,g,b]=h<60?[C,X2,0]:h<120?[X2,C,0]:h<180?[0,C,X2]:h<240?[0,X2,C]:h<300?[X2,0,C]:[C,0,X2]; return [(r+m2)*255,(g+m2)*255,(b+m2)*255]; };
   const tone=(c,L,strong)=>{ if(isBW) return grey(mixc(c,L>0.5?_LC_WHT:[20,20,20],Math.abs(L-0.5))); const [h,s2]=hsl(c); return strong?rgbH(h,_lcClamp(s2,0.6,0.78),L<0.4?0.28:(h>=40&&h<75)?0.5:(h>=75&&h<175)?0.34:0.44):rgbH(h,_lcClamp(s2*0.55,0.14,0.48),L); };   // the loud passages in strong colour, as his deep blues, reds and magentas; the rest held soft
   const colOf=(l)=>_picChord(chords,Math.min(cn-1,Math.floor((l.a+l.b)/2)),gc,isBW).rgb;
-  const strongL=on.slice().sort((p,q)=>q.loud-p.loud).slice(0,on.length>4?2:1);   // only the loudest passages in strong colour
-  const fillOf=(cell)=>{ let cx=0,cy=0; for(const p of cell){ cx+=p[0]; cy+=p[1]; } cx/=cell.length; cy/=cell.length; let best=null,bd=1e18; for(const l of on){ const d=Math.abs((cx-l.px)*l.nx+(cy-l.py)*l.ny); if(d<bd){ bd=d; best=l; } }
-    if(!best) return {f:_LC_WHT}; const h=_lcR(83100+Math.round(cx/7)*131+Math.round(cy/7)*17,ss); h(); const u=h(), l=best, c=colOf(l), st=strongL.includes(l), soft=st?tone(c,0.48,true):tone(c,0.62+0.12*(1-l.loud)), deep=tone(c,0.26,st);
-    if(u<0.12) return {f:_LC_WHT}; if(u>0.96) return {f:_LC_BLK};
+  const strongL=L.slice().sort((p,q)=>q.loud-p.loud).slice(0,L.length>4?2:1);   // only the loudest passages of the whole piece in strong colour (fixed from the first bar)
+  /* Nov 2026: what is painted stays painted. A facet used to take the colour of whichever line was nearest, so every
+     new line recoloured half the canvas. Now a line cuts the facets it crosses and, of each pair, paints one side in
+     its own passage's colour (more often the smaller); the other side keeps what it had. The picture is built cut by cut. */
+  const fillFor=(l,u)=>{ const c=colOf(l), st=strongL.includes(l), soft=st?tone(c,0.48,true):tone(c,0.62+0.12*(1-l.loud)), deep=tone(c,0.26,st);
+    if(u<0.1) return {f:_LC_WHT}; if(u>0.96) return {f:_LC_BLK};
     if(l.hp.v<0.34) return u<0.55?{dots:deep,on:_LC_WHT}:{metal:1};
     if(l.lp>0.5&&u<0.7) return {stripes:u<0.4?_LC_BLK:deep,on:u<0.55?_LC_WHT:soft};
     if(u>0.9) return {dots:deep,on:soft};
     if(dens>0.55&&u>0.78) return {f:deep};
     return {f:soft}; };
+  const areaOf=(P)=>{ let s=0; for(let i=0;i<P.length;i++){ const p=P[i], q=P[(i+1)%P.length]; s+=p[0]*q[1]-q[0]*p[1]; } return Math.abs(s)/2; };
+  let cells=[{P:[[x0,y0],[x1,y0],[x1,y1],[x0,y1]],F:{f:_LC_WHT}}];
+  for(const l of on){ const nxt=[]; cells.forEach((c,ci)=>{ const [pa,pb]=_lcSplit(c.P,l.px,l.py,l.nx,l.ny); if(!pa||!pb){ nxt.push(c); return; }
+      const h=_lcR(83100+l.k*977+ci*31,ss); h(); const u1=h(), u2=h(), small=areaOf(pa)<areaOf(pb)?0:1, bare=c.F.f===_LC_WHT, side=bare?(u1<0.5?small:u1<0.94?1-small:-1):(u1<0.45?small:u1<0.6?1-small:-1), Fn=fillFor(l,bare?0.1+u2*0.86:u2);   /* bare canvas is nearly always painted, a painted facet keeps its colour more often than not */
+      nxt.push({P:pa,F:side===0?Fn:c.F}); nxt.push({P:pb,F:side===1?Fn:c.F}); }); cells=nxt; }
   ctx.save(); ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.fillRect(x0+D*0.012,y0+D*0.012,W,H); ctx.restore();   // the canvas on the wall
   const paint=(cell,F)=>{ _lcPoly(ctx,cell);
     if(F.f){ ctx.fillStyle=_lcCss(F.f); ctx.fill(); return; }
@@ -9335,14 +9341,14 @@ function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
     if(F.stripes){ ctx.strokeStyle=_lcCss(F.stripes); ctx.lineWidth=D*0.0045; const st=D*0.0125; for(let s2=-H-W;s2<W+H;s2+=st){ ctx.beginPath(); ctx.moveTo(x0+s2,y0); ctx.lineTo(x0+s2+H*0.8,y1); ctx.stroke(); } }
     else { let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9; for(const p of cell){ bx0=Math.min(bx0,p[0]); by0=Math.min(by0,p[1]); bx1=Math.max(bx1,p[0]); by1=Math.max(by1,p[1]); } _lcBenday(ctx,bx0,by0,bx1-bx0,by1-by0,Math.max(4,D*0.014),F.dots,()=>0.62); }
     ctx.restore(); };
-  for(const cell of cells) paint(cell,fillOf(cell));
+  for(const cell of cells) paint(cell.P,cell.F);
   // the points where a line breaks out: the canvas grows a point to carry it
   for(const l of out){ if(!on.includes(l)) continue; const right=l.hp.dir>=0; let t=1e9; const sgn=right?1:-1; const ex=l.dx*sgn, ey=l.dy*sgn;
     if(ex>1e-6) t=Math.min(t,(x1-l.px)/ex); if(ex<-1e-6) t=Math.min(t,(x0-l.px)/ex); if(ey>1e-6) t=Math.min(t,(y1-l.py)/ey); if(ey<-1e-6) t=Math.min(t,(y0-l.py)/ey);
     const P=[l.px+ex*t,l.py+ey*t], T=[l.px+ex*(t+m*1.6),l.py+ey*(t+m*1.6)], onV=Math.abs(P[0]-x0)<1||Math.abs(P[0]-x1)<1, wq=D*(0.2+0.1*l.loud), Q=onV?[P[0],_lcClamp(P[1]+(ey>0?-wq:wq),y0,y1)]:[_lcClamp(P[0]+(ex>0?-wq:wq),x0,x1),P[1]];
     const Tc=[Math.min(Math.max(T[0],D*0.01),CW-D*0.01),Math.min(Math.max(T[1],D*0.01),CH-D*0.01)]; const tri=[P,Tc,Q];
-    let near=cells[0], bd=1e18; for(const c of cells){ let cx=0,cy=0; for(const p of c){ cx+=p[0]; cy+=p[1]; } cx/=c.length; cy/=c.length; const d=Math.hypot(cx-(P[0]+Q[0])/2,cy-(P[1]+Q[1])/2); if(d<bd){ bd=d; near=c; } }
-    paint(tri,fillOf(near)); _lcPoly(ctx,tri); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; ctx.lineJoin='miter'; ctx.stroke(); l.tip=Tc; l.P=P; }
+    let near=cells[0], bd=1e18; for(const c of cells){ let cx=0,cy=0; for(const p of c.P){ cx+=p[0]; cy+=p[1]; } cx/=c.P.length; cy/=c.P.length; const d=Math.hypot(cx-(P[0]+Q[0])/2,cy-(P[1]+Q[1])/2); if(d<bd){ bd=d; near=c; } }
+    paint(tri,near.F); _lcPoly(ctx,tri); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; ctx.lineJoin='miter'; ctx.stroke(); l.tip=Tc; l.P=P; }
   // the lines, each drawn across as its passage plays, and the canvas edge
   ctx.save(); ctx.beginPath(); ctx.rect(x0,y0,W,H); ctx.clip();
   const band=out[0]||null;
