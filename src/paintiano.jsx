@@ -14211,26 +14211,34 @@ function _kuListen(ctx,CW,CH,chords,lim,gc,sessionSeed){
   ctx.fillStyle='#050408'; ctx.fillRect(0,0,CW,CH); if(!cn) return;
   const A=_kd2Analyze(chords,gc,'color'), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), r=_seedRnd(61,ss,0,0); r();
   const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
-  // the room: a camera a little above half height, the water at the floor, mirrors at the walls, lights up to the ceiling
-  const cx=CW/2, hz=CH*0.6, fx=CW*0.62, fy=CH*0.62, camH=0.42, W=1;
-  const proj=(x,y,z)=>[cx+x*fx/z, hz-(y-camH)*fy/z];
+  /* the room (rehung Nov 2026: it was too dark and too empty): more lights and larger, each with its glow; the mirrors
+     repeat the room to the sides AND into the depth, so the lights go on without end; the water gives them back as long
+     trembling streaks; the accents are lanterns with a flare; the walkway leads in. The piece sets where you stand
+     (left or right of the middle, the horizon higher or lower) and how full the room hangs. */
+  const pr=_seedRnd(61800,_mrPieceKey(chords),0,0); pr(); const dens=_pieceDens(chords), isAcc=_mtAccOf(A);
+  const camX=(pr()-0.5)*0.7, hz=CH*(0.52+0.12*pr()), cx=CW/2, fx=CW*0.62, fy=CH*0.62, camH=0.42, W=1, zRoom=2.4;
+  const proj=(x,y,z)=>[cx+(x-camX)*fx/z, hz-(y-camH)*fy/z];
+  /* the walkway over the water */
+  { const a=proj(-0.16,0,0.3), b2=proj(0.16,0,0.3), c2=proj(0.16,0,zRoom*3), d2=proj(-0.16,0,zRoom*3); const g=ctx.createLinearGradient(0,hz,0,CH); g.addColorStop(0,'rgba(255,255,255,0)'); g.addColorStop(1,'rgba(255,255,255,0.07)'); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b2[0],b2[1]); ctx.lineTo(c2[0],c2[1]); ctx.lineTo(d2[0],d2[1]); ctx.closePath(); ctx.fill(); }
   // the lights: the chords, the piece walking into the room
-  const N=Math.min(cn,Math.round(clamp(140+cn*0.12,140,260))), lights=[];
+  const N=Math.min(cn,Math.round(clamp((170+cn*0.15)*(0.75+0.7*dens),150,340))), lights=[];
   for(let k=0;k<N;k++){ const i=Math.min(cn-1,Math.floor(k*cn/N)), e=A.ev[i]; if(!e) continue; const u=i/Math.max(1,cn-1);
-    const z=0.32+1.9*Math.pow(u,0.9)+(r()-0.5)*0.16, x=(r()*2-1)*W*0.94, y=clamp(0.1+1.15*A.reg(e.top)+(r()-0.5)*0.22,0.05,1.3), loud=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1);
-    const c=_kwVivid(_kusChord(chords,i,gc).rgb); lights.push({i,x,y,z,loud,c}); }
-  // the mirrors: each light again beyond the left and right walls, and everything again in the black water
-  const copies=[]; for(const L of lights){ for(const m of [-2,-1,0,1,2]){ const x=m===0?L.x:(m%2?(Math.sign(m)*2*W-L.x):(m*2*W+L.x)), dim=Math.pow(0.55,Math.abs(m)); copies.push({L,x,y:L.y,dim}); copies.push({L,x,y:-L.y,dim:dim*0.42,water:true}); } }
-  copies.sort((a,b)=>b.L.z-a.L.z);
+    const z=0.34+(zRoom-0.5)*Math.pow(u,0.9)+(r()-0.5)*0.16, x=(r()*2-1)*W*0.94, y=clamp(0.1+1.15*A.reg(e.top)+(r()-0.5)*0.22,0.05,1.3), loud=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1);
+    const c=_kwVivid(_kusChord(chords,i,gc).rgb); lights.push({i,x,y,z,loud,c,acc:isAcc(e)}); }
+  { const fl=lights.filter(L=>L.acc).sort((p,q)=>q.loud-p.loud).slice(0,9); lights.forEach(L=>{ L.flare=fl.indexOf(L)>=0; }); }   /* only the few loudest accents carry a flare */
+  // the mirrors: each light again beyond the left and right walls and again in the depth, and everything again in the black water
+  const copies=[]; for(const L of lights){ for(let d=0;d<3;d++){ const z=d%2?(d+1)*zRoom-L.z+0.3:d*zRoom+L.z, dd=Math.pow(0.5,d); for(const m of [-3,-2,-1,0,1,2,3]){ const x=m===0?L.x:(m%2?(Math.sign(m)*(Math.abs(m)+1)*W-L.x):(m*2*W+L.x)), dim=dd*Math.pow(0.6,Math.abs(m)); copies.push({L,x,y:L.y,z,dim,first:d===0&&m===0}); copies.push({L,x,y:-L.y,z,dim:dim*0.6,water:true}); } } }
+  copies.sort((p,q)=>q.z-p.z);
   ctx.save(); ctx.globalCompositeOperation='lighter';
-  for(const q of copies){ const L=q.L; if(L.i>=played) continue; const [sx,sy]=proj(q.x,q.y,L.z); if(sx<-D*0.1||sx>CW+D*0.1||sy<-D*0.1||sy>CH+D*0.1) continue;
-    const s=D*(0.004+0.01*L.loud*L.loud)/L.z, a=q.dim*(0.55+0.45*L.loud);
-    ctx.fillStyle=`rgba(${L.c[0]|0},${L.c[1]|0},${L.c[2]|0},${(0.08*a).toFixed(3)})`; ctx.beginPath(); ctx.arc(sx,sy,s*(q.water?4.5:4),0,6.2832); ctx.fill();
-    ctx.fillStyle=`rgba(${L.c[0]|0},${L.c[1]|0},${L.c[2]|0},${(0.32*a).toFixed(3)})`; ctx.beginPath(); ctx.arc(sx,sy,s*1.8,0,6.2832); ctx.fill();
-    const w=[(L.c[0]+255*2)/3,(L.c[1]+255*2)/3,(L.c[2]+255*2)/3]; ctx.fillStyle=`rgba(${w[0]|0},${w[1]|0},${w[2]|0},${(0.9*a).toFixed(3)})`; ctx.beginPath(); ctx.arc(sx,sy,s*0.7,0,6.2832); ctx.fill(); }
+  for(const q of copies){ const L=q.L; if(L.i>=played) continue; const [sx,sy]=proj(q.x,q.y,q.z); if(sx<-D*0.1||sx>CW+D*0.1||sy<-D*0.1||sy>CH+D*0.1) continue;
+    const s=D*(0.006+0.014*L.loud*L.loud)*(L.flare?1.4:1)/q.z, a=q.dim*(0.6+0.4*L.loud), col=(al)=>`rgba(${L.c[0]|0},${L.c[1]|0},${L.c[2]|0},${al.toFixed(3)})`, ry=q.water?2.6:1;
+    ctx.fillStyle=col(0.06*a); ctx.beginPath(); ctx.ellipse(sx,sy,s*5,s*5*ry,0,0,6.2832); ctx.fill();
+    ctx.fillStyle=col(0.26*a); ctx.beginPath(); ctx.ellipse(sx,sy,s*2,s*2*ry,0,0,6.2832); ctx.fill();
+    const w=[(L.c[0]+255*2)/3,(L.c[1]+255*2)/3,(L.c[2]+255*2)/3]; ctx.fillStyle=`rgba(${w[0]|0},${w[1]|0},${w[2]|0},${(0.8*a).toFixed(3)})`; ctx.beginPath(); ctx.ellipse(sx,sy,s*0.8,s*0.8*ry,0,0,6.2832); ctx.fill();
+    if(L.flare && q.first){ ctx.strokeStyle=col(0.4*a); ctx.lineWidth=Math.max(0.6,s*0.16); ctx.lineCap='round'; for(let k=0;k<4;k++){ const an=k*Math.PI/4+0.2; const len=s*(k%2?3:5); ctx.beginPath(); ctx.moveTo(sx-Math.cos(an)*len,sy-Math.sin(an)*len); ctx.lineTo(sx+Math.cos(an)*len,sy+Math.sin(an)*len); ctx.stroke(); } } }
   ctx.restore();
   // the water's edge: a faint line where the room meets its reflection
-  ctx.fillStyle='rgba(255,255,255,0.025)'; ctx.fillRect(0,hz-1,CW,2);
+  ctx.fillStyle='rgba(255,255,255,0.03)'; ctx.fillRect(0,hz-1,CW,2);
   try{ globalThis.__KU_LISTEN={v:'room',lights:lights.length}; }catch(_){}
   _setCurE(0.5);
 }
