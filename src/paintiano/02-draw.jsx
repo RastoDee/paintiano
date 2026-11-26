@@ -7374,14 +7374,14 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   }
   if(pick===4){ // arrows over terraces
     /* Nov 2026: the finished picture is unchanged, but it is no longer there from the first bar. Each terrace is the
-       colour of its own stretch of the piece and is brushed across, left to right, while that stretch plays, from the top
-       terrace down; an arrow is set once its passage has sounded AND the terraces it stands on are laid. */
+       colour of its own stretch of the piece and is laid whole, edge to edge, the moment that stretch begins, from the top
+       terrace down (no half-painted band); an arrow is set once its passage has sounded AND the terraces it stands on are laid. */
     const _ad=(_ch?_ch.density:0.4), rows=Math.round(7+8*_ad);   // a dense piece: more terraces and more arrows
     ground('#e9e0c9','#e2d7bc');
     for(let r=0;r<rows;r++){
-      const ni=Math.min(cn-1,(r*cn/rows)|0); const m=meta(ni); const si=r*cn/rows, ei=(r+1)*cn/rows, f=Math.max(0,Math.min(1,(N-si)/Math.max(1,ei-si))); if(f<=0) break;
+      const ni=Math.min(cn-1,(r*cn/rows)|0); const m=meta(ni); if(r>0 && N<=r*cn/rows) break;
       ctx.fillStyle=css(col(ni,0.55+m.vel*0.55),0.95);
-      ctx.fillRect(0,r*CH/rows,CW*f,CH/rows+1);
+      ctx.fillRect(0,r*CH/rows,CW,CH/rows+1);
     }
     const nA=Math.max(5,Math.round(3+10*_ad)), per=Math.ceil(cn/nA); let tPrev=0;
     for(let p=0;p<nA;p++){
