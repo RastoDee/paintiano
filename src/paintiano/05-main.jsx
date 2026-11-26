@@ -18210,11 +18210,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // the look on screen, to keep with a card
   feedDrawRef.current = _feedDraw;
   const _feedSelNow = ()=> viewMode==='image' ? ({ img:true, comp:imgComposer, cstage:composerStage.slice(), isig:!!imgSigActive }) : ({ style, phase:phaseIndex|0, mode, notes:notesMode, stage:painterStage.slice(), sig:!!sigActive, look:_stLookNow() });   // look: the whole look (a drawn painter, its variant, a fusion's members and variants) — back and forth it comes back the same
-  // the piece: the first-run card's Liebestraum; otherwise one at random from the built-in pieces and yours (My Music / My Images), not the one on the home card
+  // the piece: the first-run card's Liebestraum; otherwise one at random from today's built-in pieces (pictures), not the one on the home card.
+  // Never yours from My Music / My Images (26 Nov 2026: For You is the app's surprise — your own photo turned up there, under its file's code name; 4–26 Nov they were in the draw)
   const _feedPiece = (kind)=>{ const homeArt=_homeCur(); const hn=String((homeArt && homeArt.t)||'').toLowerCase();
     const same=(n)=>{ const a=String(n||'').toLowerCase(); return !!hn && !!a && (a===hn || a.startsWith(hn) || hn.startsWith(a)); };
-    const mine=(kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).filter(x=>!same(x.n)).map(x=>'m'+x.id);
-    const c=(kind==='img' ? _FEED_IMGS.map((x,i)=>(same(x && x.t) || !dayImages.includes(i)) ? -1 : i) : _FEED_NAMES.map((x,i)=>(same(x) || !dayPieces.includes(i)) ? -1 : i)).filter(i=>i>=0).concat(mine);   // today's three only
+    const c=(kind==='img' ? _FEED_IMGS.map((x,i)=>(same(x && x.t) || !dayImages.includes(i)) ? -1 : i) : _FEED_NAMES.map((x,i)=>(same(x) || !dayPieces.includes(i)) ? -1 : i)).filter(i=>i>=0);   // today's three only
     if(kind!=='img' && !feedDayRef.current && c.includes(pieceOfDay)){ feedDayRef.current='now'; return pieceOfDay; }   // the first swipe of the session: the painting of the day
     return c.length ? c[(Math.random()*c.length)|0] : 0; };
   const feedDayRef = useRef(false);
