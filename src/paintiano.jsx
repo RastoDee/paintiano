@@ -5236,7 +5236,7 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   /* and how full the web is follows how full the music is: a sparse piece (Gymnopédie) a score of skeins on open
      canvas, thinner, with fewer specks and pools; a dense one (the Fifth, Prometheus) the closed web as before */
   const _pDens = _ch ? _ch.density : 0.5;
-  const _passCharMul = _passCharMul0 * Math.min(1, Math.min(55 + 75*_charDrive, 14 + 130*Math.pow(_pDens,1.3)) / Math.max(1, passMaxFull*_passCharMul0));
+  const _passCharMul = _passCharMul0 * Math.min(1, (14 + 130*Math.pow(_pDens,1.3) + 1400*Math.pow(Math.max(0,_pDens-0.72),1.5)) / Math.max(1, passMaxFull*_passCharMul0));   /* a torrent (Prometheus) pours on until no canvas shows */
   const _pSplat = Math.min(1, 0.3 + 1.1*_pDens);
   const passCount = Math.max(4, Math.round(
     (pollVariant === 1 ? passCount0 * 0.55 : passCount0) * _passCharMul
@@ -5248,7 +5248,7 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   const passCountFull = Math.max(4, Math.round(
     (pollVariant === 1 ? passMaxFull * 0.55 : passMaxFull) * _passCharMul
   ));
-  const _pollWidthMul = (pollVariant === 1 ? 1.8 : 1.0) * (0.73 + 0.54*_charDrive) * (0.6 + 0.4*Math.min(1, _pDens/0.6));
+  const _pollWidthMul = (pollVariant === 1 ? 1.8 : 1.0) * (0.73 + 0.54*_charDrive) * (0.6 + 0.4*Math.min(1, _pDens/0.6)) * (1 + 1.6*Math.max(0,_pDens-0.78));
 
   // Map pass index → chord index. The first pass corresponds to the first
   // chord, last pass corresponds to the last chord of the SONG, evenly
