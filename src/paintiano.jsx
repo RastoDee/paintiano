@@ -32090,8 +32090,8 @@ const PF_SECOND = { pieces:[8,0,2,5,9,10,7,3,6], style:'mitchell', phase:0 };   
 // from where the words stand on this screen. The open part of an end link is the part of its round the middle link does not cross —
 // a word sits in the middle of that. null when it cannot be done here (a wide frame, the words not found, not three links): the painting
 // then fills its frame as any other does.
-function _lhStellaPlace(cv, fv, cs, tone, lay){
-  const box=cv && cv.parentElement; if(!box) return null; const bw=box.clientWidth, bh=box.clientHeight; if(bw<200 || bh<bw*1.3) return null;
+function _lhStellaPlace(box, fv, cs, tone, lay){
+  if(!box) return null; const bw=box.clientWidth, bh=box.clientHeight; if(bw<200 || bh<bw*1.3) return null;
   const tc=document.createElement('canvas'); globalThis.__ST_RINGS=null; _favPaint(tc, {...fv, lim:1}, {chords:cs}, 0.05, tone, {...lay, CW:1000, CH:1600});
   const G=globalThis.__ST_RINGS; if(!G || !G.rings || G.rings.length!==3) return null;
   const rs=G.rings.slice().sort((a,b)=>a[1]-b[1]), mid=rs[1];
@@ -32524,6 +32524,7 @@ const STUDIO_HOME_CSS = `
 .pf-lh{position:absolute;inset:0;overflow:hidden;background:#0a0814}
 .pf-lh-in{position:absolute;inset:0;overflow:hidden;animation:pfLhIn 1.1s cubic-bezier(.45,0,.2,1) both;background:#0a0814}   /* one painting gives way to the next as in a slow swipe: both move together, joined, for 1.1 s (it was a .6 s snap) */
 .pf-lh-in.first{animation:pfLhFade .5s ease both}   /* the very first one is simply there */
+.pf-lh-in.now{animation:none}   /* brought by the finger: it is there already */
 .pf-lh-in.out{animation:pfLhOut 1.1s cubic-bezier(.45,0,.2,1) both;z-index:1;pointer-events:none}   /* the one that leaves: the painting itself with its words, not a picture of it */
 @keyframes pfLhIn{from{transform:translateY(100%)}to{transform:none}}
 .pf-lh-out{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:pfLhOut 1.1s cubic-bezier(.45,0,.2,1) both;z-index:1;pointer-events:none}
@@ -47518,7 +47519,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const card=feedCardRef.current, out=feedOutRef.current; if(!card || !out || feedFly) return null;
     const r=card.getBoundingClientRect(), L=Math.round(ax==='y' ? r.height : r.width); if(!L) return null;
     const fd={ax, dir, L, card, out, mode:'rub', d:0};
-    if(ax==='y' && dir>0){ if(o.nextU!==undefined){ fd.mode='known'; fd.img=o.nextU; } else if(o.img){ fd.mode='known'; fd.img=o.picU || null; } else fd.mode='pre'; }
+    if(o.rub){ fd.onBack=o.onBack; }   // nothing that way: the card gives a little and comes back
+    else if(o.cv){ fd.mode='known'; fd.cv=o.cv; fd.onGo=o.onGo; fd.onBack=o.onBack; fd.until=o.until; }   // the first screen: the painting that comes, as it will stand (see _lhLock)
+    else if(ax==='y' && dir>0){ if(o.nextU!==undefined){ fd.mode='known'; fd.img=o.nextU; } else if(o.img){ fd.mode='known'; fd.img=o.picU || null; } else fd.mode='pre'; }
     else if(ax==='y'){ if(o.prevU!==undefined){ fd.mode='known'; fd.img=o.prevU; } }
     else if(o.sideU!==undefined){ fd.mode='known'; fd.img=o.sideU; fd.onGo=o.onGo; }   // ← → on the home: the next unfinished painting comes with the finger
     else { if(o.img) return null; fd.mode='pre'; }
@@ -47528,7 +47531,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       card.dataset.fdz='1';   // the card's painting waits until the new look is on it
       const N=feedNavRef.current, sig0=_fdMark(); N.hold(o.meta); let ok=true; try{ if(ax==='y') N.up(); else ok = dir>0 ? N.vn() : N.vb(); }catch(_){ ok=false; }
       if(!ok){ fd.mode='rub'; out.innerHTML=''; delete card.dataset.fdz; N.free(); } else _fdUngate(fd, sig0);
-    } else if(fd.mode==='known' && fd.img){ const im=new Image(); im.src=fd.img; im.alt=''; out.appendChild(im); }
+    } else if(fd.mode==='known' && fd.cv){ out.appendChild(fd.cv); }
+    else if(fd.mode==='known' && fd.img){ const im=new Image(); im.src=fd.img; im.alt=''; out.appendChild(im); }
     if(fd.mode!=='rub') out.style.display='block';
     _fdSet(fd, 0); return fd; };
   // d: how far the finger went along the axis (px). The card that leaves sits at d, the one that comes at d + dir·L
@@ -47542,13 +47546,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const d = fd.dir>0 ? Math.max(-L, Math.min(0, raw)) : Math.min(L, Math.max(0, raw)); _fdSet(fd, d); };
   // let go: v = the finger's speed along the axis (px/ms)
   const _fdEnd = (fd, v, back)=>{ v=v||0;   // back: the phone took the touch — the card goes back, never on
-    if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>_fdClear(fd)); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
+    if(fd.mode==='rub'){ _fdSpring(fd.d, v*1000, 0, (x)=>_fdSet(fd, x), ()=>{ _fdClear(fd); if(fd.onBack){ try{ fd.onBack(); }catch(_){} } }); if(Math.abs(fd.d)>30) feedNavRef.current.buzz(6); return; }
     const p=-fd.dir*fd.d/fd.L, fv=-fd.dir*v, go = !back && (fv>0.3 || (p>0.25 && fv>-0.3)), to = go ? -fd.dir*fd.L : 0;   // thrown that way, or past a quarter and not thrown back
     const hold = (go && fd.mode==='pre') ? (()=> fd.ready ? null : -fd.dir*fd.L*Math.max(p, 0.22)) : null;   // the next painting not there yet: it waits a little short of it
     _fdSpring(fd.d, v*1000, to, (x)=>_fdSet(fd, x), ()=>{ const N=feedNavRef.current;
       if(fd.mode==='pre' && go){ _fdCopyFree(); fd.out.style.display='none'; fd.out.innerHTML=''; fd.card.style.transform=''; fd.card.style.animation=''; N.free(); N.flash(); N.buzz(fd.ax==='y' ? 8 : 10); return; }
-      if(fd.mode==='known' && !go){ _fdClear(fd); return; }
-      if(fd.onGo){ fd.card.style.transform=''; fd.out.style.transform=''; try{ fd.onGo(); }catch(_){} N.buzz(8); _fdLater(140, ()=>_fdClear(fd), ()=>_fdClear(fd)); return; }
+      if(fd.mode==='known' && !go){ _fdClear(fd); if(fd.onBack){ try{ fd.onBack(); }catch(_){} } return; }
+      if(fd.onGo){ fd.card.style.transform=''; fd.out.style.transform=''; try{ fd.onGo(); }catch(_){} N.buzz(8);
+        if(fd.until){ const t0=performance.now(), poll=()=>{ if(fd.until() || performance.now()-t0>900) _fdLater(30, ()=>_fdClear(fd), ()=>_fdClear(fd)); else _fdFrame(poll, ()=>_fdClear(fd)); }; _fdFrame(poll, ()=>_fdClear(fd)); return; }   // the copy stays until the painting under it is on the screen
+        _fdLater(140, ()=>_fdClear(fd), ()=>_fdClear(fd)); return; }
       // the copy stays over the card while the look changes under it, then fades
       fd.card.style.transform=''; fd.card.dataset.fdz='1'; fd.out.style.transform=''; const sig0=_fdMark();
       try{ if(fd.mode==='known'){ if(fd.dir>0) N.up(); else N.back(); N.flash(); N.buzz(8); }
@@ -47755,6 +47761,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const lhPrevRef = useRef(null);
   const _lhCta = (cls)=>(<span className={'pf-lh-cta'+cls}><span className="pf-lh-eq" aria-hidden="true"><i/><i/><i/><i/></span><b>{_stT('supHear')}</b></span>);
   const liveHomeRef = useRef(null);   // {piece, sel, snap} — what the first screen is painting now: a tap starts this one
+  // ↑ and ↓ on the first screen go through its paintings as For You goes through its own: the painting goes with the finger, the next one
+  // comes up from below, the one before down from above — each as it was left, and all of it quiet still (a tap is for the sound).
+  // lhHistRef: per place in the list, its painting, how far it was painted and a picture of it then; lhDragRef: a finger on it (the next
+  // painting waits); lhNowRef: the painting the finger brought (no slide of its own); lhPaintedRef: the last one on the screen.
+  const lhHistRef = useRef({}); const lhDragRef = useRef(false); const lhNowRef = useRef(null); const lhPaintedRef = useRef(null); const lhTouchRef = useRef(0);   // lhTouchRef: when a finger last let it go — the painting then stays its full while
   const liveCvRef = useRef(null); const liveOutRef = useRef(null); const liveListRef = useRef(null); const liveChordsRef = useRef({});
   // your My Music too: the pieces whose notes are at hand (a MIDI, or an audio already read once), long enough for a painting
   const liveMineRef = useRef([]);
@@ -47776,18 +47787,41 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const ab=b64ToArrayBuffer(BUILTIN_PIECES[idx].b64); const {raw,div,temps}=parseMidi(ab); const ev=toChords(raw,div,temps); const cs=ev.map((c,i)=>({...c,idx:i})); C[idx]=cs; return cs; };
   const _liveName = (idx)=>{ if(typeof idx==='string'){ const r=liveMineRef.current.find(x=>'m'+x.id===idx); return pfSongTitle(String((r && r.name)||'')); } return String(BUILTIN_NAMES[idx]||''); };
   const livePrevRef = useRef(null);
+  // a painting of the first screen made ready for its frame (box): what the painting is and how large (the opening Stella: see _lhStellaPlace)
+  const _lhPrep = (it, cs, box)=>{ const st=it.style; const skip=!!(st && _TAKE_ORIG.includes(st)); let se=0.5; try{ const c=computeSongCharacter(cs); se=c ? c.energy : 0.5; }catch(_){}
+    const fv={ style:st, keys:null, fa:null, phase:it.phase|0, seed:pollockSessionSeed>>>0, cap:null, mode:'harmony', tone, pal:null, ks:0, se, dna:null, skip, liveE:false, compose:false, own:null, lim:1 };
+    const lay=_favLayout(fv, cs); if(!lay) return null;
+    const bw=box ? box.clientWidth : 0, bh=box ? box.clientHeight : 0; if(bw>40 && bh>40){ lay.CW=bw; lay.CH=bh; }   // painted in the card's own frame, as the Studio paints (a painter's picture, not the mosaic grid)
+    let place=null; if(box && it.piece===PF_FIRST.piece && st===PF_FIRST.style && (it.phase|0)===PF_FIRST.phase){ try{ place=_lhStellaPlace(box, fv, cs, tone, lay); }catch(_){ place=null; } if(place){ lay.CW=place.CW; lay.CH=place.CH; } }   // the opening Stella: large, its links round the words
+    return {st, fv, lay, place, bw, bh}; };
+  // the place j in the list: its painting (drawn from the hat once, then kept)
+  const _lhItem = (j)=>{ const H0=lhHistRef.current; if(H0[j]) return H0[j].it; const L=_liveList(); const it0=L[j % L.length]; const it=it0.piece==null ? {...it0, piece:_livePick(livePrevRef.current)} : it0; H0[j]={it, lim:0, shot:null}; return it; };
+  // what the painting at j shows the moment it comes: as it was left, or its ground and first stroke — the size of the frame, as on the screen
+  const _lhFrame = (j)=>{ const cv0=liveCvRef.current, box=cv0 && cv0.parentElement; if(!box) return null; const bw=box.clientWidth, bh=box.clientHeight; if(!(bw>40 && bh>40)) return null;
+    const it=_lhItem(j), rec=lhHistRef.current[j]; if(rec && rec.shot) return rec.shot; if(rec && !rec.lim && rec.pre && rec.pre.w===bw && rec.pre.h===bh) return rec.pre.c;
+    const S=Math.min(1.5, window.devicePixelRatio||1), o=document.createElement('canvas'); o.width=Math.round(bw*S); o.height=Math.round(bh*S); const g=o.getContext('2d'); g.fillStyle='#0a0814'; g.fillRect(0,0,o.width,o.height);
+    let cs=null; try{ cs=_liveChords(it.piece); }catch(_){ cs=null; } if(!cs || typeof cs.then==='function' || !cs.length) return o;   // its notes not at hand yet: the dark ground
+    const P=_lhPrep(it, cs, box); if(!P) return o; P.fv.lim=Math.max(1, Math.min(cs.length, (rec && rec.lim)|0));
+    const c=document.createElement('canvas'); try{ _favPaint(c, P.fv, {chords:cs}, S, tone, P.lay); g.drawImage(c, P.place ? P.place.dx*S : 0, P.place ? P.place.dy*S : 0); }catch(_){}
+    if(rec && !rec.lim) rec.pre={c:o, w:bw, h:bh}; return o; };   // the next one's start is made once (while the painting before paints), so the finger finds it ready
+  // the finger brought the painting at j: it stands there at once (no slide of its own), the one before stops where it was
+  const _lhTo = (j)=>{ lhDragRef.current=false; lhPrevRef.current=null; liveOutRef.current=null; const k=Date.now(); lhNowRef.current=k; setLiveHome({i:j, k}); return k; };
+  // a finger up or down on the first screen (dir 1: up, the next; -1: down, the one before — none before the first: the card only gives)
+  const _lhLock = (dir)=>{ const j=liveHome.i+dir, back=()=>{ lhDragRef.current=false; lhTouchRef.current=performance.now(); };
+    let cv=null; if(j>=0){ try{ cv=_lhFrame(j); }catch(_){ cv=null; } }
+    const R={k:null}; const fd = cv ? _fdLock('y', dir, {cv, onGo:()=>{ R.k=_lhTo(j); }, onBack:back, until:()=>R.k!=null && lhPaintedRef.current===R.k}) : _fdLock('y', dir, {rub:true, onBack:back});
+    if(fd) lhDragRef.current=true; return fd; };
   useEffect(()=>{
-    if(!liveHomeOn){ liveHomeRef.current=null; lhPrevRef.current=null; return; }
+    if(!liveHomeOn){ liveHomeRef.current=null; lhPrevRef.current=null; lhDragRef.current=false; return; }
     setLhAgain(0);
     const cv=liveCvRef.current; if(!cv) return;
-    const L=_liveList(); const it0=L[liveHome.i % L.length]; const it=it0.piece==null ? {...it0, piece:_livePick(livePrevRef.current)} : it0; livePrevRef.current=it.piece;
+    const H0=lhHistRef.current; Object.keys(H0).forEach(x=>{ if(Math.abs(+x-liveHome.i)>3) delete H0[x]; });   // the places far behind are let go (their pictures with them)
+    const it=_lhItem(liveHome.i), rec=H0[liveHome.i]; livePrevRef.current=it.piece;
     let alive=true, tm=null, tc=null; let got=null; try{ got=_liveChords(it.piece); }catch(_){ got=null; }
     const run=(cs)=>{ if(!alive) return; if(!cs || !cs.length){ if(typeof it.piece==='string') setLiveHome(h=>({i:h.i+1, k:Date.now()})); return; }   // one of yours that cannot be read: the next painting
-    const st=it.style; const skip=!!(st && _TAKE_ORIG.includes(st)); let se=0.5; try{ const c=computeSongCharacter(cs); se=c ? c.energy : 0.5; }catch(_){}
-    const fv={ style:st, keys:null, fa:null, phase:it.phase|0, seed:pollockSessionSeed>>>0, cap:null, mode:'harmony', tone, pal:null, ks:0, se, dna:null, skip, liveE:false, compose:false, own:null, lim:1 };
-    const lay=_favLayout(fv, cs); if(!lay) return;
-    try{ cv.style.cssText=''; const box=cv.parentElement; const bw=box ? box.clientWidth : 0, bh=box ? box.clientHeight : 0; if(bw>40 && bh>40){ lay.CW=bw; lay.CH=bh; } }catch(_){}   // painted in the card's own frame, as the Studio paints (a painter's picture, not the mosaic grid)
-    let place=null; if(it.piece===PF_FIRST.piece && st===PF_FIRST.style && (it.phase|0)===PF_FIRST.phase){ try{ place=_lhStellaPlace(cv, fv, cs, tone, lay); }catch(_){ place=null; } if(place){ lay.CW=place.CW; lay.CH=place.CH; cv.style.cssText='inset:auto;left:'+place.dx.toFixed(1)+'px;top:'+place.dy.toFixed(1)+'px;width:'+place.CW+'px;height:'+place.CH+'px;object-fit:fill'; } }   // the opening Stella: large, its links round the words (see _lhStellaPlace)
+    const P=_lhPrep(it, cs, cv.parentElement); if(!P) return; const {st, fv, lay, place, bw, bh}=P;
+    cv.style.cssText = place ? 'inset:auto;left:'+place.dx.toFixed(1)+'px;top:'+place.dy.toFixed(1)+'px;width:'+place.CW+'px;height:'+place.CH+'px;object-fit:fill' : '';   // the opening Stella: large, its links round the words (see _lhStellaPlace)
+    if(rec) rec.take=()=>{ try{ if(!(bw>40 && bh>40)) return null; const k=cv.width/lay.CW, o=document.createElement('canvas'); o.width=Math.round(bw*k); o.height=Math.round(bh*k); o.getContext('2d').drawImage(cv, place ? place.dx*k : 0, place ? place.dy*k : 0); return o; }catch(_){ return null; } };   // a picture of it as it is on the screen, kept when it goes
     liveHomeRef.current={ piece:it.piece, sel:{style:st, phase:it.phase|0, mode:'harmony', notes:false, stage:[], sig:false}, snap:()=>{ try{ if(place){ const k=cv.width/place.CW, o=document.createElement('canvas'); o.width=Math.round(place.bw*k); o.height=Math.round(place.bh*k); o.getContext('2d').drawImage(cv, place.dx*k, place.dy*k); return o.toDataURL('image/jpeg',0.8); } return cv.toDataURL('image/jpeg',0.8); }catch(_){ return null; } } };   // what is on the screen, as it is there
     let meta=null; try{ const nm=_liveName(it.piece); const q=nm.split(' — '); meta={t:q[0]||nm, by:q[1]||'', p:t('inspiredBy').replace('{artist}', STYLE_INSPIRED[st]||st), k:liveHome.k}; setLiveMeta(meta); }catch(_){ setLiveMeta(null); }
     const reduce=(()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(_){ return false; } })();
@@ -47795,18 +47829,23 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     // a painting before this one is leaving: this one comes up under it (1.1 s, see .pf-lh-in) and its strokes begin once it has arrived
     const lead=((lhPrevRef.current || liveOutRef.current) && !reduce) ? 1100 : 0;
     const _lhSlow=liveHome.k===0, MS=_lhSlow ? 8500 : _LH_MS, HOLD=_lhSlow ? 3000 : _LH_HOLD;   // k is 0 only until the opening painting gives way
-    const cn=cs.length, t0=performance.now()+lead; let last=-1; const S=Math.min(1.5, window.devicePixelRatio||1);
-    const paint=(lim)=>{ fv.lim=lim; try{ _favPaint(cv, fv, {chords:cs}, S, tone, lay); }catch(_){} };
-    const step=()=>{ if(!alive) return; const u=Math.max(0, Math.min(1,(performance.now()-t0)/MS)); const e=_lhSlow ? 1-Math.pow(1-u,1.6) : (u<0.5 ? 2*u*u : 1-Math.pow(-2*u+2,2)/2); const lim=Math.max(1, Math.ceil(cn*e));
+    const cn=cs.length, lim0=(rec && rec.lim>1) ? Math.min(cn, rec.lim) : 0; let last=-1; const S=Math.min(1.5, window.devicePixelRatio||1);   // lim0: come back to, as far as it was painted
+    const ease=(u)=>_lhSlow ? 1-Math.pow(1-u,1.6) : (u<0.5 ? 2*u*u : 1-Math.pow(-2*u+2,2)/2), unease=(e)=>_lhSlow ? 1-Math.pow(1-e,1/1.6) : (e<0.5 ? Math.sqrt(e/2) : 1-Math.sqrt(2*(1-e))/2);
+    const t0=performance.now()+lead-(lim0 ? unease(lim0/cn)*MS : 0);   // on from where it was
+    const paint=(lim)=>{ fv.lim=lim; try{ _favPaint(cv, fv, {chords:cs}, S, tone, lay); }catch(_){} if(rec) rec.lim=lim; lhPaintedRef.current=liveHome.k; };
+    const adv=()=>{ if(!alive) return; const w=HOLD-(performance.now()-lhTouchRef.current); if(lhDragRef.current || w>60){ tm=setTimeout(adv, lhDragRef.current ? 300 : w); return; } lhPrevRef.current={k:liveHome.k, m:meta}; liveOutRef.current=null; setLiveHome(h=>({i:h.i+1, k:Date.now()})); };   // a finger on it: the next one waits — and once it lets go, this one rests its full while again
+    const step=()=>{ if(!alive) return; const u=Math.max(0, Math.min(1,(performance.now()-t0)/MS)); const lim=Math.max(1, Math.ceil(cn*ease(u)));
       const a=performance.now(); if(lim!==last){ last=lim; paint(lim); } const cost=performance.now()-a;
-      if(lim>=cn){ setLivePhase('done'); tm=setTimeout(()=>{ if(!alive) return; lhPrevRef.current={k:liveHome.k, m:meta}; liveOutRef.current=null; setLiveHome(h=>({i:h.i+1, k:Date.now()})); }, HOLD); return; }
+      if(lim>=cn){ setLivePhase('done'); tm=setTimeout(adv, HOLD); return; }
       tm=setTimeout(step, Math.max(70, cost*1.5)); };
+    if(reduce){ setLivePhase(lim0 ? 'done' : 'card'); paint(cn); if(!lim0) tc=setTimeout(()=>{ if(alive) setLivePhase('done'); }, 3800); return; }   // no motion asked for: the finished painting, still — its title there for its moment all the same
+    if(lim0){ setLivePhase(lim0>=cn ? 'done' : 'paint'); paint(lim0); last=lim0; tm=setTimeout(lim0>=cn ? adv : step, lim0>=cn ? HOLD : lead+120); return; }   // come back to: as it was, without its title again
     setLivePhase('card');
-    if(reduce){ paint(cn); tc=setTimeout(()=>{ if(alive) setLivePhase('done'); }, 3800); return; }   // no motion asked for: the finished painting, still — its title there for its moment all the same
     paint(1); last=1;   // its ground and first stroke at once: it never comes up as an empty dark card that turns into the painting a moment later
-    tm=setTimeout(step, lead+200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, (lead ? 600 : 0)+3800); };   // the title card: 3.8 s (long enough to read the piece and its painter) — with a painting leaving above, it begins as this one arrives (.6 s in)
+    tm=setTimeout(step, lead+200); tc=setTimeout(()=>{ if(alive) setLivePhase(p=>p==='card' ? 'paint' : p); }, (lead ? 600 : 0)+3800);
+    setTimeout(()=>{ if(alive && !lhDragRef.current) try{ _lhFrame(liveHome.i+1); }catch(_){} }, lead+1500); };   // the next one's start, made ready in a quiet moment   // the title card: 3.8 s (long enough to read the piece and its painter) — with a painting leaving above, it begins as this one arrives (.6 s in)
     if(got && typeof got.then==='function') got.then(run).catch(()=>{ run(null); }); else run(got);
-    return ()=>{ alive=false; clearTimeout(tm); clearTimeout(tc); };
+    return ()=>{ alive=false; clearTimeout(tm); clearTimeout(tc); const r=lhHistRef.current[liveHome.i]; if(r && r.take){ r.shot=r.take(); r.take=null; } };   // it goes: a picture of it as it was, for when it comes back
   }, [liveHomeOn, liveHome.i, tone]);
   useEffect(()=>{
     if(!_feedLiveOn) return;
@@ -49119,6 +49158,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               st.fd = _fdLock(st.ax, dir, { img:FC.kind==='img', picU:originalImgUrl || null, meta:{feed:1, t:_fTitle, l:_fLine},
                 nextU: (up && feedAt<feedCards.length-1) ? ((feedCards[feedAt+1] && feedCards[feedAt+1].u) || null) : undefined,
                 prevU: dn ? (feedAt>0 ? ((feedCards[feedAt-1] && feedCards[feedAt-1].u) || null) : (_canHome ? ((FC.piece==='own' && _feedSnap()) || H.u || null) : undefined)) : undefined }); }
+            else if(!FC && _smp && liveHomeOn && st.ax==='y' && !st.b){ st.fd = _lhLock(dy<0 ? 1 : -1); }   // the first screen: ↑ the next of its paintings, ↓ the one before — quiet still
             else if(!FC && st.ax==='x' && !st.b){ const dir = dx<0 ? 1 : -1, nb=_homeNb(dir); if(nb && nb.u) st.fd = _fdLock('x', dir, { sideU:nb.u, onGo:()=>_homeGo(nb.k) }); } }
           if(st.fd) _fdMove(st.fd, st.ax==='y' ? dy : dx); };
         const _fTC = ()=>{ const st=feedTouchRef.current; feedTouchRef.current=null; { const MH=metaHoldRef.current; if(MH.tm){ clearTimeout(MH.tm); MH.tm=null; } } if(st && st.fd) _fdEnd(st.fd, 0, true); };   // the phone took the touch: the card goes back
@@ -49143,7 +49183,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             _fdEnd(st.fd, v); return; }
           const dx=tt.clientX-st.x, dy=tt.clientY-st.y, dt=Date.now()-st.t;
           if(st.e && (Math.abs(dx)>=12 || Math.abs(dy)>=12)) return;   // from the phone's edge: not a swipe
-          if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }
+          if(dt<800 && dy<=-50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(!FC && _smp && liveHomeOn) return; _feedUp(FC ? null : {u:H.u, t:ttl, l:line}); return; }   // the first screen's ↑ is its own (see _lhLock): never a jump into For You
           if(dt<800 && dy>=50 && Math.abs(dy)>Math.abs(dx)*1.3){ if(FC) _feedBack(); return; }   // ↓ back, as on TikTok: the surprise before
           if(dt<800 && Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ _sideDone(); let ok=false; try{ ok = dx<0 ? _variantNext() : _variantBack(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } else if(!FC){ _homeLR(dx<0 ? 1 : -1); } return; }   // ← the next variant, → back to the one before   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
@@ -49189,7 +49229,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   {_fL && holdPaused && !playing && !anim && !feedNeedTap && !feedMuteFl && (<span className="pf-sh-paused" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
                 </div>) : (
                 <div key={'home'+kind+(H.u||'').length} className={'pf-sh-art'+((feedFly && feedFly.dir==='down') ? ' pf-sh-back' : homeSlide==='l' ? ' pf-sh-inl' : homeSlide==='r' ? ' pf-sh-inr' : '')}>
-                                    {_smp ? (liveHomeOn ? (<div className="pf-lh" aria-hidden="true">{(()=>{ const P=lhPrevRef.current; return (P && P.k!==liveHome.k) ? (<div key={'i'+P.k} className="pf-lh-in out"><canvas/>{null}<div className="pf-lh-foot">{P.m && _lhCta(' on')}</div></div>) : (liveOutRef.current && liveHome.k) ? (<img key={'o'+liveHome.k} className="pf-lh-out" src={liveOutRef.current} alt=""/>) : null; })()}<div key={'i'+liveHome.k} className={'pf-lh-in'+((lhPrevRef.current || (liveOutRef.current && liveHome.k)) ? '' : ' first')}><canvas ref={liveCvRef}/>{_lhOwn && (livePhase==='card' || lhAgain>0) ? (<div key={'c'+lhAgain} className="pf-lh-card" style={(!lhAgain && (lhPrevRef.current || (liveOutRef.current && liveHome.k))) ? {animationDelay:'.6s'} : undefined}><small>{liveMeta.by}</small><b>{liveMeta.t}</b><i>{liveMeta.p}</i></div>) : null}<div className="pf-lh-foot">{_lhOwn && _lhCta(livePhase==='done' ? ' on' : '')}</div>{liveBars && _lhOwn ? (<div className={'pf-lh-bars'+(livePhase==='done' ? ' off' : '')}>{liveBars.map((c,j)=>(<s key={j} style={{background:c, height:(14+((j*37)%53))+'px', animationDuration:(0.45+((j*13)%7)/10)+'s', animationDelay:(-((j*29)%10)/10)+'s'}}/>))}</div>) : null}</div></div>) : (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>)) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
+                                    {_smp ? (liveHomeOn ? (<div className="pf-lh" aria-hidden="true">{(()=>{ const P=lhPrevRef.current; return (P && P.k!==liveHome.k) ? (<div key={'i'+P.k} className="pf-lh-in out"><canvas/>{null}<div className="pf-lh-foot">{P.m && _lhCta(' on')}</div></div>) : (liveOutRef.current && liveHome.k) ? (<img key={'o'+liveHome.k} className="pf-lh-out" src={liveOutRef.current} alt=""/>) : null; })()}<div key={'i'+liveHome.k} className={'pf-lh-in'+(lhNowRef.current===liveHome.k ? ' now' : (lhPrevRef.current || (liveOutRef.current && liveHome.k)) ? '' : ' first')}><canvas ref={liveCvRef}/>{_lhOwn && (livePhase==='card' || lhAgain>0) ? (<div key={'c'+lhAgain} className="pf-lh-card" style={(!lhAgain && (lhPrevRef.current || (liveOutRef.current && liveHome.k))) ? {animationDelay:'.6s'} : undefined}><small>{liveMeta.by}</small><b>{liveMeta.t}</b><i>{liveMeta.p}</i></div>) : null}<div className="pf-lh-foot">{_lhOwn && _lhCta(livePhase==='done' ? ' on' : '')}</div>{liveBars && _lhOwn ? (<div className={'pf-lh-bars'+(livePhase==='done' ? ' off' : '')}>{liveBars.map((c,j)=>(<s key={j} style={{background:c, height:(14+((j*37)%53))+'px', animationDuration:(0.45+((j*13)%7)/10)+'s', animationDelay:(-((j*29)%10)/10)+'s'}}/>))}</div>) : null}</div></div>) : (<div className="pf-sh-tease" aria-hidden="true"><img src={PF_FIRST.u} alt="" style={{opacity:1,animation:'none'}}/></div>)) : H.u ? (<img src={H.u} alt={ttl}/>) : (<div aria-hidden="true" style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,background:'radial-gradient(120% 90% at 30% 20%, '+SRC[kind].c+'33, transparent 60%), linear-gradient(160deg,#15121f,#07060c)',color:SRC[kind].c}}>{_sv(SRC[kind].p, 54)}<span style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontStyle:'italic',fontSize:26,color:'#f3ead2'}}>{SRC[kind].label}</span></div>)}
                   {!_smp && _canPlay && !feedFly && !feedBurst && (<span className="pf-sh-tap" aria-hidden="true"><b/><i/><i/></span>)}   {/* your painting waits: the same rings as the first screen, not a ▶ */}
                   {!_smp && _canPlay && (<span className="pf-sh-chip" style={{'--g':'linear-gradient(135deg,'+K.g+')'}}><span className="pf-sh-chip-ic">{_sv(K.p, 14)}</span><span className="pf-sh-chip-t">{K.label}</span></span>)}
                   {(ttl || line) && (<div className="pf-sh-cap">{ttl && (<div className="pf-sh-cap-t">{ttl}</div>)}{line && (<div className="pf-sh-cap-l">{line}</div>)}</div>)}
