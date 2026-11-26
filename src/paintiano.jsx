@@ -15646,6 +15646,14 @@ function _mrListenOld(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,world){
 // biomorphic bodies afloat on it: black silhouettes, a red one, a white one,
 // thin contours, an eye here and there, a thin line drifting between them.
 // each piece its own picture (Nov 2026): the seed takes the piece in — before, every piece laid the same bodies in the same places and only a colour changed
+// the bodies a piece gives, set on the canvas as a hand would set them: many layouts are tried and the best balanced is kept — nothing
+// against an edge, nothing in a heap with the rest of the canvas bare, the weight of the picture resting round its middle (a large dark
+// body on one side answered on the other). items: [{r, w}] (reach and visual weight) → [[x,y]…]; the same piece always the same layout
+const _mrBalance=(items,CW,CH,rnd)=>{ const D=Math.min(CW,CH), n=items.length; if(!n) return []; let best=null, bs=1e9;
+  for(let t=0;t<64;t++){ const P=[]; for(let i=0;i<n;i++){ const r=items[i].r, x0=Math.min(CW/2,r*1.15), y0=Math.min(CH/2,r*1.15); let bx=CW/2, by=CH/2, bd=-1e9; for(let c=0;c<7;c++){ const cx=x0+rnd()*(CW-2*x0), cy=y0+rnd()*(CH-2*y0); let md=1e9; for(let j=0;j<i;j++) md=Math.min(md, Math.hypot(cx-P[j][0],cy-P[j][1])-(r+items[j].r)*0.8); if(!i) md=rnd(); if(md>bd){ bd=md; bx=cx; by=cy; } } P.push([bx,by]); }
+    let mx=0, my=0, mt=0, ov=0; const cell=[0,0,0,0,0,0]; for(let i=0;i<n;i++){ const m=items[i].r*items[i].r*items[i].w; mx+=P[i][0]*m; my+=P[i][1]*m; mt+=m; cell[(P[i][0]<CW/2 ? 0 : 1)+2*Math.min(2,Math.floor(P[i][1]/CH*3))]+=m; for(let j=0;j<i;j++) ov+=Math.max(0,(items[i].r+items[j].r)*0.85-Math.hypot(P[i][0]-P[j][0],P[i][1]-P[j][1]))/D; }
+    const mean=mt/6; let va=0; for(const c of cell) va+=(c-mean)*(c-mean); const sc=Math.hypot(mx/mt-CW/2, my/mt-CH/2)/D*4+Math.sqrt(va/6)/(mean||1)*0.6+ov*2.5; if(sc<bs){ bs=sc; best=P; } }
+  return best; };
 const _mrPieceKey=(chords)=>{ let h=chords.length*31; for(let j=0;j<chords.length;j+=Math.max(1,Math.floor(chords.length/24))){ const ns=(chords[j] && (chords[j].n||chords[j].notes))||[]; for(const x of ns){ const m=(x && x.m!==undefined) ? x.m : x; h=(h*33+(+m|0))|0; } } return Math.abs(h)%100000; };
 function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=((sessionSeed|0)+_mrPieceKey(chords))|0, S=_mrSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(S.cn,lim))/S.cn;
@@ -15655,8 +15663,10 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   for(let i=0;i<7;i++){ const x=CW*r0(), y=CH*r0(), rr=D*(0.25+r0()*0.3); const c=_mrMix(base,r0()<0.5?[214,180,126]:[96,66,46],0.4+r0()*0.2); const g=ctx.createRadialGradient(x,y,0,x,y,rr); g.addColorStop(0,_mrCss(c,0.55)); g.addColorStop(1,_mrCss(c,0)); ctx.fillStyle=g; ctx.fillRect(x-rr,y-rr,2*rr,2*rr); }
   const list=[]; let id=0; const push=(t,draw)=>list.push({id:id++,t,draw});
   const n=Math.round((5+S.density*4)*_dW(S.density));
-  for(let i=0;i<n;i++){ const t=(i+0.3)/n; const x=CW*(0.12+r0()*0.76), y=CH*(0.12+r0()*0.76), r=D*(0.07+r0()*0.1), sx=0.7+r0()*0.7, sy=0.7+r0()*0.7, rot=r0()*6.28;
-    const u=r0(); const fill= u<0.42?BLK : u<0.6?(S.isBW?[120,120,120]:_MR_PRIM[0]) : u<0.75?WHT : S.prim(t); const rim= fill===BLK? (r0()<0.4?WHT:null) : BLK; const eye=r0()<0.45;
+  const bod=[]; for(let i=0;i<n;i++){ const t=(i+0.3)/n; r0(); r0(); const r=D*(0.07+r0()*0.1), sx=0.7+r0()*0.7, sy=0.7+r0()*0.7, rot=r0()*6.28;
+    const u=r0(); const fill= u<0.42?BLK : u<0.6?(S.isBW?[120,120,120]:_MR_PRIM[0]) : u<0.75?WHT : S.prim(t); const rim= fill===BLK? (r0()<0.4?WHT:null) : BLK; const eye=r0()<0.45; bod.push({t,r,sx,sy,rot,fill,rim,eye}); }
+  const pos=_mrBalance(bod.map(b=>({r:b.r*Math.max(b.sx,b.sy)*1.25, w:b.fill===BLK ? 1.4 : b.fill===WHT ? 0.9 : 1.1})), CW, CH, _mrR(45500,ss));   // set as a hand would set them (see _mrBalance)
+  for(let i=0;i<n;i++){ const {t,r,sx,sy,rot,fill,rim,eye}=bod[i], x=pos[i][0], y=pos[i][1];
     push(t,(ctx,rnd)=>{ const p=_mrBody(rnd,x,y,r,sx,sy,rot); _mrTrace(ctx,p); ctx.fillStyle=_mrCss(fill); ctx.fill(); if(rim){ ctx.strokeStyle=_mrCss(rim); ctx.lineWidth=Math.max(1,D*0.0035); ctx.stroke(); }
       if(eye){ const e=p[(rnd()*p.length)|0]; const ex=x+(e[0]-x)*0.45, ey=y+(e[1]-y)*0.45; _mrEye(ctx,ex,ey,r*0.16,fill===BLK?WHT:BLK,fill===BLK?S.prim(t+0.05):BLK,fill===BLK?BLK:WHT); } }); }
   // thin black lines drifting between the bodies, a few dots and small stars
@@ -15676,10 +15686,9 @@ function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   ctx.fillStyle=_mrCss(GRD); ctx.fillRect(0,0,CW,CH);
   const list=[]; let id=0; const push=(t,draw)=>list.push({id:id++,t,draw});
   const nf=Math.round((3+S.density*2)*_dW(S.density)); const W=D*(0.02+S.energy*0.01);
-  const placed=[];   // figures spread over the whole picture: each takes the candidate farthest from those already placed
-  for(let k=0;k<nf;k++){ const t=k/nf; const r=D*(0.11+r0()*0.05), sx=0.75+r0()*0.4, sy=0.9+r0()*0.4;
-    let bx=CW/2, by=CH/2, bd=-1; for(let c=0;c<14;c++){ const cx=CW*(0.22+r0()*0.56), cy=CH*(0.2+r0()*0.62); let md=1e9; for(const q of placed) md=Math.min(md,Math.hypot(cx-q[0],cy-q[1])); if(!placed.length) md=Math.hypot(cx-CW*(k%2?0.7:0.3),cy-CH*0.35)*-1+1e6; if(md>bd){ bd=md; bx=cx; by=cy; } }
-    placed.push([bx,by]); const x=_mrClamp(bx, r*sx*1.6, CW-r*sx*1.6), y=_mrClamp(by, r*sy*1.6, CH-r*sy*1.6);
+  const fig=[]; { const rA=_mrR(46100,ss); for(let k=0;k<nf;k++) fig.push({r:D*(0.11+rA()*0.05), sx:0.75+rA()*0.4, sy:0.9+rA()*0.4}); }
+  const pos=_mrBalance(fig.map(f=>({r:f.r*Math.max(f.sx,f.sy)*1.7, w:1})), CW, CH, _mrR(46500,ss));   // the figures set as a hand would set them (see _mrBalance): each piece its own, none against an edge, the picture resting round its middle
+  for(let k=0;k<nf;k++){ const t=k/nf; const {r,sx,sy}=fig[k], x=pos[k][0], y=pos[k][1];
     const whole=r0()<0.55, c1=S.prim(t), c2=S.prim(t+0.05+r0()*0.1);
     // the body: either flooded with one primary, or left pale with a smaller body of another primary inside; then the thick black contour
     push(t,(ctx,rnd)=>{ const p=_mrBody(rnd,x,y,r,sx,sy,(rnd()-.5)*0.5,true);
