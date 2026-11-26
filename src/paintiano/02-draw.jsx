@@ -14065,28 +14065,56 @@ function kd2_circleInCircle(ctx,CW,CH,cc,ss,mode,chords,gc){
   for(const p of A.phrases){ if(A.reg(p.top)<0.78) continue; const ang=r()*6.2832; const rad=R*(1.08+r()*0.1); pushO({kind:'circle',t:p.t,x:_kdClamp(cx+Math.cos(ang)*rad,D*0.03,CW-D*0.03),y:_kdClamp(cy+Math.sin(ang)*rad,D*0.03,CH-D*0.03),r:D*(0.008+p.v*0.012),col:A.pcCol(p.pc,Math.round(p.top)),ring:S.K}); }
   _kd2Draw(ctx,ol,reveal,D,ss); _setCurE(0.5);
 }
-// ── 4 · Yellow–Red–Blue (1925) — the yellow panel carries the bass as black verticals,
-//        the black serpent is the melody's own contour, the blue disc is the tonic.
-function kd2_yrb(ctx,CW,CH,cc,ss,mode,chords,gc){
-  const A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1);
-  ctx.fillStyle=A.isBW?'#d8d4cc':'#dacdb2'; ctx.fillRect(0,0,CW,CH);
+// ── 4 · Yellow–Red–Blue (1925) — his three: the light yellow oblong with its fine black lines, the red between, the deep blue
+//        circle, on a ground clouded with violet and blue; the black serpent through them. (Nov 2026: it was one small yellow
+//        oblong and one blue disc at fixed places on a bare ground, the same on every piece. Now the three fill the canvas along
+//        a diagonal the piece chooses; the oblong carries the bass as black verticals, the red is as large as the piece is
+//        forceful, the circle is the tonic; the serpent is the melody's own contour from the yellow to the blue; and round them
+//        his small forms for the piece's accents, spread over the whole canvas — more of them, and the checkerboards, for a
+//        dense piece. Each piece its own picture.)
+function kd2_yrb(ctx,CW,CH,cc,ss0,mode,chords,gc){
+  const ss=((ss0|0)+_mrPieceKey(chords))|0, A=_kd2Analyze(chords,gc,mode), S=_kdSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=_kdClamp(cc/A.cn,0,1);
   const r=_kdR(65000,ss); r(); const list=[]; let id=0; const push=f=>{ f.id=id++; list.push(f); };
-  let warm=A.tonic,cold=A.tonic,wb=-1,cb=-1; for(let p=0;p<12;p++){ const h=_kd2Hue(A.pcCol(p,60)); const w=A.pcW[p]; if(h>=20&&h<90&&w>wb){ wb=w; warm=p; } if(h>=180&&h<290&&w>cb){ cb=w; cold=p; } }
-  const yel=_kdMix(S.Y,A.pcCol(warm,64),0.35), blu=_kdMix(S.Bl,A.pcCol(cold,50),0.4);
-  const pw=CW*(0.3+A.ch.density*0.06), phh=CH*(0.5+A.ch.energy*0.1), pxc=CW*0.3, pyc=CH*0.44;
-  push({kind:'rect',t:0,x:pxc,y:pyc,w:pw,h:phh,ang:-0.04+(r()-.5)*0.06,col:yel});
-  const bassP=_kd2Phrases(A,Math.round((7+A.ch.density*4)*_dW(A.ch.density)));
-  bassP.forEach((p,k)=>{ const x=pxc-pw*0.4+pw*0.8*(k/Math.max(1,bassP.length-1)); push({kind:'lines',t:p.t0,x,y:pyc+(A.reg(p.bass)-0.5)*phh*0.45,ang:1.5708+(r()-.5)*0.2,fan:0.02,len:phh*(0.14+p.v*0.22),w:D*0.0045,n:1+(A.ch.density>0.5?1:0),col:S.K}); });
-  push({kind:'circle',t:0.1,x:pxc-pw*0.3,y:pyc-phh*0.3,r:D*0.016,col:S.Rd,ring:S.K});
-  const melP=_kd2Phrases(A,12); const pts=melP.map((p,k)=>({x:CW*(0.4+0.3*(k/Math.max(1,melP.length-1))),y:_kdClamp(CH*(0.72-0.5*A.reg(p.top)),CH*0.14,CH*0.86),w:D*(0.005+p.v*0.008)}));
-  push({kind:'stroke',t:0.25,pts,col:S.K});
-  const bx=CW*(0.72+r()*0.06), by=CH*(0.5+r()*0.12), br=D*(0.11+A.ch.energy*0.05);
-  push({kind:'circle',t:0.5,x:bx,y:by,r:br,col:blu,halo:[A.isBW?[70,70,70]:[30,28,54],_kdMix(blu,S.K,0.55)]});
-  const acc=_kd2Events(A,8).filter(e=>e.acc).slice(0,Math.round((4+A.ch.density*3)*_dW(A.ch.density)));
-  acc.forEach((e,k)=>{ const c=A.col(e.i); const f=_kd2Form(c); const x=CW*(0.55+r()*0.38), y=CH*(0.08+r()*0.84); const sz=D*(0.03+e.v*0.04);
-    if(f==='circle') push({kind:'circle',t:e.t,x,y,r:sz*0.6,col:c,ring:S.K}); else if(f==='rect') push({kind:'rect',t:e.t,x,y,w:sz,h:sz,ang:r()*0.6,col:k%2?S.Rd:c,ring:S.K}); else push({kind:'tri',t:e.t,x,y,ang:r()*6.28,len:sz*1.6,aspect:0.3,col:k%2?S.Rd:c,ring:S.K}); });
-  push({kind:'checker',t:0.75,x:CW*(0.83+r()*0.08),y:CH*(0.12+r()*0.08),size:D*(0.07+A.ch.density*0.03),n:3,ang:0,col:S.K,col2:S.W});
-  push({kind:'dots',t:0.9,x:bx,y:by,r:br*2.2,n:Math.round((5+A.ch.density*6)*_dW(A.ch.density)),dr:D*0.005,col:S.K});
+  let warm=A.tonic,cold=A.tonic,red=A.tonic,wb=-1,cb=-1,rb=-1; for(let p=0;p<12;p++){ const h=_kd2Hue(A.pcCol(p,60)); const w=A.pcW[p]; if(h>=20&&h<90&&w>wb){ wb=w; warm=p; } if(h>=180&&h<290&&w>cb){ cb=w; cold=p; } if((h<20||h>=320)&&w>rb){ rb=w; red=p; } }
+  const yel=_kdMix(S.Y,A.pcCol(warm,64),0.35), blu=_kdMix(S.Bl,A.pcCol(cold,50),0.4), rdc=_kdMix(S.Rd,A.pcCol(red,58),rb>0?0.35:0);
+  // the diagonal: the yellow at one corner's side, the blue at the opposite — which, the piece chooses
+  const fx=r()<0.5 ? 1 : -1, fy=r()<0.5 ? 1 : -1, P=(u,v)=>[CW*(0.5+fx*(u-0.5)), CH*(0.5+fy*(v-0.5))];
+  const Y=P(0.3+r()*0.06, 0.22+r()*0.06), B=P(0.68+r()*0.06, 0.76+r()*0.06), M=P(0.5+(r()-.5)*0.12, 0.5+(r()-.5)*0.08);
+  // the ground: warm, clouded — light round the yellow, violet and deep blue round the circle, as his is
+  ctx.fillStyle=A.isBW?'#d8d4cc':'#e2d6b8'; ctx.fillRect(0,0,CW,CH);
+  { const cloud=(x,y,R,c,a)=>{ const g=ctx.createRadialGradient(x,y,0,x,y,R); g.addColorStop(0,`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`); g.addColorStop(1,`rgba(${c[0]|0},${c[1]|0},${c[2]|0},0)`); ctx.fillStyle=g; ctx.fillRect(x-R,y-R,2*R,2*R); };
+    const vio=A.isBW?[120,120,130]:_kdMix(blu,[150,90,170],0.5), dp=A.isBW?[80,80,90]:_kdMix(blu,[30,28,70],0.5);
+    cloud(Y[0],Y[1],D*0.75,A.isBW?[240,238,230]:[250,240,190],0.65); cloud(B[0],B[1],D*0.8,vio,0.5); cloud(B[0]+(r()-.5)*D*0.3,B[1]+(r()-.5)*D*0.3,D*0.5,dp,0.38);
+    for(let i=0;i<5;i++) cloud(CW*r(),CH*r(),D*(0.25+r()*0.3),i%2?vio:(A.isBW?[200,200,200]:_kdMix(rdc,[240,200,170],0.6)),0.2); }
+  // the yellow oblong and the bass in it
+  const pw=CW*(0.4+A.ch.density*0.08), phh=CH*(0.3+A.ch.energy*0.06);
+  push({kind:'rect',t:0,x:Y[0],y:Y[1],w:pw,h:phh,ang:(r()-.5)*0.24,col:yel});
+  const bassP=_kd2Phrases(A,Math.round((8+A.ch.density*6)*_dW(A.ch.density)));
+  bassP.forEach((p,k)=>{ const x=Y[0]-pw*0.4+pw*0.8*(k/Math.max(1,bassP.length-1)); push({kind:'lines',t:p.t0*0.6,x,y:Y[1]+(A.reg(p.bass)-0.5)*phh*0.45,ang:1.5708+(r()-.5)*0.25,fan:0.02,len:phh*(0.2+p.v*0.3),w:D*0.0045,n:1+(A.ch.density>0.5?1:0),col:S.K}); });
+  // the red between, as his is: not one oblong but several forms laid over one another — the large red, a darker one across it, a
+  // pink one behind, a wedge driven through, a black bar and the small circle; how many and how they lie, the piece's
+  const rw=D*(0.22+A.ch.energy*0.16), ra=(r()-.5)*0.9, pink=A.isBW?[190,190,190]:_kdMix(rdc,[244,190,196],0.6);
+  push({kind:'rect',t:0.16,x:M[0]+(r()-.5)*rw*0.7,y:M[1]+(r()-.5)*rw*0.7,w:rw*(1.0+r()*0.3),h:rw*(0.8+r()*0.4),ang:ra-0.5-r()*0.5,col:pink});
+  push({kind:'rect',t:0.2,x:M[0],y:M[1],w:rw,h:rw*(1.2+r()*0.5),ang:ra,col:rdc,ring:S.K});
+  push({kind:'rect',t:0.26,x:M[0]+(r()-.5)*rw*0.6,y:M[1]+(r()-.5)*rw*0.6,w:rw*0.95,h:rw*0.3,ang:ra+1.2+r()*0.6,col:_kdMix(rdc,S.K,0.4),ring:S.K});
+  push({kind:'tri',t:0.3,x:M[0]+(r()-.5)*rw*0.8,y:M[1]+(r()-.5)*rw*0.8,ang:ra+r()*3,len:rw*(1.1+r()*0.5),aspect:0.28,col:_kdMix(rdc,yel,0.45),ring:S.K});
+  if(A.ch.density>0.3) push({kind:'rect',t:0.34,x:M[0]+(r()-.5)*rw,y:M[1]+(r()-.5)*rw,w:rw*(0.9+r()*0.5),h:rw*0.07,ang:ra+0.6+r()*1.2,col:S.K});
+  push({kind:'circle',t:0.36,x:M[0]+(r()-.5)*rw*0.9,y:M[1]+(r()-.5)*rw*0.9,r:rw*(0.14+r()*0.08),col:_kdMix(blu,pink,0.3),ring:S.K});
+  // the blue circle: the tonic, with its dark halo
+  const br=D*(0.2+A.ch.energy*0.07);
+  push({kind:'circle',t:0.45,x:B[0],y:B[1],r:br,col:blu,halo:[A.isBW?[70,70,70]:[30,28,54],_kdMix(blu,S.K,0.55)]});
+  // the serpent: the melody's contour, from the yellow through the red to the blue
+  const melP=_kd2Phrases(A,14), nm=Math.max(2,melP.length), ax=B[0]-Y[0], ay=B[1]-Y[1], al=Math.hypot(ax,ay)||1, nx=-ay/al, ny=ax/al;
+  const pts=melP.map((p,k)=>{ const u=-0.08+1.16*k/(nm-1), o=(A.reg(p.top)-0.5)*D*0.55; return {x:_kdClamp(Y[0]+ax*u+nx*o,CW*0.04,CW*0.96), y:_kdClamp(Y[1]+ay*u+ny*o,CH*0.04,CH*0.96), w:D*(0.006+p.v*0.012)}; });
+  push({kind:'stroke',t:0.3,pts,col:S.K});
+  // his small forms for the accents, spread over the whole canvas (each takes the freest place)
+  const acc=_kd2Events(A,14).filter(e=>e.acc).slice(0,Math.round((7+A.ch.density*8)*_dW(A.ch.density))), used=[[Y[0],Y[1]],[B[0],B[1]],[M[0],M[1]]];
+  acc.forEach((e,k)=>{ const c=A.col(e.i); const f=_kd2Form(c); let x=0,y=0,bd=-1; for(let q=0;q<8;q++){ const qx=CW*(0.07+r()*0.86), qy=CH*(0.05+r()*0.9); let md=1e9; for(const u of used) md=Math.min(md,Math.hypot(qx-u[0],qy-u[1])); if(md>bd){ bd=md; x=qx; y=qy; } } used.push([x,y]); const sz=D*(0.04+e.v*0.06);
+    if(f==='circle') push({kind:'circle',t:e.t,x,y,r:sz*0.6,col:c,ring:S.K}); else if(f==='rect') push({kind:'rect',t:e.t,x,y,w:sz,h:sz*(0.6+r()*0.8),ang:r()*0.9,col:k%3?c:S.Rd,ring:S.K}); else push({kind:'tri',t:e.t,x,y,ang:r()*6.28,len:sz*1.8,aspect:0.3,col:k%3?c:S.Rd,ring:S.K}); });
+  // fans of fine lines off the forms, the checkerboards, the dots round the circle
+  for(let i=0;i<Math.round(2+A.ch.density*3);i++){ const u=used[3+((r()*Math.max(1,used.length-3))|0)]||M; push({kind:'lines',t:0.4+i*0.1,x:u[0],y:u[1],ang:r()*6.28,fan:0.5+r()*0.4,len:D*(0.14+r()*0.14),w:D*0.003,n:3+((r()*3)|0),col:S.K}); }
+  for(let i=0;i<1+(A.ch.density>0.45?1:0);i++){ const c=P(0.78+r()*0.12-(i?0.6:0), 0.1+r()*0.1+(i?0.72:0)); push({kind:'checker',t:0.7+i*0.1,x:c[0],y:c[1],size:D*(0.09+A.ch.density*0.05),n:3+i,ang:(r()-.5)*0.5,col:S.K,col2:S.W}); }
+  push({kind:'dots',t:0.9,x:B[0],y:B[1],r:br*1.9,n:Math.round((6+A.ch.density*8)*_dW(A.ch.density)),dr:D*0.006,col:S.K});
   _kd2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
 // ── 5 · Improvisation (1911–13) — the Blue Rider years: colour masses that breathe, one per
