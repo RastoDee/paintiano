@@ -2927,6 +2927,27 @@ const SAMPLE_IMG_BAKE = {"The Starry Night — Van Gogh":{"atmo":{"v":0.35,"e":0
 function _atmoTitleL(t, lang){ return (t && typeof t==='object') ? (t[lang] || t.EN || '') : (t || ''); }
 const PF_FIRST = { piece:1, style:'arcs', phase:6, u:'/studio/first.webp' };   // Flight of the Bumble-Bee by Stella (interlocking arcs: his Protractor interlace, a chain of links down the whole canvas) — the picture is this very painting, made in the app; bold from the first second, on a dark ground
 const PF_SECOND = { pieces:[8,0,2,5,9,10,7,3,6], style:'mitchell', phase:0 };   // then Joan Mitchell's strokes, a different piece at every opening of the app, round these in turn, dark ground and light by turns
+// The opening Stella, drawn large and set in its frame so that each of the words over it sits in one of its links: the name in the
+// top one, the title in the middle one, the line to the sound in the bottom one (where the bigger rings once fell by mistake, now on
+// purpose and exact). Its chain of three links is measured in a small trial painting; the size and the place of the canvas then follow
+// from where the words stand on this screen. The open part of an end link is the part of its round the middle link does not cross —
+// a word sits in the middle of that. null when it cannot be done here (a wide frame, the words not found, not three links): the painting
+// then fills its frame as any other does.
+function _lhStellaPlace(cv, fv, cs, tone, lay){
+  const box=cv && cv.parentElement; if(!box) return null; const bw=box.clientWidth, bh=box.clientHeight; if(bw<200 || bh<bw*1.3) return null;
+  const tc=document.createElement('canvas'); globalThis.__ST_RINGS=null; _favPaint(tc, {...fv, lim:1}, {chords:cs}, 0.05, tone, {...lay, CW:1000, CH:1600});
+  const G=globalThis.__ST_RINGS; if(!G || !G.rings || G.rings.length!==3) return null;
+  const rs=G.rings.slice().sort((a,b)=>a[1]-b[1]), mid=rs[1];
+  const open=(r)=>{ const ux=r[0]-mid[0], uy=r[1]-mid[1], d=Math.hypot(ux,uy)||1, t=Math.max(0, Math.min(r[3], (r[3]-d+mid[2])/2)); return [r[0]+ux/d*t, r[1]+uy/d*t]; };
+  const P=[open(rs[0]), [mid[0],mid[1]], open(rs[2])].map(p=>[p[0]/1000, (p[1]-mid[1])/1000]);   // per unit of canvas width, from the middle link — which is always at the canvas's middle height
+  const br=box.getBoundingClientRect(); const at=(el)=>{ if(!el) return null; const r=el.getBoundingClientRect(); return (r.width>0 && r.height>0) ? r.top+r.height/2-br.top : null; };
+  const yW=at(document.querySelector('.pf-st-word')), ft=box.querySelector('.pf-lh-foot'), yC=at(box.querySelector('.pf-lh-cta')) ?? (ft ? ft.getBoundingClientRect().bottom-br.top-16 : null); if(yW==null || yC==null) return null;
+  const T=[yW, bh/2, yC], mp=(P[0][1]+P[1][1]+P[2][1])/3, mt=(T[0]+T[1]+T[2])/3; let sxy=0, sxx=0; for(let i=0;i<3;i++){ sxy+=(P[i][1]-mp)*(T[i]-mt); sxx+=(P[i][1]-mp)*(P[i][1]-mp); }
+  const CW=Math.round(sxy/(sxx||1)), m=mt-CW*mp; if(!(CW>bw) || m<0 || m>bh) return null;   // the canvas width, from how far apart the words stand; m, where the middle link sits on the screen
+  const CH=Math.ceil(2*Math.max(m, bh-m))+2; if(CH>CW*1.94) return null;   // tall enough to cover the screen with the middle link at its middle height; no taller than three links hold
+  const dx=Math.min(0, Math.max(bw-CW, bw/2-CW*(P[0][0]+P[1][0]+P[2][0])/3)), dy=m-CH/2;
+  return {CW, CH, dx, dy, bw, bh};
+}
 // (Fantaisie-Impromptu, Liebestraum, Mountain King, Für Elise, Promenade, the Fifth, Toccata, Clair de lune, The Entertainer; the Bumble-Bee is Stella's, Gymnopédie too sparse for the opening)
 const _pfOpenN = (()=>{ try{ const n=(parseInt(localStorage.getItem('pf_open_n'),10)|0); localStorage.setItem('pf_open_n',String(n+1)); return n; }catch(_){ return Math.floor(Math.random()*1000); } })();   // how many times the app has been opened here
 const _pfSecondPiece = (avoid)=>{ const P=PF_SECOND.pieces; for(let i=0;i<P.length;i++){ const pc=P[(_pfOpenN+i)%P.length]; if(pc!==avoid) return pc; } return P[0]; };   // this opening's piece, never the piece of the day that follows it
@@ -3344,7 +3365,7 @@ const STUDIO_HOME_CSS = `
 .pf-sh-art img{pointer-events:none;-webkit-user-drag:none}
 .pf-sh-art{position:absolute;inset:0;border-radius:24px;overflow:hidden;border:1px solid rgba(242,238,232,.18);box-shadow:0 30px 60px rgba(0,0,0,.65);animation:pfShFloat 6s ease-in-out infinite;background:#0b0910}
 .pf-lh{position:absolute;inset:0;overflow:hidden;background:#0a0814}
-.pf-lh-in{position:absolute;inset:0;animation:pfLhIn 1.1s cubic-bezier(.45,0,.2,1) both;background:#0a0814}   /* one painting gives way to the next as in a slow swipe: both move together, joined, for 1.1 s (it was a .6 s snap) */
+.pf-lh-in{position:absolute;inset:0;overflow:hidden;animation:pfLhIn 1.1s cubic-bezier(.45,0,.2,1) both;background:#0a0814}   /* one painting gives way to the next as in a slow swipe: both move together, joined, for 1.1 s (it was a .6 s snap) */
 .pf-lh-in.first{animation:pfLhFade .5s ease both}   /* the very first one is simply there */
 .pf-lh-in.out{animation:pfLhOut 1.1s cubic-bezier(.45,0,.2,1) both;z-index:1;pointer-events:none}   /* the one that leaves: the painting itself with its words, not a picture of it */
 @keyframes pfLhIn{from{transform:translateY(100%)}to{transform:none}}
@@ -18608,8 +18629,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const st=it.style; const skip=!!(st && _TAKE_ORIG.includes(st)); let se=0.5; try{ const c=computeSongCharacter(cs); se=c ? c.energy : 0.5; }catch(_){}
     const fv={ style:st, keys:null, fa:null, phase:it.phase|0, seed:pollockSessionSeed>>>0, cap:null, mode:'harmony', tone, pal:null, ks:0, se, dna:null, skip, liveE:false, compose:false, own:null, lim:1 };
     const lay=_favLayout(fv, cs); if(!lay) return;
-    try{ const box=cv.parentElement; const bw=box ? box.clientWidth : 0, bh=box ? box.clientHeight : 0; if(bw>40 && bh>40){ lay.CW=bw; lay.CH=bh; } }catch(_){}   // painted in the card's own frame, as the Studio paints (a painter's picture, not the mosaic grid)
-    liveHomeRef.current={ piece:it.piece, sel:{style:st, phase:it.phase|0, mode:'harmony', notes:false, stage:[], sig:false}, snap:()=>{ try{ return cv.toDataURL('image/jpeg',0.8); }catch(_){ return null; } } };
+    try{ cv.style.cssText=''; const box=cv.parentElement; const bw=box ? box.clientWidth : 0, bh=box ? box.clientHeight : 0; if(bw>40 && bh>40){ lay.CW=bw; lay.CH=bh; } }catch(_){}   // painted in the card's own frame, as the Studio paints (a painter's picture, not the mosaic grid)
+    let place=null; if(it.piece===PF_FIRST.piece && st===PF_FIRST.style && (it.phase|0)===PF_FIRST.phase){ try{ place=_lhStellaPlace(cv, fv, cs, tone, lay); }catch(_){ place=null; } if(place){ lay.CW=place.CW; lay.CH=place.CH; cv.style.cssText='inset:auto;left:'+place.dx.toFixed(1)+'px;top:'+place.dy.toFixed(1)+'px;width:'+place.CW+'px;height:'+place.CH+'px;object-fit:fill'; } }   // the opening Stella: large, its links round the words (see _lhStellaPlace)
+    liveHomeRef.current={ piece:it.piece, sel:{style:st, phase:it.phase|0, mode:'harmony', notes:false, stage:[], sig:false}, snap:()=>{ try{ if(place){ const k=cv.width/place.CW, o=document.createElement('canvas'); o.width=Math.round(place.bw*k); o.height=Math.round(place.bh*k); o.getContext('2d').drawImage(cv, place.dx*k, place.dy*k); return o.toDataURL('image/jpeg',0.8); } return cv.toDataURL('image/jpeg',0.8); }catch(_){ return null; } } };   // what is on the screen, as it is there
     let meta=null; try{ const nm=_liveName(it.piece); const q=nm.split(' — '); meta={t:q[0]||nm, by:q[1]||'', p:t('inspiredBy').replace('{artist}', STYLE_INSPIRED[st]||st), k:liveHome.k}; setLiveMeta(meta); }catch(_){ setLiveMeta(null); }
     const reduce=(()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(_){ return false; } })();
     try{ if(reduce) throw 0; const cn0=cs.length, bars=[]; for(let j=0;j<36;j++){ const c=cs[Math.min(cn0-1, Math.floor(j/36*cn0))]; const ns=(c && (c.n||c.notes))||[]; let top=60, vel=100; ns.forEach(x=>{ const m=(x && x.m!==undefined) ? x.m : (x && x.midi!==undefined ? x.midi : x); if(+m>top) top=+m; if(x && x.v) vel=x.v; }); const k=gc(top, vel); bars.push('rgb('+(k[0]|0)+','+(k[1]|0)+','+(k[2]|0)+')'); } setLiveBars(bars); }catch(_){ setLiveBars(null); }
