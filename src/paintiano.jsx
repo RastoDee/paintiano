@@ -5703,8 +5703,49 @@ function _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode){
 //   the pour         wide and pooling where the piece is slow and loud (enamel with body), fine and spattered where
 //                    it is quick; a pool at every long note; the spatter as dense as the piece
 // ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// POLLOCK LISTENS (Nov 2026) — Sounds in the Grass: Shimmering Substance (1946), the series whose very name is what he
+// heard. Not a web: the canvas laid all over with short thick strokes of paint straight from the tube, cream and white
+// and yellow with the piece's colours worked in, turning in slow eddies; and in it the suns — rings of strokes round a
+// bright disc. Every note is a stroke, laid as it sounds: as long as the note is held, as thick as it is loud, turned
+// with the eddy it falls in, its colour the chord's (a cream or white between them, as he mixed); the loudest passages
+// are the suns, each an eddy's eye. Stroke by stroke as the piece plays.
+// ═══════════════════════════════════════════════════════════════════════════
+function _pkShimmer(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const bw=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH); if(!cn) return;
+  const A=_kd2Analyze(chords,gc,mode), dens=A.ch?A.ch.density:0.4, cl=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a==null?1:a})`;
+  const CREAM=bw?[232,230,224]:[238,226,192], WHITE=[250,247,236], YEL=bw?[206,206,200]:[238,200,70], OCH=bw?[150,150,146]:[206,142,48];
+  const pk=_seedRnd(61500,_mrPieceKey(chords),0,0); pk();
+  ctx.fillStyle=css(bw?[210,208,202]:[214,198,160]); ctx.fillRect(0,0,CW,CH);   // the board, before the paint
+  // the eddies: one round each of the loudest passages (its sun at the eye)
+  const P=A.phrases.slice().sort((a,b)=>b.vmax-a.vmax), nE=Math.round(cl(1+3*dens,1,4)), eyes=[];
+  for(const q of P){ if(eyes.length>=nE) break; const x=CW*(0.18+0.64*pk()), y=CH*(0.12+0.76*cl(0.75*(1-A.reg(q.top))+0.25*pk(),0,1)); if(eyes.some(e=>Math.hypot(e.x-x,e.y-y)<D*0.42)) continue; eyes.push({x,y,q,dir:pk()<0.5?1:-1,R:D*(0.08+0.07*(q.vmax||0.7))}); }
+  const flow=(x,y)=>{ let vx=Math.sin(y/CH*4.4+pk0)*0.5, vy=Math.cos(x/CW*3.8+pk1)*0.5; for(const e of eyes){ const dx=x-e.x, dy=y-e.y, d=Math.hypot(dx,dy)+D*0.05, k=cl(D*0.5/d,0,3); vx+=-dy/d*e.dir*k; vy+=dx/d*e.dir*k; } return Math.atan2(vy,vx); };
+  const pk0=pk()*6.28, pk1=pk()*6.28;
+  const chordCol=(i)=>bw?[110,110,110]:_picChord(chords,cl(i,0,cn-1),gc,bw).rgb;
+  const colOf=(i,r)=>{ const c=chordCol(i), u=r(); return u<0.3?mix(WHITE,c,0.05):u<0.55?mix(YEL,c,0.15):u<0.68?mix(CREAM,c,0.12):u<0.78?mix(OCH,c,0.2):mix(c,CREAM,0.22+0.18*r()); };   /* his whites and yellows, the piece's colours worked in */
+  // a stroke of paint straight from the tube: its shadow, the body, a ridge of light along it
+  const stroke=(x,y,ang,len,w,c,curl)=>{ const pts=[]; for(let s=0;s<=8;s++){ const u=s/8-0.5; const a=ang+curl*u; pts.push([x+Math.cos(a)*len*u, y+Math.sin(a)*len*u]); }
+    const draw=(dx,dy,col,lw)=>{ ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); pts.forEach((p,k)=>k?ctx.lineTo(p[0]+dx,p[1]+dy):ctx.moveTo(p[0]+dx,p[1]+dy)); ctx.stroke(); };
+    draw(w*0.16,w*0.22,css(mix(c,[50,36,20],0.6),0.4),w*1.06); draw(0,0,css(c,1),w); draw(-w*0.14,-w*0.18,css(mix(c,[255,255,248],0.6),0.6),w*0.3); };
+  // the strokes: laid all over, crowding, the field filling as the piece plays; each takes the note sounding when it is laid
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  const g=D*(0.05-0.012*dens), nx=Math.ceil(CW/g)+1, ny=Math.ceil(CH/g)+1, cells=[]; for(let j=0;j<ny;j++) for(let i=0;i<nx;i++) for(let L=0;L<2;L++) cells.push([i,j,L]);
+  const sh=_seedRnd(61550,ss,0,0); sh(); for(let k=cells.length-1;k>0;k--){ const m=Math.floor(sh()*(k+1)); const t=cells[k]; cells[k]=cells[m]; cells[m]=t; }
+  const its=[]; cells.forEach((cc,k)=>{ const i=Math.min(cn-1,Math.floor(k/cells.length*cn)); const e=A.ev[i]||A.ev.find(Boolean); const r=_seedRnd(61600+k,ss,0,0); r(); const f=e?cl((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1):0.5;
+    const x=(cc[0]+r()-0.3)*g, y=(cc[1]+r()-0.3)*g, ang=flow(x,y)+(r()-0.5)*0.45, len=g*(1.5+1.1*r()+0.6*cl((e&&e.dur)||0.5,0,2)/2), w=g*(0.42+0.32*f+0.1*r());
+    its.push({i,z:cc[2],f:()=>stroke(x,y,ang,len,w,colOf(i,r),(r()-0.5)*0.9)}); });
+  // the suns: at each eye a round of paint laid in rings, yellow and white, its edge in the passage's colour
+  for(const e of eyes){ const r=_seedRnd(61700+Math.round(e.x*7),ss,0,0); r(); const c=chordCol(e.q.a), span=Math.max(1,e.q.b-e.q.a);
+    const rings=[[0.25,YEL],[0.55,mix(YEL,WHITE,0.5)],[0.85,mix(YEL,c,0.25)],[1.1,mix(c,OCH,0.3)]];
+    rings.forEach(([rf,col],ri)=>{ const rr=e.R*rf, n=Math.max(3,Math.round(6.2832*rr/(g*1.1))); for(let k=0;k<n;k++){ const a=k/n*6.2832+r()*0.2, t=e.q.a+Math.floor(span*((ri+k/n)/rings.length));
+      its.push({i:t,z:2,f:()=>stroke(e.x+Math.cos(a)*rr,e.y+Math.sin(a)*rr,a+Math.PI/2*e.dir,g*(1.6+0.6*r()),g*(0.5+0.2*r()),mix(col,WHITE,0.1*r()),0.5*e.dir)}); } }); }
+  its.sort((a,b)=>a.i-b.i||a.z-b.z); for(const it of its){ if(it.i>=played) break; it.f(); }
+  try{ globalThis.__PK_LISTEN={v:'shimmer',eddies:eyes.length}; }catch(_){}
+  _setCurE(0.5);
+}
 function _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
-  return _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode);   // What he heard is his Mural now; the walk round the canvas below retired (code kept)
+  return _pkShimmer(ctx,CW,CH,chords,lim,gc,ss,mode);   // What he heard is Shimmering Substance now (Nov 2026); the Mural (_pkMural) and the walk round the canvas below retired, code kept   // What he heard is his Mural now; the walk round the canvas below retired (code kept)
   const bw=mode==='bw'; const A0=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A0); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A0.ch?A0.ch.register:0.5, dens=A0.ch?A0.ch.density:0.3;
   const black = !major && loud>0.6, white = loud<0.5 && reg>0.55 && !black;
   try{ globalThis.__PK_LISTEN={black,white,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
