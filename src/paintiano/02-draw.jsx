@@ -3411,8 +3411,56 @@ function _pkShimmer(ctx,CW,CH,chords,lim,gc,ss,mode){
   try{ globalThis.__PK_LISTEN={v:'shimmer2',crescents:nC}; }catch(_){}
   _setCurE(0.5);
 }
+// The Mural rebuilt (Nov 2026) as the painting is: one frieze filling the whole height, no bands — the stampede of tall
+// black figures, each a heavy brushed S from the floor to the top, curling into loops; teal and blue curves winding
+// between and through them; the ground between all filled with yellow, rose, white and pale teal laid in swathes. The
+// piece runs left to right: every beat a figure, as heavy as it is loud, swaying as the melody moves, a loop where a note
+// is held or accented; every passage its swathes in its colours, drawn to the Mural's own; white thrown at the accents.
+function _pkMural2(ctx,CW,CH,chords,lim,gc,ss,mode){
+  const bw=mode==='bw', A=_kd2Analyze(chords,gc,mode), cn=A.cn, D=Math.min(CW,CH), played=Math.max(1,Math.min(cn,lim)); if(!cn) return;
+  const cl=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], dens=A.ch?A.ch.density:0.4;
+  const MUR=[[226,190,70],[214,150,156],[236,228,210],[150,186,176],[198,120,90],[232,214,150]];   // yellow, rose, white, pale teal, rust, straw
+  const TEAL=bw?[70,70,70]:[34,96,108], BLUE=bw?[50,50,50]:[30,52,104], BLK=bw?[18,18,18]:[22,18,16], WHT=bw?[244,244,240]:[244,238,224];
+  const toMur=(c)=>{ if(bw){ const g=c[0]*0.3+c[1]*0.59+c[2]*0.11; return [g,g,g].map(v=>180+v*0.25); } let best=MUR[0], bd=1e9; for(const m of MUR){ const d2=(m[0]-c[0])**2+(m[1]-c[1])**2+(m[2]-c[2])**2; if(d2<bd){ bd=d2; best=m; } } return mix(c,best,0.86); };
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  const tops=A.ev.filter(Boolean).map(e=>e.top).sort((a,b)=>a-b), tLo=tops[Math.floor(tops.length*0.05)]||48, tHi=tops[Math.floor(tops.length*0.95)]||84;
+  const ds=A.ev.filter(Boolean).map(e=>e.dur).sort((a,b)=>a-b), dMed=ds[ds.length>>1]||1;
+  ctx.fillStyle=`rgb(${bw?'214,212,206':'216,198,170'})`; ctx.fillRect(0,0,CW,CH);
+  const items=[]; let id=0; const put=(t,z,fn)=>items.push({t,z,id:id++,fn});
+  const X=(t)=>CW*(-0.04+1.08*cl(t,0,1));
+  // the swathes: each passage a few broad brushed sweeps of its colours across its stretch, top to bottom, the ground filling
+  const P=_kd2Phrases(A,Math.round(cl(8+A.phrases.length*0.4,10,28)));
+  P.forEach((p,k)=>{ const r=_seedRnd(93500+k,ss,0,0); r(); const xa=X(p.t0), xb=X(p.t1), n=4+Math.floor(r()*4);
+    for(let j=0;j<n+3;j++){ const x=xa+(xb-xa)*r(), y=CH*(r()), w=D*(0.1+0.1*r()), c=r()<0.3?WHT:toMur(A.pcCol(r()<0.6?p.pc:(p.pc2!=null?p.pc2:p.pc),60)), ang=Math.PI/2+(r()-0.5)*1.6, L=D*(0.16+0.22*r()), pts=[];
+      for(let s=0;s<=8;s++){ const u=s/8-0.5; pts.push([x+Math.cos(ang)*L*u+Math.sin(u*4+k)*w*0.15, y+Math.sin(ang)*L*u,1]); }
+      put(p.t0+(p.t1-p.t0)*j/(n+3),0,()=>_pkRibbon(ctx,pts,w,c,0.88)); } });
+  // the figures: a beat each across the frieze, from the floor to the top
+  const nF=Math.round(cl(8+10*dens,8,18)); let prevM=0.5;
+  const fig=[]; for(let k=0;k<nF;k++){ const i=Math.min(cn-1,Math.floor((k+0.5)*cn/nF)), e=A.ev[i]||A.ev.find(Boolean); const r=_seedRnd(93700+k,ss,0,0); r();
+    const f=cl((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1), m=cl((e.top-tLo)/Math.max(1,tHi-tLo),0,1), x=CW*(0.04+0.92*(k+0.5)/nF)+(r()-0.5)*CW*0.03, sway=(m-prevM)*CW*0.12+(r()-0.5)*CW*0.04; prevM=m;
+    let lo=0,nn=0; for(let q=Math.max(0,i-4);q<=Math.min(cn-1,i+4);q++){ const o=A.ev[q]; if(!o||q===i) continue; nn++; if(o.v<e.v) lo++; } const acc=nn&&lo/nn>0.85, held=e.dur>dMed*1.6;
+    const w=D*(0.045+0.04*f), pts=[], b1=(r()<0.5?-1:1)*CW*(0.06+0.06*r()), b2=(r()<0.5?-1:1)*CW*(0.04+0.05*r());
+    for(let s=0;s<=20;s++){ const u=s/20, y=CH*(1.03-1.08*u); pts.push([x+sway*u+b1*Math.sin(Math.PI*u)+b2*Math.sin(2*Math.PI*u)+Math.sin(u*11+k)*w*0.2, y, 0.9+0.3*Math.sin(u*4+k)]); }
+    fig.push({i,t:i/cn,x,f,pts,w,acc,held,r}); }
+  fig.forEach((F,k)=>{ const r=F.r;
+    // teal and blue curves winding round the figure, a little before it
+    const tc=r()<0.6?TEAL:BLUE; for(let q=0;q<3;q++){ const cx=F.x+(r()-0.5)*CW*0.14, cy=CH*(0.1+0.8*r()), R=CH*(0.06+0.1*r()), a0=r()*6.28, sp=2+2.5*r(), lp=[]; for(let s=0;s<=18;s++){ const u=s/18, a=a0+sp*u; lp.push([cx+Math.cos(a)*R*0.55,cy+Math.sin(a)*R,0.8+0.4*Math.sin(u*3)]); }
+      put(F.t-0.002,1,()=>_pkRibbon(ctx,lp,D*(0.03+0.025*F.f),mix(tc,[255,255,255],0.12*r()),0.92)); }
+    // the figure: a heavy black S, its brush dragged dry along one side
+    put(F.t,2,()=>{ _pkRibbon(ctx,F.pts,F.w,BLK,0.94); _pkRibbon(ctx,F.pts.map(p=>[p[0]+F.w*0.35,p[1],p[2]*0.35]),F.w,mix(BLK,[90,60,40],0.5),0.5); });
+    // its loops: a head at the top, a loop where the note is held or accented
+    const loops=[[0.82+0.1*r()]].concat(F.held||F.acc?[[0.3+0.4*r()]]:[]);
+    loops.forEach(([u],q)=>{ const p=F.pts[Math.round(u*20)], rx=F.w*(0.9+0.7*r()), ry=rx*(1.2+0.8*r()), rot=(r()-0.5)*0.8, lp=[]; for(let s=0;s<=26;s++){ const a=s/26*6.2832; lp.push([p[0]+Math.cos(a)*rx*Math.cos(rot)-Math.sin(a)*ry*Math.sin(rot)+rx*0.6, p[1]+Math.cos(a)*rx*Math.sin(rot)+Math.sin(a)*ry*Math.cos(rot),1]); }
+      put(F.t+0.001,3,()=>_pkRibbon(ctx,lp,F.w*0.55,q?mix(BLK,TEAL,0.3):BLK,0.92)); });
+    // white and yellow thrown at the accents
+    if(F.acc){ for(let q=0;q<3;q++){ const p=F.pts[3+Math.floor(r()*14)], a=(r()-0.5)*2.4, L=D*(0.05+0.07*r()), sp=[]; for(let s=0;s<=6;s++){ const u=s/6-0.5; sp.push([p[0]+Math.cos(a)*L*u,p[1]+Math.sin(a)*L*u,1]); }
+      put(F.t+0.002,4,()=>_pkRibbon(ctx,sp,D*0.022,q===2?mix(MUR[0],WHT,0.3):WHT,0.92)); } } });
+  items.sort((a,b)=>a.t-b.t||a.z-b.z||a.id-b.id); const reveal=played/cn; for(const it of items){ if(it.t>reveal+1e-9 && it.t>0) break; it.fn(); }
+  try{ globalThis.__PK_LISTEN={v:'mural2',figures:nF}; }catch(_){}
+  _setCurE(0.5);
+}
 function _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
-  return _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode);   // What he heard is his Mural; the walk round the canvas below retired (code kept)   // What he heard is his Mural now; the walk round the canvas below retired (code kept)
+  return _pkMural2(ctx,CW,CH,chords,lim,gc,ss,mode);   // What he heard is his Mural, rebuilt as one frieze (Nov 2026; the friezes in rows, _pkMural, and the walk round the canvas below retired, code kept)   // What he heard is his Mural now; the walk round the canvas below retired (code kept)
   const bw=mode==='bw'; const A0=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A0); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A0.ch?A0.ch.register:0.5, dens=A0.ch?A0.ch.density:0.3;
   const black = !major && loud>0.6, white = loud<0.5 && reg>0.55 && !black;
   try{ globalThis.__PK_LISTEN={black,white,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
