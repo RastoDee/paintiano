@@ -9817,10 +9817,18 @@ function _dl2Paint(pick,ctx,CW,CH,chords,lim,gc,ss,mode){
           items.push({t:(u0+u1)/2,z:1,f:(ctx)=>{ ctx.fillStyle=_dlCss(q,0.95); ctx.beginPath(); ctx.moveTo(x0-w2,y0); ctx.quadraticCurveTo(x0-w2*1.2,(y0+y1)/2,x1-w2*0.8,y1); ctx.quadraticCurveTo(x1,y1-(y0-y1)*0.25,x1+w2*0.8,y1); ctx.quadraticCurveTo(x0+w2*1.2,(y0+y1)/2,x0+w2,y0); ctx.closePath(); ctx.fill(); }}); }
         items.push({t:g.t1,z:2,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream,0.95); ctx.beginPath(); ctx.arc(x+lean,base-hgt-bw2*0.5,bw2*0.42,0,6.2832); ctx.fill(); }}); });
       break; }
-    default: { // Le Premier Disque 1913 — the piece as the first disc: seven rings from the centre outward, each a seventh of the piece, each cut into its four quarters
-      ctx.fillStyle=_dlCss(bw?[60,60,62]:_dlMix(S.col(0.5),[52,48,60],0.8)); ctx.fillRect(0,0,W,H); const R=D*0.47, x=W/2, y=H/2;
-      items.push({t:0,z:0,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream); ctx.beginPath(); ctx.arc(x,y,R*1.02,0,6.2832); ctx.fill(); }});
-      _dl2Disc(items,S,x,y,R,0,1,{q:4,K:7,z:1,rot:0.7854,spin:0});
+    default: { // Le Premier Disque 1913 — the piece as the first disc. (Nov 2026: it was one disc in the middle of a dark ground, seven
+      // equal rings in four quarters, the same on every piece — only the order of its colours changed. Now the disc is larger than the
+      // canvas and the canvas cuts it, as a close view of his tondo: where its centre lies is the piece's; a ring for each passage,
+      // as wide as the passage is loud; the inner rings in his four quarters, the outer cut finer the denser the piece; each ring
+      // turned a little against the last by the passage's register. The corners the disc leaves show the dark ground.)
+      const kk=((ss|0)+_mrPieceKey(chords))|0, rq=_dlR(90500,kk); rq();
+      ctx.fillStyle=_dlCss(bw?[60,60,62]:_dlMix(S.col(0.5),[52,48,60],0.8)); ctx.fillRect(0,0,W,H);
+      const R=Math.max(W,H)*(0.56+0.1*rq()), x=W*(0.5+(rq()-0.5)*0.5), y=H*(0.5+(rq()-0.5)*0.36), dens=A.ch ? A.ch.density : 0.4;
+      items.push({t:0,z:0,f:(ctx)=>{ ctx.fillStyle=_dlCss(cream); ctx.beginPath(); ctx.arc(x,y,R*1.015,0,6.2832); ctx.fill(); }});
+      const G=S.groups(_dlClamp(Math.round(5+4*dens+nP/12),5,10)), n=G.length; let tot=0; const wd=G.map(g=>{ const w=0.6+0.9*g.vmax; tot+=w; return w; }); let acc=0, rot=rq()*6.2832;
+      G.forEach((g,i)=>{ const r0=R*acc/tot; acc+=wd[i]; const r1=R*acc/tot, q=i<2 ? 4 : _dlClamp(4*Math.round(1+dens*2.2*(i/n)+0.3),4,12); rot+=(g.reg-0.5)*1.1+(i%2 ? 6.2832/q/2 : 0);
+        const cols=_dl2Cols(S,g.t0,g.t1,q,i%2===1), rr=rot; items.push({t:g.t0,z:1,f:(ctx)=>_dl2Ring(ctx,x,y,r0,r1,cols,rr)}); });
       break; }
   }
   _dl2Draw(ctx,items,reveal); _setCurE(0.5);
@@ -10945,35 +10953,39 @@ function hk2_altar(ctx,CW,CH,chords,lim,gc,ss,mode){
   push({kind:'poly',t:0.99,pts:[[apex[0],apex[1]-sr*0.3],[apex[0]-sr*0.25,apex[1]+sr*0.15],[apex[0]+sr*0.25,apex[1]+sr*0.15]],col:[20,16,24]});
   _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
-// ── 3 · The Swan (1914–15) — her series of the two that meet. (Nov 2026: it was No. 17 alone, a small quartered circle with a
-//        cube in the middle of a white canvas, the same on every piece. Now the whole canvas is hers: split into the dark and the
-//        light half, as her Swans are, and the great circle across the split — its rings the piece's passages, each ring cut
-//        into the arcs of that passage's chords in their colours, the inner rings the first passages, the outer the last; the
-//        colours turn to their darker selves on the dark half. The number of rings, how finely they are cut and where the
-//        circle sits are the piece's; the cube at its heart is the tonic.)
+// ── 3 · The Swan (1914–15) — her series of the two that meet: the light one on the dark, the dark one on the light, mirrored across
+//        the line between the two halves of the canvas and touching on it. (Nov 2026: first a small quartered circle on a bare
+//        canvas, the same on every piece; then a great circle of rings, which read as Delaunay's disc. Now the two themselves, as
+//        her later Swans abstract them: from the point where they meet each opens a great wing of long blades, a blade for each
+//        passage of the piece, as long as the passage is loud, banded along its length with that passage's chords in their colours
+//        — deep colours on the light half, their pale selves on the dark; the upper wing follows the melody, the lower the bass;
+//        a neck curls from each back toward the meeting point, where the cube of the tonic stands. How many blades, how far each
+//        reaches, which half is light and how the line tilts are the piece's.)
 function hk2_quarters(ctx,CW,CH,chords,lim,gc,ss0,mode){
   const ss=((ss0|0)+_mrPieceKey(chords))|0, A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
   const r=_hkR(84000,ss); r(); const K=[24,22,24], W=[248,245,238], cn=A.cn, dens=A.ch ? A.ch.density : 0.4, sm=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x);
-  // the two halves: which way the canvas is split and where the line runs is the piece's
-  const tilt=(r()-0.5)*0.5+(r()<0.5 ? 0 : Math.PI/2)*0, split=0.46+0.08*r(), nx=Math.sin(tilt), ny=Math.cos(tilt), cx=CW*(0.5+(r()-0.5)*0.12), cy=CH*split;
-  const dark=(x,y)=>((x-cx)*nx+(y-cy)*ny)>0;
-  ctx.fillStyle=_hkCss(W); ctx.fillRect(0,0,CW,CH);
-  ctx.save(); ctx.beginPath(); const far=Math.hypot(CW,CH)*1.5; ctx.moveTo(cx-ny*far, cy+nx*far); ctx.lineTo(cx+ny*far, cy-nx*far); ctx.lineTo(cx+ny*far+nx*far, cy-nx*far+ny*far); ctx.lineTo(cx-ny*far+nx*far, cy+nx*far+ny*far); ctx.closePath(); ctx.clip(); ctx.fillStyle=_hkCss(K); ctx.fillRect(0,0,CW,CH); ctx.restore();
-  // the rings: one per passage, cut into the arcs of its chords
-  const nR=Math.max(4, Math.min(8, Math.round(4+4*dens+Math.min(1,cn/600)))), P=_kd2Phrases(A,nR), n=Math.max(1,P.length), R=Math.min(CW*0.6, CH*0.4), r0=R*0.13, rot=r()*6.283;
-  const col=(c,dk)=>{ const q=isBW ? _hkPastel(c,0.25,true) : c; return dk ? _hkMix(_hkMix(q,W,0.15),K,0.62) : _hkMix(q,W,0.4); };   // her colours: soft and chalky on the light half, their deep selves on the dark
-  for(let i=0;i<n;i++){ const p=P[i], ra=r0+(R-r0)*i/n, rb=r0+(R-r0)*(i+1)/n, t0=0.04+0.86*i/n, k=sm((reveal-t0)/(0.86/n)); if(k<=0) break;
-    const ev=[]; for(let j=p.a;j<p.b;j++) if(A.ev[j]) ev.push(A.ev[j]); const m=Math.max(3, Math.min(Math.round(5+16*dens+i*1.5), ev.length||3)), a0=rot+i*0.7+r()*0.4;
-    for(let q=0;q<Math.ceil(m*k);q++){ const e=ev.length ? ev[Math.min(ev.length-1, Math.floor(q*ev.length/m))] : null, c=e ? A.pcCol(((Math.round(e.top)%12)+12)%12, Math.round(e.top)) : A.pcCol(p.pc, Math.round(p.top||60)), s0=a0+q/m*6.283, s1=a0+(q+1)/m*6.283;
-      // each arc in two parts where the split line crosses it: light side, dark side
-      const st=10; for(let u=0;u<st;u++){ const b0=s0+(s1-s0)*u/st, b1=s0+(s1-s0)*(u+1)/st+0.004, mid=(b0+b1)/2, rm=(ra+rb)/2, dk=dark(cx+Math.cos(mid)*rm, cy+Math.sin(mid)*rm);
-        ctx.beginPath(); ctx.arc(cx,cy,rb,b0,b1); ctx.arc(cx,cy,ra,b1,b0,true); ctx.closePath(); ctx.fillStyle=_hkCss(col(c,dk)); ctx.fill(); }
-      ctx.strokeStyle=_hkCss([24,22,24],0.55); ctx.lineWidth=Math.max(0.7,D*0.0018); ctx.beginPath(); ctx.moveTo(cx+Math.cos(s0)*ra, cy+Math.sin(s0)*ra); ctx.lineTo(cx+Math.cos(s0)*rb, cy+Math.sin(s0)*rb); ctx.stroke(); }
-    ctx.strokeStyle=_hkCss([130,124,118]); ctx.lineWidth=Math.max(0.9,D*0.0026); ctx.beginPath(); ctx.arc(cx,cy,rb,a0,a0+6.283*k); ctx.stroke(); }
-  // the line of the split through the circle, and the cube at its heart (the tonic), light on one side and dark on the other
-  ctx.strokeStyle=_hkCss([130,124,118]); ctx.lineWidth=Math.max(1,D*0.003); ctx.beginPath(); ctx.moveTo(cx-ny*far, cy+nx*far); ctx.lineTo(cx+ny*far, cy-nx*far); ctx.stroke();
-  if(reveal>0.9){ const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60), q=r0*0.5, kk=sm((reveal-0.9)/0.08); ctx.globalAlpha=kk; const poly=(pts,c)=>{ ctx.beginPath(); pts.forEach((v,i)=>i ? ctx.lineTo(v[0],v[1]) : ctx.moveTo(v[0],v[1])); ctx.closePath(); ctx.fillStyle=_hkCss(c); ctx.fill(); ctx.strokeStyle=_hkCss(K); ctx.lineWidth=Math.max(1,D*0.003); ctx.stroke(); };
-    ctx.fillStyle=_hkCss(W); ctx.beginPath(); ctx.arc(cx,cy,r0,0,6.283); ctx.fill(); ctx.strokeStyle=_hkCss(K); ctx.lineWidth=Math.max(1,D*0.003); ctx.stroke();
+  const flip=r()<0.5, tilt=(r()-0.5)*0.36, cx=CW*(0.5+(r()-0.5)*0.16), cy=CH*(0.47+0.06*r()), far=Math.hypot(CW,CH)*1.5, ux=Math.cos(tilt), uy=Math.sin(tilt);
+  // the two halves
+  ctx.fillStyle=_hkCss(flip ? K : W); ctx.fillRect(0,0,CW,CH);
+  ctx.save(); ctx.beginPath(); ctx.moveTo(cx-ux*far, cy-uy*far); ctx.lineTo(cx+ux*far, cy+uy*far); ctx.lineTo(cx+ux*far-uy*far, cy+uy*far+ux*far); ctx.lineTo(cx-ux*far-uy*far, cy-uy*far+ux*far); ctx.closePath(); ctx.fillStyle=_hkCss(flip ? W : K); ctx.fill(); ctx.restore();
+  const nB=Math.max(5, Math.min(11, Math.round(5+6*dens+Math.min(1,cn/700)))), P=_kd2Phrases(A,nB), n=Math.max(1,P.length), reach=Math.min(CH*0.5, CW*0.95);
+  // a wing: side -1 the upper, +1 the lower; onDark: pale colours
+  const wing=(side,onDark)=>{ for(let i=0;i<n;i++){ const p=P[i], t0=0.04+0.84*i/n, k=sm((reveal-t0)/(0.84/n)); if(k<=0) break;
+      const u=(i+0.5)/n, ang=tilt+side*(0.2+2.74*u), reg=A.reg(side<0 ? p.top : (p.bass!=null ? p.bass : p.top)), L=reach*(0.5+0.32*(p.vmax||p.v||0.6)+0.22*reg)*k, wd=L*(0.2+0.5/n);
+      const dx=Math.cos(ang), dy=Math.sin(ang), px=-dy, py=dx, tx=cx+dx*L, ty=cy+dy*L, bl=new Path2D(); bl.moveTo(cx,cy); bl.bezierCurveTo(cx+dx*L*0.3+px*wd, cy+dy*L*0.3+py*wd, cx+dx*L*0.8+px*wd*0.7, cy+dy*L*0.8+py*wd*0.7, tx, ty); bl.bezierCurveTo(cx+dx*L*0.8-px*wd*0.7, cy+dy*L*0.8-py*wd*0.7, cx+dx*L*0.3-px*wd, cy+dy*L*0.3-py*wd, cx, cy); bl.closePath();
+      const ev=[]; for(let j=p.a;j<p.b;j++) if(A.ev[j]) ev.push(A.ev[j]); const m=Math.max(3, Math.min(7, Math.round(3+4*dens)));
+      ctx.save(); ctx.clip(bl); for(let q=m-1;q>=0;q--){ const e=ev.length ? ev[Math.min(ev.length-1, Math.floor(q*ev.length/m))] : null, tp=e ? Math.round(side<0 ? e.top : (e.bass!=null ? e.bass : e.top)) : Math.round(p.top||60); let c=A.pcCol(((tp%12)+12)%12, tp); if(isBW) c=_hkPastel(c,0.25,true);
+        c=onDark ? _hkMix(c,W,0.45) : _hkMix(_hkMix(c,W,0.1),K,0.42); ctx.fillStyle=_hkCss(c); ctx.beginPath(); ctx.arc(cx,cy,L*(q+1)/m*1.02,0,6.2832); ctx.fill(); } ctx.restore();
+      ctx.strokeStyle=_hkCss(onDark ? W : K, 0.85); ctx.lineWidth=Math.max(1,D*0.0032); ctx.lineJoin='round'; ctx.stroke(bl);
+      ctx.strokeStyle=_hkCss(onDark ? W : K, 0.5); ctx.lineWidth=Math.max(0.7,D*0.0018); ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(tx,ty); ctx.stroke(); } };
+  const upDark=flip;   // the upper half is dark when flipped
+  wing(-1, upDark); wing(1, !upDark);
+  // the necks: from each wing a line curling back to the meeting point, the light one on the dark, the dark one on the light
+  if(reveal>0.5){ const kk=sm((reveal-0.5)/0.35); [-1,1].forEach((side)=>{ const onDark=side<0 ? upDark : !upDark, R0=reach*0.42, a0=tilt+side*(1.57+0.5*(r()-0.5)), sx=cx+Math.cos(a0)*R0, sy=cy+Math.sin(a0)*R0; ctx.strokeStyle=_hkCss(onDark ? W : K); ctx.lineWidth=Math.max(2,D*0.012); ctx.lineCap='round'; ctx.beginPath(); const st=40; for(let q=0;q<=Math.round(st*kk);q++){ const v=q/st, rr=R0*(1-v)*(1-v*0.2), aa=a0+side*v*4.6; const X=cx+Math.cos(aa)*rr+ (1-v)*0, Y=cy+Math.sin(aa)*rr; q ? ctx.lineTo(X,Y) : ctx.moveTo(sx,sy); } ctx.stroke(); }); }
+  // the line between the halves, and the cube of the tonic where the two meet
+  ctx.strokeStyle=_hkCss([130,124,118]); ctx.lineWidth=Math.max(1,D*0.003); ctx.beginPath(); ctx.moveTo(cx-ux*far, cy-uy*far); ctx.lineTo(cx+ux*far, cy+uy*far); ctx.stroke();
+  if(reveal>0.9){ const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60), q=D*0.045, kk=sm((reveal-0.9)/0.08); ctx.globalAlpha=kk; const poly=(pts,c)=>{ ctx.beginPath(); pts.forEach((v,i)=>i ? ctx.lineTo(v[0],v[1]) : ctx.moveTo(v[0],v[1])); ctx.closePath(); ctx.fillStyle=_hkCss(c); ctx.fill(); ctx.strokeStyle=_hkCss(K); ctx.lineWidth=Math.max(1,D*0.003); ctx.stroke(); };
+    ctx.fillStyle=_hkCss(W); ctx.beginPath(); ctx.arc(cx,cy,q*2,0,6.283); ctx.fill(); ctx.strokeStyle=_hkCss(K); ctx.lineWidth=Math.max(1,D*0.003); ctx.stroke();
     poly([[cx-q,cy-q*0.6],[cx+q*0.5,cy-q*0.6],[cx+q*0.5,cy+q*0.9],[cx-q,cy+q*0.9]],tc); poly([[cx-q,cy-q*0.6],[cx-q*0.5,cy-q*1.1],[cx+q,cy-q*1.1],[cx+q*0.5,cy-q*0.6]],_hkMix(tc,W,0.45)); poly([[cx+q*0.5,cy-q*0.6],[cx+q,cy-q*1.1],[cx+q,cy+q*0.4],[cx+q*0.5,cy+q*0.9]],_hkMix(tc,K,0.45)); ctx.globalAlpha=1; }
   _setCurE(0.5);
 }
