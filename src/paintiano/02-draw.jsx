@@ -11699,9 +11699,10 @@ function _wvScene(ctx,S,W,H,Dm,rnd,ss,X,Q){
     const rip=G(8); ctx.strokeStyle=css(paper,0.85); ctx.lineWidth=Math.max(1,Dm*0.003); rip.forEach((g)=>{ if(r<g.t0+0.02) return; const x=W*(0.1+0.8*g.t), y=pool+H*(0.05+0.12*((g.t*7)%1)); const len=W*(0.04+0.1*g.v); ctx.beginPath(); ctx.moveTo(x-len,y); ctx.quadraticCurveTo(x,y-H*0.012,x+len,y); ctx.stroke(); });
     pine(W*0.1,H*0.2,H*0.14,0.7,el.flakes); pine(W*0.9,H*0.18,H*0.12,0.6,el.flakes); waterTop=pool+H*0.04; shoreY=H*0.9; hz=H*0.3;
   } else if(setting==='bridge'){ // the arched bridge over the river: a pile per quarter, a walker per passage (the rain, if it rains, falls over all)
-    hz=H*0.5; skyBand(0,hz,skyCol[0],skyCol[1]); fujiBase=hz;
-    P=seaLine(H*0.6,0.025); ctx.fillStyle=css(night?mix(D,sumi,0.25):mix(D,paper,0.1)); _wvPath(ctx,P.concat([[W*1.03,H*1.02],[-W*0.03,H*1.02]]),true); ctx.fill(); const ns=Math.round((3+dens*14)*_dW(dens)); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:M,0.7); ctx.lineWidth=Math.max(1,Dm*0.003); _wvPath(ctx,P.map(q=>[q[0],q[1]+H*0.04*j]),false); ctx.stroke(); }
-    waterTop=H*0.62; Q.bridge={by:H*0.46,arc:H*0.1}; 
+    const bv=Q.bv||{by:0.46,arc:0.1,tilt:0,piles:3,water:0.6,shore:false,rs:0,nb:3}; hz=H*(bv.water-0.1); skyBand(0,hz,skyCol[0],skyCol[1]); fujiBase=hz;
+    if(bv.shore){ const sr=_seedRnd(81910,_mrPieceKey(S.chords),0,0); sr(); ctx.fillStyle=css(mix(D,sumi,0.35),0.85); ctx.beginPath(); ctx.moveTo(-W*0.02,H*(bv.water+0.02)); let x=-W*0.02; while(x<W*1.02){ const w=W*(0.03+0.07*sr()), h=H*(0.012+0.04*sr()); ctx.quadraticCurveTo(x+w*0.5,hz+H*0.03-h*2,x+w,hz+H*0.03-h*0.3*sr()); x+=w; } ctx.lineTo(W*1.02,H*(bv.water+0.02)); ctx.closePath(); ctx.fill(); }   /* the far bank, its trees one dark line */
+    P=seaLine(H*bv.water,0.025); ctx.fillStyle=css(night?mix(D,sumi,0.25):mix(D,paper,0.1)); _wvPath(ctx,P.concat([[W*1.03,H*1.02],[-W*0.03,H*1.02]]),true); ctx.fill(); const ns=Math.round((3+dens*14)*_dW(dens)); for(let j=1;j<=ns;j++){ ctx.strokeStyle=css(j%2?L:M,0.7); ctx.lineWidth=Math.max(1,Dm*0.003); _wvPath(ctx,P.map(q=>[q[0],q[1]+H*0.04*j]),false); ctx.stroke(); }
+    waterTop=H*(bv.water+0.02); Q.bridge={by:H*bv.by,arc:H*bv.arc,tilt:H*bv.tilt,piles:bv.piles}; 
   } else if(setting==='lake'){ // the still water: mist, the far hills a passage each, a ripple per phrase
     hz=H*(0.42+0.1*(1-reg)); skyBand(0,hz,skyCol[0],skyCol[1]); fujiBase=hz;
     const hills=G(5); hills.forEach((g,i)=>{ if(r<g.t0) return; const x=W*(0.05+0.9*g.t), w=W*(0.14+0.2*g.dur*3), h=H*(0.05+0.12*g.vmax); ctx.fillStyle=css(mix(D,paper,0.5+0.1*(i%3))); ctx.beginPath(); ctx.moveTo(x-w,hz); ctx.quadraticCurveTo(x-w*0.4,hz-h,x,hz-h*0.9); ctx.quadraticCurveTo(x+w*0.5,hz-h*0.8,x+w,hz); ctx.closePath(); ctx.fill(); });
@@ -11739,13 +11740,13 @@ function _wvScene(ctx,S,W,H,Dm,rnd,ss,X,Q){
   // ── the sky's things, behind everything that stands: the moon, the clouds, Fuji
   if(night) moon(W*(0.2+0.6*c.t),H*0.12,Dm*0.06); else if(!storm && !el.rain && setting!=='gorge' && water!=='wave') clouds(H*0.04,hz*0.7,4);
   if(el.fuji && fujiBase!=null) fuji(W*(setting==='sea' ? (c.t>0.5?0.26:0.74) : (trend>0.5?0.68:0.32)),fujiBase,0.09+0.2*(1-reg),dawn?(S.bw?mix(D,paper,0.35):mix(Acc,sumi,0.12)):storm?mix(D,sumi,0.3):night?mix(D,sumi,0.45):mix(D,paper,0.4));
-  if(Q.bridge){ const {by,arc}=Q.bridge; const deck=(x)=>by-arc*Math.sin(Math.PI*Math.max(0,Math.min(1,(x+W*0.05)/(W*1.1))));
-    ctx.fillStyle=css(mix(sumi,D,0.25)); ctx.beginPath(); ctx.moveTo(-W*0.05,by+H*0.02); for(let i=0;i<=24;i++){ const x=-W*0.05+W*1.1*i/24; ctx.lineTo(x,deck(x)); } ctx.lineTo(W*1.05,by+H*0.08); for(let i=24;i>=0;i--){ const x=-W*0.05+W*1.1*i/24; ctx.lineTo(x,deck(x)+H*0.05); } ctx.closePath(); ctx.fill();
+  if(Q.bridge){ const {by,arc}=Q.bridge, tl=Q.bridge.tilt||0, np=Q.bridge.piles||3; const deck=(x)=>by-arc*Math.sin(Math.PI*Math.max(0,Math.min(1,(x+W*0.05)/(W*1.1))))-tl*(x/W-0.5);
+    ctx.fillStyle=css(mix(sumi,D,0.25)); ctx.beginPath(); ctx.moveTo(-W*0.05,deck(-W*0.05)+H*0.02); for(let i=0;i<=24;i++){ const x=-W*0.05+W*1.1*i/24; ctx.lineTo(x,deck(x)); } ctx.lineTo(W*1.05,deck(W*1.05)+H*0.08); for(let i=24;i>=0;i--){ const x=-W*0.05+W*1.1*i/24; ctx.lineTo(x,deck(x)+H*0.05); } ctx.closePath(); ctx.fill();
     ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(1,Dm*0.004); for(let i=0;i<=12;i++){ const x=-W*0.03+W*1.06*i/12; ctx.beginPath(); ctx.moveTo(x,deck(x)); ctx.lineTo(x,deck(x)-H*0.03); ctx.stroke(); } ctx.beginPath(); for(let i=0;i<=24;i++){ const x=-W*0.05+W*1.1*i/24; i?ctx.lineTo(x,deck(x)-H*0.03):ctx.moveTo(x,deck(x)-H*0.03); } ctx.stroke();
-    for(let i=1;i<4;i++){ const x=W*(0.25*i); ctx.strokeStyle=ink(0.8); ctx.lineWidth=Math.max(2,Dm*0.008); ctx.beginPath(); ctx.moveTo(x,deck(x)+H*0.05); ctx.lineTo(x,seaAt(P,x)+H*0.02); ctx.stroke(); }
+    for(let i=1;i<=np;i++){ const x=W*(i/(np+1)); ctx.strokeStyle=ink(0.8); ctx.lineWidth=Math.max(2,Dm*0.008); ctx.beginPath(); ctx.moveTo(x,deck(x)+H*0.05); ctx.lineTo(x,seaAt(P,x)+H*0.02); ctx.stroke(); }
     const wk=G(7); const cols=[mix(Acc,paper,0.2),mix(D,paper,0.3),mix([200,80,60],paper,0.2)]; wk.forEach((g,i)=>{ if(r<g.t0+0.03) return; const x=W*(0.06+0.88*g.t); walker(x,deck(x)-H*0.005,Dm*(0.01+0.006*g.vmax),false,el.rain?(S.bw?mix(paper,D,0.2):cols[i%3]):null); }); }
   // ── the elements
-  if(el.boats && P && setting!=='lake') boats(P,setting==='bridge'?3:4,0.05);
+  if(el.boats && P && setting!=='lake') boats(P,setting==='bridge'?(Q.bv?Q.bv.nb:3):4,0.05);
   if(el.pines && setting!=='gorge'){ const sx=Q.shoreX!=null?Q.shoreX:(setting==='snow'?W*0.12:(c.t<0.5?W*0.8:W*0.1)); const base=shoreY!=null?shoreY:H*0.86; pine(sx,base,H*(setting==='snow'?0.3:0.2),0.7,el.flakes); if(nP>12) pine(sx+W*0.12*(sx<W*0.5?1:-1),base+H*0.01,H*0.14,0.5,el.flakes); if(setting==='snow') pine(W*0.88,H*0.7,H*0.24,0.6,true); }
   if(el.walkers && setting!=='bridge'){ const base = Q.road ? null : (shoreY!=null?shoreY+H*0.04:H*0.9); G(6).forEach((g,i)=>{ if(r<g.t0+0.03) return; const x=W*(0.08+0.84*g.t); const y = Q.road ? H*(0.8+0.04*Math.sin(x/W*6)) : (setting==='gorge' ? H*(0.9+0.02*(i%2)) : base); if(setting==='lake' && Math.abs(x-W*(0.15+0.7*c.t))<W*0.12) return; walker(x,y,Dm*(0.01+0.008*g.vmax),true,null); }); }
   if(el.carp && waterTop!=null){ const nk=Math.round((4+dens*6)*_dW(dens)); const keep=[]; for(let q=0;q<nk;q++){ let b=null; for(let i=Math.floor(cn*q/nk);i<Math.floor(cn*(q+1)/nk);i++){ const e=A.ev[i]; if(e && (!b || e.v>b.v)) b=e; } if(b) keep.push(b); } const orange=S.bw?mix(paper,D,0.3):[214,110,50];
@@ -11763,7 +11764,7 @@ function _wvScene(ctx,S,W,H,Dm,rnd,ss,X,Q){
       ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(0.8,Dm*0.002); ctx.beginPath(); ctx.moveTo(x-sz*0.7,y+sz*0.1); ctx.lineTo(x-sz*1.5,y+sz*0.3); ctx.stroke(); }); }
   if(el.plovers){ const E=_kd2Events(A,Math.round((10+dens*30)*_dW(dens))); ctx.strokeStyle=ink(); ctx.lineWidth=Math.max(1,Dm*0.004); const C2=S.contour(0,cn,12); E.forEach(e=>{ if(e.t>r || A.reg(e.top)<0.55) return; const u=e.t; const i=Math.min(10,Math.floor(u*11)); const f=u*11-i; const cy=C2[i]+(C2[i+1]-C2[i])*f; const x=W*(0.06+0.88*u), y=hz*(0.15+0.65*(1-cy))+(rnd()-.5)*H*0.04; const sz=Dm*(0.006+0.012*e.v); ctx.beginPath(); ctx.moveTo(x-sz*1.4,y+sz*0.3); ctx.quadraticCurveTo(x-sz*0.6,y-sz*0.6,x,y); ctx.quadraticCurveTo(x+sz*0.6,y-sz*0.6,x+sz*1.4,y+sz*0.3); ctx.stroke(); }); }
   if(el.lightning && r>c.t) lightning(W*(0.1+0.6*c.t),H*0.03,hz*0.9);
-  if(el.rain) rain(Math.round((60+dens*300)*win(r,0.05,0.8)),(trend-0.5)*0.5+(storm?0.3:0),0.5);
+  if(el.rain) rain(Math.round((60+dens*300)*win(r,0.05,0.8)),(trend-0.5)*0.5+(storm?0.3:0)+(Q.bv?Q.bv.rs:0),0.5);
   if(el.flakes){ const E=_kd2Events(A,Math.round((40+dens*200)*_dW(dens))); ctx.fillStyle=css(paper); E.forEach(e=>{ if(e.t>r) return; const x=W*rnd(), y=H*0.6*rnd(); ctx.beginPath(); ctx.arc(x,y,Dm*(0.002+0.004*e.v),0,6.2832); ctx.fill(); }); ctx.fillStyle=css(mix(paper,D,0.15)); E.forEach(e=>{ if(e.t>r) return; const x=W*rnd(), y=H*(0.6+0.4*rnd()); ctx.beginPath(); ctx.arc(x,y,Dm*(0.002+0.003*e.v),0,6.2832); ctx.fill(); }); }
   if(el.bough){ const nn=12; const C2=S.contour(0,cn,nn); const fromR=trend<0.5; const Pb=[]; for(let i=0;i<nn;i++){ const u=i/(nn-1); Pb.push([fromR ? W*(1.04-0.8*u) : W*(-0.04+0.8*u), H*(0.05+0.2*u)+H*0.06*(0.5-C2[i])]); }
     const kb=win(r,0,0.6); const mb=Math.max(2,Math.round(nn*kb)); ctx.strokeStyle=ink(); for(let i=0;i<mb-1;i++){ ctx.lineWidth=Math.max(1.5,Dm*(0.02-0.015*i/(nn-1))); ctx.beginPath(); ctx.moveTo(Pb[i][0],Pb[i][1]); ctx.lineTo(Pb[i+1][0],Pb[i+1][1]); ctx.stroke(); }
@@ -11784,6 +11785,9 @@ function _wvPrint(kind,ctx,S,W,H,Dm,rnd,ss){ const X=_wvHear(S); const c=S.clima
           : kind==='bridge'    ? {setting:'bridge',sky:X.tens>0.42?'storm':'day',water:'swell',el:Object.assign(base,{boats:true,rain:true,fuji:X.trend>0.5})}
           : kind==='carp'      ? {setting:'sea',sky:X.major?'day':'night',water:'swell',el:Object.assign(base,{carp:true})}
           :                      {setting:'lake',sky:'dawn',water:'still',el:Object.assign(base,{cranes:true,pines:true})};
+  if(kind==='bridge'){ /* the piece's own bridge: how high it crosses, how steep its arch, which way it climbs, how many piles, where the river lies, the far bank, the slant of the rain */
+    const pr=_seedRnd(81900,_mrPieceKey(S.chords),0,0); pr(); const by=0.3+0.26*pr(), arc=0.035+0.11*pr(), tilt=(pr()<0.6?(pr()-0.5)*0.34:0), piles=2+Math.floor(pr()*4), water=Math.min(0.8,by+Math.abs(tilt)/2+0.1+0.16*pr()), shore=pr()<0.55, rs=(pr()-0.5)*0.7, nb=1+Math.floor(pr()*4);
+    Q.bv={by,arc,tilt,piles,water,shore,rs,nb}; }
   Q.c=c; _wvScene(ctx,S,W,H,Dm,rnd,ss,X,Q); }
 // _hkWin(r,a,b) eases 0→1 over r∈[a,b] — the reveal windows of the prints above.
 function _hkWin(r, a, b){ const x=Math.max(0, Math.min(1, (r-a)/Math.max(1e-6, b-a))); return x*x*(3-2*x); }
