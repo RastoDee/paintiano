@@ -5279,6 +5279,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // are random). Shuffle 1 needs no flag: Next rolls the variant of the crossing.
   const [jamAll, setJamAll] = useState(false);
   const jamAllRef = useRef(false); useEffect(()=>{ jamAllRef.current = jamAll; },[jamAll]);
+  const lookOwnLoadRef = useRef(0);   // when a load that brings its own look began (For You's card, the home card): gold does not hold over it
   // Ensemble × ALL with PINS: the painters the user keeps; every Next draws only
   // the guests (1–3) around them. Pinned members lead the stage, in pin order.
   // Exists only while Ensemble and ALL are both on.
@@ -6989,6 +6990,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // repeat; never the one currently playing. The piece continues from where it
   // is in the new voice — same seamless swap as Lite's Surprise.
   const [composerDice, setComposerDice] = useState(false);
+  const composerDiceRef = useRef(false); useEffect(()=>{ composerDiceRef.current = composerDice; },[composerDice]);
   useEffect(()=>{ if(!crOn || !composerDice) setCrPins(p=>p.length?[]:p); },[crOn, composerDice]);
   const composerBagRef = useRef([]);
   const composerBagKeyRef = useRef('');
@@ -10816,8 +10818,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // the new piece opens on its own ✦ (a gold palette stays even then)
       const _gold = !stTakenRef.current && (jamOnRef.current ? (jamAllRef.current ? ((jamPinsRef.current||[]).length>0 || jamFixedRef.current) : (painterStageRef.current||[]).length>0)
         : (styleRef.current!=null && !/^(mosaic|notes|mosaicFamily)$/.test(styleRef.current)));
-      const _keep = _sgMusic && _gold && !basicModeRef.current && !sigActiveRef.current && !qrArtistRef.current && !favMusicRestoreRef.current;
-      const _palKeep = palGoldRef.current ? modeRef.current : null;
+      const _ownLook = Date.now()-lookOwnLoadRef.current<15000; if(_ownLook) lookOwnLoadRef.current=0;
+      const _keep = _sgMusic && _gold && !_ownLook && !basicModeRef.current && !sigActiveRef.current && !qrArtistRef.current && !favMusicRestoreRef.current;
+      const _palKeep = (palGoldRef.current && !_ownLook) ? modeRef.current : null;
       if(fuRollRef.current && !_keep) _setFuRoll(null);   // a new piece opens on its own variants (a kept look keeps its fusion's)
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
@@ -12540,6 +12543,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           imgNameRef.current = file.name||'';
           let _isg=null; try{ _isg=computeImageSignature(img, file.name.replace(/\.[^.]+$/,'')); }catch(_){}
           if(_isg){ if(autoMode==='bw') _isg.mode='bw'; else if(_isg.mode==='bw') _isg.mode='harmony'; }   // the canvas's own colour reading decides B/W
+          // GOLD HOLDS — also when you pick another picture (26 Nov 2026, as for a piece of music): a composer or a Jam you chose (gold) plays
+          // the new picture too — the composer, his form, the Jam and its 📌 stay; everything white (the app chose it) or a ✦: the picture opens
+          // on its own ✦. A gold palette stays either way. (For You chooses for itself; a ♥ and a return open as they were.)
+          const _ownLook = Date.now()-lookOwnLoadRef.current<15000; if(_ownLook) lookOwnLoadRef.current=0;
+          const _cDice=composerDiceRef.current, _goldC = !imgSigActiveRef.current && !_ownLook && !basicModeRef.current && (crOnRef.current
+            ? (_cDice ? ((crPinsRef.current||[]).length>0 || crFixedRef.current) : (composerStageRef.current||[]).length>0)
+            : (!!imgComposerRef.current && !_cDice));
+          const _palKeepI = (!basicModeRef.current && !_ownLook && palGoldRef.current && mode!=='custom') ? mode : null;
           if(imgSigActiveRef.current){
             imgSigActiveRef.current=false; setImgSigActive(false); imgSigPrevRef.current=null;
             if(!crOnRef.current){ composerStageRef.current=[]; setComposerStage(p=>p.length?[]:p); }
@@ -12550,7 +12561,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           let _isgOpen=false;
           const _isReturn = imgReturnLoadRef.current || !!_fr; imgReturnLoadRef.current = false;
           if(_fr){ const _k0=((_fr.keys||[]).filter(Boolean)); soloFormRef.current={ k:_k0.length===1 ? _k0[0] : null, v:_k0.length===1 ? (_fr.sf|0) : 0 }; }
-          else if(!_isReturn) soloFormRef.current={ k:null, v:0 };
+          else if(!_isReturn && !_goldC) soloFormRef.current={ k:null, v:0 };
           if(_fr){
             // ♥ favorite: on ✦ when it was saved on ✦; otherwise its own composer(s) — or Scan — seated before it is composed
             _liteImgNextIsSigRef.current = false;
@@ -12569,12 +12580,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           } else {
             _liteImgNextIsSigRef.current = false;
             // Advanced: every picture file and sample opens on ✦ too — the mirror of music files and samples
-            if(!basicModeRef.current && _isg && !_isReturn) _isgOpen = true;   // Hear the painting too: the picture opens on its own ✦ first
+            if(!basicModeRef.current && _isg && !_isReturn && !_goldC) _isgOpen = true;   // Hear the painting too: the picture opens on its own ✦ first
           }
-          const startMode = _isgOpen ? _isg.mode : _fr ? (_fr.mode || autoMode) : (_fromMusic ? mode : (mode==='custom' ? 'custom' : autoMode));
+          const startMode = (_palKeepI && !_fr && !_isReturn) ? _palKeepI : _isgOpen ? _isg.mode : _fr ? (_fr.mode || autoMode) : (_fromMusic ? mode : (mode==='custom' ? 'custom' : autoMode));
           if(_isgOpen){ try{ imgSigFnRef.current.apply(_isg); }catch(_){} }
           kontraAutoRef.current = (!_fromMusic && startMode==='kontra'); // auto-kontra only on a fresh image, never when palette carried from Music
-          if(startMode!==mode) setMode(startMode);
+          if(startMode!==mode || (_isgOpen && _isg.mode!==startMode)) setMode(startMode);   // (after ✦: a gold palette over its own)
           pixelRef.current={nc,nr,px,lastMode:startMode,colStep:4,mosaicBands:(_mosRows|0)||null};
           scanPixelBackupRef.current=pixelRef.current; // keep scan data for Clear after a compose nulls pixelRef
           imgComposeRef.current=false;
@@ -18219,6 +18230,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _feedMineImg = async(piece)=>{ const m=_feedMine('img', piece); if(!m) return; const l=await myImgList(); const rec=(l||[]).find(r=>r && r.id===m.id && r.blob); if(!rec) return;
     loadImage({target:{files:[new File([rec.blob], (rec.name||'image')+'.jpg', {type:rec.blob.type||'image/jpeg'})], value:''}}); _loadedFromMyImgRef.current=rec.id; };
   const _feedLoad = (piece, sel, kind)=>{
+    lookOwnLoadRef.current = Date.now();   // For You chooses for itself: a gold look from the Studio does not hold over its card
     if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
     if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} }
     setTimeout(()=>{ if(!_acRunning()) setFeedNeedTap(true); }, 450);   // still asleep (a swipe on iOS): ▶ asks for one tap
@@ -18488,7 +18500,10 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const _mem = [style].concat(painterStage).filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='mosaicFamily');
     const _fu = c.kind!=='img' && painterStage.length>0 && _mem.length>=2 && ensembleActive;
     if(c.kind!=='img'){ _palGoldSet(false); if(!_fu){ stTakenRef.current=true; setStTaken(true); } else if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } }
-    else if(!crOn && imgComposerRef.current) setComposerDice(true);   // a picture's composer: drawn, not chosen — white, ↑ draws on
+    else {   // a picture the same (26 Nov 2026): its composer white (drawn, not chosen — ↑ draws on), a Jam open (no gold, no 📌: ↑ draws a new jam), the palette white
+      _palGoldSet(false);
+      if(composerStage.length>0 && ensembleActive){ crPinsRef.current=[]; setCrPins([]); if(crFixedRef.current){ crFixedRef.current=false; setCrFixed(false); } if(!crOn){ crOnRef.current=true; setCrOn(true); } if(!composerDice) setComposerDice(true); }
+      else if(imgComposerRef.current && !composerDice) setComposerDice(true); }
     // the switch tells what is on the canvas: one painter (one composer) = Solo, a crossing = Fusion — open
     if(_fu){ jamPinsRef.current=[]; setJamPins([]); if(jamFixedRef.current){ jamFixedRef.current=false; setJamFixed(false); } if(!jamOn || !jamAll) jamAllKeepRef.current=true; if(!jamOn) setJamOn(true); if(!jamAll) setJamAll(true); if(mosaicShuffleLock) setMosaicShuffleLock(false); }
     else if(!painterStage.length && jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); if(jamFixedRef.current){ jamFixedRef.current=false; setJamFixed(false); } } else if(painterStage.length && ensembleActive && !jamOn) setJamOn(true);
@@ -19977,6 +19992,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const _rp = _smp ? null : (H.r || (()=>{ const mi=BUILTIN_NAMES.indexOf(H.t); if(mi>=0 && kind==='music') return {s:'midi', i:mi}; const ii=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).findIndex(x=>x && x.t===H.t); if(ii>=0 && kind==='image') return {s:'img', i:ii}; return null; })());
         const _canPlay = _smp ? !_anyDraft : (!!SRC[kind].d || !!_rp);
         const _replay = ()=>{
+          lookOwnLoadRef.current = Date.now();   // the home card opens as it was kept, never in another look
           // the card's own look (a home saved before the look was kept, or a ✦ Signature card: the piece opens on its Signature as before)
           if(_rp.s==='midi'){ const L=_lookMigrate(H.lk); if(L && !L.sig){ loadSampleMidi(_rp.i, {noSig:true});
               setRandomMode(false); randomModeRef.current=false; setStyle(L.st||null); setPainterStage(Array.isArray(L.sg) ? L.sg.slice() : []); setPhaseIndex(L.ph|0); setNotesMode(!!L.nt); if(L.md) setMode(L.md); if(L.tn) setTone(L.tn);
