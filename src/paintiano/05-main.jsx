@@ -2926,7 +2926,23 @@ const STUDIO_HOME_SAMPLE = { u:'/studio/home.webp', src:'sample' };
 const SAMPLE_IMG_BAKE = {"The Starry Night — Van Gogh":{"atmo":{"v":0.35,"e":0.82,"root":0,"title":{"EN":"Swirl of the night sky","SK":"Vírenie nočnej oblohy","DE":"Wirbel des Nachthimmels","FR":"Tourbillon du ciel nocturne","ES":"Remolino del cielo nocturno","PT":"Redemoinho do céu noturno","zh":"夜空的漩涡","zhTW":"夜空的漩渦","ja":"夜空の渦"}},"mel":{"notes":[["E5",1,0,108],["D5",0.5,1,104],["E5",0.5,1.5,106],["F5",1,2,110],["E5",1,3,105],["D5",1,4,102],["C5",0.5,5,100],["D5",0.5,5.5,103],["E5",1,6,108],["A5",1,7,112],["G5",1,8,110],["F5",0.5,9,106],["E5",0.5,9.5,104],["D5",1,10,100],["C5",0.5,11,98],["B4",0.5,11.5,96],["A4",1,12,102],["C5",0.5,13,104],["B4",0.5,13.5,100],["A4",1,14,98],["G4",0.5,15,96],["A4",0.5,15.5,98],["B4",0.5,16,100],["C5",0.5,16.5,103],["D5",1,17,106],["E5",1,18,110],["D5",0.5,19,105],["C5",0.5,19.5,102],["D5",1,20,104],["E5",1,21,108],["F5",0.5,22,106],["E5",0.5,22.5,104],["D5",1,23,100]],"chords":[[["D3","F3","A3","D4"],1,0,80],[["D3","F3","A3","D4"],1,1,76],[["D3","F3","A3","F4"],1,2,78],[["A2","E3","A3","C4"],1,3,75],[["G2","D3","G3","B3"],1,4,74],[["G2","D3","G3","B3"],1,5,72],[["A2","E3","A3","C4"],1,6,76],[["A2","E3","A3","E4"],1,7,80],[["D3","F3","A3","D4"],1,8,78],[["D3","F3","A3","D4"],1,9,75],[["E3","G3","B3","E4"],1,10,74],[["A2","E3","A3","C4"],1,11,72],[["D3","F3","A3","D4"],1,12,76],[["E3","G3","B3","E4"],1,13,74],[["A2","C3","E3","A3"],1,14,72],[["G2","D3","G3","B3"],1,15,70],[["G2","D3","G3","B3"],1,16,72],[["A2","E3","A3","C4"],1,17,75],[["D3","F3","A3","D4"],1,18,78],[["D3","F3","A3","D4"],1,19,76],[["G2","D3","G3","B3"],1,20,74],[["A2","E3","A3","C4"],1,21,76],[["A2","C3","E3","G3"],1,22,78],[["D3","F3","A3","D4"],1,23,82]],"tempo":90,"title":"Swirl of the night sky"}},"Water Lily Pond — Monet":{"atmo":{"v":0.42,"e":0.1,"root":0,"title":{"EN":"A quiet pond in summer","SK":"Tichý rybník v lete","DE":"Stiller Teich im Sommer","FR":"Étang paisible en été","ES":"Estanque tranquilo en verano","PT":"Lago tranquilo no verão","zh":"夏日静谧的池塘","zhTW":"夏日靜謐的池塘","ja":"夏の静かな池"}},"mel":{"notes":[["E5",1,0,100],["D5",1,1,98],["C5",1,2,96],["D5",1,3,98],["E5",1,4,102],["G5",1,5,104],["A5",2,6,108],["G5",1,8,100],["E5",1,9,98],["D5",1,10,96],["E5",1,11,98],["G5",1,12,102],["A5",1,13,104],["G5",1,14,100],["E5",1,15,98],["D5",1,16,96],["C5",1,17,98],["A4",1,18,100],["G4",1,19,98],["A4",1,20,100],["C5",1,21,102],["E5",2,22,110]],"chords":[[["C3","G3","C4","E4"],1,0,78],[["C3","G3","C4","E4"],1,1,76],[["C3","G3","C4","E4"],1,2,75],[["D3","A3","D4","F4"],1,3,76],[["C3","G3","C4","E4"],1,4,78],[["C3","E3","G3","E4"],1,5,78],[["A2","E3","A3","C4"],2,6,80],[["C3","G3","C4","E4"],1,8,78],[["C3","G3","C4","E4"],1,9,76],[["D3","A3","D4","F4"],1,10,76],[["C3","G3","C4","E4"],1,11,78],[["A2","E3","A3","C4"],1,12,80],[["D3","A3","D4","F4"],1,13,80],[["G2","D3","G3","D4"],1,14,82],[["G2","D3","G3","D4"],1,15,80],[["A2","E3","A3","E4"],1,16,82],[["A2","C3","E3","A3"],1,17,80],[["D3","A3","D4","F4"],1,18,80],[["G2","D3","G3","B3"],1,19,82],[["G2","D3","G3","B3"],1,20,84],[["G2","D3","G3","B3"],1,21,86],[["C3","G3","C4","E4"],2,22,85]],"tempo":90,"title":"A quiet pond in summer"}},"The Scream — Munch":{"atmo":{"v":-0.85,"e":0.95,"root":0,"title":{"EN":"A scream of existential dread","SK":"Výkrik existenciálnej hrôzy","DE":"Schrei existenzieller Angst","FR":"Cri d’angoisse existentielle","ES":"Grito de angustia existencial","PT":"Grito de angústia existencial","zh":"存在之恐惧的呐喊","zhTW":"存在之恐懼的吶喊","ja":"実存の恐怖の叫び"}},"mel":{"notes":[["G#5",1,0,112],["G#5",0.5,1,108],["A#5",0.5,1.5,114],["G#5",1,2,110],["F5",1,3,106],["D#5",1,4,112],["D#5",0.5,5,108],["F5",0.5,5.5,114],["G#5",1,6,116],["C5",1,7,104],["G#5",1,8,118],["A#5",0.5,9,112],["G#5",0.5,9.5,110],["F5",1,10,108],["D#5",0.5,11,106],["C5",0.5,11.5,104],["D#5",1,12,112],["F5",0.5,13,110],["D#5",0.5,13.5,108],["C5",1,14,118],["G#4",1,15,116]],"chords":[[["G#2","D#3","G#3","D#4"],1,0,88],[["G#2","D#3","G#3","D#4"],1,1,84],[["C3","G#3","C4","D#4"],1,2,86],[["F2","C3","A#3","F4"],1,3,82],[["D#2","A#2","G#3","D#4"],1,4,88],[["D#2","A#2","G#3","D#4"],1,5,84],[["G#2","D#3","G#3","D#4"],1,6,90],[["C3","G#3","C4","G#4"],1,7,86],[["G#2","D#3","G#3","D#4"],1,8,92],[["A#2","F3","A#3","D#4"],1,9,88],[["F2","C3","A#3","F4"],1,10,86],[["D#2","A#2","G#3","D#4"],1,11,90],[["G#2","D#3","G#3","D#4"],1,12,88],[["A#2","F3","A#3","D#4"],1,13,86],[["D#2","A#2","F3","G#3"],1,14,92],[["G#1","D#2","G#2","D#3"],1,15,96]],"tempo":132,"title":"A scream of existential dread"}}};
 function _atmoTitleL(t, lang){ return (t && typeof t==='object') ? (t[lang] || t.EN || '') : (t || ''); }
 const PF_FIRST = { piece:1, style:'arcs', phase:6, u:'/studio/first.webp' };   // Flight of the Bumble-Bee by Stella (interlocking arcs: his Protractor interlace, a chain of links down the whole canvas) — the picture is this very painting, made in the app; bold from the first second, on a dark ground
-const PF_SECOND = { pieces:[8,0,2,5,9,10,7,3,6], style:'mitchell', phase:0 };   // then Joan Mitchell's strokes, a different piece at every opening of the app, round these in turn, dark ground and light by turns
+// The first screen's second painting (Nov 2026; before: Joan Mitchell alone, her piece changing): twelve of the most striking paintings
+// as the first screen paints them — dark from the first stroke to the last (the words over it stay readable), filling the whole screen,
+// each by another painter, ten pieces among them (the Bumble-Bee is Stella's). Chosen from every painter's every variant on every piece.
+const PF_SECOND = [
+  { style:'kusama', phase:4, piece:8 },         // Kusama's spheres · Fantaisie-Impromptu
+  { style:'kandinsky', phase:3, piece:7 },      // Kandinsky's glowing circles on black · Toccata (not his cosmic scatter: For You shows that one first)
+  { style:'raffel', phase:3, piece:9 },         // RafFel's Sunflower 137.5° · Promenade
+  { style:'pollock', phase:7, piece:0 },        // Pollock's dark web · Liebestraum
+  { style:'bulge', phase:4, piece:3 },          // Vasarely · Clair de lune
+  { style:'thomas', phase:3, piece:5 },         // Alma Thomas · Für Elise
+  { style:'gold', phase:3, piece:4 },           // Klimt's golden rain · Gymnopédie
+  { style:'delaunay', phase:7, piece:6 },       // Delaunay · The Entertainer
+  { style:'klee', phase:3, piece:2 },           // Klee's town at night · In the Hall of the Mountain King
+  { style:'spiral', phase:3, piece:10 },        // Hilma af Klint · the Fifth
+  { style:'mitchell', phase:0, piece:8 },       // Joan Mitchell, dark (a minor piece) · Fantaisie-Impromptu
+  { style:'lichtenstein', phase:4, piece:10 },  // Lichtenstein's brushstrokes · the Fifth
+];
 // The opening Stella, drawn large and set in its frame so that each of the words over it sits in one of its links: the name in the
 // top one, the title in the middle one, the line to the sound in the bottom one (where the bigger rings once fell by mistake, now on
 // purpose and exact). Its chain of three links is measured in a small trial painting; the size and the place of the canvas then follow
@@ -2948,9 +2964,20 @@ function _lhStellaPlace(box, fv, cs, tone, lay){
   const dx=Math.min(0, Math.max(bw-CW, bw/2-CW*(P[0][0]+P[1][0]+P[2][0])/3)), dy=m-CH/2;
   return {CW, CH, dx, dy, bw, bh};
 }
-// (Fantaisie-Impromptu, Liebestraum, Mountain King, Für Elise, Promenade, the Fifth, Toccata, Clair de lune, The Entertainer; the Bumble-Bee is Stella's, Gymnopédie too sparse for the opening)
-const _pfOpenN = (()=>{ try{ const n=(parseInt(localStorage.getItem('pf_open_n'),10)|0); localStorage.setItem('pf_open_n',String(n+1)); return n; }catch(_){ return Math.floor(Math.random()*1000); } })();   // how many times the app has been opened here
-const _pfSecondPiece = (avoid)=>{ const P=PF_SECOND.pieces; for(let i=0;i<P.length;i++){ const pc=P[(_pfOpenN+i)%P.length]; if(pc!==avoid) return pc; } return P[0]; };   // this opening's piece, never the piece of the day that follows it
+// They come as a shuffled deck: one each time the app opens, all twelve before any of them comes again; a new deck never begins with
+// the one the last deck ended on; one with the same painter or piece as the painting of the day (which follows it) waits in the deck
+// for another opening. Drawn once per opening (pf_intro_bag: what is left in the deck and the last one shown).
+let _pfSecondMemo = null;
+const _pfSecond = (dayStyle, dayPiece)=>{ if(_pfSecondMemo) return _pfSecondMemo;
+  const N=PF_SECOND.length, clash=(k)=>PF_SECOND[k].style===dayStyle || PF_SECOND[k].piece===dayPiece;
+  const fresh=()=>{ const a=[...Array(N).keys()]; for(let i=N-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const x=a[i]; a[i]=a[j]; a[j]=x; } return a; };
+  let bag=null, last=-1; try{ const v=JSON.parse(localStorage.getItem('pf_intro_bag')||'null'); if(v && Array.isArray(v.b)){ bag=v.b.filter((x,i,a)=>Number.isInteger(x) && x>=0 && x<N && a.indexOf(x)===i); last=Number.isInteger(v.l) ? v.l : -1; } }catch(_){}
+  if(!bag || !bag.length) bag=fresh();
+  let at=bag.findIndex(k=>!clash(k) && k!==last); if(at<0) at=bag.findIndex(k=>!clash(k));
+  if(at<0){ bag=fresh(); at=bag.findIndex(k=>!clash(k) && k!==last); if(at<0) at=bag.findIndex(k=>!clash(k)); if(at<0) at=0; }   // all that is left in the deck clashes today: a new deck (those come again in it, on another day)
+  const k=bag.splice(at,1)[0];
+  try{ localStorage.setItem('pf_intro_bag', JSON.stringify({b:bag, l:k})); }catch(_){}
+  _pfSecondMemo=PF_SECOND[k]; return _pfSecondMemo; };
 // MINE — My Music · My Images · ♥ Favorites as one grid of paintings
 const MINE_CSS = `
 .pf-mine{position:fixed;inset:0;z-index:100002;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;background:#0b0a10;color:#f2eee8;font-family:'Outfit','Helvetica Neue',Arial,sans-serif;padding:calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px));animation:pfMineIn .22s ease-out}
@@ -18614,13 +18641,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const liveMineRef = useRef([]);
   useEffect(()=>{ if(!studioHome) return; let c=false; myMusicList().then(l=>{ if(c) return; liveMineRef.current=(l||[]).filter(r=>r && !r.empty && r.blob && (r.kind==='midi' || (r.ev && r.ev.v===AUDIO_EV_VER && Array.isArray(r.ev.e) && r.ev.e.length>=40))); }).catch(()=>{}); return ()=>{ c=true; }; },[studioHome, myMusicSlots]);
   // after the first three, every painting draws its piece from one hat: the eleven built in and yours — never the one just painted, nor the first two
-  const _lhSecondPc = _pfSecondPiece(pieceOfDay);
-  const _livePick = (prev)=>{ const pool=[]; for(let i=0;i<BUILTIN_PIECES.length;i++) if(i!==PF_FIRST.piece && i!==_lhSecondPc && i!==prev) pool.push(i); liveMineRef.current.forEach(r=>{ const k='m'+r.id; if(k!==prev) pool.push(k); }); return pool.length ? pool[Math.floor(Math.random()*pool.length)] : pieceOfDay; };
+  const _lhSecond = _pfSecond(artistOfDay, pieceOfDay);   // this opening's second painting (see PF_SECOND)
+  const _livePick = (prev)=>{ const pool=[]; for(let i=0;i<BUILTIN_PIECES.length;i++) if(i!==PF_FIRST.piece && i!==_lhSecond.piece && i!==prev) pool.push(i); liveMineRef.current.forEach(r=>{ const k='m'+r.id; if(k!==prev) pool.push(k); }); return pool.length ? pool[Math.floor(Math.random()*pool.length)] : pieceOfDay; };
   const _liveList = ()=>{ if(liveListRef.current) return liveListRef.current;
-    const L=[{piece:PF_FIRST.piece, style:PF_FIRST.style, phase:PF_FIRST.phase}];   // Stella's interlace first, always; then Mitchell's strokes, another piece at every opening; then the painting of the day
-    if(artistOfDay!==PF_SECOND.style) L.push({piece:_lhSecondPc, style:PF_SECOND.style, phase:PF_SECOND.phase});
+    const L=[{piece:PF_FIRST.piece, style:PF_FIRST.style, phase:PF_FIRST.phase}];   // Stella's interlace first, always; then one of the twelve (PF_SECOND), another at every opening; then the painting of the day
+    if(artistOfDay!==_lhSecond.style) L.push({piece:_lhSecond.piece, style:_lhSecond.style, phase:_lhSecond.phase});
     L.push({piece:pieceOfDay, style:artistOfDay, phase:dayVariant});
-    const ks=Object.keys(STYLE_INSPIRED).filter(k=>k!=='mosaic' && k!=='notes' && k!==PF_FIRST.style && k!==PF_SECOND.style && k!==artistOfDay); for(let i=ks.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const x=ks[i]; ks[i]=ks[j]; ks[j]=x; }
+    const ks=Object.keys(STYLE_INSPIRED).filter(k=>k!=='mosaic' && k!=='notes' && k!==PF_FIRST.style && k!==_lhSecond.style && k!==artistOfDay); for(let i=ks.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const x=ks[i]; ks[i]=ks[j]; ks[j]=x; }
     ks.forEach((k)=>{ L.push({piece:null, style:k, phase:0}); });   // every painter's own "What he heard" — the piece is drawn when its turn comes (_livePick)
     liveListRef.current=L; return L; };
   const _liveChords = (idx)=>{ const C=liveChordsRef.current; if(C[idx]) return C[idx];
