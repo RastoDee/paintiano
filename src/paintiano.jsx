@@ -15645,8 +15645,10 @@ function _mrListenOld(ctx,CW,CH,chords,lim,gc,sessionSeed,mode,world){
 // ── Miró E · Peinture (1933) — a stained warm ground and a few large flat
 // biomorphic bodies afloat on it: black silhouettes, a red one, a white one,
 // thin contours, an eye here and there, a thin line drifting between them.
+// each piece its own picture (Nov 2026): the seed takes the piece in — before, every piece laid the same bodies in the same places and only a colour changed
+const _mrPieceKey=(chords)=>{ let h=chords.length*31; for(let j=0;j<chords.length;j+=Math.max(1,Math.floor(chords.length/24))){ const ns=(chords[j] && (chords[j].n||chords[j].notes))||[]; for(const x of ns){ const m=(x && x.m!==undefined) ? x.m : x; h=(h*33+(+m|0))|0; } } return Math.abs(h)%100000; };
 function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0, S=_mrSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(S.cn,lim))/S.cn;
+  const ss=((sessionSeed|0)+_mrPieceKey(chords))|0, S=_mrSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(S.cn,lim))/S.cn;
   const r0=_mrR(45000,ss); r0(); const BLK=S.isBW?[18,18,18]:[22,18,20], WHT=[240,232,214];
   let avg=[0,0,0]; for(let k=0;k<10;k++){ const c=S.raw(k/10); avg=[avg[0]+c[0]/10,avg[1]+c[1]/10,avg[2]+c[2]/10]; }
   const base=S.isBW?[150,146,138]:_mrMix(avg,[156,116,76],0.72); ctx.fillStyle=_mrCss(base); ctx.fillRect(0,0,CW,CH);
@@ -15669,7 +15671,7 @@ function miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // lines on a pale ground, closing round bodies that are filled with flat
 // primaries in places, stars, eyes, a black crescent; one figure per passage.
 function miroPhaseSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
-  const ss=sessionSeed|0, S=_mrSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(S.cn,lim))/S.cn;
+  const ss=((sessionSeed|0)+_mrPieceKey(chords))|0, S=_mrSetup(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(S.cn,lim))/S.cn;
   const r0=_mrR(46000,ss); r0(); const BLK=S.isBW?[16,16,16]:[18,16,20], GRD=S.isBW?[238,236,232]:[242,236,222];
   ctx.fillStyle=_mrCss(GRD); ctx.fillRect(0,0,CW,CH);
   const list=[]; let id=0; const push=(t,draw)=>list.push({id:id++,t,draw});
