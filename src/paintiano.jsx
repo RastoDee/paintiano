@@ -14622,7 +14622,7 @@ function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     if(pick===0){ _mrListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(pick===1){ _mrListenOld(ctx,CW,CH,chords,lim,gc,ss,mode,true); return; }   // Miró's world (the old Constellations below retired, code kept)
     if(pick===2){ miroPhaseB(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
-    if(pick===3){ miroPhaseBlue(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(pick===3){ miroPhaseLate(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // his late canvases (the Blue triptych, miroPhaseBlue, retired, code kept)
     if(pick===4){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(pick===5){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(pick===6){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
@@ -15155,6 +15155,52 @@ function _miroAccentRGB(slot, chord, gc, isBW, chords){
   const c = gc(m, 100);
   if(!Array.isArray(c)) return fallback[slot] || fallback.RED;
   return [c[0]|0, c[1]|0, c[2]|0];
+}
+
+// ── Miró C: the late canvases (Nov 2026; in place of the Blue triptych, miroPhaseBlue below — a few marks on a flat blue, too thin,
+// and a faithful Bleu is nearly empty by nature). His big paintings of the 1960s and 70s: thinned colour sprayed and stained into
+// the canvas, great flat patches of pure colour, and over them the black — a loaded brush swept across in arcs, hooks and loops,
+// spattering and dripping as it goes, with his stars and dots between. Here the patches are the piece's passages in their own
+// colours, the black strokes its loud moments (the louder, the broader and the more they spatter), and it paints with the music:
+// stain, patch and stroke in the order the piece plays them, each stroke swept from its start to its end. A quiet piece gets
+// fewer and calmer strokes, never a bare canvas.
+function miroPhaseLate(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length; if(!cn) return; const N=Math.max(1,Math.min(cn,lim)), rv=N/cn, D=Math.min(CW,CH);
+  const P=_miroPal(isBW, gc, chords); let sc=null; try{ sc=computeSongCharacter(chords); }catch(_){ sc=null; }
+  const en=sc ? sc.energy : 0.5, dens=sc ? sc.density : 0.4, cl=(v)=>Math.max(0,Math.min(255,Math.round(v))), sm=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x);
+  const grey=(c)=>{ const v=Math.round(c[0]*0.299+c[1]*0.587+c[2]*0.114); return [v,v,v]; };
+  // a stretch's colour: its highest notes', pure (the patch is one colour, as he laid it)
+  const colOf=(a,b)=>{ let best=null, bs=-1; for(let j=a;j<b && j<cn;j+=Math.max(1,Math.floor((b-a)/6))){ const ns=(chords[j] && (chords[j].n||chords[j].notes))||[]; let top=-1; for(const x of ns){ const m=(x && x.m!==undefined) ? x.m : x; if(+m>top) top=+m; } if(top<0) continue; const c=gc(top,112); if(!Array.isArray(c)) continue; const sat=Math.max(c[0],c[1],c[2])-Math.min(c[0],c[1],c[2]); if(sat>bs){ bs=sat; best=[c[0]|0,c[1]|0,c[2]|0]; } } best=best||[214,40,32]; return isBW ? grey(best) : best; };
+  const loud=(a,b)=>{ let v=0; for(let j=a;j<b && j<cn;j++){ const ns=(chords[j] && (chords[j].n||chords[j].notes))||[]; for(const x of ns){ const vv=(x && x.v!==undefined) ? x.v : 80; if(vv>v) v=vv; } } return Math.min(1,v/112); };
+  // the canvas: unprimed, warm
+  ctx.fillStyle=isBW ? 'rgb(232,230,224)' : 'rgb(240,232,214)'; ctx.fillRect(0,0,CW,CH);
+  const r=_seedRnd(7401,ss,cn,0);
+  // the stains: thinned colour sprayed in, wide and soft — the first third of the piece lays them
+  const nS=5, stains=[]; for(let i=0;i<nS;i++){ const a=Math.floor(i*cn/nS), b=Math.floor((i+1)*cn/nS); stains.push({x:(0.12+0.76*r())*CW, y:(0.08+0.84*((i+0.2+0.6*r())/nS))*CH, R:D*(0.34+0.3*r()), c:colOf(a,b), t:i/nS*0.3}); }
+  for(const q of stains){ const k=sm((rv-q.t)/0.1); if(k<=0) continue; const g=ctx.createRadialGradient(q.x,q.y,0,q.x,q.y,q.R); g.addColorStop(0,`rgba(${q.c},${0.34*k})`); g.addColorStop(0.55,`rgba(${q.c},${0.16*k})`); g.addColorStop(1,`rgba(${q.c},0)`); ctx.fillStyle=g; ctx.fillRect(q.x-q.R,q.y-q.R,2*q.R,2*q.R); }
+  // the patches: the piece's passages, each one flat colour, spread over the canvas
+  const nP=Math.max(5, Math.min(9, Math.round(5+4*dens))), pat=[];
+  for(let i=0;i<nP;i++){ const a=Math.floor(i*cn/nP), b=Math.floor((i+1)*cn/nP); let bx=0, by=0, bd=-1; for(let t=0;t<9;t++){ const qx=(0.14+0.72*r())*CW, qy=(0.1+0.8*r())*CH; let md=1e9; for(const p of pat) md=Math.min(md, Math.hypot(qx-p.x,qy-p.y)); if(md>bd){ bd=md; bx=qx; by=qy; } }
+    const R=D*(0.12+0.13*loud(a,b)+0.05*r()), n=7+Math.floor(r()*3), pts=[], rot=r()*6.283; for(let k=0;k<n;k++){ const an=rot+k*6.283/n, rr=R*(0.62+0.6*r()); pts.push([Math.cos(an)*rr*(0.8+0.5*r()), Math.sin(an)*rr]); } pat.push({x:bx, y:by, pts, c:colOf(a,b), t:0.06+0.86*a/cn}); }
+  for(const q of pat){ const k=sm((rv-q.t)/0.06); if(k<=0) continue; const n=q.pts.length; ctx.beginPath(); for(let j=0;j<=n;j++){ const c0=q.pts[j%n], c1=q.pts[(j+1)%n], mx=q.x+(c0[0]+c1[0])/2*k, my=q.y+(c0[1]+c1[1])/2*k; if(!j) ctx.moveTo(mx,my); else { const p0=q.pts[j%n]; ctx.quadraticCurveTo(q.x+p0[0]*k, q.y+p0[1]*k, mx, my); } } ctx.closePath(); ctx.fillStyle=`rgb(${q.c})`; ctx.fill(); }
+  // the black: a loaded brush swept across — one stroke per loud stretch, broad where it is loud, thinning and breaking as the brush runs dry
+  const nB=Math.max(4, Math.min(8, Math.round(4+3*en+2*dens))), blk=`${P.BLK[0]},${P.BLK[1]},${P.BLK[2]}`;
+  for(let i=0;i<nB;i++){ const a=Math.floor(i*cn/nB), b=Math.floor((i+1)*cn/nB), v=loud(a,b), rb=_seedRnd(7431+i,ss,cn,0), t0=0.1+0.84*i/nB, k=sm((rv-t0)/(0.84/nB*0.9)); 
+    const x0=(0.1+0.8*rb())*CW, y0=(0.06+0.86*((i+rb())/nB))*CH, a0=rb()*6.283, L=D*(0.55+0.6*rb()), kind=Math.floor(rb()*3), bend=(rb()<0.5 ? 1 : -1)*(kind===2 ? 5.2 : kind===1 ? 2.6 : 1.3), W=D*(0.022+0.04*v)*(0.85+0.3*rb());
+    if(k<=0){ continue; }
+    const steps=Math.max(30, Math.round(L/(D*0.006))), upto=Math.round(steps*k); let x=x0, y=y0; ctx.fillStyle=`rgb(${blk})`;
+    for(let s2=0;s2<=upto;s2++){ const u=s2/steps, an=a0+bend*u*u*(kind===2 ? 1 : 0.9)+0.25*Math.sin(u*9+i), w=W*(0.35+0.65*Math.sin(Math.PI*Math.min(1,u*1.15+0.05)))*(u>0.72 ? 1-(u-0.72)*2.2 : 1);
+      x+=Math.cos(an)*L/steps; y+=Math.sin(an)*L/steps; if(w<=0.4) continue;
+      if(u>0.62 && rb()<(u-0.62)*1.6) continue;   // the dry brush: gaps toward its end
+      ctx.beginPath(); ctx.ellipse(x,y,w,w*(0.78+0.2*rb()),an,0,6.283); ctx.fill();
+      if(v>0.45 && rb()<0.05*v){ const sa=rb()*6.283, sd=w*(1.6+4*rb()); ctx.beginPath(); ctx.arc(x+Math.cos(sa)*sd, y+Math.sin(sa)*sd, D*(0.003+0.007*rb()), 0, 6.283); ctx.fill(); }   // spatter off a fast, loud stroke
+      if(v>0.6 && rb()<0.012){ const dl=D*(0.05+0.14*rb()); ctx.fillRect(x-D*0.0025, y, D*0.005, dl); ctx.beginPath(); ctx.arc(x, y+dl, D*0.005, 0, 6.283); ctx.fill(); } } }   // and a drip running down
+  // his signs between: stars and dots, as the piece goes on
+  const nG=Math.max(4, Math.round(5+7*dens)); ctx.strokeStyle=`rgb(${blk})`; ctx.lineCap='round';
+  for(let i=0;i<nG;i++){ const rg=_seedRnd(7471+i,ss,cn,0), t0=0.15+0.8*i/nG; if(rv<t0) continue; const x=(0.08+0.84*rg())*CW, y=(0.06+0.88*rg())*CH, R=D*(0.022+0.022*rg());
+    if(rg()<0.55){ ctx.lineWidth=Math.max(1.2,D*0.006); const a0=rg()*3.14; for(let j=0;j<4;j++){ const an=a0+j*Math.PI/4; ctx.beginPath(); ctx.moveTo(x-Math.cos(an)*R,y-Math.sin(an)*R); ctx.lineTo(x+Math.cos(an)*R,y+Math.sin(an)*R); ctx.stroke(); } }
+    else { const a=Math.floor(i*cn/nG), c=rg()<0.5 ? `rgb(${blk})` : `rgb(${colOf(a, a+Math.ceil(cn/nG))})`; ctx.fillStyle=c; ctx.beginPath(); ctx.arc(x,y,R*0.6,0,6.283); ctx.fill(); } }
+  try{ _setCurE(0.5); }catch(_){}
 }
 
 // ── Miró C: Blue triptych — a deep blue field with a few floating marks. ──
