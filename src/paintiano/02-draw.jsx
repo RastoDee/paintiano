@@ -3337,7 +3337,7 @@ function _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode){
   _setCurE(0.5);
 }
 // ═══════════════════════════════════════════════════════════════════════════
-// (retired, code kept) POLLOCK LISTENS, the first — not one of the paintings above: the canvas on the floor and
+// POLLOCK LISTENS — not one of the paintings above: the canvas on the floor and
 // the painter walking round it with the piece. Every passage is a place on the
 // edge where he stands — he walks round the canvas as the piece goes — and a
 // pour from there into the canvas, the hand drawn by the melody.
@@ -3350,22 +3350,26 @@ function _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode){
 //                    it is quick; a pool at every long note; the spatter as dense as the piece
 // ═══════════════════════════════════════════════════════════════════════════
 function _pkListen(ctx,CW,CH,chords,lim,gc,ss,mode){
-  return _pkMural(ctx,CW,CH,chords,lim,gc,ss,mode);   // What he heard is his Mural now; the walk round the canvas below retired (code kept)
+  /* Nov 2026: What he heard is the walk round the canvas again (the Mural, a frieze, wrapped into three rows on a phone and looked like grass; code kept), poured fuller, in his enamels */
   const bw=mode==='bw'; const A0=_kd2Analyze(chords,gc,mode); const X=_hear(chords,A0); const {pace,loud,regular,leaps,poly,major,tens,trend}=X; const reg=A0.ch?A0.ch.register:0.5, dens=A0.ch?A0.ch.density:0.3;
   const black = !major && loud>0.6, white = loud<0.5 && reg>0.55 && !black;
   try{ globalThis.__PK_LISTEN={black,white,pace,loud,regular,leaps,poly,major,tens,trend,reg,dens}; }catch(_){}
   _polGround(ctx,CW,CH,black?(bw?[24,22,22]:[22,18,16]):white?(bw?[236,234,230]:[238,234,226]):(bw?[222,218,210]:[220,206,176]));
-  _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.groups(_polClamp(Math.round(S.A.phrases.length/2),8,36)); const n=G.length;
+  /* his enamels: each of the piece's colours drawn halfway to the house paint he poured — black, white and aluminium aside, a red, an ochre, a teal, a cobalt, a salmon, a green, an orange */
+  const _PK_EN=[[176,48,38],[214,168,62],[38,116,124],[42,68,148],[222,126,108],[62,118,72],[214,112,44],[118,64,112]];
+  const _pkReal=(c)=>{ let best=_PK_EN[0], bd=1e9; for(const e of _PK_EN){ const d2=(e[0]-c[0])**2+(e[1]-c[1])**2+(e[2]-c[2])**2; if(d2<bd){ bd=d2; best=e; } } return [0,1,2].map(k=>Math.round(c[k]*0.45+best[k]*0.55)); };
+  _pol2Build(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const G=S.groups(_polClamp(Math.round(S.A.phrases.length*(0.55+0.9*dens)),14,60)); const n=G.length;   /* poured until the web closes, the fuller the piece the denser */
+    if(!bw) S.pal=S.pal.map(_pkReal);
     const INK=black?(bw?[230,226,220]:[236,230,214]):S.ink; const WHITE=black?S.pal[1]:S.white;
     // a station on the edge for a time t (going round from the top left)
     const station=(t)=>{ const u=(t*4)%4; const m=D*0.02; if(u<1) return [m+(CW-2*m)*u, m, Math.PI/2]; if(u<2) return [CW-m, m+(CH-2*m)*(u-1), Math.PI]; if(u<3) return [CW-m-(CW-2*m)*(u-2), CH-m, -Math.PI/2]; return [m, CH-m-(CH-2*m)*(u-3), 0]; };
     G.forEach((g,i)=>{ const r=_polR(99000+i,ss); r(); const [sx,sy,inward]=station(g.t); const ang=inward+(r()-.5)*1.2; const len=D*(0.8+1.6*g.vmax+0.8*Math.min(1.5,g.dur*n));
       const slow=pace<0.45, quick=pace>0.75;
       // the bass, black, first
-      list.push({id:id++,t:g.t,layer:0,x:sx,y:sy,ang,len,col:INK,alpha:0.95,relief:slow&&g.vmax>0.7,o:{speed:(slow?0.7:1.1)+S.tempo*0.4,w:(slow?0.018:quick?0.008:0.013)+0.01*g.vmax,loopy:0.2+0.9*leaps,wob:0.6+0.6*leaps,guide:_pol2Guide(S,g,sx,sy,ang,len,D*0.4,10,true),follow:0.24}});
+      list.push({id:id++,t:g.t,layer:0,x:sx,y:sy,ang,len,col:INK,alpha:0.95,relief:false,o:{speed:(slow?0.7:1.1)+S.tempo*0.4,w:(slow?0.018:quick?0.008:0.013)+0.01*g.vmax,loopy:0.2+0.9*leaps,wob:0.6+0.6*leaps,guide:_pol2Guide(S,g,sx,sy,ang,len,D*0.4,10,true),follow:0.24}});
       // the melody over it, in colour
       const col=bw?S.silver:S.pal[i%3]; const ang2=ang+(r()-.5)*0.5;
-      list.push({id:id++,t:g.t+0.005,layer:1,x:sx,y:sy,ang:ang2,len:len*0.9,col,alpha:0.95,relief:slow&&g.vmax>0.75,o:{speed:(slow?0.8:1.2)+S.tempo*0.4,w:(slow?0.015:quick?0.007:0.011)+0.008*g.v,loopy:0.3+0.8*leaps,wob:0.7+0.5*leaps,guide:_pol2Guide(S,g,sx,sy,ang2,len*0.9,D*0.45,10,false),follow:0.26}});
+      list.push({id:id++,t:g.t+0.005,layer:1,x:sx,y:sy,ang:ang2,len:len*0.9,col,alpha:0.95,relief:false,o:{speed:(slow?0.8:1.2)+S.tempo*0.4,w:(slow?0.015:quick?0.007:0.011)+0.008*g.v,loopy:0.3+0.8*leaps,wob:0.7+0.5*leaps,guide:_pol2Guide(S,g,sx,sy,ang2,len*0.9,D*0.45,10,false),follow:0.26}});
       // the accents, white
       if(g.vmax>=S.A.vHi*0.95){ list.push({id:id++,t:g.t1,layer:2,x:sx,y:sy,ang:ang+(r()-.5)*0.8,len:len*0.6,col:WHITE,alpha:0.95,o:{speed:1.4,w:0.009,loopy:0.25,wob:1.1,guide:_pol2Guide(S,g,sx,sy,ang,len*0.6,D*0.3,6,false),follow:0.2}}); }
       // fine silver threads when it is quick
