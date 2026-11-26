@@ -3429,35 +3429,48 @@ function pollockDeep(ctx,CW,CH,chords,lim,gc,ss,mode){
   for(let k=0;k<K;k++) dk[k]=wt[k]?dk[k]/wt[k]:(k?dk[k-1]:0.5); for(let p=0;p<3;p++) for(let k=1;k<K-1;k++) dk[k]=(dk[k-1]+dk[k]*2+dk[k+1])/4;
   let mn=1,mx=0; dk.forEach(v=>{ if(v<mn) mn=v; if(v>mx) mx=v; }); const dark=(u)=>{ const x=cl(u,0,1)*(K-1), k=Math.min(K-2,Math.floor(x)); const v=dk[k]+(dk[k+1]-dk[k])*(x-k); return mx>mn+0.02?(v-mn)/(mx-mn):0.5; };
   const gloom=cl(0.35+0.5*(X.major?0:1)*0.6+0.3*(1-(A.ch?A.ch.register:0.5)),0.3,1);   // how far the chasm opens at all
-  const pr=_seedRnd(63500,_mrPieceKey(chords),0,0); pr(); const cx0=CW*(0.44+0.12*pr()), lean=(pr()-0.5)*0.2, ph=[pr()*6.28,pr()*6.28,pr()*6.28,pr()*6.28];
-  const CREAM=bw?[234,234,230]:[238,234,218], BLUEG=bw?[176,178,180]:[168,182,190], YEL=bw?[200,200,196]:[214,198,92];
+  /* Nov 2026: inspired by The Deep, not a copy of it — the piece builds the picture: a rift opens for each of its darkest
+     passages, where the passage lies (its time down the canvas, its register across), slanting as its tune climbs or
+     falls, as long as it lasts and as wide as it is dark; the rift is the passage's own colour gone deep (pure black only
+     when the piece is heavy and minor); the white is tinted by the piece; the poured lines are the melody's light colours */
+  const pr=_seedRnd(63500,_mrPieceKey(chords),0,0); pr();
+  const CREAM=bw?[234,234,230]:[238,234,218], BLUEG=bw?[176,178,180]:[168,182,190];
+  const col=(i)=>bw?[120,120,120]:_picChord(chords,cl(i,0,cn-1),gc,bw).rgb;
+  const heavy=!X.major && (A.ch?A.ch.register:0.5)<0.5;
   const its=[]; const at=(t,z,f)=>its.push({t,z,f});
   const soft=(x,y,rx,ry,rot,c,a)=>{ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.scale(1,ry/rx); const g=ctx.createRadialGradient(0,0,0,0,0,rx); g.addColorStop(0,css(c,a)); g.addColorStop(0.7,css(c,a*0.6)); g.addColorStop(1,css(c,0)); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,rx,0,6.2832); ctx.fill(); ctx.restore(); };
   const blob=(x,y,R,c,a,seed)=>{ const r=_seedRnd(seed,ss,0,0); r(); ctx.fillStyle=css(c,a); ctx.beginPath(); for(let s=0;s<12;s++){ const an=s/12*6.2832, rr=R*(0.6+0.6*r()); s?ctx.lineTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr*0.8):ctx.moveTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr*0.8); } ctx.closePath(); ctx.fill(); };
-  // the white ground, laid soft and thick: cream, mottled whiter and duller, from the first bar
+  // the white ground, laid soft and thick, mottled with the piece's colours as a breath
   ctx.fillStyle=css(CREAM); ctx.fillRect(0,0,CW,CH);
-  { const r=_seedRnd(63550,ss,0,0); r(); for(let k=0;k<70;k++){ const x=CW*r(), y=CH*r(), R=D*(0.08+0.18*r()); soft(x,y,R,R*(0.5+0.5*r()),r()*3.14,r()<0.6?[252,250,244]:[222,218,200],0.35); } }
-  // the chasm: opening from the top down as the piece goes, as wide as the music is dark there; its lips ragged
-  const NR=70, y0=CH*0.05, y1=CH*0.97, rows=[];
-  for(let k=0;k<=NR;k++){ const u=k/NR, y=y0+(y1-y0)*u, env=Math.pow(Math.sin(Math.PI*cl(0.02+u*1.0,0,1)),0.5), w=Math.min(CW*0.6,D*(0.05+0.5*gloom*(0.25+0.75*dark(u))))*env, c=cx0+CW*lean*(u-0.5)+Math.sin(u*4.2+ph[0])*CW*0.04;
-    const nl=1+0.35*Math.sin(u*23+ph[1])+0.2*Math.sin(u*57+ph[2]), nr=1+0.35*Math.sin(u*19+ph[3])+0.2*Math.sin(u*61+ph[1]); rows.push({u,y,c,w,l:c-w*0.5*nl,rr:c+w*0.5*nr}); }
-  for(let k=0;k<NR;k++){ const a=rows[k], b2=rows[k+1]; at(a.u,1,()=>{ ctx.fillStyle=css(INK); ctx.beginPath(); ctx.moveTo(a.l,a.y); ctx.lineTo(a.rr,a.y); ctx.lineTo(b2.rr,b2.y+1.5); ctx.lineTo(b2.l,b2.y+1.5); ctx.closePath(); ctx.fill(); });
-    // its lips scumbled: the white dragged dry over the black, a grey haze where it is thin, a few dry strands
-    const r=_seedRnd(63650+k,ss,0,0); r(); for(let s=0;s<2;s++){ const side=s?1:-1, ex=side<0?a.l:a.rr, x=ex+side*a.w*(0.02+0.12*r()), y=(a.y+b2.y)/2, c=mix(BLUEG,[96,100,108],0.5*r());
-      at(a.u+0.001,2,()=>{ soft(x,y,D*(0.03+0.03*r()),D*(0.05+0.04*r()),(r()-0.5)*0.6,c,0.42); ctx.strokeStyle=css(mix(CREAM,[140,140,140],0.35*r()),0.45); ctx.lineCap='round'; ctx.lineWidth=Math.max(0.6,D*0.002); for(let q=0;q<3;q++){ const yy=y+(r()-0.5)*D*0.03, L=D*(0.03+0.05*r()); ctx.beginPath(); ctx.moveTo(ex-side*L*0.6,yy); ctx.quadraticCurveTo(ex,yy+(r()-0.5)*D*0.02,ex+side*L*0.5,yy+(r()-0.5)*D*0.02); ctx.stroke(); } }); } }
-  // the white coming back into it: islands where the piece is loud, laid as the passage sounds
-  const ev=_kd2Events(A,Math.round(cl(60+120*dens,60,180)));
-  ev.filter(e=>e.v>=vHi*0.85).slice(0,9).forEach((e,k)=>{ const kk=cl(Math.round(e.t*NR),0,NR), rw=rows[kk]; if(rw.w<D*0.05) return; const r=_seedRnd(63750+k,ss,0,0); r(); const x=rw.c+(r()-0.5)*rw.w*0.5, R=Math.min(rw.w*0.35,D*(0.025+0.035*r()));
-    at(e.t+0.002,3,()=>{ blob(x,rw.y,R,[246,244,236],0.92,63760+k); soft(x,rw.y,R*1.8,R*1.4,0,[200,204,208],0.25); }); });
-  // the white poured over the black: thin lines that wander and fork, one at every high note
-  ev.filter(e=>A.reg(e.top)>0.45).forEach((e,k)=>{ const r=_seedRnd(63800+k,ss,0,0); r(); const kk=cl(Math.round(e.t*NR),0,NR), rw=rows[kk]; let x=rw.c+(r()-0.5)*rw.w*0.6, y=rw.y, an=r()*6.28; const pts=[[x,y]], n=8+Math.floor(r()*12), st=D*(0.012+0.012*r());
-    for(let s=0;s<n;s++){ an+=(r()-0.5)*1.4; x+=Math.cos(an)*st; y+=Math.sin(an)*st; pts.push([x,y]); }
-    at(e.t+0.003,4,()=>{ ctx.strokeStyle=css([244,242,234],0.9); ctx.lineWidth=Math.max(0.7,D*(0.0025+0.003*r())); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); pts.forEach((p,m)=>m?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); }); });
-  // across the white: grey-blue shadows and small flecks of yellow at the accents
-  ev.forEach((e,k)=>{ const r=_seedRnd(63900+k,ss,0,0); r(); let x=CW*r(), y=CH*r(); const kk=cl(Math.round((y-y0)/(y1-y0)*NR),0,NR); if(x>rows[kk].l-D*0.04&&x<rows[kk].rr+D*0.04) return;
-    if(e.acc&&r()<0.55){ const c=bw?YEL:mix(YEL,_picChord(chords,e.i,gc,bw).rgb,0.15), R=D*(0.012+0.016*r()); at(e.t,3,()=>{ soft(x,y,R*2.2,R*1.6,r()*3.14,c,0.3); blob(x,y,R,c,0.45,63950+k); }); }
+  { const r=_seedRnd(63550,ss,0,0); r(); for(let k=0;k<70;k++){ const x=CW*r(), y=CH*r(), R=D*(0.08+0.18*r()), u=r(); soft(x,y,R,R*(0.5+0.5*r()),r()*3.14,u<0.45?[252,250,244]:u<0.7?[222,218,200]:mix(CREAM,col(Math.floor(k/70*cn)),0.3),u<0.7?0.35:0.28); } }
+  // the rifts: the darkest passages
+  const P=A.phrases.map(q=>({q,d:(1-A.reg(q.top))*0.6+(1-cl(((q.v||0.5)-vLo)/Math.max(0.02,vHi-vLo),0,1))*0.4})).sort((a,b2)=>b2.d-a.d);
+  const nR=Math.round(cl(1+3.2*gloom*(0.4+dens),1,4)), rifts=[];
+  for(const o of P){ if(rifts.length>=nR) break; const q=o.q, r=_seedRnd(63600+q.a,ss,0,0); r(); const x=CW*(0.14+0.72*cl(A.reg(q.top)*0.7+0.3*r(),0,1)), y=CH*(0.08+0.6*cl(q.t,0,1)), L=CH*cl(0.28+0.5*(q.n/cn)*nR+0.15*r(),0.25,0.78);
+    if(rifts.some(f=>Math.hypot(f.x-x,f.y-y)<D*0.22)) continue; const ev0=A.ev[q.a]||A.ev.find(Boolean), ev1=A.ev[Math.max(q.a,q.b-1)]||ev0, trend=cl(((ev1?ev1.top:60)-(ev0?ev0.top:60))/12,-1,1);
+    const ang=Math.PI/2+trend*0.55+(r()-0.5)*0.3, W=D*(0.06+0.26*o.d*(0.6+0.6*gloom)), dc=bw?INK:(heavy&&o.d>0.6?INK:mix(_polMix(col(q.a),col(Math.floor((q.a+q.b)/2)),0.5),INK,0.72)), ph=[r()*6.28,r()*6.28,r()*6.28];
+    rifts.push({q,x,y,L,ang,W,dc,ph}); }
+  const M=40; rifts.forEach((f,ri)=>{ const pts=[]; for(let j=0;j<=M;j++){ const u=j/M, env=Math.pow(Math.sin(Math.PI*cl(0.03+u*0.94,0,1)),0.55), cx=f.x+Math.cos(f.ang)*f.L*(u-0.5)+(-Math.sin(f.ang))*Math.sin(u*3.4+f.ph[0])*f.L*0.07, cy=f.y+Math.sin(f.ang)*f.L*(u-0.5)+Math.cos(f.ang)*Math.sin(u*3.4+f.ph[0])*f.L*0.07;
+      const w=f.W*env, nl=1+0.32*Math.sin(u*6.3+f.ph[1])+0.16*Math.sin(u*13.7+f.ph[2])+0.08*Math.sin(u*29+f.ph[0]), nr=1+0.32*Math.sin(u*5.1+f.ph[2])+0.16*Math.sin(u*11.9+f.ph[1])+0.08*Math.sin(u*31+f.ph[0]),   /* the lips torn in a few big bites, not a saw */ nx=-Math.sin(f.ang), ny=Math.cos(f.ang);
+      pts.push({u,cx,cy,w,L:[cx-nx*w*0.5*nl,cy-ny*w*0.5*nl],R:[cx+nx*w*0.5*nr,cy+ny*w*0.5*nr]}); } f.pts=pts;
+    const t0=f.q.t0, t1=Math.max(f.q.t0+0.02,f.q.t1);
+    for(let j=0;j<M;j++){ const a=pts[j], b2=pts[j+1], t=t0+(t1-t0)*a.u;
+      at(t,1,()=>{ ctx.fillStyle=css(f.dc); ctx.beginPath(); ctx.moveTo(a.L[0],a.L[1]); ctx.lineTo(a.R[0],a.R[1]); ctx.lineTo(b2.R[0],b2.R[1]); ctx.lineTo(b2.L[0],b2.L[1]); ctx.closePath(); ctx.fill(); });
+      const r=_seedRnd(63650+ri*97+j,ss,0,0); r(); if(j%2===0) for(let s=0;s<2;s++){ const e=s?a.R:a.L, c=mix(BLUEG,f.dc,0.35*r());
+        at(t+0.0005,2,()=>{ soft(e[0],e[1],D*(0.025+0.025*r()),D*(0.04+0.03*r()),f.ang+(r()-0.5)*0.6,c,0.4); ctx.strokeStyle=css(mix(CREAM,[140,140,140],0.35*r()),0.45); ctx.lineCap='round'; ctx.lineWidth=Math.max(0.6,D*0.002); for(let q=0;q<2;q++){ const L2=D*(0.03+0.04*r()), an=f.ang+Math.PI/2+(r()-0.5)*0.8; ctx.beginPath(); ctx.moveTo(e[0]-Math.cos(an)*L2*0.5,e[1]-Math.sin(an)*L2*0.5); ctx.lineTo(e[0]+Math.cos(an)*L2*0.5,e[1]+Math.sin(an)*L2*0.5); ctx.stroke(); } }); } } });
+  const riftAt=(t)=>{ for(const f of rifts){ if(t>=f.q.t0&&t<=f.q.t1){ const u=cl((t-f.q.t0)/Math.max(0.001,f.q.t1-f.q.t0),0,1); return {f,p:f.pts[Math.round(u*M)]}; } } return null; };
+  const inRift=(x,y)=>rifts.some(f=>f.pts.some(p=>Math.hypot(p.cx-x,p.cy-y)<p.w*0.6+D*0.03));
+  const ev=_kd2Events(A,Math.round(cl(60+140*dens,60,200)));
+  // the white coming back into a rift where the passage is loud; the melody poured over the dark in its light colours
+  ev.forEach((e,k)=>{ const h=riftAt(e.t); if(!h||h.p.w<D*0.04) return; const r=_seedRnd(63800+k,ss,0,0); r(); const lc=bw?[244,242,234]:mix([246,244,236],col(e.i),0.28);
+    if(e.v>=vHi*0.85 && r()<0.5){ const x=h.p.cx+(r()-0.5)*h.p.w*0.4, R=Math.min(h.p.w*0.3,D*(0.02+0.03*r())); at(e.t+0.002,3,()=>{ blob(x,h.p.cy,R,mix([246,244,236],col(e.i),0.12),0.92,63760+k); soft(x,h.p.cy,R*1.8,R*1.4,0,[200,204,208],0.25); }); }
+    if(A.reg(e.top)>0.4){ let x=h.p.cx+(r()-0.5)*h.p.w*0.5, y=h.p.cy, an=r()*6.28; const pts=[[x,y]], n=8+Math.floor(r()*12), st=D*(0.012+0.012*r()); for(let s=0;s<n;s++){ an+=(r()-0.5)*1.4; x+=Math.cos(an)*st; y+=Math.sin(an)*st; pts.push([x,y]); }
+      at(e.t+0.003,4,()=>{ ctx.strokeStyle=css(lc,0.9); ctx.lineWidth=Math.max(0.7,D*(0.0025+0.003*r())); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); pts.forEach((p2,m)=>m?ctx.lineTo(p2[0],p2[1]):ctx.moveTo(p2[0],p2[1])); ctx.stroke(); }); } });
+  // across the white: grey-blue shadows, and small soft flecks of the accents' colours
+  ev.forEach((e,k)=>{ const r=_seedRnd(63900+k,ss,0,0); r(); const x=CW*r(), y=CH*r(); if(inRift(x,y)) return;
+    if(e.acc&&r()<0.6){ const c=bw?[200,200,196]:mix(col(e.i),[236,226,180],0.5), R=D*(0.012+0.016*r()); at(e.t,3,()=>{ soft(x,y,R*2.2,R*1.6,r()*3.14,c,0.3); blob(x,y,R,c,0.5,63950+k); }); }
     else if(r()<0.5) at(e.t,0,()=>soft(x,y,D*(0.08+0.1*r()),D*(0.04+0.06*r()),r()*3.14,BLUEG,0.14)); });
-  its.sort((a,b)=>a.t-b.t||a.z-b.z); const reveal=played/cn; for(const it of its){ if(it.t>reveal+1e-9 && it.t>0) break; it.f(); }
+  its.sort((a,b2)=>a.t-b2.t||a.z-b2.z); const reveal=played/cn; for(const it of its){ if(it.t>reveal+1e-9 && it.t>0) break; it.f(); }
   try{ globalThis.__PK_DEEP={gloom}; }catch(_){}
   _setCurE(0.5);
 }
