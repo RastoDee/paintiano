@@ -3370,22 +3370,37 @@ function _pkShimmer(ctx,CW,CH,chords,lim,gc,ss,mode){
   const pk0=pk()*6.28, pk1=pk()*6.28;
   const chordCol=(i)=>bw?[110,110,110]:_picChord(chords,cl(i,0,cn-1),gc,bw).rgb;
   const colOf=(i,r)=>{ const c=chordCol(i), u=r(); return u<0.3?mix(WHITE,c,0.05):u<0.55?mix(YEL,c,0.15):u<0.68?mix(CREAM,c,0.12):u<0.78?mix(OCH,c,0.2):mix(c,CREAM,0.22+0.18*r()); };   /* his whites and yellows, the piece's colours worked in */
-  // a stroke of paint straight from the tube: its shadow, the body, a ridge of light along it
-  const stroke=(x,y,ang,len,w,c,curl)=>{ const pts=[]; for(let s=0;s<=8;s++){ const u=s/8-0.5; const a=ang+curl*u; pts.push([x+Math.cos(a)*len*u, y+Math.sin(a)*len*u]); }
-    const draw=(dx,dy,col,lw)=>{ ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); pts.forEach((p,k)=>k?ctx.lineTo(p[0]+dx,p[1]+dy):ctx.moveTo(p[0]+dx,p[1]+dy)); ctx.stroke(); };
-    draw(w*0.16,w*0.22,css(mix(c,[50,36,20],0.6),0.4),w*1.06); draw(0,0,css(c,1),w); draw(-w*0.14,-w*0.18,css(mix(c,[255,255,248],0.6),0.6),w*0.3); };
+  /* a stroke of paint straight from the tube (Nov 2026: was a smooth round tube, read as worms): a flat ribbon, thick where
+     it was squeezed out and thinning as the brush drags it, its edges ragged; the paint not fully mixed — streaks of a lighter
+     and a darker paint run along it, as the bristles leave them; a raised lip of light on the upper edge, its shadow below */
+  const stroke=(x,y,ang,len,w,c,curl)=>{ const sr=_seedRnd(Math.round(x*13+y*7)+61900,ss,0,0); sr(); const N=10, C=[], L=[], R=[];
+    for(let s=0;s<=N;s++){ const u=s/N, a=ang+curl*(u-0.5); C.push([x+Math.cos(a)*len*(u-0.5)+Math.cos(ang+1.57)*Math.sin(u*3.1+curl)*w*0.12, y+Math.sin(a)*len*(u-0.5)+Math.sin(ang+1.57)*Math.sin(u*3.1+curl)*w*0.12, a]); }
+    const prof=(u)=>(u<0.1?0.7+3*u:1-0.3*Math.pow((u-0.1)/0.9,1.2))*(0.9+0.2*sr());   /* squeezed out round and full, the brush end blunt and broken */
+    C.forEach((p,s)=>{ const u=s/N, hw=w*0.5*prof(u), nx=-Math.sin(p[2]), ny=Math.cos(p[2]); L.push([p[0]+nx*hw*(0.9+0.2*sr()),p[1]+ny*hw*(0.9+0.2*sr())]); R.push([p[0]-nx*hw*(0.9+0.2*sr()),p[1]-ny*hw*(0.9+0.2*sr())]); });
+    const t0=[Math.cos(C[0][2]),Math.sin(C[0][2])], cap=[C[0][0]-t0[0]*w*0.55,C[0][1]-t0[1]*w*0.55];
+    const poly=(dx,dy)=>{ ctx.beginPath(); L.forEach((q,k)=>k?ctx.lineTo(q[0]+dx,q[1]+dy):ctx.moveTo(q[0]+dx,q[1]+dy)); for(let k=R.length-1;k>=0;k--) ctx.lineTo(R[k][0]+dx,R[k][1]+dy); ctx.quadraticCurveTo(cap[0]+dx,cap[1]+dy,L[0][0]+dx,L[0][1]+dy); ctx.closePath(); };
+    poly(w*0.08,w*0.12); ctx.fillStyle=css(mix(c,[46,32,18],0.6),0.26); ctx.fill();
+    poly(0,0); ctx.fillStyle=css(c,1); ctx.fill();
+    ctx.save(); poly(0,0); ctx.clip(); ctx.lineCap='round';
+    const ns=6+Math.floor(sr()*3); for(let k=0;k<ns;k++){ const off=-0.85+1.7*(k+0.2+0.6*sr())/ns, light=k%2===0, col=light?mix(c,[255,252,242],0.25+0.2*sr()):mix(c,[60,44,30],0.1+0.1*sr());   /* the bristles' marks across the whole width */
+      ctx.strokeStyle=css(col,0.3+0.3*sr()); ctx.lineWidth=Math.max(0.5,w*(0.04+0.05*sr())); ctx.beginPath(); C.forEach((p,s)=>{ const u=s/N, hw=w*0.5*prof(u)*off, nx=-Math.sin(p[2]), ny=Math.cos(p[2]); s?ctx.lineTo(p[0]+nx*hw,p[1]+ny*hw):ctx.moveTo(p[0]+nx*hw,p[1]+ny*hw); }); ctx.stroke(); }
+    ctx.restore();
+    /* the dry end: the paint gives out in a few bristle trails beyond the stroke */
+    { const pe=C[N], te=[Math.cos(pe[2]),Math.sin(pe[2])], nx=-te[1], ny=te[0], hw=w*0.5*prof(1), nt=2+Math.floor(sr()*3); ctx.lineCap='round';
+      for(let k=0;k<nt;k++){ const o=(-0.8+1.6*(k+0.5)/nt)*hw, l=len*(0.05+0.14*sr()); ctx.strokeStyle=css(c,0.85); ctx.lineWidth=Math.max(0.6,w*(0.1+0.1*sr())); ctx.beginPath(); ctx.moveTo(pe[0]+nx*o-te[0]*w*0.1,pe[1]+ny*o-te[1]*w*0.1); ctx.lineTo(pe[0]+nx*o*0.8+te[0]*l,pe[1]+ny*o*0.8+te[1]*l); ctx.stroke(); } }
+    ctx.strokeStyle=css(mix(c,[255,252,244],0.5),0.5); ctx.lineWidth=Math.max(0.6,w*0.07); ctx.beginPath(); L.forEach((q,k)=>k?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.stroke(); };
   // the strokes: laid all over, crowding, the field filling as the piece plays; each takes the note sounding when it is laid
   const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
   const g=D*(0.05-0.012*dens), nx=Math.ceil(CW/g)+1, ny=Math.ceil(CH/g)+1, cells=[]; for(let j=0;j<ny;j++) for(let i=0;i<nx;i++) for(let L=0;L<2;L++) cells.push([i,j,L]);
   const sh=_seedRnd(61550,ss,0,0); sh(); for(let k=cells.length-1;k>0;k--){ const m=Math.floor(sh()*(k+1)); const t=cells[k]; cells[k]=cells[m]; cells[m]=t; }
   const its=[]; cells.forEach((cc,k)=>{ const i=Math.min(cn-1,Math.floor(k/cells.length*cn)); const e=A.ev[i]||A.ev.find(Boolean); const r=_seedRnd(61600+k,ss,0,0); r(); const f=e?cl((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1):0.5;
-    const x=(cc[0]+r()-0.3)*g, y=(cc[1]+r()-0.3)*g, ang=flow(x,y)+(r()-0.5)*0.45, len=g*(1.5+1.1*r()+0.6*cl((e&&e.dur)||0.5,0,2)/2), w=g*(0.42+0.32*f+0.1*r());
+    const x=(cc[0]+r()-0.3)*g, y=(cc[1]+r()-0.3)*g, ang=flow(x,y)+(r()-0.5)*0.45, len=g*(1.6+1.2*r()+0.6*cl((e&&e.dur)||0.5,0,2)/2), w=g*(0.6+0.4*f+0.12*r());
     its.push({i,z:cc[2],f:()=>stroke(x,y,ang,len,w,colOf(i,r),(r()-0.5)*0.9)}); });
   // the suns: at each eye a round of paint laid in rings, yellow and white, its edge in the passage's colour
   for(const e of eyes){ const r=_seedRnd(61700+Math.round(e.x*7),ss,0,0); r(); const c=chordCol(e.q.a), span=Math.max(1,e.q.b-e.q.a);
     const rings=[[0.25,YEL],[0.55,mix(YEL,WHITE,0.5)],[0.85,mix(YEL,c,0.25)],[1.1,mix(c,OCH,0.3)]];
     rings.forEach(([rf,col],ri)=>{ const rr=e.R*rf, n=Math.max(3,Math.round(6.2832*rr/(g*1.1))); for(let k=0;k<n;k++){ const a=k/n*6.2832+r()*0.2, t=e.q.a+Math.floor(span*((ri+k/n)/rings.length));
-      its.push({i:t,z:2,f:()=>stroke(e.x+Math.cos(a)*rr,e.y+Math.sin(a)*rr,a+Math.PI/2*e.dir,g*(1.6+0.6*r()),g*(0.5+0.2*r()),mix(col,WHITE,0.1*r()),0.5*e.dir)}); } }); }
+      its.push({i:t,z:2,f:()=>stroke(e.x+Math.cos(a)*rr,e.y+Math.sin(a)*rr,a+Math.PI/2*e.dir,g*(1.7+0.6*r()),g*(0.66+0.2*r()),mix(col,WHITE,0.1*r()),0.5*e.dir)}); } }); }
   its.sort((a,b)=>a.i-b.i||a.z-b.z); for(const it of its){ if(it.i>=played) break; it.f(); }
   try{ globalThis.__PK_LISTEN={v:'shimmer',eddies:eyes.length}; }catch(_){}
   _setCurE(0.5);
