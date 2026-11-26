@@ -23272,23 +23272,35 @@ function bauhausPhaseHomage(ctx,CW,CH,chords,lim,gc,ss,mode){
   for(let i=0;i<n;i++){ const x=r()*CW, y=r()*CH, w=6+r()*22, h=1+r()*1.6; ctx.fillStyle=r()<0.5?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.045)'; ctx.fillRect(x,y,w,h); }
   ctx.restore();
 }
-// 8 · Construction (László Moholy-Nagy, 1923–27) — in muted pigment, not neon: transparent planes on a pale ground: long bars at an angle, discs, a trapezoid; where they cross, the colours add. A black bar and two hairlines hold the space. Each plane is one phrase of the piece
-function bauhausPhaseConstruction(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const S=_bhxSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.min(CW,CH);
+// 8 · Construction (László Moholy-Nagy, 1923–27) — transparent planes on a pale ground: long bars at an angle, discs, trapezoids;
+// where they cross, the colours darken into one another, as his glass does. Black bars and hairlines hold the space. Each plane is
+// one passage of the piece. (Nov 2026: the same planes lay at the same places on every piece, crowded in the upper half, and only
+// their tint changed. Now the piece sets the construction: its own slant, a plane for each passage — a disc where the passage is
+// sustained, a bar where it runs, a trapezoid between — as large as the passage is loud, set in balance over the whole canvas;
+// the black bars stand at its loudest passages.)
+function bauhausPhaseConstruction(ctx,CW,CH,chords,lim,gc,ss0,mode){
+  const ss=((ss0|0)+_mrPieceKey(chords))|0, S=_bhxSetup(chords,gc,mode); const reveal=Math.max(1,Math.min(S.cn,lim))/S.cn; const D=Math.sqrt(CW*CH)*0.8, cn=S.cn;
   ctx.save(); ctx.fillStyle=_bhxCss(S.isBW?[232,230,226]:[234,229,218]); ctx.fillRect(0,0,CW,CH);
-  const r0=_bhxR(94000,ss); r0(); const ang=-0.35-r0()*0.5; const cx=CW*(0.45+r0()*0.1), cy=CH*(0.45+r0()*0.1);
+  const r0=_bhxR(94000,ss); r0(); const ang=(r0()<0.5 ? -1 : 1)*(0.3+r0()*0.7);
   const n=Math.round((7+S.density*5)*_dW(S.density)); const items=[];
-  for(let i=0;i<n;i++){ const r=_bhxR(94100+i,ss); r(); const t=i/n; const c0=_bhxAvg(S,t,Math.min(1,t+1/n),6); const g=_bhxLum(c0); const c=S.isBW?[g,g,g]:_bhxPigment(c0,0.2,0.55,0.36,0.62,0.14,0.5,null);
-    const kind=i===0?'disc':(r()<0.55?'bar':(r()<0.5?'trap':'disc'));
-    const a=ang+(r()<0.3?1.5708:0)+(r()-.5)*0.25; const px=cx+(r()-.5)*CW*0.55, py=cy+(r()-.5)*CH*0.6;
-    items.push({t,kind,c,a,px,py,len:D*(0.5+r()*0.6),wd:D*(0.04+r()*0.1),rad:D*(0.12+r()*0.16)}); }
-  for(const it of items){ if(it.t>=reveal) break; ctx.save(); ctx.translate(it.px,it.py); ctx.rotate(it.a); ctx.fillStyle=_bhxCss(it.c,0.55); ctx.beginPath();
+  const span=(a,b)=>{ let v=0, d=0, k=0; for(let j=a;j<b && j<cn;j++){ const c=chords[j], ns=(c && (c.n||c.notes))||[]; for(const x of ns){ const vv=(x && x.v!==undefined) ? x.v : 80; if(vv>v) v=vv; } d+=(c && c.durQ) || 1; k++; } return {v:Math.min(1,v/112), d:k ? d/k : 1}; };
+  let dAvg=0; const sp=[]; for(let i=0;i<n;i++){ const q=span(Math.floor(i*cn/n), Math.max(Math.floor(i*cn/n)+1, Math.floor((i+1)*cn/n))); sp.push(q); dAvg+=q.d/n; }
+  for(let i=0;i<n;i++){ const r=_bhxR(94100+i,ss); r(); const t=i/n; const c0=_bhxAvg(S,t,Math.min(1,t+1/n),6); const g=_bhxLum(c0); const c=S.isBW?[g,g,g]:_bhxPigment(c0,0.3,0.7,0.34,0.6,0.14,0.5,null);
+    const q=sp[i], kind=q.d>dAvg*1.25 ? 'disc' : q.d<dAvg*0.8 ? 'bar' : (r()<0.5 ? 'trap' : 'bar'), sz=(0.6+0.8*q.v)*(1.05-0.3*S.density);
+    const a=ang+(r()<0.3?1.5708:0)+(r()-.5)*0.25; items.push({t,kind,c,a,v:q.v,len:D*(0.5+r()*0.5)*sz,wd:D*(0.05+r()*0.09)*sz,rad:D*(0.11+r()*0.1)*sz}); }
+  const pos=_mrBalance(items.map(it=>({r:it.kind==='disc' ? it.rad : it.len*0.34, w:it.kind==='disc' ? 1.2 : 1})), CW, CH, _bhxR(94500,ss));
+  items.forEach((it,i)=>{ it.px=pos[i][0]; it.py=pos[i][1]; });
+  ctx.globalCompositeOperation='multiply';
+  for(const it of items){ if(it.t>=reveal) break; ctx.save(); ctx.translate(it.px,it.py); ctx.rotate(it.a); ctx.fillStyle=_bhxCss(it.c.map(v=>v+(255-v)*0.3),0.6); ctx.beginPath();   /* lighter glass, so many planes over one another stay colour, not black */
     if(it.kind==='bar') ctx.rect(-it.len/2,-it.wd/2,it.len,it.wd);
     else if(it.kind==='trap'){ ctx.moveTo(-it.len*0.3,-it.wd*1.4); ctx.lineTo(it.len*0.3,-it.wd*0.8); ctx.lineTo(it.len*0.3,it.wd*0.8); ctx.lineTo(-it.len*0.3,it.wd*1.4); ctx.closePath(); }
     else ctx.arc(0,0,it.rad,0,6.2832);
     ctx.fill(); ctx.restore(); }
-  if(reveal>0.5){ ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang); ctx.fillStyle=_bhxCss([24,22,24]); ctx.fillRect(-D*0.45,D*0.18,D*0.9,D*0.022); ctx.restore(); }
-  if(reveal>0.8){ ctx.strokeStyle=_bhxCss([24,22,24]); ctx.lineWidth=Math.max(1,D*0.0025); ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang+1.5708); ctx.beginPath(); ctx.moveTo(-D*0.6,-D*0.12); ctx.lineTo(D*0.6,-D*0.12); ctx.moveTo(-D*0.6,D*0.3); ctx.lineTo(D*0.6,D*0.3); ctx.stroke(); ctx.restore(); }
+  ctx.globalCompositeOperation='source-over';
+  // the black: a bar at each of the loudest passages (one, or two for a forceful piece), and the hairlines across the slant
+  const ld=items.slice().sort((p,q)=>q.v-p.v).slice(0, S.energy>0.55 ? 2 : 1);
+  ld.forEach((it,k)=>{ if(reveal<=Math.max(0.3,it.t)) return; ctx.save(); ctx.translate(it.px,it.py); ctx.rotate(ang+(k ? 1.5708 : 0)); ctx.fillStyle=_bhxCss([24,22,24]); ctx.fillRect(-D*(0.4-k*0.12),D*0.06,D*(0.8-k*0.24),D*0.022); ctx.restore(); });
+  if(reveal>0.8){ ctx.strokeStyle=_bhxCss([24,22,24]); ctx.lineWidth=Math.max(1,D*0.0025); const hr=_bhxR(94600,ss); hr(); ctx.save(); ctx.translate(CW/2,CH/2); ctx.rotate(ang+1.5708); ctx.beginPath(); for(let k=0;k<2+(S.density>0.5 ? 1 : 0);k++){ const o=(hr()-0.5)*D*0.9; ctx.moveTo(-D*1.2,o); ctx.lineTo(D*1.2,o); } ctx.stroke(); ctx.restore(); }
   ctx.restore();
 }
 
