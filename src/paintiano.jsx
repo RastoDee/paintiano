@@ -8704,12 +8704,19 @@ function francisPhaseBlueBalls(ctx,CW,CH,chords,lim,gc,ss,mode){
 }
 // ── Sam Francis 2: Edge painting (1960s — Sail, Mako) — colour only at the four
 // borders, the centre an open white; spatter flicked inward, drips off the top.
-function francisPhaseEdge(ctx,CW,CH,chords,lim,gc,ss,mode){
+// (Nov 2026: every side got the same thin band on every piece. Now the four sides are the four quarters of the piece, each as
+// deep and as crowded as its quarter is loud — a quiet quarter leaves its side nearly bare, the loudest pushes far into the white;
+// which quarter takes which side, the piece sets. The cells are larger, in each quarter's own colours.)
+function francisPhaseEdge(ctx,CW,CH,chords,lim,gc,ss0,mode){
+  const ss=((ss0|0)+_mrPieceKey(chords))|0;
   _frGround(ctx,CW,CH,mode==='bw');
-  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const n=Math.round((50+S.density*50)*_dW(S.density)); const m=0.13; let id=0;
-    for(let i=0;i<n;i++){ const r=_frR(86000+i,ss); r(); const t=i/n; const side=Math.floor(r()*4); const u=r(), v=Math.pow(r(),1.6)*m; let x,y,flick;
-      if(side===0){ x=u*CW; y=v*CH; flick=1.5708; } else if(side===1){ x=u*CW; y=CH*(1-v); flick=-1.5708; } else if(side===2){ x=v*CW; y=u*CH; flick=0; } else { x=CW*(1-v); y=u*CH; flick=3.1416; }
-      list.push({id:id++,t,x,y,r:D*(0.025+r()*0.045),sx:0.85+r()*0.4,sy:0.85+r()*0.4,col:S.col(t),alpha:0.55+r()*0.3,drip:side===0?0.6:0.2,dripLen:1.6,spat:0.55,flick:flick+(r()-.5)*0.8,edge:1}); }
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const cn=chords.length; let id=0; const r0=_frR(85900,ss); r0(); const turn=Math.floor(r0()*4);
+    const lv=[0,1,2,3].map(q=>{ let v=0,k=0; for(let j=Math.floor(q*cn/4);j<Math.floor((q+1)*cn/4);j++){ const ns=(chords[j] && (chords[j].n||chords[j].notes))||[]; for(const x of ns){ v+=(x && x.v!==undefined) ? x.v : 80; k++; } } return k ? v/k/127 : 0.5; }), lo=Math.min(...lv), hi=Math.max(...lv), w=lv.map(v=>hi>lo ? 0.25+0.75*(v-lo)/(hi-lo) : 0.6);
+    const n=Math.round((70+S.density*60)*_dW(S.density));
+    for(let i=0;i<n;i++){ const r=_frR(86000+i,ss); r(); const t=i/n, q=Math.min(3,Math.floor(t*4)), side=(q+turn)%4, wq=w[q]; if(r()>0.35+0.65*wq) continue;   // a quiet quarter: few cells on its side
+      const u=r(), v=Math.pow(r(),1.5)*(0.1+0.2*wq); let x,y,flick;
+      if(side===0){ x=u*CW; y=v*CH; flick=1.5708; } else if(side===1){ x=CW*(1-v); y=u*CH; flick=3.1416; } else if(side===2){ x=u*CW; y=CH*(1-v); flick=-1.5708; } else { x=v*CW; y=u*CH; flick=0; }
+      list.push({id:id++,t,x,y,r:D*(0.03+r()*0.05)*(0.8+0.5*wq),sx:0.85+r()*0.4,sy:0.85+r()*0.4,col:S.col(t),alpha:0.55+r()*0.3,drip:side===0?0.7:0.2,dripLen:1.6+1.4*wq,spat:0.55+0.3*wq,flick:flick+(r()-.5)*0.8,edge:1}); }
     return list; });
 }
 // ── Sam Francis 4: Big Red (1953) — the canvas nearly filled by one mass of cells in
@@ -8782,15 +8789,21 @@ function francisPhaseMatrix(ctx,CW,CH,chords,lim,gc,ss,mode){
 // for every passage, laid clockwise from the top in the order of the music, as big
 // as its dynamics, nudged in or out by its register; the drips run down with
 // gravity, the spatter flies inward; the loudest accents land outside the ring.
-function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,ss,mode){
+// (Nov 2026: it was a thin ring of small cells in the middle of the canvas, most of it bare, the same on every piece. Now the ring
+// fills the canvas — an oval as tall as the canvas is, its centre and its tilt the piece's, open where the piece chooses (he never
+// closed his rings) — and it is thick: every passage a cluster of cells, the loud ones large and many.)
+function francisPhaseMandala(ctx,CW,CH,chords,lim,gc,ss0,mode){
+  const ss=((ss0|0)+_mrPieceKey(chords))|0;
   _frGround(ctx,CW,CH,mode==='bw');
-  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; let id=0; const A=_kd2Analyze(chords,gc,mode); const cn=chords.length;
-    const G=_kd2Phrases(A,Math.max(1,Math.min(22,Math.max(10,Math.round(A.phrases.length/3))))); const n=G.length; const cx=CW/2, cy=CH*0.5, R=D*0.3;
-    G.forEach((g,i)=>{ const r=_frR(86000+i,ss); r(); const a=-1.5708+6.2832*(i+0.5)/n; const reg=A.reg(g.top); const rr=R*(0.9+0.25*(reg-0.5))+(r()-.5)*D*0.03; const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr;
-      list.push({id:id++,t:g.t0,x,y,r:D*(0.035+0.05*g.vmax),sx:0.9+r()*0.5,sy:0.8+r()*0.4,col:_frChordAt(chords,gc,S.isBW,g.t),alpha:0.55+0.35*g.v,drip:Math.sin(a)>0?0.9:0.25,dripLen:0.6+1.8*Math.max(0,Math.sin(a)),spat:0.8,flick:a+3.1416+(r()-.5)*0.8,spatR:1.2,edge:1,bleed:0.4});
-      if(g.n>cn/n*1.3){ list.push({id:id++,t:g.t,x:x+Math.cos(a)*D*0.06+(r()-.5)*D*0.03,y:y+Math.sin(a)*D*0.06,r:D*(0.02+0.025*g.v),sx:1,sy:1,col:_frChordAt(chords,gc,S.isBW,g.t1-0.01),alpha:0.5,drip:0.3,spat:0.5,flick:a,edge:1}); } });
-    const acc=[]; for(let i=0;i<cn;i++){ const e=A.ev[i]; if(e&&e.v>=A.vHi) acc.push(e); } acc.sort((p,q)=>q.v-p.v); acc.slice(0,4).sort((p,q)=>p.t-q.t).forEach((e,k)=>{ const r=_frR(86500+k,ss); r(); const a=-1.5708+6.2832*e.t; const rr=R*(1.55+0.3*r()); const x=_frClamp(cx+Math.cos(a)*rr,D*0.06,CW-D*0.06), y=_frClamp(cy+Math.sin(a)*rr,D*0.06,CH-D*0.06);
-      list.push({id:id++,t:e.t,x,y,r:D*(0.025+0.03*e.v),sx:1.2,sy:0.8,col:_frChordAt(chords,gc,S.isBW,e.t),alpha:0.8,drip:0.7,dripLen:1.5,spat:0.9,flick:a+3.1416,spatR:1.5,edge:1}); });
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D0,CW,CH)=>{ const list=[]; let id=0; const A=_kd2Analyze(chords,gc,mode); const cn=chords.length, D=Math.sqrt(CW*CH)*0.85;
+    const G=_kd2Phrases(A,Math.max(1,Math.min(22,Math.max(10,Math.round(A.phrases.length/3))))); const n=G.length; const r0=_frR(85950,ss); r0();
+    const cx=CW*(0.5+(r0()-.5)*0.1), cy=CH*(0.48+(r0()-.5)*0.08), Rx=CW*(0.33+0.04*r0()), Ry=CH*(0.33+0.04*r0()), tilt=(r0()-.5)*0.5, start=r0()*6.2832, sweep=6.2832*(0.8+0.14*r0()), dir=r0()<0.5 ? 1 : -1;
+    const at=(a,k)=>{ const ex=Math.cos(a)*Rx*k, ey=Math.sin(a)*Ry*k; return [cx+ex*Math.cos(tilt)-ey*Math.sin(tilt), cy+ex*Math.sin(tilt)+ey*Math.cos(tilt)]; };
+    G.forEach((g,i)=>{ const r=_frR(86000+i,ss); r(); const a=start+dir*sweep*(i+0.5)/n; const reg=A.reg(g.top), m=1+Math.round(1.6*g.vmax+S.density*0.8);
+      for(let j=0;j<m;j++){ const k=0.9+0.3*(reg-0.5)+(r()-.5)*0.3, aa=a+(r()-.5)*sweep/n*1.1, q=at(aa,k), dn=Math.sin(aa)>0;
+        list.push({id:id++,t:g.t0+(g.t1-g.t0)*j/m,x:q[0],y:q[1],r:D*(0.04+0.07*g.vmax)*(j ? 0.55+0.4*r() : 1),sx:0.9+r()*0.5,sy:0.8+r()*0.4,col:_frChordAt(chords,gc,S.isBW,_frClamp(g.t0+(g.t1-g.t0)*j/m,0,0.999)),alpha:0.42+0.26*g.v,drip:dn?0.9:0.25,dripLen:0.6+1.8*(dn ? 1 : 0),spat:0.8,flick:aa+3.1416+(r()-.5)*0.8,spatR:1.2,edge:1,bleed:0.4}); } });
+    const acc=[]; for(let i=0;i<cn;i++){ const e=A.ev[i]; if(e&&e.v>=A.vHi) acc.push(e); } acc.sort((p,q)=>q.v-p.v); acc.slice(0,5).sort((p,q)=>p.t-q.t).forEach((e,k)=>{ const r=_frR(86500+k,ss); r(); const a=start+dir*sweep*e.t; const q=at(a,0.25+0.3*r());   // the loudest accents fall inside the ring, in its white
+      list.push({id:id++,t:e.t,x:q[0],y:q[1],r:D*(0.03+0.035*e.v),sx:1.2,sy:0.8,col:_frChordAt(chords,gc,S.isBW,e.t),alpha:0.8,drip:0.7,dripLen:1.5,spat:0.9,flick:a,spatR:1.5,edge:1}); });
     return list; });
 }
 
@@ -9319,8 +9332,8 @@ function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
 // dots where it is moderate (swelling as it grows), hatching where it leaps, white where it is quiet; a streak of his
 // yellow at its climax; the zones leaning the way the tune goes. The deep colours are the part's own hues darkened, the
 // dots in his inks. Zone by zone as the part plays.
-function lichtensteinMirrors(ctx,CW,CH,chords,lim,gc,ss,mode){
-  const isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
+function lichtensteinMirrors(ctx,CW,CH,chords,lim,gc,ss0,mode){   // Nov 2026: the mirrors hung small on a bare wall, alike on every piece — now they fill the wall, cut into more zones, and each piece hangs its own (the seed takes the piece in)
+  const ss=((ss0|0)+_mrPieceKey(chords))|0, isBW=mode==='bw', cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH);
   const A=_kd2Analyze(chords,gc,mode), dens=A.ch?A.ch.density:0.4; const lw=Math.max(1.5,D*0.006); const I=_LC_INK;
   const hsl=(c)=>{ const R=c[0]/255,G=c[1]/255,B=c[2]/255, mx=Math.max(R,G,B), mn=Math.min(R,G,B), l=(mx+mn)/2, d=mx-mn; let h=0,s2=0; if(d>1e-6){ s2=d/(1-Math.abs(2*l-1)); h=mx===R?((G-B)/d)%6:mx===G?(B-R)/d+2:(R-G)/d+4; h*=60; if(h<0) h+=360; } return [h,s2,l]; };
   const rgbH=(h,s2,l)=>{ const C=(1-Math.abs(2*l-1))*s2, X2=C*(1-Math.abs((h/60)%2-1)), m=l-C/2; const [a,b,c]=h<60?[C,X2,0]:h<120?[X2,C,0]:h<180?[0,C,X2]:h<240?[0,X2,C]:h<300?[X2,0,C]:[C,0,X2]; return [(a+m)*255,(b+m)*255,(c+m)*255]; };
@@ -9328,13 +9341,13 @@ function lichtensteinMirrors(ctx,CW,CH,chords,lim,gc,ss,mode){
   ctx.fillStyle=_lcCss([232,231,227]); ctx.fillRect(0,0,CW,CH);
   const nM=1+(dens>0.33?1:0)+(dens>0.62?1:0), G=_kd2Phrases(A,nM).slice(0,nM), n=G.length, land=CW>CH*1.1;
   const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vq=(f)=>vs.length?vs[Math.min(vs.length-1,Math.floor(vs.length*f))]:0.5;
-  const M=G.map((q,k)=>{ let cx,cy,rx,ry; if(n===1){ cx=CW/2; cy=CH/2; rx=Math.min(CW*0.4,CH*0.3); ry=Math.min(CH*0.43,rx*1.5); }
+  const M=G.map((q,k)=>{ let cx,cy,rx,ry; if(n===1){ cx=CW/2; cy=CH/2; rx=Math.min(CW*0.45,CH*0.34); ry=Math.min(CH*0.47,rx*1.75); }
       else if(land){ const w=CW/n; cx=w*(k+0.5); cy=CH/2; rx=Math.min(w*0.42,CH*0.4); ry=k===0?Math.min(CH*0.44,rx*1.4):rx; }
-      else { const h=CH/n; cy=h*(k+0.5); cx=CW/2; ry=Math.min(h*0.43,CW*0.46); rx=k===0?Math.min(CW*0.36,ry*0.72):Math.min(CW*0.42,ry); }   // the first an oval, the others round, as he hung them
+      else { const h=CH/n; cy=h*(k+0.5); cx=CW*(0.5+((k+ss)%2 ? 0.03 : -0.03)); ry=Math.min(h*0.475,CW*0.56); rx=(k+ss)%n===0?Math.min(CW*0.4,ry*0.8):Math.min(CW*0.46,ry*1.15); }   // the first an oval, the others round, as he hung them
     return {q,cx,cy,rx,ry,k}; });
   for(const m of M){ const {q,cx,cy,rx,ry}=m; const a=q.a, b=Math.max(q.a+2,q.b); if(played<=a) continue; const r=_lcR(84000+a,ss); r();
     const hp=_mtHearSpan(A,a,b), lean=_lcClamp(hp.dir,-1.5,1.5)*0.12;
-    const Z=Math.round(_lcClamp(3+(b-a)/60,3,5)); const wts=[]; for(let z=0;z<Z;z++) wts.push(0.6+0.9*r()); const wsum=wts.reduce((p,x)=>p+x,0); const bnd=[-1.3]; let acc=0; for(let z=0;z<Z-1;z++){ acc+=wts[z]; bnd.push(-1+2*acc/wsum); } bnd.push(1.3);   // a few broad zones, of unequal width
+    const Z=Math.round(_lcClamp(4+(b-a)/45+dens*1.5,4,7)); const wts=[]; for(let z=0;z<Z;z++) wts.push(0.6+0.9*r()); const wsum=wts.reduce((p,x)=>p+x,0); const bnd=[-1.3]; let acc=0; for(let z=0;z<Z-1;z++){ acc+=wts[z]; bnd.push(-1+2*acc/wsum); } bnd.push(1.3);   // a few broad zones, of unequal width
     const oval=()=>{ ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,6.2832); };
     ctx.save(); ctx.fillStyle='rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(cx+D*0.01,cy+D*0.014,rx,ry,0,0,6.2832); ctx.fill(); ctx.restore();
     ctx.save(); oval(); ctx.fillStyle=_lcCss(I.W); ctx.fill(); ctx.clip();
