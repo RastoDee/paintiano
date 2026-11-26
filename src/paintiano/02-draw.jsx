@@ -9753,15 +9753,17 @@ function haringHeart(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 function haringAcrobats(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length, D=Math.min(CW,CH), reveal=_matReveal(chords,lim);
   const A=_kd2Analyze(chords,gc,mode), X=_hear(chords,A), st=_hgStats(chords,gc,isBW); const bg=isBW?[236,236,232]:(st[2]||st[0]), bg2=_hgOn(st[3]||_HG_PAL[6],bg,isBW);
-  const s=Math.min(CH*0.88/14.2, CW/7.4), O=Math.max(2,s*0.1); const G=_kd2Phrases(A,7); const col=(i)=>_hgOn(_hgAt(chords,Math.floor(((G[Math.min(G.length-1,i)]||{a:0,b:1}).a+(G[Math.min(G.length-1,i)]||{a:0,b:1}).b)/2),gc,isBW),bg,isBW); const t=(i)=>(G[Math.min(G.length-1,i)]||{t0:0}).t0;
-  const Ops=_mtOps(); const o={ink:_HG_BLK,O,motion:0.3+0.5*X.energy}; const base=CH*0.95-1.6*s, cx=CW*0.5;
-  Ops.at(0,()=>{ _hgBG(ctx,CW,CH,'stripes',bg,bg2,_HG_BLK,D,65000+ss); ctx.fillStyle=_hgCss(_HG_BLK); ctx.fillRect(0,base+1.62*s,CW,O*2); });
-  Ops.at(t(0), ()=>{ _hgFig(ctx,'hold',cx-s*1.25,base,s,1,0,65100+ss,Object.assign({col:col(0)},o)); _hgFig(ctx,'hold',cx+s*1.25,base,s,-1,0,65101+ss,Object.assign({col:col(1),pat:'dash'},o)); });
-  const y2=base-3.05*s; Ops.at(t(2), ()=>_hgFig(ctx,'flip',cx,y2-0.2*s,s,1,0,65102+ss,Object.assign({col:col(2)},o)));
-  const y3=y2-3.6*s; Ops.at(t(3), ()=>_hgFig(ctx,'hold',cx,y3-0.4*s,s*0.95,1,0,65103+ss,Object.assign({col:col(3),pat:'cross'},o)));
-  const y4=y3-2.75*s; Ops.at(t(4), ()=>{ _hgFig(ctx,'cheer',cx,y4-0.4*s,s*0.9,1,0,65104+ss,Object.assign({col:col(4)},o)); _hgRays(ctx,cx,y4-1.6*s,s*1.0,s*1.4,11,-Math.PI/2,3.4,_HG_BLK,O*1.2); });
-  Ops.at(t(5), ()=>_hgRoundDog(ctx,cx+s*3.1,base+1.55*s-1.6*s,s,-1,col(5),_HG_BLK,O,null,'beg'));
-  Ops.at(t(6), ()=>_hgFig(ctx,'run',cx-s*3.1,base+0.1*s,s*0.85,1,0,65105+ss,Object.assign({col:col(6)},o)));
+  /* the piece picks the formation (tower, pyramid, bridge, column with flyers), its side, the ground's stripes, who wears which marks */
+  const pr=_seedRnd(65900,_mrPieceKey(chords),0,0); pr(); const form=Math.floor(pr()*4)%4, mir=pr()<0.5?-1:1, hs=pr()<0.35, dogPose=['beg','sit','stand'][Math.floor(pr()*3)%3]; const pats=[null,'dash','cross',null,'dash',null,'cross']; for(let k=6;k>0;k--){ const j=Math.floor(pr()*(k+1)); const q=pats[k]; pats[k]=pats[j]; pats[j]=q; }
+  const dim=[[14.2,7.4],[11.6,8.6],[11.4,8.2],[11.6,8.6]][form]; const s=Math.min(CH*0.88/dim[0], CW/dim[1]), O=Math.max(2,s*0.1); const G=_kd2Phrases(A,7); const col=(i)=>_hgOn(_hgAt(chords,Math.floor(((G[Math.min(G.length-1,i)]||{a:0,b:1}).a+(G[Math.min(G.length-1,i)]||{a:0,b:1}).b)/2),gc,isBW),bg,isBW); const t=(i)=>(G[Math.min(G.length-1,i)]||{t0:0}).t0;
+  const Ops=_mtOps(); const o={ink:_HG_BLK,O,motion:0.3+0.5*X.energy}; const base=CH*0.95-1.6*s, cx=CW*0.5; let fi=0;
+  Ops.at(0,()=>{ _hgBG(ctx,CW,CH,hs?'hstripes':'stripes',bg,bg2,_HG_BLK,D,65000+ss); ctx.fillStyle=_hgCss(_HG_BLK); ctx.fillRect(0,base+1.62*s,CW,O*2); });
+  const fig=(ph,kind,x,y,sc,dir,rot,rays)=>{ const k=fi++; Ops.at(t(ph),()=>{ const X0=cx+x*s*mir, Y0=base-y*s; _hgFig(ctx,kind,X0,Y0,s*(sc||1),(dir||1)*mir,(rot||0)*mir,65100+k+ss,Object.assign({col:col(k%7)},pats[k%7]?{pat:pats[k%7]}:{},o)); if(rays) _hgRays(ctx,X0,Y0-1.2*s,s*1.0,s*1.4,11,-Math.PI/2,3.4,_HG_BLK,O*1.2); }); };
+  const dog=(ph,x,pose,dir)=>Ops.at(t(ph),()=>_hgRoundDog(ctx,cx+x*s*mir,base+1.55*s-1.6*s,s,(dir||-1)*mir,col(5),_HG_BLK,O,null,pose));
+  if(form===0){ fig(0,'hold',-1.25,0,1,1); fig(0,'hold',1.25,0,1,-1); fig(2,'flip',0,3.25,1,1); fig(3,'hold',0,7.05,0.95,1); fig(4,'cheer',0,9.8,0.9,1,0,true); dog(5,3.1,dogPose); fig(6,'run',-3.1,-0.1,0.85,1); }
+  else if(form===1){ fig(0,'hold',-2.5,0,1,1); fig(0,'hold',0,0,1,1); fig(1,'hold',2.5,0,1,-1); fig(2,'hold',-1.25,2.95,1,1); fig(3,'hold',1.25,2.95,1,-1); fig(4,'cheer',0,5.9,1,1,0,true); fig(5,'jump',-3.3,6.2,0.8,1,-0.35); fig(6,'jump',3.3,6.2,0.8,-1,0.35); }
+  else if(form===2){ fig(0,'hold',-2.0,0,1,1); fig(0,'hold',2.0,0,1,-1); fig(1,'hold',-2.0,2.95,1,1); fig(2,'hold',2.0,2.95,1,-1); fig(3,'cheer',0.2,5.15,1.15,1,1.5708); fig(4,'cheer',0,7.2,0.85,1,0,true); dog(5,0,dogPose,1); }
+  else { fig(0,'hold',0.6,0,1,1); fig(1,'hold',0.6,2.95,1,1); fig(2,'cheer',0.6,5.9,1,1,0,true); fig(3,'flip',-2.6,1.0,1,1); fig(4,'jump',-2.7,5.0,0.9,1,-0.5); fig(5,'jump',3.3,3.6,0.9,-1,0.5); dog(6,3.2,dogPose); }
   Ops.run(reveal); try{ globalThis.__HG_LISTEN={v:'acrobats2'}; }catch(_){} _setCurE(0.5);
 }
 
