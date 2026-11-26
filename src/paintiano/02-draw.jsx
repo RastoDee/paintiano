@@ -5039,14 +5039,22 @@ function mondrianPhaseLozenge(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const full=_md19Area(lz), used=new Set(), planes=[]; const byLoud=A.phrases.slice().sort((a,b)=>b.vmax-a.vmax), nCol=Math.round(Math.max(1,Math.min(3,1+2.5*dens)));
   for(const q of byLoud){ if(planes.length>=nCol) break; let [i,j]=cellOf(q.t,q.top); const poly=_md19Clip([[xs[i],ys[j]],[xs[i+1],ys[j]],[xs[i+1],ys[j+1]],[xs[i],ys[j+1]]],cx,cy,R);
     if(poly.length<3||_md19Area(poly)<full*0.025||used.has(i+','+j)) continue; const col=_mdSnap(_picChord(chords,Math.min(cn-1,Math.max(0,q.a)),gc,isBW).rgb,isBW);
-    if(planes.some(p=>p.col.join()===col.join())&&planes.length) continue; used.add(i+','+j); planes.push({t:q.a,poly,col}); }
+    if(planes.some(p=>p.col.join()===col.join())&&planes.length) continue; used.add(i+','+j); planes.push({t:q.a,poly,col,i,j}); }
   if(!X.major){ let g=A.phrases[0]; for(const q of A.phrases) if(q.v<g.v) g=q; const [i,j]=cellOf(g.t,g.bass); const poly=_md19Clip([[xs[i],ys[j]],[xs[i+1],ys[j]],[xs[i+1],ys[j+1]],[xs[i],ys[j+1]]],cx,cy,R);
-    if(poly.length>=3&&!used.has(i+','+j)&&_md19Area(poly)>=full*0.02) planes.push({t:g.a,poly,col:isBW?[150,150,150]:[186,184,178]}); }
+    if(poly.length>=3&&!used.has(i+','+j)&&_md19Area(poly)>=full*0.02) planes.push({t:g.a,poly,col:isBW?[150,150,150]:[186,184,178],i,j}); }
   for(const p of planes){ if(p.t>=played) continue; ctx.fillStyle=`rgb(${p.col[0]},${p.col[1]},${p.col[2]})`; path(p.poly); ctx.fill(); }
-  // the black lines, clipped to the canvas: the horizontals from the start, each vertical as its section ends
+  /* a plane comes with its own edges in black, so a colour never stands without its line (the long lines come later, over them) */
   ctx.save(); path(lz); ctx.clip(); ctx.fillStyle=isBW?'#141414':'#141210';
-  for(const y of hy) ctx.fillRect(cx-R,y-lw/2,2*R,lw);
-  vx.forEach((x,k)=>{ if(G[k]&&G[k].b<=played+1) ctx.fillRect(x-lw/2,cy-R,lw,2*R); });
+  for(const p of planes){ if(p.t>=played||p.i==null) continue; const X0=xs[p.i], X1=xs[p.i+1], Y0=ys[p.j], Y1=ys[p.j+1];
+    if(p.i>0) ctx.fillRect(X0-lw/2,Y0-lw/2,lw,Y1-Y0+lw); if(p.i+1<xs.length-1) ctx.fillRect(X1-lw/2,Y0-lw/2,lw,Y1-Y0+lw); if(p.j>0) ctx.fillRect(X0-lw/2,Y0-lw/2,X1-X0+lw,lw); if(p.j+1<ys.length-1) ctx.fillRect(X0-lw/2,Y1-lw/2,X1-X0+lw,lw); }
+  ctx.restore();
+  /* the black lines, clipped to the canvas (Nov 2026: drawn, not dropped in — the picture used to change only two or
+     three times in a whole piece). The horizontals are ruled across, left to right, through the first section; each
+     vertical is ruled down through its own section, reaching the bottom as the section ends. The finished picture is unchanged. */
+  ctx.save(); path(lz); ctx.clip(); ctx.fillStyle=isBW?'#141414':'#141210';
+  const rule=(a,b2)=>Math.max(0,Math.min(1,(played-a)/Math.max(1,b2-a)));
+  const g0=G[0]||{a:0,b:cn}; hy.forEach((y,k)=>{ const f=rule(g0.a+(g0.b-g0.a)*0.15*k,g0.b), hw=R-Math.abs(y-cy); if(f>0) ctx.fillRect(cx-hw-lw,y-lw/2,(2*hw+2*lw)*f,lw); });   /* ruled across the canvas as it is at that height */
+  vx.forEach((x,k)=>{ const g=G[k]; if(!g) return; const f=rule(g.a,g.b), hh=R-Math.abs(x-cx); if(f>0) ctx.fillRect(x-lw/2,cy-hh-lw,lw,(2*hh+2*lw)*f); });
   ctx.restore();
   _setCurE(0.5);
 }
