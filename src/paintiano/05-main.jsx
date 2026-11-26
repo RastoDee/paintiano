@@ -878,7 +878,7 @@ function _favHash(arr){
 // The painting's identity: same key = the same painting, so ♥ shows it is saved.
 function _favAddrKey(o){
   return [o.pk, o.style||'', (o.keys||[]).map(k=>k||'mosaic').join('+'), o.phase|0, o.seed>>>0, o.mode, o.tone,
-          o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].concat(o.ks ? ['k'+(o.ks|0)] : []).concat(o.fa && (o.fa.fs==='E' || o.fa.fs==='G') ? [o.fa.fs] : []).concat(o.fa && o.fa.rv===2 ? ['r2'] : []).join('|');   // … and a painting under the new shape rules is another painting too   // an E fusion is another painting (an A one keeps the old key)
+          o.mode==='custom' ? JSON.stringify(o.pal||null) : '', o.fa ? o.fa.phs.join(',') : '', o.cap||0].concat(o.ks ? ['k'+(o.ks|0)] : []).concat(o.fa && (o.fa.fs==='E' || o.fa.fs==='G') ? [o.fa.fs] : []).concat(o.fa && (o.fa.rv|0)>=2 ? ['r'+(o.fa.rv|0)] : []).join('|');   // … and a painting under the new shape rules is another painting too   // an E fusion is another painting (an A one keeps the old key)
 }
 const _FAV_OVERLAY = ['raffel','lichtenstein','klee','delaunay','pollock','kandinsky','picasso','kusama','miro','rothko','matisse','mondrian','bauhaus','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','thomas'];
 const _FAV_FULL = ['raffel','lichtenstein','klee','delaunay','mondrian','bauhaus','rothko','matisse','kusama','bulge','arcs','bloom','spiral','gold','pop','wave','mitchell','monet','hokusai','thomas'];
@@ -6089,7 +6089,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const _fa=_fusionAddr((style!==null ? [style] : []).concat(painterStageRef.current||[]), vNow);
       if(_fa && ALL_ARTIST_KEYS.includes(_fa.keys[0]) && _fa.keys[0]!=='mosaicFamily'){
         _artQ=_fa.keys[0];
-        _withQ='&with='+_fa.keys.slice(1).map((k,i)=>k+'.'+_fa.phs[i+1]).join(',')+((_fa.fs==='E' || _fa.fs==='G') ? '&fs='+_fa.fs : '')+(_fa.rv===2 ? '&r=2' : '');
+        _withQ='&with='+_fa.keys.slice(1).map((k,i)=>k+'.'+_fa.phs[i+1]).join(',')+((_fa.fs==='E' || _fa.fs==='G') ? '&fs='+_fa.fs : '')+((_fa.rv|0)>=2 ? '&r='+(_fa.rv|0) : '');
       }
       return 'https://paintiano.app/play?piece='+pieceKey+'&artist='+_artQ+'&v='+vNow+_withQ+(mode!=='custom' ? '&p='+mode : '')+'&t='+tone;
     }catch(_){ return null; }
@@ -6116,7 +6116,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(_fa){
         if(!ALL_ARTIST_KEYS.includes(_fa.keys[0]) || _fa.keys[0]==='mosaicFamily'){ alert('Poster maker: fuzia musi zacinat konkretnym umelcom (nie Mosaic) - zmen poradie.'); return; }
         _artQ=_fa.keys[0];
-        _withQ='&with='+_fa.keys.slice(1).map((k,i)=>k+'.'+_fa.phs[i+1]).join(',')+((_fa.fs==='E' || _fa.fs==='G') ? '&fs='+_fa.fs : '')+(_fa.rv===2 ? '&r=2' : '');
+        _withQ='&with='+_fa.keys.slice(1).map((k,i)=>k+'.'+_fa.phs[i+1]).join(',')+((_fa.fs==='E' || _fa.fs==='G') ? '&fs='+_fa.fs : '')+((_fa.rv|0)>=2 ? '&r='+(_fa.rv|0) : '');
       }
       const url='https://paintiano.app/play?piece='+pieceKey+'&artist='+_artQ+'&v='+vNow+_withQ+'&p='+mode+'&t='+tone;
       // fonts first (Cormorant is already imported by the app shell)
@@ -6459,7 +6459,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const _ws=_qw.split(',').slice(0,4).map(x=>{ const a=String(x).split('.'); return {k:a[0], n:parseInt(a[1],10)}; })
           .filter(o=> o.k && ((typeof ALL_ARTIST_KEYS!=='undefined' && ALL_ARTIST_KEYS.includes(o.k) && o.k!=='mosaicFamily') || o.k==='mosaic')
                       && typeof ARTIST_DNA!=='undefined' && ARTIST_DNA[o.k] && Number.isInteger(o.n) && o.n>=0 && o.n<_vN(o.k));
-        if(_ws.length) qrStageRef.current={ keys:_ws.map(o=>o.k), vs:_ws.map(o=>o.n), fs:_fsNorm(_u.get('fs')), rv:(_u.get('r')==='2' ? 2 : 1) };   // &fs=E — the poster's fusion style; &r=2 — its shape rules
+        if(_ws.length) qrStageRef.current={ keys:_ws.map(o=>o.k), vs:_ws.map(o=>o.n), fs:_fsNorm(_u.get('fs')), rv:Math.max(1, Math.min(3, parseInt(_u.get('r'),10)||1)) };   // &fs=E — the poster's fusion style; &r=2 — its shape rules
       }
       // ?p= palette and ?t= tone — the rest of the painting's address. Without
       // them a poster made in e.g. spectral/pastel would repaint in the scanner's
@@ -22449,7 +22449,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             if(_isImgFlash){ const ks=[imgComposer,...composerStage].filter(Boolean), J=globalThis.__COMP_JAM_STYLE, ok=!!(J && J.sig===ks.join()), R=ok ? J.roles : null; _st=ok ? _fsNorm(J.style) : _fsV;
               _rows=ks.map(k=>{ const r=[]; if(R && _st!=='A'){ if(R.melody===k || R.melody2===k || (R.hands && R.hands.includes(k))) r.push('mel'); if(R.harmony===k) r.push('har'); if(R.touch===k || R.ground===k) r.push('acc'); if(R.pulse===k) r.push('pul'); } return {n:_COMP_SHORT[k]||k, r}; });
               if(_st==='A' && ok){ const op=((J.v|0)%ks.length+ks.length)%ks.length; _rows.forEach((o,i)=>{ o.r=(i===op ? ['opn'] : []); }); } }   // a Collage: they trade phrases; the one who opens sets the tempo and the key (the variant turns who)
-            else { const fa=_fusionAddr(_jamStage(), paintPhase|0); if(fa){ _st=_fsNorm(fa.fs); const R=(_st!=='A' && typeof _fuRolesOf==='function') ? _fuRolesOf(fa.phs, fa.keys) : null;
+            else { const fa=_fusionAddr(_jamStage(), paintPhase|0); if(fa){ _st=_fsNorm(fa.fs); const R=(_st!=='A' && typeof _fuRolesOf==='function') ? _fuRolesOf(fa.phs, fa.keys, fa.rv) : null;
               _rows=fa.keys.map((k,i)=>{ const r=[]; if(R){ if(R.hand===i) r.push('hand'); if(R.ground===i) r.push('bg'); if(R.layout===i) r.push('lay'); if(!r.length) r.push('shp'); } else if(i===0) r.push('bg'); return {n:_painterLabel(k), r, g:_ART_GENDER[k]||''}; }); } }
           }catch(_){}
           if(_rows.length!==_ensF.length) _rows=_ensF.map(n=>({n, r:[]}));
