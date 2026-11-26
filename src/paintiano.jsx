@@ -14623,7 +14623,7 @@ function drawMiroOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     if(pick===1){ _mrListenOld(ctx,CW,CH,chords,lim,gc,ss,mode,true); return; }   // Miró's world (the old Constellations below retired, code kept)
     if(pick===2){ miroPhaseAzure(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // The Gold of the Azure (Bright sparse, miroPhaseB, retired, code kept)
     if(pick===3){ miroPhaseLate(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // his late canvases (the Blue triptych, miroPhaseBlue, retired, code kept)
-    if(pick===4){ miroPhaseBio(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+    if(pick===4){ miroPhaseBiomorph(ctx,CW,CH,chords,lim,gc,ss,mode); return; }   // his biomorphs of 1933–34 (the web of nodes, miroPhaseBio, retired, code kept)
     if(pick===5){ miroPhaseCarnival(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(pick===6){ miroPhaseSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     miroPhaseA(ctx,CW,CH,chords,lim,gc,ss,mode);
@@ -15194,6 +15194,50 @@ function miroPhaseAzure(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     if(kind<0.2){ ctx.lineWidth=Math.max(1.2,D*0.006); const a0=rd()*3.14, Rs=R*1.5; for(let j=0;j<4;j++){ const an=a0+j*Math.PI/4; ctx.beginPath(); ctx.moveTo(p.x-Math.cos(an)*Rs,p.y-Math.sin(an)*Rs); ctx.lineTo(p.x+Math.cos(an)*Rs,p.y+Math.sin(an)*Rs); ctx.stroke(); } ctx.lineWidth=Math.max(1.1, D*0.004); }   // a star
     else if(kind<0.42){ const c=colPc(p.pc); ctx.fillStyle=`rgb(${far(c)>120 ? c : others[i%others.length]})`; ctx.beginPath(); ctx.arc(p.x,p.y,R*1.5,0,6.283); ctx.fill(); ctx.stroke(); }   // a small patch of the note's colour, ringed in black
     else { ctx.fillStyle=`rgb(${blk})`; ctx.beginPath(); ctx.ellipse(p.x,p.y,R,R*(0.85+0.2*rd()),rd()*3,0,6.283); ctx.fill(); } }
+  try{ _setCurE(0.5); }catch(_){}
+}
+
+// ── Miró D: the biomorphs of 1933–34 (Nov 2026; in place of the thin web of nodes, miroPhaseBio, code kept — small dots on wires,
+// too slight). Hirondelle Amour and its sisters: a ground of deep colour passing from one hue into another, and on it his living
+// forms — amoebas, horns, crescents, drops — each one flat colour inside a black line; where two forms cross, the crossing takes
+// another colour (his rule); and one long black line sweeping through them all. Here the ground is the piece's colours deepened,
+// the forms its passages in their colours (a loud passage a large form), the line its course from first form to last. It paints
+// with the music: the forms grow one by one as their passages come, the line runs on from each to the next.
+function miroPhaseBiomorph(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, isBW=mode==='bw', cn=chords.length; if(!cn) return; const N=Math.max(1,Math.min(cn,lim)), rv=N/cn, D=Math.min(CW,CH);
+  const P=_miroPal(isBW, gc, chords); let sc=null; try{ sc=computeSongCharacter(chords); }catch(_){ sc=null; }
+  const dens=sc ? sc.density : 0.4, cl=(v)=>Math.max(0,Math.min(255,Math.round(v))), sm=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x), blk=`${P.BLK[0]},${P.BLK[1]},${P.BLK[2]}`;
+  const grey=(c)=>{ const v=Math.round(c[0]*0.299+c[1]*0.587+c[2]*0.114); return [v,v,v]; };
+  const top=(j)=>{ const ns=(chords[j] && (chords[j].n||chords[j].notes))||[]; let t=-1, v=0; for(const x of ns){ const m=(x && x.m!==undefined) ? x.m : x, vv=(x && x.v!==undefined) ? x.v : 80; if(+m>t) t=+m; if(vv>v) v=vv; } return [t,v]; };
+  const pig=(m)=>{ let c=gc(m,112); c=Array.isArray(c) ? [cl(c[0]*0.82+26), cl(c[1]*0.82+20), cl(c[2]*0.82+12)] : [214,40,32]; return isBW ? grey(c) : c; };
+  const cnt=new Array(12).fill(0); for(let j=0;j<cn;j++){ const t=top(j); if(t[0]>=0) cnt[((t[0]%12)+12)%12]+=1; } const order=[...Array(12).keys()].sort((a,b)=>cnt[b]-cnt[a]).filter(k=>cnt[k]>0);
+  // the ground: the piece's two main colours deepened, one passing into the other, clouded
+  const g0=pig(60+(order[0]||0)).map(v=>cl(v*0.34+8)), g1=pig(60+(order[1]!==undefined ? order[1] : (order[0]||0)+5)).map(v=>cl(v*0.4+10)), r=_seedRnd(7601,ss,cn,0);
+  const gr=ctx.createLinearGradient(0,0,CW*(0.3+0.6*r()),CH); gr.addColorStop(0,`rgb(${g0})`); gr.addColorStop(1,`rgb(${g1})`); ctx.fillStyle=gr; ctx.fillRect(0,0,CW,CH);
+  for(let i=0;i<26;i++){ const x=r()*CW, y=r()*CH, R=D*(0.2+r()*0.4), c=(r()<0.5 ? g0 : g1).map(v=>cl(v*(0.7+0.9*r()))); const q=ctx.createRadialGradient(x,y,0,x,y,R); q.addColorStop(0,`rgba(${c},0.3)`); q.addColorStop(1,`rgba(${c},0)`); ctx.fillStyle=q; ctx.fillRect(x-R,y-R,2*R,2*R); }
+  // the forms: one per passage — a few large, the rest smaller — each a living shape of its own kind
+  const M=Math.max(7, Math.min(13, Math.round(7+7*dens))), F=[];
+  for(let i=0;i<M;i++){ const a=Math.floor(i*cn/M), b=Math.max(a+1,Math.floor((i+1)*cn/M)); let v=0, best=-1, bc=0; const cc={}; for(let j=a;j<b && j<cn;j++){ const t=top(j); if(t[1]>v) v=t[1]; if(t[0]>=0){ const k=((t[0]%12)+12)%12; cc[k]=(cc[k]||0)+1; if(cc[k]>bc){ bc=cc[k]; best=t[0]; } } }
+    const rf=_seedRnd(7611+i,ss,cn,0); let bx=0, by=0, bd=-1; for(let q=0;q<8;q++){ const qx=(0.14+0.72*rf())*CW, qy=(0.1+0.8*rf())*CH; let md=1e9; for(const p of F) md=Math.min(md,Math.hypot(qx-p.x,qy-p.y)-p.R*0.6); if(!F.length) md=rf(); if(md>bd){ bd=md; bx=qx; by=qy; } }
+    const vv=Math.min(1,v/112), R=D*(0.06+0.15*Math.pow(vv,1.8)+0.03*rf()), kind=Math.floor(rf()*4), rot=rf()*6.283, n=28, pts=[]; const l1=2+Math.floor(rf()*3), a1=0.22+0.2*rf(), p1=rf()*6.283;
+    for(let k=0;k<n;k++){ const an=k/n*6.283; let rr=1+a1*Math.sin(an*l1+p1);   // 0 amoeba (lobes)
+      if(kind===1) rr=0.55+0.75*Math.pow(Math.abs(Math.cos(an/2)),0.6);                // 1 a drop
+      else if(kind===2) rr=(0.7+0.5*Math.cos(an))*(1+0.18*Math.sin(an*3+p1));          // 2 a horn, heavy at one end
+      else if(kind===3) rr=0.62+0.5*Math.pow(Math.sin(an*1.5+p1)*0.5+0.5,2)*1.2;       // 3 three-lobed
+      pts.push([Math.cos(an+rot)*R*rr, Math.sin(an+rot)*R*rr*(0.78+0.3*rf()*0+0.1)]); }
+    F.push({x:bx, y:by, R, pts, c:pig(best>=0 ? best : 60+i), t0:0.04+0.9*a/cn, eye:rf()<0.4}); }
+  const path=(f,k)=>{ const q=new Path2D(), n=f.pts.length; for(let j=0;j<=n;j++){ const c0=f.pts[j%n], c1=f.pts[(j+1)%n], mx=f.x+(c0[0]+c1[0])/2*k, my=f.y+(c0[1]+c1[1])/2*k; if(!j) q.moveTo(mx,my); else q.quadraticCurveTo(f.x+c0[0]*k, f.y+c0[1]*k, mx, my); } q.closePath(); return q; };
+  const live=[]; for(const f of F){ const k=sm((rv-f.t0)/0.06); if(k>0) live.push({f, q:path(f,k), k}); }
+  for(const L of live){ ctx.fillStyle=`rgb(${L.f.c})`; ctx.fill(L.q); }
+  // where two forms cross, the crossing takes another colour: black, or the white of his canvas, turn about
+  for(let i=0;i<live.length;i++) for(let j=i+1;j<live.length;j++){ const A=live[i], B=live[j]; if(Math.hypot(A.f.x-B.f.x,A.f.y-B.f.y)>(A.f.R+B.f.R)*1.5) continue; ctx.save(); ctx.clip(A.q); ctx.fillStyle=(i+j)%2 ? `rgb(${blk})` : (isBW ? 'rgb(236,234,228)' : 'rgb(240,232,214)'); ctx.fill(B.q); ctx.restore(); }
+  ctx.strokeStyle=`rgb(${blk})`; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.lineWidth=Math.max(1.3, D*0.006); for(const L of live) ctx.stroke(L.q);
+  for(const L of live){ if(!L.f.eye || L.k<1) continue; const e=L.f.R*0.16; ctx.fillStyle=isBW ? 'rgb(236,234,228)' : 'rgb(240,232,214)'; ctx.beginPath(); ctx.arc(L.f.x,L.f.y,e,0,6.283); ctx.fill(); ctx.stroke(); ctx.fillStyle=`rgb(${blk})`; ctx.beginPath(); ctx.arc(L.f.x,L.f.y,e*0.42,0,6.283); ctx.fill(); }
+  // the long line: from form to form in the order the piece plays, sweeping wide between them
+  ctx.lineWidth=Math.max(1.1, D*0.0042); ctx.beginPath(); let pen=false;
+  for(let i=0;i<M-1;i++){ const a=F[i], b=F[i+1], k=sm((rv-a.t0)/Math.max(0.02,b.t0-a.t0)); if(k<=0) break; const rl=_seedRnd(7651+i,ss,cn,0), dx=b.x-a.x, dy=b.y-a.y, L=Math.hypot(dx,dy)||1, sw=(rl()<0.5 ? 1 : -1)*L*(0.35+0.5*rl()), mx=(a.x+b.x)/2-dy/L*sw, my=(a.y+b.y)/2+dx/L*sw;
+    if(!pen){ ctx.moveTo(a.x,a.y); pen=true; } const st=22; for(let q=1;q<=Math.round(st*k);q++){ const u=q/st; ctx.lineTo((1-u)*(1-u)*a.x+2*u*(1-u)*mx+u*u*b.x, (1-u)*(1-u)*a.y+2*u*(1-u)*my+u*u*b.y); } }
+  ctx.stroke();
   try{ _setCurE(0.5); }catch(_){}
 }
 
