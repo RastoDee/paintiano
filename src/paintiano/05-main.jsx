@@ -16642,10 +16642,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   };
   // one tap = pause / play, two taps within 300 ms = ♥
   const stTapRef = useRef({ t:0, timer:null }); const stChTapRef = useRef(null);
+  const stHomeTapAtRef = useRef(0);   // when a tap on the home card opened the Studio: the same tap's click lands on the stage under it — it must not play the painting
   const _stHeartRef = useRef(null), _stSwipeRef = useRef(null);   // set below, next to the ♥ and the swipes
   const _stTap = (e)=>{ const r=stTapRef.current, now=Date.now(); clearTimeout(r.timer);
     const x = (e && e.clientX!=null) ? e.clientX : window.innerWidth/2, y = (e && e.clientY!=null) ? e.clientY : window.innerHeight/2;
     if(stChTapRef.current && stChTapRef.current(x, y)) return;   // Compose with a chord chosen: a tap moves the frame (no play, no ♥)
+    if(now-stHomeTapAtRef.current<700) return;   // the tap that brought you here from the home card
     if(now-r.t<300){ r.t=0; if(_stHeartRef.current) _stHeartRef.current(x, y); return; }
     r.t=now; r.timer=setTimeout(()=>{ _stTapOne(); }, 260); };
   const backBtnRef = useRef(null), hearBtnRef = useRef(null), seeBtnRef = useRef(null), stSheetRef = useRef(null);
@@ -17800,6 +17802,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     }, hold); };
   // a new piece plays at once (when the sound is already awake); once it plays, the rail goes after a while
   const _stFreshRef = useRef(false); _stFreshRef.current = _stFresh;
+  const stNoAutoRef = useRef(0);   // the painting waiting on the home card was tapped: it goes into the Studio stopped — you play it, or first change its painter or palette (Nov 2026)
+  useEffect(()=>{ if(playing) stNoAutoRef.current=0; },[playing]);
   const stAutoAtRef = useRef(0);     // when a timer last started the playback by itself (one start at a time)
   useEffect(()=>{
     if(!_stFresh){ if(stSideRef.current==='right' && !stIdleRef.current) _stArm(); return; }
@@ -17807,6 +17811,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(!_stFreshRef.current || !handlePauseClickRef.current) return;
       if(moodFromImg) return;   // a mood from a picture waits: the picture first, ▶ paints its mood
       if(stPlayIntentRef.current || Date.now()-stAutoAtRef.current<2500) return;   // ▶ on the home card starts it
+      if(stNoAutoRef.current){ const t0=stNoAutoRef.current; stNoAutoRef.current=0; if(Date.now()-t0<20000) return; }   // from the home card: it waits for ▶
       if(Date.now()-_clearAtRef.current<2500) return;   // just cleared: it waits for ▶
       if(Tone.getContext().rawContext.state!=='running') return;
       stAutoAtRef.current=Date.now(); wakeAudioRef.current=Date.now(); handlePauseClickRef.current();
@@ -19970,7 +19975,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(_rp.s==='mm' || _rp.s==='mi'){ (_rp.s==='mm' ? myMusicList() : myImgList()).then(l=>{ const rec=(l||[]).find(r=>r && r.id===_rp.id && r.blob); if(rec){ if(_rp.s==='mm') loadFromMyMusic(rec); else loadFromMyImg(rec); } }).catch(()=>{}); setForceSetup(false); return; }
           if(_rp.s==='mood' && MOODS.includes(_rp.m)){ const m=_rp.m, sg=findSong(m); setStructureSeedLock(null); setForceSetup(false); setCurrentMood(m); setVarySource(sg); setImgMoodThumb(null); setMoodFromImg(false); setLoadedSource(null); setMoodContext(true); setSongQ(m); stopAll(); aiMidi(m); }
         };
-        const _play = ()=>{ if(!_canPlay) return; stPlayIntentRef.current=Date.now(); try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } if(!SRC[kind].d && _rp){ _replay(); return; } _tap(kind); };
+        const _play = (go)=>{ if(!_canPlay) return; stHomeTapAtRef.current=Date.now(); if(go===true){ stPlayIntentRef.current=Date.now(); stNoAutoRef.current=0; } else { stPlayIntentRef.current=0; stNoAutoRef.current=Date.now(); } try{ wakeAudio(); }catch(_){}   // go: ▶ — it plays; a tap on the painting (or its Music / Image label), ♥ or share: into the Studio, stopped where it was
+          try{ unlockAudio(); }catch(_){} if(_smp){ loadSampleMidi(0); setForceSetup(false); return; } if(!SRC[kind].d && _rp){ _replay(); return; } _tap(kind); };
         const _up = (x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
         const ttl = _smp ? '' : (kind==='compose'||kind==='mic') ? '' : _up((kind==='mood'||kind==='mfi') ? _moodTitleLoc(H.t || '', t('moodNames')) : (H.t || ''));
         const line = _smp ? '' : (H.l || '');
@@ -20064,7 +20070,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           if(dt<800 && Math.abs(dx)>=60 && Math.abs(dx)>Math.abs(dy)*1.3){ if(FC && _fL){ _sideDone(); let ok=false; try{ ok = dx<0 ? _variantNext() : _variantBack(); }catch(_){} if(ok){ _stBuzz(10); _feedFlashNow(); } } else if(!FC){ _homeLR(dx<0 ? 1 : -1); } return; }   // ← the next variant, → back to the one before   // ←: the next variant of this surprise's painter / Fusion   // down: it's yours — the surprise moves into the Studio and plays on
           if(!st.b && Math.abs(dx)<12 && Math.abs(dy)<12 && dt<400) _fTap(e);
         };
-        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(); return; } _feedStart(null, _smp); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
+        const _fBtn = ()=>{ if(!FC){ if(!_smp && _canPlay){ _play(true); return; } _feedStart(null, _smp); return; } if(_fL){ if(!_acRunning()){ try{ wakeAudio(); }catch(_){} try{ unlockAudio(); }catch(_){} } setFeedNeedTap(false); if(handlePauseClickRef.current) handlePauseClickRef.current(); return; } _feedLoad(FC.piece, FC.sel || (FC.kind==='img' ? {img:true} : {style:_feedOpener(), phase:0, mode, notes:false, stage:[], sig:false}), FC.kind); };
         homePlayRef.current = ()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } _fBtn(); };
         feedUpRef.current = ()=>{ if(FC) return; _feedUp({u:H.u, t:ttl, l:line}); };
         return (
