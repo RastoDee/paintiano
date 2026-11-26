@@ -18627,6 +18627,14 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const tm=setTimeout(take, Math.max(0, 6000-(Date.now()-w))); return ()=>clearTimeout(tm); },[feedAt, feedCards, feedLoaded, playing]);   // the sound may sleep (iOS): then it goes into the Studio as it is
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
   _stTakenSetRef.current = ()=>{ stTakenRef.current=true; setStTaken(true); };
+  // THE STUDIO HAS NO WHITE SOLO (26 Nov 2026, his rule): one painter (one composer) alone in the Studio is always yours — gold. Whatever
+  // would leave one white there (a kept link, ↑ out of a ✦, a draw) turns gold on the spot, the same painter in the same variant: ↑ then
+  // brings palettes, ← → its variants; another painter is a tap in Look. Painters drawn by chance are For You's (and a Fusion's guests).
+  const _soloWhiteP = studioFs && !studioHome && feedAt<0 && viewMode!=='image' && !composeMode && !micActive && !micArmed && !jamOn && !painterStage.length && !sigActive && !cockpitEdit && !working
+    && ((stTaken && !!style && !/^(mosaic|notes|mosaicFamily)$/.test(style)) || (randomMode && style===null && !mosaicShuffleLock && !!shuffleStyle && !/^(mosaic|notes|mosaicFamily)$/.test(shuffleStyle)));
+  useEffect(()=>{ if(!_soloWhiteP) return; if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } if(style===null && shuffleStyle){ setPhaseIndex(shufVariant|0); setStyle(shuffleStyle); } },[_soloWhiteP]);
+  const _soloWhiteC = studioFs && !studioHome && feedAt<0 && viewMode==='image' && !moodFromImg && !crOn && !!imgComposer && composerDice && !imgSigActive && !working && imgPlayMode!=='compose';
+  useEffect(()=>{ if(_soloWhiteC) setComposerDice(false); },[_soloWhiteC]);
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current && sigActiveRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: its ✦ took over — gone; in the look on screen a white painter stays white (26 Nov 2026)
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
@@ -21159,13 +21167,13 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   const sel = !_aiOn && !_cWhite && (_crAll ? _cPinned : (imgComposer===c.k || _cIx>0 || _inSigC));
                   const locked=working;
                   return (<Fragment key={String(c.k)}>{c.k===_tryC && _tryMkEl('comp')}
-                    <button key={String(c.k)} data-lk={composerIsLocked(c.k) ? 1 : 0} disabled={locked} onClick={()=>{ if(locked||anim)return; if(composerIsLocked(c.k)){ if(!cTasteUsedRef.current){ cTasteUsedRef.current=true; setTasteCKey(c.k); try{ window.posthog && window.posthog.capture('taste_preview', { composer:c.k }); }catch(_){} try{ _stToastShow(String(_stT('tasteToast')).replace('{a}', _pfShort(COMPOSER_INSPIRED[c.k]||c.k))); }catch(_){} _leaveAi(); if(crOn){ setCrOn(false); crOnRef.current=false; } setComposerDice(false); setComposerStage([]); composerStageRef.current=[]; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); return; } setPaywallReason('settings'); return; } _leaveAi();
+                    <button key={String(c.k)} data-lk={composerIsLocked(c.k) ? 1 : 0} disabled={locked} onClick={(e)=>{ if(locked||anim)return; if(composerIsLocked(c.k)){ if(!cTasteUsedRef.current){ cTasteUsedRef.current=true; setTasteCKey(c.k); try{ window.posthog && window.posthog.capture('taste_preview', { composer:c.k }); }catch(_){} try{ _stToastShow(String(_stT('tasteToast')).replace('{a}', _pfShort(COMPOSER_INSPIRED[c.k]||c.k))); }catch(_){} _leaveAi(); if(crOn){ setCrOn(false); crOnRef.current=false; } setComposerDice(false); setComposerStage([]); composerStageRef.current=[]; _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); return; } setPaywallReason('settings'); return; } _leaveAi();
                         if(studioFs && crOn){ if(!composerDice) _stCrPinStage(); const had=crPinsRef.current.length; _crPinTap(c.k);   // the Studio's Fusion: a tap pins / unpins (as the painters)
                           if(had>0 && !crPinsRef.current.length && imgPlayModeRef.current==='scan'){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }   // the last gold one let go: a fresh ensemble (2–4)
                           return; }
                         if(crOn && composerDice){ _crPinTap(c.k); return; } if(crOn && imgComposerRef.current){ _crTap(c.k); return; }
-                        if(studioFs && !_aiOn){   // the Studio's Solo: a tap chooses (gold, ↑ keeps it); the gold one tapped again turns white (↑ draws others)
-                          if((imgComposer===c.k || _inSigC) && !composerStage.length){ setComposerDice(d=>!d); return; }
+                        if(studioFs && !_aiOn){   // the Studio's Solo: a tap chooses (gold, ↑ keeps it); one composer is always gold — tapped again he stays (26 Nov 2026)
+                          if((imgComposer===c.k || _inSigC) && !composerStage.length){ if(composerDice) setComposerDice(false); else _segShake(e); return; }
                           _stepNote('comp'); setComposerDice(false); _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); return; }
                         if(!_aiOn && imgComposer===c.k && !composerStage.length){ _toScan(); return; }   // the chosen one tapped again → back to SCAN (an artist → Mosaic)
                         _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
@@ -21398,7 +21406,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               const _ghost = cockpitEdit && !inSet;
               const _out = jamOn && !cockpitEdit && fuBan.includes(k);
               const _holdable = jamOn && !cockpitEdit && !locked;
-              const onClick = ()=>{
+              const onClick = (e)=>{
                 if(fuHoldRef.current.fired){ fuHoldRef.current.fired=false; return; }   // the hold already did its work
                 if(cockpitEdit){
                   toggleArtSafe(k);
@@ -21413,7 +21421,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   if(jamOn && jamAll && !locked) _jamPinTap(k);
                   return;
                 }
-                if(studioFs && (jamOn ? (_jamStage().length===1 && _jamStage()[0]===k) : style===k)){ _stAllOn(); return; }   // the Studio: the last gold one tapped again = let go — ↑ draws from your whole set again
+                if(studioFs && !jamOn && style===k){ _segShake(e); return; }   // the Studio's Solo: one painter is always gold — tapped again he stays (a white solo would be For You; 26 Nov 2026)
+                if(studioFs && jamOn && _jamStage().length===1 && _jamStage()[0]===k){ _stAllOn(); return; }   // the Fusion: the last gold one tapped again = let go — ↑ draws a new fusion
                 // 🔀 1 needs an artist: taking the LAST one off switches 🔀 off (it
                 // must not slide into ALL just because nothing is selected any more).
                 if(_artMode===1 && (jamOn ? (_jamStage().length===1 && _jamStage()[0]===k) : style===k)) _shuffleOff();
