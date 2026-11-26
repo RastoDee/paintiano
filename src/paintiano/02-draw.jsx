@@ -11984,21 +11984,51 @@ const _KW_MOTIF={
     _kwDots(ctx,x,y,w,h,s/8,()=>(r()<0.4?s*0.018:0),ink,true); },
 };
 const _KW_SET=['dots','graded','eye','net','rings','squiggle','dots','graded'];
+/* three more of her canvases (Nov 2026): the sun-flower, the amoeba with its cilia, the field of small eyes */
+_KW_MOTIF.sun=function(ctx,x,y,w,h,g,ink,r,e){ const cx=x+w/2, cy=y+h/2, R=Math.min(w,h)*0.3, n=9+((r()*6)|0); ctx.fillStyle=_kwCss(ink); for(let k=0;k<n;k++){ const a=k/n*6.2832+r()*0.1; ctx.save(); ctx.translate(cx+Math.cos(a)*R*1.05,cy+Math.sin(a)*R*1.05); ctx.rotate(a); ctx.beginPath(); ctx.ellipse(0,0,R*0.42,R*0.17,0,0,6.2832); ctx.fill(); ctx.restore(); }
+  ctx.beginPath(); ctx.arc(cx,cy,R*0.62,0,6.2832); ctx.fill(); ctx.fillStyle=_kwCss(g); ctx.beginPath(); for(let k=0;k<3;k++){ const rad=R*0.16*(k+0.4), m=k?k*6:1; for(let q=0;q<m;q++){ const a=q/m*6.2832+k; const px=cx+Math.cos(a)*rad, py=cy+Math.sin(a)*rad; ctx.moveTo(px+R*0.06,py); ctx.arc(px,py,R*0.06,0,6.2832); } } ctx.fill();
+  const s=Math.min(w,h)/7; ctx.fillStyle=_kwCss(ink); ctx.beginPath(); for(let yy=y+s/2; yy<y+h; yy+=s) for(let xx=x+s/2; xx<x+w; xx+=s){ if(Math.hypot(xx-cx,yy-cy)<R*1.7) continue; ctx.moveTo(xx+s*0.14,yy); ctx.arc(xx,yy,s*0.14,0,6.2832); } ctx.fill(); };
+_KW_MOTIF.amoeba=function(ctx,x,y,w,h,g,ink,r,e){ const s=Math.min(w,h), nb=2+((r()*2)|0); ctx.lineCap='round';
+  for(let b=0;b<nb;b++){ const cx=x+w*(0.3+0.4*r()), cy=y+h*(0.25+0.5*(b+0.5)/nb+0.1*(r()-.5)), R=s*(0.17+0.08*r())/Math.sqrt(nb/2), ph=r()*6.28, k1=2+((r()*2)|0), P=[]; for(let q=0;q<40;q++){ const a=q/40*6.2832; const rad=R*(1+0.22*Math.sin(a*k1+ph)+0.1*Math.sin(a*5+ph*2)); P.push([cx+Math.cos(a)*rad*1.25,cy+Math.sin(a)*rad]); }
+    ctx.strokeStyle=_kwCss(ink); ctx.lineWidth=Math.max(1,s*0.012); for(let q=0;q<40;q+=2){ const a=q/40*6.2832; ctx.beginPath(); ctx.moveTo(P[q][0],P[q][1]); ctx.lineTo(P[q][0]+Math.cos(a)*R*0.3,P[q][1]+Math.sin(a)*R*0.3); ctx.stroke(); }
+    ctx.fillStyle=_kwCss(ink); ctx.beginPath(); P.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.closePath(); ctx.fill();
+    ctx.fillStyle=_kwCss(g); ctx.beginPath(); for(let q=0;q<7;q++){ const a=r()*6.28, d=R*0.6*Math.sqrt(r()); const px=cx+Math.cos(a)*d*1.2, py=cy+Math.sin(a)*d, rr=R*(0.07+0.07*r()); ctx.moveTo(px+rr,py); ctx.arc(px,py,rr,0,6.2832); } ctx.fill(); } };
+_KW_MOTIF.eyes=function(ctx,x,y,w,h,g,ink,r,e){ const n=3, sw=w/n, sh=h/(n+1); ctx.lineWidth=Math.max(1,w*0.012); for(let j=0;j<=n;j++) for(let i=0;i<n;i++){ const cx=x+sw*(i+0.5)+((j%2)?sw*0.25:-sw*0.25)*0.6, cy=y+sh*(j+0.5), ew=sw*0.4, eh=sh*0.22;
+    ctx.fillStyle=_kwCss(_KW_PAPER); ctx.beginPath(); ctx.moveTo(cx-ew,cy); ctx.quadraticCurveTo(cx,cy-eh*2,cx+ew,cy); ctx.quadraticCurveTo(cx,cy+eh*2,cx-ew,cy); ctx.closePath(); ctx.fill(); ctx.strokeStyle=_kwCss(_KW_INK); ctx.stroke(); ctx.fillStyle=_kwCss(_KW_INK); ctx.beginPath(); ctx.arc(cx,cy,eh*0.8,0,6.2832); ctx.fill(); } };
+/* the painted edge every canvas of hers has: a band in a second colour, set with her saw-teeth or a chain of dots */
+function _kwBorder(ctx,x,y,w,h,bw,c2,ink,kind){ ctx.fillStyle=_kwCss(c2); ctx.fillRect(x,y,w,bw); ctx.fillRect(x,y+h-bw,w,bw); ctx.fillRect(x,y,bw,h); ctx.fillRect(x+w-bw,y,bw,h); ctx.fillStyle=_kwCss(ink); const nx=Math.max(4,Math.round(w/(bw*1.5))), ny=Math.max(4,Math.round(h/(bw*1.5)));
+  if(kind===0){ ctx.beginPath(); for(let i=0;i<nx;i++){ const a=x+w*i/nx, b2=x+w*(i+1)/nx, m=(a+b2)/2; ctx.moveTo(a,y); ctx.lineTo(b2,y); ctx.lineTo(m,y+bw*0.85); ctx.closePath(); ctx.moveTo(a,y+h); ctx.lineTo(b2,y+h); ctx.lineTo(m,y+h-bw*0.85); ctx.closePath(); } for(let i=0;i<ny;i++){ const a=y+h*i/ny, b2=y+h*(i+1)/ny, m=(a+b2)/2; ctx.moveTo(x,a); ctx.lineTo(x,b2); ctx.lineTo(x+bw*0.85,m); ctx.closePath(); ctx.moveTo(x+w,a); ctx.lineTo(x+w,b2); ctx.lineTo(x+w-bw*0.85,m); ctx.closePath(); } ctx.fill(); }
+  else if(kind===1){ ctx.beginPath(); const rr=bw*0.3; for(let i=0;i<nx*1.5;i++){ const px=x+bw/2+(w-bw)*i/(nx*1.5); ctx.moveTo(px+rr,y+bw/2); ctx.arc(px,y+bw/2,rr,0,6.2832); ctx.moveTo(px+rr,y+h-bw/2); ctx.arc(px,y+h-bw/2,rr,0,6.2832); } for(let i=1;i<ny*1.5;i++){ const py=y+bw/2+(h-bw)*i/(ny*1.5); ctx.moveTo(x+bw/2+rr,py); ctx.arc(x+bw/2,py,rr,0,6.2832); ctx.moveTo(x+w-bw/2+rr,py); ctx.arc(x+w-bw/2,py,rr,0,6.2832); } ctx.fill(); }
+  ctx.strokeStyle=_kwCss(_KW_INK); ctx.lineWidth=Math.max(1,bw*0.08); ctx.strokeRect(x+bw,y+bw,w-2*bw,h-2*bw); }
+/* The wall, rehung (Nov 2026): fewer and larger canvases; a loud passage gets a canvas four times the size, so the wall
+   has the piece's own rhythm; every canvas is a painting with its edge in a second colour; and what is painted on it is
+   what the passage is — an eye at an accent, the sun-flower when it is loud, rings for full chords, graded dots when the
+   melody climbs or falls, the net when it is quiet, the amoeba or the squiggles when it leaps. */
 function kusamaPhaseA(ctx, CW, CH, chords, lim, gc, sessionSeed){
   const ss=sessionSeed|0, cn=chords.length; const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null; const dens=_ch?_ch.density:0.4;
+  const A=_kd2Analyze(chords,gc), isAcc=_mtAccOf(A); const pr=_seedRnd(97900,_mrPieceKey(chords),0,0); pr();
   const raw=(t)=>_picChord(chords,_kwClamp(Math.floor(t*cn),0,cn-1),gc,false).rgb;
-  const E=(t)=>{ const c=chords[_kwClamp(Math.floor(t*cn),0,cn-1)]; return (c&&typeof c._E==='number')?c._E:0.5; };
   const reveal=Math.max(1,Math.min(cn,lim))/cn;
-  const cols=Math.round(_kwClamp(3+dens*2+(cn>400?1:0),3,5)), rows=Math.max(3,Math.round(cols*CH/CW)); const n=cols*rows;
-  const gut=Math.min(CW,CH)*0.014, pw=(CW-gut)/cols, ph=(CH-gut)/rows;
+  const cols=Math.round(_kwClamp(3+dens*1.6+(pr()-0.5),3,4)), rows=Math.max(3,Math.round(cols*CH/CW)); const n=cols*rows;
+  const gut=Math.min(CW,CH)*0.016, pw=(CW-gut)/cols, ph=(CH-gut)/rows;
+  /* what each cell's stretch of the piece is */
+  const span=(t0,t1)=>{ const a=Math.floor(t0*cn), b=Math.max(a+1,Math.floor(t1*cn)); let v=0,k=0,acc=0,nn=0,first=null,last=null,leap=0,prev=null; for(let i=a;i<b&&i<cn;i++){ const ev=A.ev[i]; if(!ev) continue; v+=ev.v; nn+=ev.nn||1; k++; if(isAcc(ev)) acc++; if(first==null) first=ev.top; last=ev.top; if(prev!=null) leap+=Math.abs(ev.top-prev); prev=ev.top; } return k?{v:v/k,acc,nn:nn/k,rise:last-first,leap:leap/k}:{v:0.5,acc:0,nn:1,rise:0,leap:0}; };
+  const cellS=[]; for(let i=0;i<n;i++) cellS.push(span(i/n,(i+1)/n)); const vs=cellS.map(s=>s.v).slice().sort((p,q)=>p-q), vHi=vs[Math.floor(vs.length*0.72)], vLo=vs[Math.floor(vs.length*0.3)];
+  /* hang the wall: reading order is time; the loudest stretches take four cells */
+  const occ=new Array(n).fill(false), panels=[]; let big=0; const maxBig=Math.max(1,Math.round(n/7));
+  for(let i=0;i<n;i++){ if(occ[i]) continue; const cx=i%cols, cy=Math.floor(i/cols); const canBig=cx<cols-1 && cy<rows-1 && !occ[i+1] && !occ[i+cols] && !occ[i+cols+1] && big<maxBig && cellS[i].v>=vHi && (panels.length===0 || !panels[panels.length-1].big);
+    if(canBig){ occ[i]=occ[i+1]=occ[i+cols]=occ[i+cols+1]=true; big++; panels.push({cx,cy,k:2,i,big:true}); } else { occ[i]=true; panels.push({cx,cy,k:1,i,big:false}); } }
   ctx.save(); ctx.fillStyle=_kwCss(_KW_WALL); ctx.fillRect(0,0,CW,CH);
-  const vis=Math.ceil(n*reveal);
-  for(let i=0;i<vis;i++){ const r=_seedRnd(97000+i,ss,0,0); r(); const cx=i%cols, cy=Math.floor(i/cols); const x=gut+cx*pw, y=gut+cy*ph, w=pw-gut, h=ph-gut;
-    const t=(i+0.5)/n; const g=_kwVivid(raw(t)); const e=E(t);
-    const ink=_kwLum(g)>150?_KW_INK:(r()<0.7?_KW_PAPER:_KW_INK);
-    ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); ctx.fillStyle=_kwCss(g); ctx.fillRect(x,y,w,h);
-    _KW_MOTIF[_KW_SET[(r()*_KW_SET.length)|0]](ctx,x,y,w,h,g,ink,r,e);
-    ctx.restore(); }
+  let lastM=null;
+  for(const P of panels){ const t0=P.i/n; if(t0>reveal && P.i>0) break; const r=_seedRnd(97000+P.i,ss,0,0); r(); const x=gut+P.cx*pw, y=gut+P.cy*ph, w=pw*P.k-gut, h=ph*P.k-gut;
+    const t=(P.i+0.5)/n; const s=cellS[P.i]; const g=_kwVivid(raw(t)); let c2=_kwVivid(raw(Math.min(0.999,t+0.5/n+0.02))); const far=(p,q)=>Math.abs(p[0]-q[0])+Math.abs(p[1]-q[1])+Math.abs(p[2]-q[2]); if(far(c2,g)<110) c2=_kwLum(g)>150?_KW_INK:_KW_PAPER;
+    const ink=_kwLum(g)>150?_KW_INK:(r()<0.7?_KW_PAPER:_KW_INK); const bink=_kwLum(c2)>150?_KW_INK:_KW_PAPER;
+    let m = s.acc>0 ? (P.big?'eye':(r()<0.5?'eye':'eyes')) : s.v>=vHi ? 'sun' : s.nn>=3.2 ? 'rings' : Math.abs(s.rise)>=4 ? 'graded' : s.v<=vLo ? 'net' : s.leap>4.5 ? (r()<0.5?'amoeba':'squiggle') : 'dots';
+    if(m===lastM){ const alt=['dots','amoeba','rings','squiggle','graded','net','sun']; m=alt[(alt.indexOf(m)+1+((r()*3)|0))%alt.length]; } lastM=m;
+    ctx.save(); ctx.shadowColor='rgba(30,20,10,0.25)'; ctx.shadowBlur=gut*0.8; ctx.shadowOffsetY=gut*0.25; ctx.fillStyle=_kwCss(g); ctx.fillRect(x,y,w,h); ctx.restore();
+    const bw=Math.min(w,h)*(P.big?0.07:0.09), bk=(P.i+((pr()*3)|0))%3;
+    ctx.save(); ctx.beginPath(); ctx.rect(x+bw,y+bw,w-2*bw,h-2*bw); ctx.clip(); _KW_MOTIF[m](ctx,x+bw,y+bw,w-2*bw,h-2*bw,g,ink,r,s.v); ctx.restore();
+    _kwBorder(ctx,x,y,w,h,bw,c2,bink,bk); }
   ctx.restore(); _setCurE(0.5);
 }
 
