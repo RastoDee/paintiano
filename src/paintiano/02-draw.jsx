@@ -6969,7 +6969,7 @@ function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
   const colOf=(l)=>_picChord(chords,Math.min(cn-1,Math.floor((l.a+l.b)/2)),gc,isBW).rgb;
   const strongL=L.slice().sort((p,q)=>q.loud-p.loud).slice(0,L.length>4?2:1);   // only the loudest passages in strong colour
   const fillOf=(cell)=>{ let cx=0,cy=0; for(const p of cell){ cx+=p[0]; cy+=p[1]; } cx/=cell.length; cy/=cell.length; let best=null,bd=1e18; for(const l of L){ const d=Math.abs((cx-l.px)*l.nx+(cy-l.py)*l.ny); if(d<bd){ bd=d; best=l; } }
-    if(!best || played<best.a) return {f:_LC_WHT};   /* its passage has not begun: bare canvas */ const h=_lcR(83100+Math.round(cx/7)*131+Math.round(cy/7)*17,ss); h(); const u=h(), l=best, c=colOf(l), st=strongL.includes(l), soft=st?tone(c,0.48,true):tone(c,0.62+0.12*(1-l.loud)), deep=tone(c,0.26,st);
+    if(!best || played<best.a) return {f:_LC_WHT,bare:true};   /* its passage has not begun: bare canvas */ const h=_lcR(83100+Math.round(cx/7)*131+Math.round(cy/7)*17,ss); h(); const u=h(), l=best, c=colOf(l), st=strongL.includes(l), soft=st?tone(c,0.48,true):tone(c,0.62+0.12*(1-l.loud)), deep=tone(c,0.26,st);
     if(u<0.12) return {f:_LC_WHT}; if(u>0.96) return {f:_LC_BLK};
     if(l.hp.v<0.34) return u<0.55?{dots:deep,on:_LC_WHT}:{metal:1};
     if(l.lp>0.5&&u<0.7) return {stripes:u<0.4?_LC_BLK:deep,on:u<0.55?_LC_WHT:soft};
@@ -6984,7 +6984,9 @@ function lichtensteinPerfect(ctx,CW,CH,chords,lim,gc,ss,mode){
     if(F.stripes){ ctx.strokeStyle=_lcCss(F.stripes); ctx.lineWidth=D*0.0045; const st=D*0.0125; for(let s2=-H-W;s2<W+H;s2+=st){ ctx.beginPath(); ctx.moveTo(x0+s2,y0); ctx.lineTo(x0+s2+H*0.8,y1); ctx.stroke(); } }
     else { let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9; for(const p of cell){ bx0=Math.min(bx0,p[0]); by0=Math.min(by0,p[1]); bx1=Math.max(bx1,p[0]); by1=Math.max(by1,p[1]); } _lcBenday(ctx,bx0,by0,bx1-bx0,by1-by0,Math.max(4,D*0.014),F.dots,()=>0.62); }
     ctx.restore(); };
-  for(const cell of cells) paint(cell,fillOf(cell));
+  { const inked=[]; for(const cell of cells){ const F=fillOf(cell); paint(cell,F); if(!F.bare) inked.push(cell); }
+    /* a painted facet is drawn round at once, so colour never stands without its line; the long line across comes with its passage */
+    ctx.save(); ctx.beginPath(); ctx.rect(x0,y0,W,H); ctx.clip(); ctx.strokeStyle=_lcCss(_LC_BLK); ctx.lineWidth=lw; ctx.lineJoin='miter'; for(const cell of inked){ _lcPoly(ctx,cell); ctx.stroke(); } ctx.restore(); }
   // the points where a line breaks out: the canvas grows a point to carry it
   for(const l of out){ if(!on.includes(l)) continue; const right=l.hp.dir>=0; let t=1e9; const sgn=right?1:-1; const ex=l.dx*sgn, ey=l.dy*sgn;
     if(ex>1e-6) t=Math.min(t,(x1-l.px)/ex); if(ex<-1e-6) t=Math.min(t,(x0-l.px)/ex); if(ey>1e-6) t=Math.min(t,(y1-l.py)/ey); if(ey<-1e-6) t=Math.min(t,(y0-l.py)/ey);
