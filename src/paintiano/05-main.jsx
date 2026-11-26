@@ -6578,11 +6578,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[btlInfo]);
   // The Battle switch lives in Battle (Správa Battle — hold its title, the same code, the admin password once per device).
   // Here the hidden tools only show where it stands; it is switched only in the Battle web app, never from Paintiano.
-  const [btlMode, setBtlMode] = useState(null);   // null = not known yet · 'off' | 'test' | 'on' (Battle tells everyone)
-  const _btlHere = (m)=> m==='on' || (m==='test' && !/^https:\/\/(www\.)?paintiano\.app$/.test(window.location.origin));   // is Battle shown in THIS Paintiano at that position?
+  const [btlMode, setBtlMode] = useState(null);   // null = not known yet · 'off' | 'test' | 'web' | 'on' (Battle tells everyone)
+  const _btlHere = (m)=> m==='on' || (m==='web' && !_pfIosApp()) || (m==='test' && !/^https:\/\/(www\.)?paintiano\.app$/.test(window.location.origin) && (!_pfIosApp() || PF_TF));   // is Battle shown in THIS Paintiano at that position? (as Battle itself decides: Web — not in the store apps; Test — in a store app only its TestFlight build)
   const _btlModeSeen = (m)=>{ setBtlMode(m); setBtlInfo(o=>{ const v={number:(o && o.number) || 1, on:_btlHere(m), at:Date.now()}; try{ sessionStorage.setItem('paintiano_btl', JSON.stringify(v)); }catch(_){} return v; }); };
   useEffect(()=>{ if(!hidOpen || !hidOk) return; let on=true;
-    fetch(PF_BTL+'/api/round'+PF_TFQ).then(r=>r.ok ? r.json() : null).then(d=>{ if(!on) return; if(d && (d.mode==='off' || d.mode==='test' || d.mode==='on')) _btlModeSeen(d.mode); else setBtlMode(null); }).catch(()=>{ if(on) setBtlMode(null); });
+    fetch(PF_BTL+'/api/round'+PF_TFQ).then(r=>r.ok ? r.json() : null).then(d=>{ if(!on) return; if(d && (d.mode==='off' || d.mode==='test' || d.mode==='web' || d.mode==='on')) _btlModeSeen(d.mode); else setBtlMode(null); }).catch(()=>{ if(on) setBtlMode(null); });
     return ()=>{ on=false; }; },[hidOpen, hidOk]);
   const hidBtlAsk = useRef(false);
   // This device is not linked to a Battle account yet (e.g. paintiano.app while Battle is off there): the row signs in — Battle opens here, straight on its sign-in;
@@ -19500,7 +19500,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                         <span style={{display:'flex',flexWrap:'wrap',gap:5,marginTop:7}}>{[0,1,2,3].map(n=>(<button key={n} type="button" onClick={()=>_stepPick(n)} style={{flex:'1 1 auto',minWidth:0,padding:'6px 7px',border:0,borderRadius:9,fontFamily:'inherit',fontSize:11.5,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',background:pfStepEff===n?'linear-gradient(135deg,#f0d78a,#c9a84c)':'rgba(255,255,255,.1)',color:pfStepEff===n?'#1a1408':'rgba(242,238,232,.8)'}}>{_stT('stp'+n)}</button>))}</span></span></div>
                     <div className="pf-hid-r" data-k="hidBtl3" style={{cursor:'default',boxSizing:'border-box'}}>   {/* where Battle's switch stands; it is switched only in the Battle web app (battle.paintiano.app) */}
                       <span className="pf-hid-ic" style={{background:'linear-gradient(135deg,#f2d27a,#c9a84c)'}}>⚔</span>
-                      <span style={{flex:1,minWidth:0}}><b>{_stT('hidBtl')}{btlMode ? ' · '+btlMode.toUpperCase() : ''}</b><small>{(btlMode==='on' ? 'paintiano.app + dev' : btlMode==='test' ? 'dev' : btlMode==='off' ? '—' : '…')+' · '+_stT('hidBtlS')}</small></span></div>
+                      <span style={{flex:1,minWidth:0}}><b>{_stT('hidBtl')}{btlMode ? ' · '+btlMode.toUpperCase() : ''}</b><small>{(btlMode==='on' ? 'paintiano.app + dev + iOS/Android' : btlMode==='web' ? 'paintiano.app + dev' : btlMode==='test' ? 'dev + TestFlight' : btlMode==='off' ? '—' : '…')+' · '+_stT('hidBtlS')}</small></span></div>
                     <div className="pf-hid-r" style={{cursor:'default'}}><span className="pf-hid-ic" style={{background:'linear-gradient(135deg,#9be0b8,#3fa97a)'}}>⤢</span><span style={{flex:1,minWidth:0}}><b>{_stT('hidExp')}</b><small>{_stT('hidExpS')}</small></span><span aria-hidden="true" style={{flex:'none',width:46,textAlign:'center',color:'#e2c477',fontSize:18,fontWeight:700}}>✓</span></div>
                   </div>
                   <button type="button" className="pf-hid-lock" onClick={_hidLock}>{_stT('hidLock')}</button>
