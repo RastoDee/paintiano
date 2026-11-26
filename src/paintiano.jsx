@@ -11019,19 +11019,27 @@ function hk2_tree(ctx,CW,CH,chords,lim,gc,ss,mode){
   const A=_kd2Analyze(chords,gc,mode), D=Math.min(CW,CH), reveal=Math.max(1,Math.min(A.cn,lim))/A.cn, isBW=A.isBW;
   const r=_hkR(85000,ss); r(); const list=[]; const push=f=>{ f.id=list.length; list.push(f); }; const INK=isBW?[60,58,56]:[86,70,60];
   ctx.fillStyle=isBW?'#ece9e2':'#efe6d2'; ctx.fillRect(0,0,CW,CH);
-  const cx=CW*0.5; const pts=[]; for(let k=0;k<=40;k++){ const a=k/40*6.2832; pts.push([cx+Math.cos(a)*CW*0.42, CH*0.5+Math.sin(a)*CH*0.46]); } push({kind:'poly',t:0,pts,col:isBW?[232,230,226]:_hkMix([236,226,206],A.pcCol(A.tonic,60),0.12),ring:INK,w:D*0.003});
-  const top=CH*(0.2+(1-A.ch.register)*0.08), bot=CH*0.72; push({kind:'poly',t:0.02,pts:[[cx-D*0.012,top],[cx+D*0.012,top],[cx+D*0.02,bot],[cx-D*0.02,bot]],col:INK});
-  for(let k=0;k<6;k++){ const a=(k-2.5)*0.4; const sd=a<0?-1:1; push({kind:'curve',t:0.03,pts:[[cx,bot-D*0.01],[cx+Math.sin(a)*D*0.12,bot+D*0.1],[cx+Math.sin(a)*D*0.26+sd*D*0.02,bot+D*0.14-Math.abs(Math.sin(a))*D*0.06]],col:INK,w:D*0.004}); push({kind:'curve',t:0.04,pts:[[cx+Math.sin(a)*D*0.26+sd*D*0.02,bot+D*0.14-Math.abs(Math.sin(a))*D*0.06],[cx+Math.sin(a)*D*0.3+sd*D*0.04,bot+D*0.1-Math.abs(Math.sin(a))*D*0.06],[cx+Math.sin(a)*D*0.28+sd*D*0.03,bot+D*0.07-Math.abs(Math.sin(a))*D*0.05]],col:INK,w:D*0.003}); }   // the roots, curling back at their tips
+  /* the piece's own tree: the shape of the crown (cone, globe, heart, or the tree mirrored in its roots), its frame (almond, circle, halo), how the branches hang */
+  const pr=_seedRnd(85900,_mrPieceKey(chords),0,0); pr(); const shape=Math.floor(pr()*4)%4, frame=Math.floor(pr()*3)%3, droop=pr()<0.4?0.6+0.4*pr():0, wide=0.85+0.3*pr(); const st=_HK_STAGE[_hk2Stage(A)];
+  const cx=CW*0.5; const tint=isBW?[232,230,226]:_hkMix(_hkMix([236,226,206],st.ground,0.45),A.pcCol(A.tonic,60),0.14);
+  if(frame===0){ const pts=[]; for(let k=0;k<=40;k++){ const a=k/40*6.2832; pts.push([cx+Math.cos(a)*CW*0.42, CH*0.5+Math.sin(a)*CH*0.46]); } push({kind:'poly',t:0,pts,col:tint,ring:INK,w:D*0.003}); }
+  else if(frame===1){ push({kind:'disc',t:0,x:cx,y:CH*0.47,r:CW*0.46,col:tint,ring:INK,rw:D*0.003}); push({kind:'ring',t:0.01,x:cx,y:CH*0.47,r:CW*0.43,col:INK,a:0.5,w:D*0.002}); }
+  else { ctx.fillStyle=_hkCss(tint); ctx.fillRect(0,0,CW,CH); push({kind:'disc',t:0,x:cx,y:CH*0.4,r:CW*0.4,col:isBW?[244,242,238]:_hkMix(tint,[252,246,226],0.7),ring:INK,rw:D*0.002}); }
+  const mirrorT=shape===3; const top=mirrorT?CH*0.15:CH*(0.2+(1-A.ch.register)*0.08), bot=mirrorT?CH*0.5:CH*0.72, foot=mirrorT?CH*0.85:bot; push({kind:'poly',t:0.02,pts:[[cx-D*0.012,top],[cx+D*0.012,top],[cx+D*(mirrorT?0.012:0.02),foot],[cx-D*(mirrorT?0.012:0.02),foot]],col:INK});
+  if(!mirrorT) for(let k=0;k<6;k++){ const a=(k-2.5)*0.4; const sd=a<0?-1:1; push({kind:'curve',t:0.03,pts:[[cx,bot-D*0.01],[cx+Math.sin(a)*D*0.12,bot+D*0.1],[cx+Math.sin(a)*D*0.26+sd*D*0.02,bot+D*0.14-Math.abs(Math.sin(a))*D*0.06]],col:INK,w:D*0.004}); push({kind:'curve',t:0.04,pts:[[cx+Math.sin(a)*D*0.26+sd*D*0.02,bot+D*0.14-Math.abs(Math.sin(a))*D*0.06],[cx+Math.sin(a)*D*0.3+sd*D*0.04,bot+D*0.1-Math.abs(Math.sin(a))*D*0.06],[cx+Math.sin(a)*D*0.28+sd*D*0.03,bot+D*0.07-Math.abs(Math.sin(a))*D*0.05]],col:INK,w:D*0.003}); }   /* the roots, curling back at their tips */
   // the branches: soft curves sweeping up and out, each curling at its tip; the leaves along the curve, turned with it
   const P=_kd2Phrases(A,Math.round((8+A.ch.density*6)*_dW(A.ch.density))); const n=P.length;
   const qb=(p0,p1,p2,f)=>[(1-f)*(1-f)*p0[0]+2*(1-f)*f*p1[0]+f*f*p2[0],(1-f)*(1-f)*p0[1]+2*(1-f)*f*p1[1]+f*f*p2[1]];
-  P.forEach((p,i)=>{ const u=(i+0.5)/n; const y=bot-(bot-top)*u; const len=CW*(0.08+(1-u)*0.26)*(0.8+p.v*0.4); const side=i%2?1:-1; const c=A.pcCol(p.pc,Math.round(p.top)); const leaf=isBW?_hkPastel(c,0.3,true):_hkMix(c,[250,244,230],0.25);
-    for(const sd of [side,-side]){ const p0=[cx,y], p1=[cx+sd*len*0.45,y-D*(0.1+0.06*p.v)], p2=[cx+sd*len,y-D*(0.02+0.05*(1-u))]; push({kind:'curve',t:p.t0,pts:[p0,p1,p2],col:INK,w:D*0.0035});
-      push({kind:'curve',t:p.t0+0.01,pts:[p2,[p2[0]+sd*D*0.025,p2[1]-D*0.03],[p2[0]+sd*D*0.005,p2[1]-D*0.045]],col:INK,w:D*0.0025});   // the tip curls up
+  const env=(u)=>shape===1?0.12+0.88*Math.pow(Math.sin(Math.PI*Math.min(1,u*0.92+0.06)),0.7) : shape===2?(u<0.78?0.3+0.7*u/0.78:1-0.55*(u-0.78)/0.22) : 1-u;
+  const branch=(p,i,vs,pale)=>{ const u=(i+0.5)/n; const y=bot-vs*(bot-top)*u; const len=CW*(0.08+env(u)*0.26)*(0.8+p.v*0.4)*wide*(mirrorT?0.92:1); const side=i%2?1:-1; const c=A.pcCol(p.pc,Math.round(p.top)); const leaf=isBW?_hkPastel(c,pale?0.6:0.3,true):_hkMix(c,[250,244,230],pale?0.6:0.25); const hang=1-2*droop;
+    for(const sd of [side,-side]){ const p0=[cx,y], p1=[cx+sd*len*0.45,y-vs*D*(0.1+0.06*p.v)*(mirrorT?0.6:1)], p2=[cx+sd*len,y-vs*hang*D*(0.02+0.05*(1-u))]; push({kind:'curve',t:p.t0,pts:[p0,p1,p2],col:INK,w:D*0.0035});
+      push({kind:'curve',t:p.t0+0.01,pts:[p2,[p2[0]+sd*D*0.025,p2[1]-vs*hang*D*0.03],[p2[0]+sd*D*0.005,p2[1]-vs*hang*D*0.045]],col:INK,w:D*0.0025});   /* the tip curls */
       const ev=A.ev.slice(p.a,p.b).filter(Boolean); const nl=Math.min(9,Math.max(2,Math.round(ev.length/3))); for(let k=0;k<nl;k++){ const q=(k+1)/(nl+1); const pt=qb(p0,p1,p2,q); const tg=qb(p0,p1,p2,Math.min(1,q+0.05)); const ang=Math.atan2(tg[1]-pt[1],tg[0]-pt[0]); const up=(k%2?1:-1); push({kind:'seed',t:p.t0+(p.t1-p.t0)*q,x:pt[0]-Math.sin(ang)*up*D*0.02,y:pt[1]+Math.cos(ang)*up*D*0.02,rx:D*0.011,ry:D*0.02,ang:ang+up*0.9,col:leaf,ring:INK}); }
-      if(p.vmax>=A.vHi){ push({kind:'curve',t:p.t1,pts:[[p2[0]-D*0.02,p2[1]-D*0.06],[p2[0],p2[1]-D*0.085],[p2[0]+D*0.02,p2[1]-D*0.06]],col:INK,w:D*0.003}); } } });
+      if(p.vmax>=A.vHi && vs>0){ push({kind:'curve',t:p.t1,pts:[[p2[0]-D*0.02,p2[1]-D*0.06],[p2[0],p2[1]-D*0.085],[p2[0]+D*0.02,p2[1]-D*0.06]],col:INK,w:D*0.003}); } } };
+  P.forEach((p,i)=>{ branch(p,i,1,false); if(mirrorT) branch(p,i,-1,true); });
   const tc=isBW?[120,120,120]:A.pcCol(A.tonic,60); push({kind:'disc',t:0.95,x:cx,y:top-D*0.05,r:D*0.045,col:_hkMix(tc,[250,244,230],0.2),ring:INK,rw:D*0.003});
   push({kind:'poly',t:0.97,pts:[[cx,top-D*0.03],[cx-D*0.022,top-D*0.062],[cx-D*0.01,top-D*0.078],[cx,top-D*0.066],[cx+D*0.01,top-D*0.078],[cx+D*0.022,top-D*0.062]],col:isBW?[90,90,90]:[200,70,70]});
+  if(mirrorT) push({kind:'disc',t:0.96,x:cx,y:foot+D*0.045,r:D*0.04,col:isBW?[70,70,70]:_hkMix(tc,INK,0.55),ring:INK,rw:D*0.003});
   _hk2Draw(ctx,list,reveal,D,ss); _setCurE(0.5);
 }
 // ── 5 · Primordial Chaos (1906–07) — the deep blue-green of the first series: the melody
