@@ -5228,7 +5228,12 @@ function drawPollockOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, pha
   // wider beads); a soft/sparse one stays airy. Deterministic; audio untouched.
   const _ch = (typeof computeSongCharacter==='function') ? computeSongCharacter(chords) : null;
   const _charDrive = _ch ? (0.55*_ch.energy + 0.45*_ch.density) : 0.5;   // 0..1
-  const _passCharMul = 0.46 + 1.08*_charDrive;                            // 0.46..1.54 (amplified ×1.8)
+  /* Nov 2026: the web was already closed after a twentieth of the piece (hundreds of pours, each crossing the whole
+     canvas), and from then on every new pour only buried the last — the picture no longer grew, it churned. The whole
+     piece now pours as many skeins as leave the canvas breathing at the end (some 55 for a quiet piece, 130 for a
+     torrent), so the first bars are a few lines on bare canvas and the web closes with the music. */
+  const _passCharMul0 = 0.46 + 1.08*_charDrive;                            // 0.46..1.54 (amplified ×1.8)
+  const _passCharMul = _passCharMul0 * Math.min(1, (55 + 75*_charDrive) / Math.max(1, passMaxFull*_passCharMul0));
   const passCount = Math.max(4, Math.round(
     (pollVariant === 1 ? passCount0 * 0.55 : passCount0) * _passCharMul
   ));
