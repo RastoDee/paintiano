@@ -35248,6 +35248,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Ensemble × shuffle ALL: every Next draws a fresh crossing (how many and who
   // are random). Shuffle 1 needs no flag: Next rolls the variant of the crossing.
   const [jamAll, setJamAll] = useState(false);
+  const jamAllRef = useRef(false); useEffect(()=>{ jamAllRef.current = jamAll; },[jamAll]);
   // Ensemble × ALL with PINS: the painters the user keeps; every Next draws only
   // the guests (1–3) around them. Pinned members lead the stage, in pin order.
   // Exists only while Ensemble and ALL are both on.
@@ -40779,8 +40780,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const _sg = computeSongSignature(events, {audio: sigAudioNextRef.current}); sigAudioNextRef.current=false;
       if(_sg && title && SIG_CURATED[title]) Object.assign(_sg, SIG_CURATED[title]);
       try{ globalThis.__PAINT_SIG_PHS = _qrPhs() || _sigPin(_sg); }catch(_){}
-      if(fuRollRef.current) _setFuRoll(null);   // a new piece opens on its own variants
       const _sgMusic = sigMusicNextRef.current; sigMusicNextRef.current=false;
+      // GOLD HOLDS — also when you pick another piece (26 Nov 2026): with a gold painter or fusion on screen (you chose it) the new piece is
+      // painted in that look — its painter or fusion, variant and palette stay. Everything white (the app chose it) or a ✦:
+      // the new piece opens on its own ✦ (a gold palette stays even then)
+      const _gold = !stTakenRef.current && (jamOnRef.current ? (jamAllRef.current ? ((jamPinsRef.current||[]).length>0 || jamFixedRef.current) : (painterStageRef.current||[]).length>0)
+        : (styleRef.current!=null && !/^(mosaic|notes|mosaicFamily)$/.test(styleRef.current)));
+      const _keep = _sgMusic && _gold && !basicModeRef.current && !sigActiveRef.current && !qrArtistRef.current && !favMusicRestoreRef.current;
+      const _palKeep = palGoldRef.current ? modeRef.current : null;
+      if(fuRollRef.current && !_keep) _setFuRoll(null);   // a new piece opens on its own variants (a kept look keeps its fusion's)
       if(sigActiveRef.current && !jamOnRef.current) setPainterStage(p=>p.length?[]:p);
       sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null;
       songSigRef.current=_sg; setSongSig(_sg); globalThis.__PAINT_SONG_SIG=_sg;
@@ -40788,7 +40796,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // Lite (no poster QR): Kandinsky v0 → Mosaic → ✦ (liteOpenRef). Advanced: music files and samples open on ✦.
       setLiteIntroPiece(false);
       if(basicModeRef.current && !qrArtistRef.current && liteOpenRef.current) liteOpenRef.current(_sg);
-      else if(_sg && _sgMusic && !favMusicRestoreRef.current && !qrArtistRef.current && applySigRef.current) applySigRef.current(_sg);   // ♥ → Open keeps the ♥'s own look, not ✦
+      else if(_sg && _sgMusic && !_keep && !favMusicRestoreRef.current && !qrArtistRef.current && applySigRef.current){ applySigRef.current(_sg); if(_palKeep) setMode(_palKeep); }   // ♥ → Open keeps the ♥'s own look, not ✦
     }catch(_){}
     { const _fr=favMusicRestoreRef.current; if(_fr){ favMusicRestoreRef.current=null; setTimeout(()=>{ try{ favApplyLookRef.current && favApplyLookRef.current(_fr); }catch(_){} }, 260); } }   // ♥ → Open: as it was kept (after the new piece's own deferred picks)
     const wi=events.map((c,i)=>({...c,idx:i}));
@@ -48506,7 +48514,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
   _stTakenSetRef.current = ()=>{ stTakenRef.current=true; setStTaken(true); };
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
-  useEffect(()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: gone
+  useEffect(()=>{ if(stTakenRef.current && sigActiveRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: its ✦ took over — gone; in the look on screen a white painter stays white (26 Nov 2026)
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
   const _feedOpen = ()=>{ feedResumeRef.current=null; feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
   // the piece is in → it starts (the sound was woken in the gesture)
