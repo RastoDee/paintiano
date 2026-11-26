@@ -5299,7 +5299,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _fuOut = (k)=> fuBanRef.current.includes(k);
   // the fixed cast (violet): a face held in the Fusion row. With any painter fixed, the stage is exactly the fixed and the gold ones — no guests are drawn; one alone is a solo; two or more are the whole fusion. ↑ rolls their variants only. Cleared when Fusion is switched
   const [jamFixed, setJamFixed] = useState(false); const jamFixedRef = useRef(false); useEffect(()=>{ jamFixedRef.current = jamFixed; },[jamFixed]);   // the whole cast fixed (violet): the pinned ones alone, no guests
-  const jamFixKeepRef = useRef(false);   // a look put back as it was (↓ ↑) with its lock: this once the switch-on must not let its lock go
+  const fyOpenRef = useRef(null);   // how the Studio was left for For You: {open, copen} — a fusion / Jam left wide open (nobody gold, no 📌) comes back open
+  const jamFixKeepRef = useRef(false);   // a fusion taken from For You arrives locked, a look put back as it was (↓ ↑) with its lock: this once the switch-on must not let its lock go
   useEffect(()=>{ if(jamFixKeepRef.current){ jamFixKeepRef.current=false; return; } jamFixedRef.current=false; setJamFixed(false); },[jamOn, jamAll]);
   useEffect(()=>{ if(!jamOn || !jamAll) setJamPins(p=>p.length?[]:p); },[jamOn, jamAll]);
   const jamAllKeepRef = useRef(false);   // a look put back as it was (↓ ↑ → ←): its Fusion keeps 'all' though the shuffle goes off with its ✦
@@ -17251,7 +17252,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // no jump to the painting of the day, no restart; ↑ brings the surprises, Studio takes it back. Nothing on screen (or Compose / Mic live):
   // your painting waits on the home card and the surprises start, as before
   const ownCastRef = useRef(null);   // who painted your painting when it left the Studio for For You: back with the same ones it returns as it was, with others it is a taken surprise
-  const _stForYou = ()=>{ if(recording||demoReelOn) return; setStChg(null); setStripOpen(false); ownCastRef.current=[style||''].concat(painterStage).join('+');
+  const _stForYou = ()=>{ if(recording||demoReelOn) return; setStChg(null); setStripOpen(false); ownCastRef.current=(viewMode==='image' && !moodFromImg) ? 'c:'+[imgComposer||''].concat(composerStage).join('+') : [style||''].concat(painterStage).join('+');   // a picture: its composers
+    fyOpenRef.current = { open: !!(jamOn && jamAll && ensembleActive && !jamPinsRef.current.length && !jamFixedRef.current), copen: !!(crOn && composerDice && ensembleActive && composerStage.length>0 && !crPinsRef.current.length && !crFixedRef.current) };   // the Studio left with a fusion / Jam wide open: what comes back from For You stays open (Nov 2026)
     const isI = viewMode==='image' && !moodFromImg && !!originalImgUrl;
     const has = isI ? !!pixelRef.current : (chords.length>0 && (disp>0 || playing || holdPaused));
     if(has && !composeMode && !micActive && !micArmed && !working && !anim && feedAt<0){
@@ -18338,7 +18340,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // ▶ on the home card (or the first swipe up): the piece starts on the card, in the opener's look
   // For You switched off (its lit tab tapped again): back to the first screen — the paintings paint themselves, silent and quick, one after another
   const _feedOff = (q)=>{ if(feedAt<0) return null; const c=feedCards[feedAt], kq=Date.now();   // q: quiet — a finger dragged the first screen's painting in (it is there already: no fade of its own)
-    feedResumeRef.current=null; setFeedIntro(null); setFeedNeedTap(false);
+    feedResumeRef.current=null; setFeedIntro(null); setFeedNeedTap(false); fyOpenRef.current=null;
     lhPrevRef.current=null; if(q===true){ liveOutRef.current=null; lhNowRef.current=kq; } else { try{ liveOutRef.current=_feedSnap()||null; }catch(_){ liveOutRef.current=null; } } if(c && c.piece!=null && c.piece!=='own') livePrevRef.current=c.piece; setLiveHome(h=>({i:h.i+1, k:kq}));   // the painting you leave fades into the next one — not the one you just heard
     if(c && c.piece==='own' && feedLoaded!==null) _feedExit(); else { _feedStop(); _feedRest(); setFeedAt(-1); setFeedCards([]); feedStepsRef.current=[]; }
     setHomeSide(null); setLhBack(true); _stBuzz(8); return kq; };
@@ -18545,25 +18547,32 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(feedAt<0 || feedFly) return;
     const c=feedCards[feedAt]; if(!c || !_feedIsLoaded(c)){ setFeedBump('d'); setTimeout(()=>setFeedBump(null), 260); return; }
     // your own painting, brought along from the Studio: with the painters it left with it goes back as it is (your gold and 📌 stay yours);
-    // swiped in For You to other painters or to a fusion, it comes like any taken surprise — as it is on screen, white
-    const _own = c.piece==='own', _ownSame = _own && ownCastRef.current===[style||''].concat(painterStage).join('+');
+    // swiped in For You to other painters or to a fusion, it comes like any taken painting — as it is on screen, gold
+    const _own = c.piece==='own', _ownSame = _own && ownCastRef.current===(c.kind==='img' ? 'c:'+[imgComposerRef.current||''].concat(composerStage).join('+') : [style||''].concat(painterStage).join('+'));   // a picture: by its composers (↑ in For You brings new ones)
     setFeedIntro(null); _stBuzz(12); _feedOpen();
     if(_ownSame) return;
     stLookHistRef.current = {key:_stHistKey(), st:[], fw:[]};   // what was before it in the Studio is not its past: ↓ and ↑ start anew here
     if(!_own){ setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600); }
-    // ONE RULE (26 Nov 2026): gold and the lock 📌 are only ever set by you. What comes from For You comes exactly as it is on screen
-    // (its painters, variant, palette) but WHITE — a single painter as a kept surprise (↑ draws someone else from your set, ← → its
-    // variants), a fusion open (no gold, no 📌: ↑ draws a new fusion). A tap on a face makes it gold; 📌 keeps only the gold ones.
-    // (15–26 Nov: one painter came gold and a fusion locked — gone, the app no longer chooses for you.)
+    // WHAT YOU CHOOSE IS GOLD: taking a painting from For You is choosing it — it comes exactly as on screen, and GOLD: one painter gold
+    // (↑ brings palettes, ← → its variants); a fusion locked 📌 with all its painters gold (↑ = palettes and their variants, no guests — a tap
+    // on 📌 lets it go); a fusion you left the Studio with wide open comes back open. Mosaic alone has nobody to hold: it stays as it was.
+    // A picture the same: its composer gold, a Jam locked 📌. (26 Nov afternoon it came white, so For You and the Studio did the same — back
+    // to gold the same night, at his word: "what I choose is gold".)
     const _mem = [style].concat(painterStage).filter(k=>k && k!=='mosaic' && k!=='notes' && k!=='mosaicFamily');
-    const _fu = c.kind!=='img' && painterStage.length>0 && _mem.length>=2 && ensembleActive;
-    if(c.kind!=='img'){ _palGoldSet(false); if(!_fu){ stTakenRef.current=true; setStTaken(true); } else if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } }
-    else {   // a picture the same (26 Nov 2026): its composer white (drawn, not chosen — ↑ draws on), a Jam open (no gold, no 📌: ↑ draws a new jam), the palette white
+    const _fo = fyOpenRef.current; fyOpenRef.current=null;
+    const _keepOpen = !!(_fo && _fo.open) && c.kind!=='img' && painterStage.length>0 && _mem.length>=2 && ensembleActive;   // you went to For You from a wide-open fusion: the fusion you bring back is open too
+    const _fuLock = c.kind!=='img' && painterStage.length>0 && _mem.length>=2 && ensembleActive && !_keepOpen;
+    if(c.kind!=='img'){ _palGoldSet(false); if(!_mem.length){ stTakenRef.current=true; setStTaken(true); } else if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } }
+    else {   // a picture: its composer gold, a Jam locked 📌 (all gold) — or open, as you left it — the palette white
       _palGoldSet(false);
-      if(composerStage.length>0 && ensembleActive){ crPinsRef.current=[]; setCrPins([]); if(crFixedRef.current){ crFixedRef.current=false; setCrFixed(false); } if(!crOn){ crOnRef.current=true; setCrOn(true); } if(!composerDice) setComposerDice(true); }
-      else if(imgComposerRef.current && !composerDice) setComposerDice(true); }
-    // the switch tells what is on the canvas: one painter (one composer) = Solo, a crossing = Fusion — open
-    if(_fu){ jamPinsRef.current=[]; setJamPins([]); if(jamFixedRef.current){ jamFixedRef.current=false; setJamFixed(false); } if(!jamOn || !jamAll) jamAllKeepRef.current=true; if(!jamOn) setJamOn(true); if(!jamAll) setJamAll(true); if(mosaicShuffleLock) setMosaicShuffleLock(false); }
+      const _cm=[imgComposerRef.current].concat(composerStage).filter(k=>k && _cOk(k)).slice(0, STAGE_MAX);
+      const _cOpen = !!(_fo && _fo.copen) || _cm.length<2;
+      if(composerStage.length>0 && ensembleActive && _cOpen){ crPinsRef.current=[]; setCrPins([]); if(crFixedRef.current){ crFixedRef.current=false; setCrFixed(false); } if(!crOn){ crOnRef.current=true; setCrOn(true); } if(!composerDice) setComposerDice(true); }
+      else if(composerStage.length>0 && ensembleActive){ crPinsRef.current=_cm; setCrPins(_cm); crFixedRef.current=true; setCrFixed(true); if(!crOn){ crOnRef.current=true; setCrOn(true); } if(!composerDice) setComposerDice(true); }
+      else if(imgComposerRef.current && composerDice) setComposerDice(false); }   // one composer: gold, it holds
+    // the switch tells what is on the canvas: one painter (one composer) = Solo, a crossing = Fusion
+    if(_keepOpen){ jamPinsRef.current=[]; setJamPins([]); if(jamFixedRef.current){ jamFixedRef.current=false; setJamFixed(false); } if(!jamOn || !jamAll) jamAllKeepRef.current=true; if(!jamOn) setJamOn(true); if(!jamAll) setJamAll(true); if(mosaicShuffleLock) setMosaicShuffleLock(false); }
+    else if(_fuLock){ const pins=_mem.slice(0,STAGE_MAX); jamPinsRef.current=pins; setJamPins(pins); if(!jamOn || !jamAll) jamFixKeepRef.current=true; jamFixedRef.current=true; setJamFixed(true); if(!jamOn) setJamOn(true); if(!jamAll) setJamAll(true); if(mosaicShuffleLock) setMosaicShuffleLock(false); }
     else if(!painterStage.length && jamOn){ setJamOn(false); setJamAll(false); jamPinsRef.current=[]; setJamPins([]); if(jamFixedRef.current){ jamFixedRef.current=false; setJamFixed(false); } } else if(painterStage.length && ensembleActive && !jamOn) setJamOn(true);
     if(!composerStage.length && crOn) setCrOn(false);
     firstKeptRef.current = !!c.first;   // the first painting, kept: it is still the one from the first screen
@@ -18609,8 +18618,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // Studio straight from the first screen (from Battle opened there): its painting starts as a tap would start it,
   // and once it plays it goes into the Studio — no detour through For You
   const feedTakeWantRef = useRef(0);
-  const _lhGo = ()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } _stBuzz(12); _feedStart(null, true); };   // For You's dim tab on the first screen: on — this painting, with sound (as a tap on it)
-  const _stFromLive = ()=>{ if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } _tipDone('studio'); setFeedStudioLit(0); feedTakeWantRef.current=Date.now(); _stBuzz(12); _feedStart(null, true); };
+  const _lhGo = ()=>{ fyOpenRef.current=null; if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } _stBuzz(12); _feedStart(null, true); };   // For You's dim tab on the first screen: on — this painting, with sound (as a tap on it)
+  const _stFromLive = ()=>{ fyOpenRef.current=null; if(!_acRunning()){ try{ unlockAudio(); }catch(_){} } _tipDone('studio'); setFeedStudioLit(0); feedTakeWantRef.current=Date.now(); _stBuzz(12); _feedStart(null, true); };
   useEffect(()=>{ const w=feedTakeWantRef.current; if(!w) return; if(Date.now()-w>12000){ feedTakeWantRef.current=0; return; }
     const c=feedCards[feedAt]; if(feedAt<0 || !c || !_feedIsLoaded(c)) return;
     const take=()=>{ if(feedTakeWantRef.current!==w) return; feedTakeWantRef.current=0; _feedTake(); };
