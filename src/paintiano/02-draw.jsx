@@ -7308,18 +7308,35 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     if(N/cn>0.85){ ctx.fillStyle='rgba(236,226,196,0.95)'; ctx.beginPath(); ctx.arc(mx,my,S*0.035,0,6.2832); ctx.fill(); ctx.fillStyle='#1d1713'; ctx.beginPath(); ctx.arc(mx+S*0.015,my-S*0.006,S*0.03,0,6.2832); ctx.fill(); }
     return;
   }
-  if(pick===3){ // fish garden
-    ground('#0c1418','#060a0e');
-    ctx.strokeStyle='rgba(240,230,200,.35)'; ctx.lineWidth=Math.max(0.8,S*0.0014);
-    for(let p=0;p<4;p++){ ctx.beginPath(); for(let s2=0;s2<=40;s2++){ const t=s2/40, x=CW*0.1+t*CW*0.8, y=CH*(0.2+p*0.2)+Math.sin(t*6+p)*CH*0.05; s2?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.stroke(); }
-    { const cx=CW*0.72, cy=CH*0.2, R=S*0.05; ctx.strokeStyle='rgba(240,230,200,.8)'; ctx.lineWidth=Math.max(1,S*0.002); ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke(); for(let k=0;k<12;k++){ const a=k/12*6.2832; ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*R*0.8,cy+Math.sin(a)*R*0.8); ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R); ctx.stroke(); } ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy-R*0.6); ctx.moveTo(cx,cy); ctx.lineTo(cx+R*0.45,cy+R*0.2); ctx.stroke(); }   // the clock of the night
-    const _fstep=Math.max(3,Math.ceil(cn/Math.round(10+26*(_ch?_ch.density:0.4))));   // ~12 fish for a slow piece, ~30 for a torrent of notes
+  if(pick===3){ // fish garden — rebuilt Nov 2026 after his Fish Magic: the dark water glowing with the piece's colours, the clock in its net, moon and sun, the plants of the garden, and the fish large, each swimming as high as it sounds
+    ground('#0c1418','#05080c');
+    const pr=_seedRnd(72900,_mrPieceKey(chords),0,0); pr(); const dn=(_ch?_ch.density:0.4), rev=N/cn;
+    /* the glow in the water: the piece's own colours, thin as his glazes */
+    { const ng=3+Math.floor(pr()*3); for(let k=0;k<ng;k++){ const gx=CW*(0.1+0.8*pr()), gy=CH*(0.1+0.8*pr()), gr=S*(0.35+0.4*pr()), ci=Math.min(cn-1,Math.floor((k+0.5)/ng*cn)); if(ci>N && k) { pr(); continue; } const g=ctx.createRadialGradient(gx,gy,0,gx,gy,gr); g.addColorStop(0,css(col(ci,1.1),0.26)); g.addColorStop(1,css(col(ci,1.1),0)); ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH); } }
+    /* the net with the clock in it (the square of canvas he glued on), where the piece puts it */
+    { const nw=CW*(0.34+0.14*pr()), nh=nw*(0.8+0.5*pr()), ncx=CW*(0.3+0.4*pr()), ncy=CH*(0.24+0.26*pr()), na=(pr()-0.5)*0.22; ctx.save(); ctx.translate(ncx,ncy); ctx.rotate(na); ctx.fillStyle='rgba(240,230,200,0.04)'; ctx.fillRect(-nw/2,-nh/2,nw,nh);
+      ctx.strokeStyle='rgba(240,230,200,0.13)'; ctx.lineWidth=Math.max(0.6,S*0.0012); const st=nw/9; ctx.beginPath(); for(let q=-nw/2;q<=nw/2+1;q+=st){ ctx.moveTo(q,-nh/2); ctx.lineTo(q,nh/2); } for(let q=-nh/2;q<=nh/2+1;q+=st){ ctx.moveTo(-nw/2,q); ctx.lineTo(nw/2,q); } ctx.stroke();
+      const R=nw*0.16, cy=-nh*0.18; ctx.strokeStyle='rgba(240,230,200,.85)'; ctx.lineWidth=Math.max(1,S*0.0022); ctx.beginPath(); ctx.moveTo(0,-nh/2-CH*0.2); ctx.lineTo(0,cy-R); ctx.stroke();   /* the line it hangs from */
+      ctx.fillStyle='rgba(12,18,22,0.85)'; ctx.beginPath(); ctx.arc(0,cy,R,0,7); ctx.fill(); ctx.stroke(); for(let k=0;k<12;k++){ const an=k/12*6.2832; ctx.beginPath(); ctx.moveTo(Math.cos(an)*R*0.8,cy+Math.sin(an)*R*0.8); ctx.lineTo(Math.cos(an)*R,cy+Math.sin(an)*R); ctx.stroke(); }
+      const ha=rev*6.2832-Math.PI/2; ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(Math.cos(ha)*R*0.7,cy+Math.sin(ha)*R*0.7); ctx.moveTo(0,cy); ctx.lineTo(Math.cos(ha*12)*R*0.45,cy+Math.sin(ha*12)*R*0.45); ctx.stroke(); ctx.restore(); }   /* its hand goes round once as the piece plays */
+    /* moon and sun */
+    { const left=pr()<0.5, mx=CW*(left?0.14:0.86), my=CH*(0.07+0.06*pr()), sx=CW*(left?0.8+0.1*pr():0.1+0.1*pr()), sy=CH*(0.08+0.1*pr()); ctx.fillStyle='rgba(236,226,196,0.9)'; ctx.beginPath(); ctx.arc(mx,my,S*0.04,0,7); ctx.fill(); ctx.fillStyle='#0b1216'; ctx.beginPath(); ctx.arc(mx+S*0.018,my-S*0.008,S*0.034,0,7); ctx.fill();
+      if(rev>0.5){ ctx.fillStyle=css(col(Math.min(cn-1,(cn*0.6)|0),1.3),0.9); ctx.beginPath(); ctx.arc(sx,sy,S*0.05,0,7); ctx.fill(); } }
+    /* the garden: reeds, flowers, firs and buds, as many and as tall as the piece is dense */
+    { const np=Math.round(5+8*dn); for(let k=0;k<np;k++){ const px=CW*((k+0.5)/np+(pr()-0.5)*0.06), ph=CH*(0.1+0.26*pr())*(0.8+0.5*dn), kind=Math.floor(pr()*4)%4, ci=Math.min(cn-1,Math.floor((k+0.5)/np*cn)), sway=(pr()-0.5)*S*0.06; if(rev<(k/np)*0.85) continue; const pc=col(ci,1.0);
+        ctx.strokeStyle=kind===0?'rgba(120,200,150,.65)':css(pc,0.8); ctx.fillStyle=css(pc,0.75); ctx.lineWidth=Math.max(1.4,S*0.003); ctx.lineCap='round';
+        if(kind===0){ ctx.beginPath(); ctx.moveTo(px,CH); const ns=Math.max(4,Math.round(ph/(CH*0.04))); for(let q=0;q<ns;q++){ ctx.quadraticCurveTo(px+(q%2?S*0.018:-S*0.018),CH-(q+0.5)*ph/ns,px,CH-(q+1)*ph/ns); } ctx.stroke(); }
+        else { const tx=px+sway, ty=CH-ph; ctx.beginPath(); ctx.moveTo(px,CH); ctx.quadraticCurveTo(px,CH-ph*0.5,tx,ty); ctx.stroke();
+          if(kind===1){ const R=S*(0.022+0.02*pr()); ctx.beginPath(); for(let q=0;q<8;q++){ const an=q/8*6.2832; ctx.moveTo(tx+Math.cos(an)*R*1.5+R*0.5,ty+Math.sin(an)*R*1.5); ctx.arc(tx+Math.cos(an)*R*1.5,ty+Math.sin(an)*R*1.5,R*0.5,0,7); } ctx.fill(); ctx.fillStyle='rgba(240,230,200,.9)'; ctx.beginPath(); ctx.arc(tx,ty,R*0.8,0,7); ctx.fill(); }
+          else if(kind===2){ const nb=5; for(let q=1;q<=nb;q++){ const f=q/(nb+1), bx=px+(tx-px)*f*f, by=CH-ph*f, bl=S*0.05*(1-f*0.6); ctx.beginPath(); ctx.moveTo(bx-bl,by+bl*0.5); ctx.lineTo(bx,by); ctx.lineTo(bx+bl,by+bl*0.5); ctx.stroke(); } }
+          else { for(let q=0;q<3;q++){ const f=0.45+q*0.27, bx=px+(tx-px)*f*f+(q%2?1:-1)*S*0.03, by=CH-ph*f, R=S*0.016; ctx.beginPath(); ctx.moveTo(px+(tx-px)*f*f,by+R); ctx.lineTo(bx,by); ctx.stroke(); ctx.beginPath(); ctx.arc(bx,by,R,0,7); ctx.fill(); } } } } }
+    /* the fish: large, as high as they sound, the loud ones larger */
+    const _fstep=Math.max(3,Math.ceil(cn/Math.round(8+16*dn)));
     for(let i=0;i<N;i++){
       if(i%_fstep) continue;
       const m=meta(i); const fk=i/_fstep+1;
-      // the fish spread over the whole garden (the R2 sequence; i·(2−φ) and i·φ always summed to 1, so every fish swam on one diagonal)
-      const x=CW*0.1+((fk*0.7548776662+0.31)%1)*CW*0.8, y=CH*0.12+((fk*0.5698402910+0.17)%1)*CH*0.75;
-      const s2=(S*0.03+m.dur*S*0.04)*(0.75+0.5*dnaE);
+      const x=CW*0.1+((fk*0.7548776662+0.31)%1)*CW*0.8, y=CH*(0.08+0.7*(0.4*(1-chordTopness(i))+0.6*((fk*0.5698402910+0.17)%1)));
+      const s2=(S*0.04+m.dur*S*0.04+m.vel*S*0.03)*(0.8+0.4*dnaE);
       // Klee's fish: a long lens body with a pointed snout, a forked tail of two soft lobes, a thin pale line round it,
       // the body translucent and striped inside, a ring for the eye — drawn, not stamped
       ctx.save(); ctx.translate(x,y); ctx.rotate((rnd()-0.5)*0.8); if(rnd()<0.5) ctx.scale(-1,1);
@@ -7332,9 +7349,6 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
       ctx.beginPath(); ctx.arc(-L*0.62,-Hh*0.15,Math.max(1.2,s2*0.1),0,7); ctx.stroke(); ctx.fillStyle='rgba(240,230,200,.9)'; ctx.beginPath(); ctx.arc(-L*0.62,-Hh*0.15,Math.max(0.8,s2*0.04),0,7); ctx.fill();   // the eye, a ring
       ctx.restore();
     }
-    ctx.strokeStyle='rgba(120,200,150,.6)'; ctx.lineWidth=Math.max(1.6,S*0.0026);
-    for(let p=0;p<6;p++){const x=CW*(0.08+p*0.16); ctx.beginPath(); ctx.moveTo(x,CH);
-      for(let s2=0;s2<8;s2++){ ctx.quadraticCurveTo(x+(s2%2?S*0.018:-S*0.018),CH-(s2+0.5)*CH*0.04,x,CH-(s2+1)*CH*0.04); } ctx.stroke();}
     return;
   }
   if(pick===4){ // arrows over terraces
