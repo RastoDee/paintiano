@@ -6346,7 +6346,7 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
 // deterministic per (seed, song). Colours come through gc() per chord so the
 // palette mode applies; the piece's four strongest hues form a small palette
 // for the structural elements (matrix bars, corner accents).
-//  0 Cellular field   (1950s — In Lovely Blueness): clustered cells, white gaps
+//  1 Cellular field   (1950–54 — Big Red, Red and Black): pressed cells of every size, grown by the piece
 //  1 Blue Balls       (1960–63): big blue biomorphs floating in white
 //  2 Edge painting    (1960s — Sail, Mako): colour only at the borders
 //  3 Big Red          (1953): one massed cluster in the piece's dominant hue
@@ -6527,21 +6527,113 @@ function _frListenOld(ctx,CW,CH,chords,lim,gc,ss,mode){
     if(pace>0.6){ const E=_kd2Events(A,Math.round(10+pace*20)); E.forEach(e=>{ const ev=A.ev[Math.min(cn-1,Math.round(e.t*(cn-1)))]; const [x,y]=place(e.t,ev?A.reg(ev.top):0.5,0.04); const col=S.col(e.t); list.push({id:id++,t:e.t,x,y,r:D*0.006,col,alpha:0.7,drip:0,spat:1,spatN:1.4,spatR:1.6,flick:flick+(ra()-.5)*1.2,edge:0,bleed:0}); }); }
     return list; });
 }
-// ── Sam Francis 1: Cellular field (the early 1950s — Red and Black, Big Blue) — the
-// piece as his field of cells, edge to edge: one cell for every chord in the order
-// of the music, row under row, pressed one beside the next with white veins left
-// between them, each in its chord's thinned colour, deeper where it is loud; the
-// loud cells drip.
+// ── Sam Francis 1: Cellular field (1950–54 — Big Red, Red and Black, Blue-Black) — his cells as they grow: pressed one
+// against the next like a living tissue, each a pool of thinned oil with its pigment gathered at the rim, large ones and
+// small ones side by side, a thin vein of white (or of the wash under them) left where two meet. Here the piece grows the
+// tissue: every chord a cell, as large as it is loud and long, the quick runs small; a passage grows on from where the last
+// left off, in its own colour, and the chords that sound far from it glint in theirs; a new passage after a pause seeds a
+// colony of its own in the largest white still open, so the masses meet and leave white rivers between them. The lowest
+// loud chords are his dark cells; the loud cells at the underside of a mass drip. Cell by cell as the piece plays.
+// (Until 26 Nov 2026: a cell for every chord in a regular grid, row under row, all of one size — a wallpaper of blots.)
+const _frF2Cache = new Map();
+function _frF2Geom(chords,CW,CH,ss,A){
+  const cn=A.cn, key=[cn,CW|0,CH|0,ss|0,chords[0]&&chords[0].startMs|0,chords[cn-1]&&chords[cn-1].startMs|0].join('|');
+  if(_frF2Cache.has(key)) return _frF2Cache.get(key);
+  const clamp=_frClamp, D=Math.min(CW,CH), r=_frR(80700,ss); r();
+  const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
+  const tops=A.ev.filter(Boolean).map(e=>e.top).sort((a,b)=>a-b), tLo=tops[Math.floor(tops.length*0.05)]||48, tHi=tops[Math.floor(tops.length*0.95)]||84;
+  const P=_kd2Phrases(A,Math.round(clamp(5+A.phrases.length*0.3,6,16)));
+  // which chords become cells: about 70…190 (a dense piece more), the loud and long ones always among them
+  const want=Math.round(clamp(70+(A.ch?A.ch.density:0.4)*150,70,190)), stride=Math.max(1,cn/want), pick=[];
+  for(let k=0;k*stride<cn;k++){ const a=Math.floor(k*stride), b=Math.min(cn,Math.floor((k+1)*stride)); let best=-1,bv=-1; for(let i=a;i<b;i++){ const e=A.ev[i]; if(!e) continue; const s=e.v*0.7+Math.min(1,e.dur/4)*0.3; if(s>bv){ bv=s; best=i; } } if(best>=0) pick.push(best); }
+  const N=pick.length; if(!N){ const g={cells:[]}; _frF2Cache.set(key,g); return g; }
+  const pOf=(i)=>{ for(let m=0;m<P.length;m++) if(i>=P[m].a && i<P[m].b) return m; return P.length-1; };
+  // sizes: loud and long → large, a quick run → small; scaled so the tissue covers about 0.8 of the canvas
+  const raw=pick.map(i=>{ const e=A.ev[i], f=clamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1), d=clamp(Math.log2(1+e.dur)/2.3,0,1); return (0.35+1.1*f*f+0.6*d)*(0.68+0.64*r()); });
+  const pv=P.map(p=>p.vmax), pmax=pv.map((v,m)=>{ let bi=-1,bv=-1; pick.forEach((i,k)=>{ if(pOf(i)===m && A.ev[i].v>bv){ bv=A.ev[i].v; bi=k; } }); return bi; });
+  pmax.forEach(k=>{ if(k>=0) raw[k]*=1.55; });   // every passage has its one great cell (its loudest chord)
+  const area=raw.reduce((s,q)=>s+Math.PI*q*q,0), sc=Math.sqrt(CW*CH*0.86/Math.max(1e-6,area))*1.12;
+  const R=raw.map(q=>Math.min(D*0.2,q*sc));
+  // growing the tissue: each cell pressed onto the cells just before it, toward where the melody goes; a new passage after a pause seeds its own colony
+  const X=new Float32Array(N), Y=new Float32Array(N); let lastM=-1;
+  const clear=(x,y,rr,upto)=>{ let worst=1e9; for(let k=0;k<upto;k++){ const d=Math.hypot(X[k]-x,Y[k]-y)-(R[k]+rr)*0.78; if(d<worst) worst=d; } return worst; };
+  const emptiest=(rr,upto)=>{ let bx=CW/2,by=CH/2,bs=-1e9; for(let s=0;s<160;s++){ const x=rr*0.4+r()*(CW-rr*0.8), y=rr*0.4+r()*(CH-rr*0.8); let c=1e9; for(let k=0;k<upto;k++){ const d=Math.hypot(X[k]-x,Y[k]-y)-R[k]; if(d<c) c=d; } const edge=Math.min(x,CW-x,y,CH-y)*0.35; const sc2=Math.min(c,1e6)+edge; if(sc2>bs){ bs=sc2; bx=x; by=y; } } return [bx,by]; };
+  // the first colony: where the piece starts (its first notes high → near the top, low → near the bottom; its key turns it left or right)
+  const e0=A.ev[pick[0]], h0=clamp((e0.top-tLo)/Math.max(1,tHi-tLo),0,1);
+  X[0]=CW*(0.3+0.4*(((A.tonic*7)%12)/11)); Y[0]=CH*(0.22+0.56*(1-h0)); lastM=pOf(pick[0]);
+  let dir=r()*6.2832;
+  for(let k=1;k<N;k++){ const i=pick[k], e=A.ev[i], m=pOf(i), rr=R[k];
+    const prev=A.ev[pick[k-1]]; const climb=clamp((e.top-prev.top)/7,-1,1);
+    dir=dir*0.85+(r()-0.5)*0.9; const want=[Math.cos(dir), Math.sin(dir)*0.6-climb*0.8];
+    const newColony = m!==lastM && (P[m].a<cn && A.ev[P[m].a] && A.ev[P[m].a].gap>(A.gapHi||1e9)*0.8 || r()<0.22);
+    let bx=0,by=0,bs=-1e9, found=false;
+    if(!newColony){
+      for(let t=0;t<26;t++){ const j=Math.max(0,k-1-Math.floor(Math.pow(r(),2)*Math.min(k,14))), a=Math.atan2(want[1],want[0])+(r()-0.5)*(t<10?1.6:4.4);
+        const d=(R[j]+rr)*(0.8+0.12*r()), x=X[j]+Math.cos(a)*d, y=Y[j]+Math.sin(a)*d;
+        if(x<-rr*0.35||x>CW+rr*0.35||y<-rr*0.35||y>CH+rr*0.35) continue;
+        const c=clear(x,y,rr,k); if(c<-rr*0.12) continue;
+        const s=-Math.abs(c)*0.6-Math.hypot(x-X[k-1],y-Y[k-1])*0.15/D*rr+(r()*0.1)*rr; if(s>bs){ bs=s; bx=x; by=y; found=true; } } }
+    if(!found){ [bx,by]=emptiest(rr,k); dir=r()*6.2832; }
+    X[k]=bx; Y[k]=by; lastM=m; }
+  // each cell: its power cell among its neighbours (pressed shapes, no overlaps), held inside a round of its own size, a thin vein left between
+  const cells=[]; const vein=D*0.0042;
+  for(let k=0;k<N;k++){ const rk=R[k]*1.12, nv=22; let poly=[]; const rr=_frR(80900+k,ss); rr();
+    for(let q=0;q<nv;q++){ const a=q/nv*6.2832, w=1+0.07*Math.sin(3*a+rr()*6)+0.04*(rr()-0.5); poly.push([X[k]+Math.cos(a)*rk*w, Y[k]+Math.sin(a)*rk*w]); }
+    for(let j=0;j<N && poly.length>2;j++){ if(j===k) continue; const dx=X[j]-X[k], dy=Y[j]-Y[k], dd=Math.hypot(dx,dy); if(dd>rk+R[j]*1.12) continue;
+      const nx=2*dx, ny=2*dy, c=(X[j]*X[j]+Y[j]*Y[j])-(X[k]*X[k]+Y[k]*Y[k])-(R[j]*R[j]-R[k]*R[k]), nl=Math.hypot(nx,ny)||1, cc=c-vein*(rr()<0.35?-1.4*rr():0.4+1.2*rr())*nl*0.5;
+      const out=[]; for(let q=0;q<poly.length;q++){ const p=poly[q], s=poly[(q+1)%poly.length], fp=nx*p[0]+ny*p[1]-cc, fs=nx*s[0]+ny*s[1]-cc;
+        if(fp<=0) out.push(p); if((fp<=0)!==(fs<=0)){ const t=fp/(fp-fs); out.push([p[0]+(s[0]-p[0])*t, p[1]+(s[1]-p[1])*t]); } }
+      poly=out; }
+    if(poly.length<3) continue;
+    // a hand-cut edge: every side broken in two, its middle nudged
+    let cx0=0, cy0=0; poly.forEach(p=>{ cx0+=p[0]; cy0+=p[1]; }); cx0/=poly.length; cy0/=poly.length;
+    const ph1=rr()*6.28, ph2=rr()*6.28, amp=D*0.0035+R[k]*0.045, st=D*0.009, hp=[]; let u=0;
+    for(let q=0;q<poly.length;q++){ const p=poly[q], s=poly[(q+1)%poly.length], L=Math.hypot(s[0]-p[0],s[1]-p[1]), n=Math.max(1,Math.round(L/st));
+      for(let z=0;z<n;z++){ const t=z/n, x=p[0]+(s[0]-p[0])*t, y=p[1]+(s[1]-p[1])*t, dx=x-cx0, dy=y-cy0, dl=Math.hypot(dx,dy)||1, w=amp*(Math.sin(u/(D*0.05)+ph1)*0.6+Math.sin(u/(D*0.017)+ph2)*0.4); hp.push([x+dx/dl*w, y+dy/dl*w]); u+=L/n; } }
+    let cx=0, cy=0; hp.forEach(p=>{ cx+=p[0]; cy+=p[1]; }); cx/=hp.length; cy/=hp.length;
+    // underside free → a drip may run from it
+    let open=true; for(let j=0;j<N;j++){ if(j!==k && Math.hypot(X[j]-X[k],Y[j]-(Y[k]+R[k]*1.25))<R[j]*0.9){ open=false; break; } }
+    cells.push({k,i:pick[k],m:pOf(pick[k]),t:pick[k]/cn,x:X[k],y:Y[k],r:R[k],cx,cy,poly:hp,open}); }
+  const g={cells,P,vLo,vHi,tLo,tHi}; if(_frF2Cache.size>8) _frF2Cache.clear(); _frF2Cache.set(key,g); return g;
+}
 function francisPhaseField(ctx,CW,CH,chords,lim,gc,ss,mode){
-  _frGround(ctx,CW,CH,mode==='bw');
-  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const A=_kd2Analyze(chords,gc,mode), cn=S.cn; let id=0;
-    const vs=A.ev.filter(Boolean).map(e=>e.v).sort((a,b)=>a-b), vLo=vs[Math.floor(vs.length*0.05)]||0, vHi=vs[Math.floor(vs.length*0.95)]||1;
-    const want=Math.round(_frClamp(90+S.density*160,90,260)), stride=Math.max(1,Math.ceil(cn/want)), n=Math.ceil(cn/stride);
-    const cols=Math.max(5,Math.round(Math.sqrt(n*CW/CH))), rows=Math.ceil(n/cols), cw=CW/cols, ch=CH/rows;
-    for(let k=0;k<n;k++){ const i=Math.min(cn-1,k*stride), e=A.ev[i]; const r=_frR(80000+k,ss); r(); const t=i/cn, f=e?_frClamp((e.v-vLo)/Math.max(0.02,vHi-vLo),0,1):0.4;
-      const cx=k%cols, cy=Math.floor(k/cols), x=(cx+0.5+(r()-0.5)*0.35)*cw, y=(cy+0.5+(r()-0.5)*0.35+0.12*Math.sin(cx*0.9+cy))*ch;
-      list.push({id:id++,t,x,y,r:Math.min(cw,ch)*(0.5+0.12*r()),sx:cw>ch?1.15:0.9,sy:ch>cw?1.15:0.9,col:S.col(t),alpha:0.42+0.4*f,drip:f>0.7?0.6:0,dripLen:0.6,spat:f>0.85?0.5:0,edge:1,bleed:0.3}); }
-    return list; });
+  const isBW=mode==='bw'; _frGround(ctx,CW,CH,isBW); const cn=chords.length; if(!cn||!lim) return;
+  const A=_kd2Analyze(chords,gc,mode), clamp=_frClamp, D=Math.min(CW,CH), G=_frF2Geom(chords,CW,CH,ss,A);
+  const played=Math.max(1,Math.min(cn,lim)), grey=(c)=>{ const l=c[0]*0.3+c[1]*0.59+c[2]*0.11; return [l,l,l]; };
+  const pcol=G.P.map(p=>{ const c=_frWetN(A.pcCol(p.pc,60)); return isBW?grey(c):c; });
+  const lows=G.cells.map(c=>{ const e=A.ev[c.i]; return e?(e.v-(e.bass-36)/60):0; }).sort((a,b)=>b-a), darkCut=lows[Math.max(0,Math.floor(lows.length*0.07))]||9;
+  const list=G.cells.filter(c=>c.i<played);
+  ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round';
+  // the wash under the tissue: each cell's colour soaked a little beyond it, so the veins inside a mass are tinted and those between masses white
+  ctx.globalCompositeOperation='multiply';
+  for(const c of list){ const R=_frR(81100+c.k,ss); R(); const own=_frWetN(_picChord(chords,c.i,gc,isBW).rgb), col=isBW?grey(own):_frMix(pcol[c.m],own,0.3);
+    const pts=_frOutline(R,c.x,c.y,c.r*1.18,1,1); _frTrace(ctx,pts); ctx.fillStyle=_frCss(col,0.1); ctx.fill(); }
+  for(const c of list){ const e=A.ev[c.i]||{v:0.6,top:60,bass:48}, R=_frR(81300+c.k,ss); R();
+    const f=clamp((e.v-G.vLo)/Math.max(0.02,G.vHi-G.vLo),0,1), hu=clamp((e.top-G.tLo)/Math.max(1,G.tHi-G.tLo),0,1);
+    let own=_frWetN(_picChord(chords,c.i,gc,isBW).rgb); if(isBW) own=grey(own);
+    const dh=Math.abs(_frHue(own)-_frHue(pcol[c.m])), far=!isBW && Math.min(dh,360-dh)>80 && R()<0.45;
+    let col=far?own:_frMix(pcol[c.m],own,0.28);
+    col=_frMix(col,[250,246,236],0.16*hu).map(v=>v*(1-0.14*f));
+    const dark=(e.v-(e.bass-36)/60)>=darkCut; if(dark) col=_frMix(col,isBW?[22,22,22]:[26,18,24],0.62);
+    const a=0.8+0.15*f;
+    // the pool: thinner in the middle, the pigment gathered at the rim
+    const g=ctx.createRadialGradient(c.cx,c.cy,c.r*0.1,c.cx,c.cy,c.r*1.05); g.addColorStop(0,_frCss(col,a*0.66)); g.addColorStop(0.7,_frCss(col,a*0.84)); g.addColorStop(1,_frCss(col,a));
+    ctx.globalCompositeOperation='multiply'; _frTrace(ctx,c.poly); ctx.fillStyle=g; ctx.fill();
+    ctx.save(); _frTrace(ctx,c.poly); ctx.clip();
+    // thinned oil: the colour lies unevenly — wet-in-wet blooms of deeper and paler paint, the pigment drifting to the underside
+    const nb=4+(R()*4|0); for(let q=0;q<nb;q++){ const bx=c.cx+(R()-0.5)*c.r*1.5, by=c.cy+(R()-0.5)*c.r*1.5, br=c.r*(0.25+0.45*R()), dk=R()<0.6; const g3=ctx.createRadialGradient(bx,by,0,bx,by,br);
+      if(dk){ ctx.globalCompositeOperation='multiply'; g3.addColorStop(0,_frCss(col,0.16+0.12*R())); g3.addColorStop(1,_frCss(col,0)); } else { ctx.globalCompositeOperation='source-over'; g3.addColorStop(0,_frCss([250,246,236],0.1+0.1*R())); g3.addColorStop(1,_frCss([250,246,236],0)); }
+      ctx.fillStyle=g3; ctx.fillRect(bx-br,by-br,br*2,br*2); }
+    ctx.globalCompositeOperation='multiply'; const gl=ctx.createLinearGradient(0,c.cy-c.r,0,c.cy+c.r); gl.addColorStop(0,_frCss(col,0)); gl.addColorStop(1,_frCss(col,0.18)); ctx.fillStyle=gl; ctx.fillRect(c.cx-c.r*1.3,c.cy-c.r*1.3,c.r*2.6,c.r*2.6);
+    _frTrace(ctx,c.poly); ctx.strokeStyle=_frCss(_frMix(col,[0,0,0],0.3),0.16); ctx.lineWidth=c.r*0.22; ctx.stroke(); ctx.lineWidth=c.r*0.07; ctx.strokeStyle=_frCss(_frMix(col,[0,0,0],0.3),0.2); ctx.stroke(); ctx.restore();
+    // the loud cells at the underside of a mass drip (no spatter: his cells of the early fifties had none)
+    ctx.globalCompositeOperation='multiply';
+    if(c.open && f>0.55 && R()<0.75){ const nd=1+(R()*2|0); for(let d=0;d<nd;d++){ let lo=c.poly[0]; for(const p of c.poly) if(p[1]>lo[1]) lo=p; const x0=lo[0]+(R()-0.5)*c.r*0.7, y0=lo[1]-c.r*0.12, len=D*(0.04+0.16*R())*(0.5+f), w=D*(0.003+0.004*R());
+        let x=x0; for(let s=0;s<12;s++){ const t=s/12, nx=x+(R()-0.5)*D*0.002; ctx.strokeStyle=_frCss(col,a*(0.85-0.4*t)); ctx.lineWidth=w*(1-t*0.7)+D*0.001; ctx.beginPath(); ctx.moveTo(x,y0+len*t); ctx.lineTo(nx,y0+len*(t+1/12)); ctx.stroke(); x=nx; }
+        ctx.fillStyle=_frCss(col,a*0.7); ctx.beginPath(); ctx.arc(x,y0+len,w*(0.8+0.6*R()),0,6.2832); ctx.fill(); } }
+  }
+  ctx.restore();
+  try{ globalThis.__FR_FIELD={v:2,cells:G.cells.length,passages:G.P.length}; }catch(_){}
 }
 // ── Sam Francis 2: Blue Balls (1960–63) — big blue biomorphs floating in white,
 // explosive spatter, drips; the blue bends toward the song's colour, and the small
