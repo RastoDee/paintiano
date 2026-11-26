@@ -14299,7 +14299,7 @@ function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex
   //  D = Dotted Spheres (floating dot orbs).
   //  E = Iconic Infinity Dots (saturated ground + black dots + chord accents).
   //  F = Tendril nets (light on colour).
-  // VARIANT: 0 What she heard (_kuListen: her Infinity Mirrored Room) · 1 Wall of canvases · 2 Dot field · 3 Infinity Net (from the first Listens; the scalloped nets retired, code kept) · 4 Dotted Spheres · 5 Infinity Dots · 6 Tendril nets · 7 Pumpkin (from the first Listens). Free: 0 and 1.
+  // VARIANT: 0 What she heard (_kuListen: her Infinity Mirrored Room) · 1 Wall of canvases · 2 Dot field · 3 Infinity Net (from the first Listens; the scalloped nets retired, code kept) · 4 Dotted Spheres · 5 Infinity Dots · 6 Dot chains (Nov 2026; the Tendril nets retired, code kept) · 7 Pumpkin (from the first Listens). Free: 0 and 1.
   const _pn=_capN(8); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _kuListen(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick0===7){ _kuListenOld(ctx,CW,CH,chords,lim,gc,ss,'pumpkin'); return; }   // the pumpkin
@@ -14308,7 +14308,7 @@ function drawKusamaOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, phaseIndex
   if(pick===2){ _kuListenOld(ctx,CW,CH,chords,lim,gc,ss,'net'); return; }   // the infinity net of the first Listens (the scalloped Infinity Nets retired, code kept)
   if(pick===3){ kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,ss); return; }
   if(pick===4){ kusamaPhaseAccum(ctx,CW,CH,chords,lim,gc,ss); return; }
-  if(pick===5){ kusamaPhaseTendril(ctx,CW,CH,chords,lim,gc,ss); return; }
+  if(pick===5){ kusamaPhaseChains(ctx,CW,CH,chords,lim,gc,ss); return; }   /* the dot chains (the Tendril nets retired, code kept) */
   kusamaPhaseA(ctx,CW,CH,chords,lim,gc,ss);
 }
 
@@ -14628,7 +14628,38 @@ function kusamaPhaseAccum(ctx,CW,CH,chords,lim,gc,sessionSeed){
   }
 }
 
-// ── Kusama F: Tendril nets — light organic tendrils on a saturated ground. ──
+// ── Kusama F2: Dot chains — variant 6 since Nov 2026 (the Tendril nets below are retired, their code kept). ──
+function kusamaPhaseChains(ctx,CW,CH,chords,lim,gc,sessionSeed){
+  /* Dot chains (Nov 2026, in place of the Tendril nets): one saturated ground and her dots in chains that never touch, swelling and
+     shrinking across the canvas. The piece sets everything: the ground its strongest colour; the chains run the way the
+     piece asks (down, across, on the slant, or in rings round a centre); a dot's size follows the loudness of the music
+     at its moment; the accents are the dots in the chord's own colour with a dark heart. It grows chain by chain. */
+  const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim)), reveal=Math.max(0,Math.min(1,N/cn)), D=Math.min(CW,CH);
+  const A=_kd2Analyze(chords,gc), isAcc=_mtAccOf(A), dens=_pieceDens(chords); const PK=_pieceCols(chords,gc,false,4);
+  const pr=_seedRnd(61900,_mrPieceKey(chords),0,0); pr(); const lay=Math.floor(pr()*4)%4, inv=pr()<0.3, ang=lay===2?(pr()<0.5?-1:1)*(0.5+0.4*pr()):lay===1?Math.PI/2:0, fx=0.6+1.6*pr(), fy=0.6+1.8*pr(), ph=pr()*6.28, warp=0.5+1.2*pr(), wobA=0.25+0.5*pr(), wobL=0.25+0.5*pr(), ccx=CW*(0.25+0.5*pr()), ccy=CH*(0.25+0.5*pr());
+  const sat=(c)=>{ const m=(c[0]+c[1]+c[2])/3; return c.map(v=>Math.max(0,Math.min(255,m+(v-m)*1.1)*0.94+8)); }; const lum=(c)=>(c[0]*0.299+c[1]*0.587+c[2]*0.114)/255;
+  const G0=sat(PK[0]||[230,190,40]); const ground=inv?[10,10,12]:G0, ink=inv?G0:(lum(G0)>0.42?[10,10,12]:[246,234,216]); const css=(c)=>'rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';
+  ctx.fillStyle=css(ground); ctx.fillRect(0,0,CW,CH);
+  /* the loudness of the music over time, smoothed */
+  const K=48, V=new Array(K).fill(0), Wt=new Array(K).fill(0); for(let i=0;i<cn;i++){ const ev=A.ev[i]; if(!ev) continue; const k=Math.min(K-1,Math.floor(i/cn*K)); V[k]+=ev.v; Wt[k]++; } for(let k=0;k<K;k++) V[k]=Wt[k]?V[k]/Wt[k]:(k?V[k-1]:0.5);
+  let vmin=1,vmax=0; V.forEach(v=>{ if(v<vmin) vmin=v; if(v>vmax) vmax=v; }); const loud=(t)=>{ const x=Math.max(0,Math.min(K-1.001,t*(K-1))), k=Math.floor(x), f=x-k; const v=V[k]+(V[k+1]-V[k])*f; return vmax>vmin+0.02?(v-vmin)/(vmax-vmin):0.5; };
+  const s=D*(0.105-0.05*Math.min(1,dens*1.6));   /* the spacing of the chains: a dense piece, a finer field */
+  const size=(u,v,t)=>{ const w=0.5+0.5*Math.sin(6.2832*(fx*u+fy*v)+ph+warp*Math.sin(6.2832*(fy*u-fx*v)*0.7+ph*1.7)); return s*Math.max(0.09,Math.min(0.46,0.1+0.3*w*(0.45+0.75*loud(t))+0.08*loud(t))); };
+  const dots=[];
+  if(lay===3){ /* rings round a centre */
+    const Rm=Math.max(Math.hypot(ccx,ccy),Math.hypot(CW-ccx,ccy),Math.hypot(ccx,CH-ccy),Math.hypot(CW-ccx,CH-ccy)), nr=Math.ceil(Rm/s);
+    for(let c=0;c<=nr;c++){ const R=c*s; if(c===0){ dots.push({x:ccx,y:ccy,r:s*0.42,t:0}); continue; } const L=6.2832*R; let d=0, a0=c*0.7+ph; while(d<L-s*0.2){ const th=a0+d/R, x=ccx+Math.cos(th)*R, y=ccy+Math.sin(th)*R, t=(c+d/L)/(nr+1); const r=Math.min(size(x/CW,y/CH,t),(L-d)/2.2); if(r<s*0.05) break; d+=r; const th2=a0+d/R; dots.push({x:ccx+Math.cos(th2)*R,y:ccy+Math.sin(th2)*R,r,t}); d+=r+s*0.07; } }
+  } else { /* chains down, across, or on the slant: all swaying together, so they never touch */
+    const ca=Math.cos(ang), sa=Math.sin(ang), Lg=Math.abs(CW*sa)+Math.abs(CH*ca), Wd=Math.abs(CW*ca)+Math.abs(CH*sa), nc=Math.ceil(Wd/s)+2;
+    for(let c=0;c<nc;c++){ const xc=-Wd/2-s+c*s+s*0.5; let y=-Lg/2-s; while(y<Lg/2+s){ const t=Math.max(0,Math.min(1,(c+(y+Lg/2)/Lg)/nc)); const px0=xc+s*wobA*Math.sin(6.2832*y/(Lg*wobL)+ph), X0=CW/2+px0*ca-y*sa, Y0=CH/2+px0*sa+y*ca; const r=size(X0/CW,Y0/CH,t); y+=r; const px=xc+s*wobA*Math.sin(6.2832*y/(Lg*wobL)+ph); dots.push({x:CW/2+px*ca-y*sa,y:CH/2+px*sa+y*ca,r,t}); y+=r+s*0.07; } }
+  }
+  dots.sort((p,q)=>p.t-q.t); const n=Math.ceil(dots.length*reveal);
+  for(let i=0;i<n;i++){ const d=dots[i]; if(d.x<-d.r||d.x>CW+d.r||d.y<-d.r||d.y>CH+d.r) continue; const ci=Math.max(0,Math.min(cn-1,Math.floor(d.t*cn))); const hr=_seedRnd(61950+i,ss,0,0); hr(); const acc=(isAcc(A.ev[ci]) && d.r>s*0.2) || hr()<0.035;
+    if(acc){ const c=sat(_kusChord(chords,ci,gc).rgb); ctx.fillStyle=css(c); ctx.beginPath(); ctx.arc(d.x,d.y,d.r,0,6.2832); ctx.fill(); ctx.fillStyle=css(inv?ground:[10,10,12]); ctx.beginPath(); ctx.arc(d.x,d.y,d.r*0.38,0,6.2832); ctx.fill(); }
+    else { ctx.fillStyle=css(ink); ctx.beginPath(); ctx.arc(d.x,d.y,d.r,0,6.2832); ctx.fill(); } }
+}
+
+// ── Kusama F: Tendril nets — light organic tendrils on a saturated ground (retired Nov 2026, code kept). ──
 function kusamaPhaseTendril(ctx,CW,CH,chords,lim,gc,sessionSeed){
   const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const base=_kusChord(chords,0,gc).rgb; const _td=_pieceDens(chords); const PK=_pieceCols(chords,gc,false,4);
@@ -21333,7 +21364,7 @@ const ARTIST_VARIANTS = {
     {ground:'#1e5a48',mark:{net:.8,dot:.2},size:[.03,.06],layout:{grid:1},density:1},   // Infinity Net (from the first Listens)
     {ground:'#1a1410',mark:{sphere:1},size:[.08,.25],layout:{scatter:1},density:.3},
     {ground:'#111111',mark:{dot:.7,dotcluster:.3},size:[.1,.3],layout:{scatter:1},density:.25},
-    {ground:'#d85a1a',mark:{net:.7,spiral:.3},size:[.05,.1],layout:{scatter:1},density:.3,lines:0},
+    {ground:'#e8a020',mark:{dot:1},size:[.008,.04],layout:{grid:.6,radial:.4},density:.9,lines:0,tone:'pure'},   // Dot chains
     {ground:'#f0c020',mark:{dot:.7,sphere:.3},size:[.01,.06],layout:{scatter:1},density:.6,tone:'pure'},   // Pumpkin
   ],
   miro: [
