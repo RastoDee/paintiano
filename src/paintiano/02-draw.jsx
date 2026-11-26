@@ -7285,6 +7285,55 @@ function drawLichtensteinOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode
 // columns never line up (his were cut and laid by hand). They spread out from the
 // middle as the piece plays, the first sounds at the heart, the last at the rim.
 // (Until 26 Nov 2026 his Fugue in Red — its jug read as a lab flask.)
+// KLEE · SIGNS (variant 7, Nov 2026) — his last years' signs (Signs in Yellow 1937, Insula dulcamara and Park near Lu 1938): a ground
+// of soft pastel patches laid edge to edge, and over it thick black signs — bars that bend, a hook, a bow, a dot —
+// written across the patches as if with a loaded brush. Here every patch is a moment of the piece, in a pale
+// pigment of its note (the piece's own colours); every sign is one passage's melody, its contour reduced to a few
+// bends, written as the passage plays; the louder, the heavier the line. Patches and signs come as the piece plays.
+function _klSigns(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
+  const ss=sessionSeed|0, cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH), isBW=mode==='bw';
+  const A=_kd2Analyze(chords,gc,mode), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>a==null?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+  const r=_seedRnd(6421,ss,0,0); r();
+  const grey=(c)=>{ const l=c[0]*0.299+c[1]*0.587+c[2]*0.114; return [l,l,l]; };
+  const pale=(c,l0,l1)=>{ const q=_bhxPigment(c,0.18,0.42,l0,l1,0.08,0.5,null); return isBW?grey(q):q; };
+  const PAPER=pale(A.pcCol(A.tonic,60),0.8,0.86); ctx.fillStyle=css(PAPER); ctx.fillRect(0,0,CW,CH); if(!cn) return;
+  // the patches: a loose lattice, every corner shared and pushed off its place, so no two patches are alike
+  const nC=4, nR=Math.max(5,Math.round(nC*CH/CW*0.95)), P0=[];
+  for(let j=0;j<=nR;j++){ const row=[]; for(let i=0;i<=nC;i++){ const ex=(i===0||i===nC)?0:(r()-0.5)*CW/nC*0.55, ey=(j===0||j===nR)?0:(r()-0.5)*CH/nR*0.55; row.push([CW*i/nC+ex, CH*j/nR+ey]); } P0.push(row); }
+  const patches=[]; for(let j=0;j<nR;j++) for(let i=0;i<nC;i++) patches.push({q:[P0[j][i],P0[j][i+1],P0[j+1][i+1],P0[j+1][i]], o:r()});
+  patches.sort((a,b)=>a.o-b.o);
+  patches.forEach((p,k)=>{ const t=Math.min(cn-1,Math.floor(k/patches.length*cn)); if(t>=played) return; const e=A.ev[t]||{top:60,v:0.6};
+    const pc=((Math.round(e.top)%12)+12)%12, c=mix(PAPER,pale(A.pcCol(pc,60),0.62,0.76),0.75);
+    const R=_seedRnd(3300+k,ss,0,0); R();
+    ctx.fillStyle=css(c); ctx.beginPath(); p.q.forEach((v,z)=>z?ctx.lineTo(v[0],v[1]):ctx.moveTo(v[0],v[1])); ctx.closePath(); ctx.fill();
+    // his paste: the colour laid on unevenly, a little lighter and darker in it
+    ctx.save(); ctx.clip(); const cx=(p.q[0][0]+p.q[2][0])/2, cy=(p.q[0][1]+p.q[2][1])/2, s=Math.max(CW/nC,CH/nR);
+    for(let d=0;d<6;d++){ ctx.fillStyle=css(R()<0.5?mix(c,[255,250,240],0.18):mix(c,[60,40,30],0.08),0.35); ctx.beginPath(); ctx.ellipse(cx+(R()-0.5)*s*0.8,cy+(R()-0.5)*s*0.8,s*(0.12+0.2*R()),s*(0.06+0.1*R()),R()*3.14,0,6.2832); ctx.fill(); }
+    ctx.restore(); });
+  // the signs: one per passage, written across the patches where it falls
+  const P=_kd2Phrases(A,Math.round(clamp(6+A.phrases.length*0.25,6,12))), INK=isBW?[18,18,18]:[22,18,20];
+  const cols=3, rows=Math.ceil(P.length/cols), slotW=CW/cols, slotH=CH/rows;
+  P.forEach((p,k)=>{ if(p.a>=played) return; const R=_seedRnd(4400+k,ss,0,0); R();
+    const i=k%cols, j=Math.floor(k/cols), cx=slotW*(i+0.5)+(R()-0.5)*slotW*0.35, cy=slotH*(j+0.5)+(R()-0.5)*slotH*0.3;
+    const S=Math.min(slotW,slotH)*(0.62+0.3*R()), w=D*(0.024+0.022*clamp(p.vmax,0,1));
+    // the contour in four bends: the passage's average height in each quarter
+    const avg=(u0,u1)=>{ let s=0,n=0; for(let t=p.a+Math.floor((p.b-p.a)*u0);t<p.a+Math.ceil((p.b-p.a)*u1);t++){ const e=A.ev[t]; if(e){ s+=e.top; n++; } } return n?s/n:60; };
+    const hs=[avg(0,0.25),avg(0.25,0.5),avg(0.5,0.75),avg(0.75,1)], lo=Math.min(...hs), hi=Math.max(...hs), sp=Math.max(3,hi-lo);
+    const kind=(k*7+((p.pc|0)))%5; let pts;
+    if(kind===2){ const up=hs[3]>=hs[0]; pts=[]; for(let s=0;s<=10;s++){ const a=Math.PI*(1+s/10)*(up?1:-1); pts.push([cx+Math.cos(a)*S*0.42, cy+Math.sin(a)*S*0.42*(up?1:-1)*-1]); } }   // a bow, opening as the melody goes
+    else if(kind===3){ const yb=cy-S*0.45+S*0.9*(1-(hs[0]-lo)/sp); pts=[[cx-S*0.3,yb],[cx-S*0.3,cy+S*0.45],[cx+S*0.4,cy+S*0.45-S*0.5*(hs[3]-lo)/sp]]; }   // a bent bar
+    else { pts=hs.map((m,z)=>[cx-S*0.5+S*z/3, cy+S*0.4-S*0.8*(m-lo)/sp]); if(R()<0.5) pts=pts.map(([x,y])=>[cx+(y-cy),cy-(x-cx)]); }   // the contour's four bends, lying or standing
+    const f=clamp((played-p.a)/Math.max(1,p.b-p.a),0,1); let L=0; const seg=[]; for(let s=1;s<pts.length;s++){ const d=Math.hypot(pts[s][0]-pts[s-1][0],pts[s][1]-pts[s-1][1]); seg.push(d); L+=d; }
+    let left=L*f; ctx.strokeStyle=css(INK); ctx.fillStyle=css(INK); ctx.lineWidth=w; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let s=1;s<pts.length && left>0;s++){ const d=seg[s-1], u=Math.min(1,left/d); ctx.lineTo(pts[s-1][0]+(pts[s][0]-pts[s-1][0])*u, pts[s-1][1]+(pts[s][1]-pts[s-1][1])*u); left-=d; } ctx.stroke();
+    if(f>=1){ const [x,y]=pts[pts.length-1], [x0,y0]=pts[0];
+      if(kind===1){ const a=Math.atan2(y-pts[pts.length-2][1],x-pts[pts.length-2][0])+Math.PI/2; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(a)*S*0.22,y+Math.sin(a)*S*0.22); ctx.stroke(); }   // a hook
+      if(kind===2 || kind===4){ const dx=(x-pts[pts.length-2][0]), dy=(y-pts[pts.length-2][1]), dl=Math.hypot(dx,dy)||1; ctx.beginPath(); ctx.arc(x+dx/dl*w*2.6,y+dy/dl*w*2.6,w*1.05,0,6.2832); ctx.fill(); }   // the dot, where the line ends (never inside the bow: that read as a smile)
+      if(kind===0 && R()<0.5){ ctx.lineWidth=w*0.85; ctx.beginPath(); ctx.moveTo(x0-w*2.4,y0-S*0.16); ctx.lineTo(x0-w*2.4,y0+S*0.16); ctx.stroke(); } }   // a bar beside it
+  });
+  try{ globalThis.__KL_SIGNS={patches:patches.length,signs:P.length}; }catch(_){}
+  _setCurE(0.5);
+}
 function _klListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const ss=sessionSeed|0, cn=chords.length, played=Math.max(1,Math.min(cn,lim)), D=Math.min(CW,CH), isBW=mode==='bw';
   const A=_kd2Analyze(chords,gc,mode), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], css=(c,a)=>a==null?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
@@ -7390,9 +7439,10 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
   const _ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   const dnaE=_ch?_ch.energy:0.5, dnaR=_ch?_ch.register:0.5;
   const PHI=(1+Math.sqrt(5))/2, GA=Math.PI*2*(1-1/PHI);
-  // VARIANT: 0 What he heard (_klListen: his Ancient Sound — squares on black glowing toward the middle; until 26 Nov 2026 his Fugue in Red) · 1 Klee's world (the first Listens, with only its own compositions; the old magic squares retired, code kept) · 2 polyphony · 3 Castle and Sun · 4 fish garden · 5 arrows · 6 Ad Parnassum. Free: 0 and 1.
-  const _pn=_capN(7); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
+  // VARIANT: 0 What he heard (_klListen: his Ancient Sound — squares on black glowing toward the middle; until 26 Nov 2026 his Fugue in Red) · 1 Klee's world (the first Listens, with only its own compositions; the old magic squares retired, code kept) · 2 polyphony · 3 Castle and Sun · 4 fish garden · 5 arrows · 6 Ad Parnassum · 7 Signs (his last years: black signs over pastel patches, Nov 2026). Free: 0 and 1.
+  const _pn=_capN(8); const pick0=((phaseIndex|0)%_pn+_pn)%_pn;
   if(pick0===0){ _klListen(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
+  if(pick0===7){ _klSigns(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   if(pick0===1){ _klListenOld(ctx,CW,CH,chords,lim,gc,ss,mode,true); return; }   // Klee's world (the old magic squares below retired, code kept)
   const pick=pick0-1;
   const ground=(a,b)=>{const g=ctx.createLinearGradient(0,0,0,CH);g.addColorStop(0,a);g.addColorStop(1,b);ctx.fillStyle=g;ctx.fillRect(0,0,CW,CH);};
@@ -19420,6 +19470,7 @@ const ARTIST_VARIANTS = {
     {ground:'#141420',mark:{dotline:.7,dot:.3},size:[.05,.2],layout:{flow:1},density:.3,edge:0,tone:'pastel'},
     {ground:'#c8b84a',mark:{field:.7,arrow:.3},size:[.2,.5],layout:{stack:1},density:.4,edge:0},
     {ground:'#a8844e',mark:{tile:.85,tri:.15},size:[.01,.03],layout:{grid:1},density:1,edge:0},                       // Ad Parnassum
+    {ground:'#e6d8c4',mark:{panel:.4,zigzag:.25,arc:.2,dot:.15},size:[.06,.18],layout:{grid:.5,scatter:.5},density:.5,edge:0,tone:'pastel',outline:0},   // Signs: black signs over pastel patches (his last years)
   ],
   delaunay: [   // slot order = solo variants: What he heard, Premier Disque, Rythme sans fin, Soleil Lune, Formes circulaires, Blériot, Prismes électriques, Bal Bullier
     {ground:'#e8e0cc',mark:{orphic:1},size:[.3,.6],layout:{radial:1},density:.15,tone:'pure'},   // What he heard: the simultaneous disc
@@ -19445,7 +19496,7 @@ const ARTIST_VARIANTS = {
 // the artist's genes for a given variant (phase) — base + that variant's overrides
 // how many variants each engine really has (its own _capN) — the fusion must
 // land on the SAME variant the solo painting is showing for this phaseIndex
-const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:8,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:7,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:7,delaunay:8,thomas:7,mosaic:1,notes:1};
+const ARTIST_VARIANT_N = {raffel:7,picasso:8,matisse:8,pollock:8,bloom:8,kusama:8,miro:7,mondrian:8,bauhaus:8,kandinsky:8,gold:7,rothko:8,bulge:8,wave:8,spiral:8,arcs:8,pop:8,mitchell:7,monet:7,hokusai:8,lichtenstein:7,klee:8,delaunay:8,thomas:7,mosaic:1,notes:1};
 function _dnaOf(k, ph, rv){ const b=ARTIST_DNA[k]; const V=ARTIST_VARIANTS[k]; if(!b||!V||!V.length) return b; const n=Math.min(V.length, ARTIST_VARIANT_N[k]||V.length); const ix=((ph|0)%n+n)%n, v=V[ix]; const o=Object.assign({}, b, v);
   if((rv|0)>=3){ const p=ARTIST_VARIANTS_R3[k]; if(p && p[ix]) Object.assign(o, p[ix]); }   // rules 3: the genes it lends a crossing now (see RULES 3)
   return o; }
