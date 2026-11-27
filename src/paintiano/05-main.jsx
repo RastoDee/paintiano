@@ -17341,10 +17341,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [stQuiet, setStQuiet] = useState(false); const stQuietRef = useRef(false); stQuietRef.current = stQuiet;
   const _stQuietSet = (v)=>{ v=!!v; if(stQuietRef.current===v) return; stQuietRef.current=v; setStQuiet(v); try{ if(navigator.vibrate) navigator.vibrate(10); }catch(_){} };
   useEffect(()=>{ if(stQuiet && (!studioFs || !stFill || studioLive)){ stQuietRef.current=false; setStQuiet(false); } },[stQuiet, studioFs, stFill, studioLive]);
+  // PINCH IN = THE MOSAIC (27 Nov 2026, his wish: the native transcription — tones → colours — is the concept itself, so it is one gesture away from any
+  // painting). Two fingers drawn together on a painting at its normal size (the Studio, For You) turn it into its Mosaic: the same piece, palette and place,
+  // playing on. Spread them: the painting you came from comes back exactly (painter or fusion, variant, palette, ✦); spread again: full screen, as before.
+  // One axis: Mosaic ← painting → full screen → the painting alone. A picture has none (its native reading is its Scan).
+  const mzFnRef = useRef(null), mzOnRef = useRef(false), mzBackRef = useRef(null), mzCardRef = useRef(null); const [mzOn, setMzOn] = useState(false);
   useEffect(()=>{ if(!studioFs || studioHome) return;   // Music, Compose and the Mic alike: spread two fingers = full screen (For You has its own: the painting alone)
     let d0=0, done=false; const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
     const st=(e)=>{ if(e.touches.length===2 && !document.querySelector('[role="dialog"]')){ d0=dist(e.touches); done=false; } };
-    const mv=(e)=>{ if(e.touches.length!==2 || !d0 || done) return; const r=dist(e.touches)/d0; if(studioLive){ if(r>1.22){ done=true; _stLiveSet(stLiveLvRef.current+1); } else if(r<0.82){ done=true; _stLiveSet(stLiveLvRef.current-1); } return; } if(r>1.22){ done=true; if(!stFillNowRef.current) _stFillSet(true); else if(!studioLive) _stQuietSet(true); } else if(r<0.82){ done=true; if(stQuietRef.current) _stQuietSet(false); else _stFillSet(false); } };   // spread = full screen, spread again = without the words; a pinch goes back a step
+    const mv=(e)=>{ if(e.touches.length!==2 || !d0 || done) return; const r=dist(e.touches)/d0; if(studioLive){ if(r>1.22){ done=true; _stLiveSet(stLiveLvRef.current+1); } else if(r<0.82){ done=true; _stLiveSet(stLiveLvRef.current-1); } return; } if(r>1.22){ done=true; if(mzOnRef.current && mzFnRef.current){ mzFnRef.current.leave(); return; } if(!stFillNowRef.current) _stFillSet(true); else if(!studioLive) _stQuietSet(true); } else if(r<0.82){ done=true; if(stQuietRef.current) _stQuietSet(false); else if(stFillNowRef.current) _stFillSet(false); else if(mzFnRef.current) mzFnRef.current.enter(); } };   // spread = full screen, spread again = without the words; a pinch goes back a step — and at the painting's normal size it goes into the Mosaic (spread: back)
     const en=(e)=>{ if(e.touches.length<2) d0=0; };
     document.addEventListener('touchstart', st, {passive:true}); document.addEventListener('touchmove', mv, {passive:true}); document.addEventListener('touchend', en, {passive:true}); document.addEventListener('touchcancel', en, {passive:true});
     return ()=>{ document.removeEventListener('touchstart', st); document.removeEventListener('touchmove', mv); document.removeEventListener('touchend', en); document.removeEventListener('touchcancel', en); };
@@ -17858,6 +17863,27 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const _stUndo = (wasUp)=>{ const H=stLookHistRef.current, from = wasUp ? H.st : H.fw; if(!from || !from.length) return false; const to = wasUp ? (H.fw || (H.fw=[])) : H.st;
     nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
     to.push(_stLookNow()); if(to.length>20) to.shift(); _stLookApply(from.pop()); setStFavPend(false); return true; };
+  // the Mosaic by a pinch (see mzFnRef): in the Studio the Mosaic chosen (as its chip in Look: gold, ↑ palettes, ← Notes); in For You the feed's own Mosaic
+  const _mzIn = ()=> style===null && !painterStage.length && (!randomMode || mosaicShuffleLock || shuffleStyle==='mosaic' || shuffleStyle==='notes');
+  const _mzEnter = ()=>{
+    if(viewMode==='image' || composeMode || micActive || micArmed || working || anim || recording || demoReelOn || cockpitEdit || !chords.length) return false;
+    if(studioHome ? !(feedAt>=0 && feedLoaded!==null && !lhOnRef.current) : !studioFs) return false;
+    if(_mzIn()) return false;   // it is the Mosaic already
+    mzBackRef.current = _stLookNow(); mzCardRef.current = studioHome ? ((feedCards[feedAt]||{}).id || null) : null;
+    nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
+    if(sigActiveRef.current){ sigActiveRef.current=false; setSigActive(false); sigPrevRef.current=null; }
+    if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
+    if(jamOn) setJamOn(false); if(jamAll) setJamAll(false); if((jamPinsRef.current||[]).length){ jamPinsRef.current=[]; setJamPins([]); }
+    _liteJamStyleRef.current = null; setPainterStage(p=>p.length?[]:p); _setFuRoll(null);
+    if(studioHome){ _feedApply({style:null, phase:0, mode, notes:false, stage:[], sig:false}); }   // For You's own Mosaic (as its first ↑ shows it)
+    else { _artQuiet(''); setStyle(null); setRandomMode(true); randomModeRef.current=true; setMosaicShuffleLock(true); setShuffleArtistIndex(0); setNotesMode(false); diceBagRef.current=[]; diceBagKeyRef.current=''; }   // the Studio: the Mosaic chosen, as its chip does
+    mzOnRef.current = true; setMzOn(true); _stBuzz(10);
+    if(studioHome) _feedFlashNow(); else _stFlashNow();
+    return true; };
+  const _mzLeave = ()=>{ const L=mzBackRef.current; mzBackRef.current=null; mzCardRef.current=null; mzOnRef.current=false; setMzOn(false); if(!L) return false;
+    nextRollInProgressRef.current = true; setTimeout(()=>{ nextRollInProgressRef.current = false; }, 600);
+    _stLookApply(L); _stBuzz(10); if(studioHome) _feedFlashNow(); else _stFlashNow(); return true; };
+  mzFnRef.current = { enter:_mzEnter, leave:_mzLeave };
   const stNavRef = useRef({});
   stNavRef.current = { next:()=>_stNext(true), prev:()=>_stPrev(true), vn:()=>_stVariant(false, true), vb:()=>_stVariant(true, true), undo:(wasUp)=>_stUndo(wasUp),
     uvn:()=>{ try{ return !!_variantNext(); }catch(_){ return false; } }, uvb:()=>{ try{ return !!_variantBack(); }catch(_){ return false; } },
@@ -18141,6 +18167,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const [fyQuietHint, setFyQuietHint] = useState(0);   // the first time the sound is held off in For You: how to get to the quiet first screen — once ever
   useEffect(()=>{ if(!fyQuietHint) return; const tm=setTimeout(()=>setFyQuietHint(0), 3200); return ()=>clearTimeout(tm); },[fyQuietHint]);
   const lhOnRef = useRef(false);   // the silent first screen is on (its two fingers either way bring everything back)
+  // left some other way (↑ to another painting, a painter tapped, another card or piece, a picture): the pinch's way back is gone — a spread is full screen again
+  useEffect(()=>{ if(!mzOn) return; const cid = studioHome ? ((feedCards[feedAt]||{}).id || null) : null;
+    if(!_mzIn() || jamOn || viewMode==='image' || (studioHome ? (feedAt<0 || cid!==mzCardRef.current) : !studioFs)){ mzOnRef.current=false; mzBackRef.current=null; mzCardRef.current=null; setMzOn(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[mzOn, style, painterStage, jamOn, randomMode, mosaicShuffleLock, shuffleStyle, viewMode, studioHome, studioFs, feedAt, feedCards]);
+  useEffect(()=>{ if(mzOnRef.current){ mzOnRef.current=false; mzBackRef.current=null; mzCardRef.current=null; setMzOn(false); } },[info && info.title]);   // another piece
   useEffect(()=>{ if(!studioHome){ feedCleanRef.current=false; setFeedClean(false); } },[studioHome]);
   useEffect(()=>{ const on=!!((feedClean && studioHome) || (studioLive && stLiveLv===2)); _pfSysBars(on); if(!on) return;   // the phone's bars go with everything else (and come back with it)
     const vis=()=>{ if(document.visibilityState==='visible' && (feedCleanRef.current || stLiveLvRef.current===2)) _pfSysBars(true); };   // back in the app: the app hides them again
@@ -18153,6 +18185,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const st=(e)=>{ if(e.touches.length===2 && !document.querySelector('[role="dialog"]')){ d0=dist(e.touches); done=false; } };
     const mv=(e)=>{ if(e.touches.length!==2 || !d0 || done) return; const r=dist(e.touches)/d0; if(r<=1.22 && r>=0.82) return; done=true;
       let v=r>1; if(lhOnRef.current && feedCleanRef.current) v=false;   // the first screen alone: spread or pinch, everything is back
+      if(!lhOnRef.current && mzFnRef.current){ if(v && mzOnRef.current){ mzFnRef.current.leave(); return; } if(!v && !feedCleanRef.current){ mzFnRef.current.enter(); return; } }   // For You: a pinch on the painting at its normal size = its Mosaic, a spread = back
       if(feedCleanRef.current===v) return; lhAutoRef.current=false; feedCleanRef.current=v; setFeedClean(v); _stBuzz(10); if(v) _pfSysBars(true);
       if(v){ let seen=false; try{ seen=localStorage.getItem('paintiano_clean_hint')==='1'; localStorage.setItem('paintiano_clean_hint','1'); }catch(_){} if(!seen) setFeedCleanHint(Date.now()); } else setFeedCleanHint(0); };
     const en=(e)=>{ if(e.touches.length<2) d0=0; };
