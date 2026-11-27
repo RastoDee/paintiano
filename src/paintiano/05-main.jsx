@@ -3141,14 +3141,21 @@ const STUDIO_FX_CSS = `
 .pf-pnl-ib:disabled{opacity:.35;cursor:default}
 .pf-pnl-ib.on{color:#f0d78a;border-color:rgba(240,215,138,.6)}
 .pf-pnl-ib.warn{background:#c8414f;border-color:#c8414f;color:#fff}
-.pf-pnl-bar{display:flex;align-items:center;gap:8px;min-height:40px}
-.pf-pnl-acts{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px}
-.pf-pnl-ibs{display:flex;gap:8px;margin-left:auto}
-.pf-pnl-a{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 11px 0 5px;border-radius:17px;border:1px solid rgba(242,238,232,.12);background:rgba(255,255,255,.05);color:#f2eee8;font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 12.5px);font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap;max-width:100%}
-.pf-pnl-a>i{flex:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-style:normal}
-.pf-pnl-a>i svg{width:14px;height:14px}
-.pf-pnl-a.on{background:#f2eee8;color:#121018}
+/* the head's one row (27 Nov 2026): what this painting can do as round buttons with their names under them (as the palettes),
+   a hairline, then the four round buttons; more than fit scroll sideways (as the faces) — never a second row of pills */
+.pf-pnl-bar{display:flex;align-items:flex-start;gap:6px;min-height:40px}
+.pf-pnl-acts{flex:1;min-width:0;display:flex;flex-wrap:nowrap;gap:4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.pf-pnl-acts::-webkit-scrollbar{display:none}
+.pf-pnl-ibs{display:flex;gap:6px;margin-left:auto;flex:none}
+.pf-pnl-acts+.pf-pnl-ibs{padding-left:8px;border-left:1px solid rgba(242,238,232,.12)}
+.pf-pnl-a{position:relative;flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:54px;max-width:78px;padding:0 2px;border:0;background:none;color:rgba(242,238,232,.72);font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 9px);font-weight:600;letter-spacing:.08em;text-transform:uppercase;line-height:1.15;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:normal}
+.pf-pnl-a>i{flex:none;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-style:normal}
+.pf-pnl-a>i svg{width:18px;height:18px}
+.pf-pnl-a:active>i{transform:scale(.92)}
+.pf-pnl-a.on{color:#f0d78a}
+.pf-pnl-a.on>i{box-shadow:0 0 0 2px #121018,0 0 0 3.5px #f0d78a}
 .pf-pnl-a:disabled{opacity:.45;cursor:default}
+.pf-pnl-a .pf-seg-lk{position:absolute;top:-3px;right:4px;font-size:11px}
 .pf-pnl-tabs{gap:6px!important;grid-template-columns:minmax(0,.92fr) minmax(0,.92fr) minmax(0,1.16fr)!important}   /* the third card's name is the longest (Compositeur) */
 .pf-pnl-tabs .pf-chg-tab{flex-direction:row;align-items:center;gap:6px;padding:8px 6px;border-radius:14px}
 .pf-pnl-tabs .pf-chg-tab small,.pf-pnl-tabs .pf-chg-who,.pf-pnl-tabs .pf-chg-cont{display:none}
