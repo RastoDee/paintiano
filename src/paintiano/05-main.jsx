@@ -2732,6 +2732,12 @@ const _ARTIST_SHORT = {'Sam Francis':'Francis','Hilma af Klint':'af Klint','Keit
 // the three fusion styles: A Collage (each painter in turn) · E Synthesis (one shared painting) · G Genesis (a new painter born of their genes)
 const _fsNorm = (v)=> v==='E' ? 'E' : v==='G' ? 'G' : 'A';
 // a line that does not fit runs slowly to its end and back (as a sound's name on TikTok); a line that fits stands still
+// For You's fusions (Nov 2026: "far too few"): not a 25 % coin on every draw — that left 15–20 solo painters in a row —
+// but a deck: one fusion in every three draws, shuffled, never two fusions running across a deck's edge (so at most four solos in a row).
+// The painters and the composers each keep a deck of their own.
+function _pfFuDeck(R){ const o=R.current||(R.current={d:[], last:false});
+  if(!o.d.length){ const d=[true,false,false]; for(let i=d.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=d[i]; d[i]=d[j]; d[j]=x; } if(o.last && d[0]) d.push(d.shift()); o.d=d; }
+  const v=o.d.shift(); o.last=v; return v; }
 function PfMarquee({ children, k }){
   const box=useRef(null), tx=useRef(null); const [d,setD]=useState(0);
   useLayoutEffect(()=>{ const b=box.current, t=tx.current; if(!b || !t) return; const m=()=>{ try{ const o=t.scrollWidth-b.clientWidth; setD(o>3 ? Math.ceil(o) : 0); }catch(_){} }; m();
@@ -4508,6 +4514,7 @@ function PaintianoApp() {
   // per-artist shuffled queues of variant indices, same idea at the variant
   // level. Refs so they survive across taps without triggering re-renders.
   const surpriseArtistBagRef = useRef([]);
+  const fuDeckRef = useRef(null), jamDeckRef = useRef(null);   // For You: one fusion (one jam) in every three draws — see _pfFuDeck
   const surpriseVariantBagsRef = useRef({});
   const surprisePaletteBagRef = useRef([]);
   useEffect(()=>{randomModeRef.current=randomMode;},[randomMode]);
@@ -5352,7 +5359,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const crPinsRef = useRef([]); useEffect(()=>{ crPinsRef.current = crPins; },[crPins]);
   const [crFixed, setCrFixed] = useState(false); const crFixedRef = useRef(false);   // the Jam pinned (📌): the gold composers alone
   useEffect(()=>{ if(!ensembleActive){ setJamOn(false); setCrOn(false); setPainterStage(p=>p.length?[]:p); setComposerStage(p=>p.length?[]:p); } },[ensembleActive]);
-  useEffect(()=>{ if(!jamOn) setPainterStage(p=>p.length?[]:p); },[jamOn]);
+  const jamOffKeepRef = useRef(false);   // For You's next look switches a ✦ Signature's Fusion off and draws its own stage in the same moment: that stage stays
+  useEffect(()=>{ if(jamOffKeepRef.current){ jamOffKeepRef.current=false; return; } if(!jamOn) setPainterStage(p=>p.length?[]:p); },[jamOn]);
   // Ensemble × shuffle ALL: every Next draws a fresh crossing (how many and who
   // are random). Shuffle 1 needs no flag: Next rolls the variant of the crossing.
   const [jamAll, setJamAll] = useState(false);
@@ -7072,9 +7080,9 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const _dc = (proStatus==='free' && a.includes(composerOfDay)) ? composerOfDay : null;
     const c = (_dc && Math.random()<0.4) ? _dc : a[(Math.random()*a.length)|0];
     imgComposerRef.current=c; setImgComposer(c);
-    // Ensemble on (Pro): now and then Surprise seats an ensemble — 2 to 4
+    // Ensemble on (Pro): one draw in three Surprise seats an ensemble (the deck, _pfFuDeck) — 2 to 4
     // composers (count and members random) trading phrases on the same picture.
-    if(ensembleOnRef.current && c && Math.random()<0.25){ const o=_en.filter(k=>k!==c); for(let i=o.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=o[i]; o[i]=o[j]; o[j]=x; } const n=Math.min(o.length, 1+((Math.random()*3)|0)); setComposerStage(o.slice(0,n)); }
+    if(ensembleOnRef.current && c && _pfFuDeck(jamDeckRef)){ const o=_en.filter(k=>k!==c); for(let i=o.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=o[i]; o[i]=o[j]; o[j]=x; } const n=Math.min(o.length, 1+((Math.random()*3)|0)); setComposerStage(o.slice(0,n)); }
     else setComposerStage(p=>p.length?[]:p);
   },[setupComposers, composerIsLocked, isDailyComposer, composerOfDay, proStatus]);
   // ADVANCED composer dice — mirror of the artists' 🎲: ON rolls a different
@@ -13858,11 +13866,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       setPhaseIndex(nv|0);            // pick that artist's variant
       setNotesMode(false);  // artist exits any family sub-mode
     }
-    // ENSEMBLE in Lite (Pro, on in Setup): now and then Surprise paints a Jam —
+    // ENSEMBLE in Lite (Pro, on in Setup): one draw in three Surprise paints a Jam (the deck, _pfFuDeck) —
     // the drawn artist (with its drawn variant) plus 1–3 more painters, count
     // and members random, from the same allowed pool. Otherwise a soloist.
     let _jamExtra = [];
-    if(ensembleOnRef.current && !_isFamilyKey(nk) && Math.random()<0.25){
+    if(ensembleOnRef.current && !_isFamilyKey(nk) && _pfFuDeck(fuDeckRef)){
       const o = Array.from(new Set(artists)).filter(k=>k!==nk);
       for(let i=o.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const x=o[i]; o[i]=o[j]; o[j]=x; }
       _jamExtra = o.slice(0, Math.min(o.length, 1+((Math.random()*3)|0)));
@@ -17969,7 +17977,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // ── STUDIO HOME FEED ── Lite's "Surprise me" on the home card. ▶ (or a first swipe up) draws a built-in
   // piece and paints it on the card, with its music. Every swipe up throws the card off and the SAME piece
   // goes on in a new look on the next card — the Mosaic, then Kandinsky, then the song's ✦ Signature, then
-  // the Lite shuffle (a painter and its variant, now and then a fusion). Down brings the look before back.
+  // the Lite shuffle (a painter and its variant, one fusion in every three). Down brings the look before back.
   // A tap on a playing card opens it full screen, where it simply plays on — from then on it is your painting.
   const [feedCards, setFeedCards] = useState([]);   // the looks seen, oldest first (10 at most): {id, piece, sel, u, l}
   const [feedAt, setFeedAt] = useState(-1);         // -1 = the home card on top, i = feedCards[i]
@@ -18388,7 +18396,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       return; }
     // the surprises decide for themselves: a painter or a fusion you hold in the Studio (gold, 📌) does not bind the next look here —
     // your painting keeps it on its own card (↓ brings it back as it was) and the Studio gets what is on screen when you go there
-    if(jamOn) setJamOn(false); if(jamAll) setJamAll(false); if((jamPinsRef.current||[]).length){ jamPinsRef.current=[]; setJamPins([]); }
+    if(jamOn){ jamOffKeepRef.current=true; setJamOn(false); } if(jamAll) setJamAll(false); if((jamPinsRef.current||[]).length){ jamPinsRef.current=[]; setJamPins([]); }
     if(jamFixedRef.current){ jamFixedRef.current=false; setJamFixed(false); } if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); }
     const k = setupArtists.includes('kandinsky') && !styleIsLocked('kandinsky') ? 'kandinsky' : (setupArtists.find(x=>x!=='mosaicFamily' && !styleIsLocked(x)) || 'kandinsky');
     while(feedStepsRef.current.length){
