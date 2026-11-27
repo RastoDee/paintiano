@@ -2627,6 +2627,30 @@ function _pieceDens(chords){ try{ return computeSongCharacter(chords).density; }
 // strongest family of hues (the most-heard notes, weighted by how vivid they are), only as far as it needs to.
 // Harmony itself is never touched. (hr is Harmony in the key as written: gc may sound the piece in another key, which
 // turns the hues but not how much colour the mix keeps.)
+// THE MOSAIC'S COLOURS (27 Nov 2026): a painting is derived from the Mosaic, so its colours are the Mosaic's. The piece's
+// colour fingerprint is what the Mosaic shows: every tone's share of the canvas (a chord's tile split between its tones),
+// gathered into colour families (tones whose colours lie within 45° of hue — in Harmony the fifths G, C, F are one green).
+// A painter who paints with few colours takes the largest FAMILIES, not the most-heard tones: those are neighbours on the
+// circle of fifths, so "three colours" came out three shades of one (Klee's olive). The family colour is laid in the
+// painter's material at a middle strength (_mzSoft): neither neon nor washed out. Painters whose colours ARE their style
+// keep them (_OWN_PAL: Mondrian, Lichtenstein, Bauhaus, Klimt's gold, Hokusai's Prussian blue) — the piece decides only
+// where and how much of their colours.
+const _OWN_PAL=new Set(['mondrian','lichtenstein','bauhaus','gold','hokusai']);
+const _mzFamC=new WeakMap();
+const _mzHue=(c)=>{ const r=c[0]/255,g=c[1]/255,b=c[2]/255, mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(d<1e-6) return 0; let h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4; h*=60; return h<0?h+360:h; };
+function _mzFams(chords,gc){
+  const e0=_curE; _setCurE(0.6); const col=[]; for(let pc=0;pc<12;pc++){ const c=gc(60+pc,100); col.push([c[0],c[1],c[2]]); } _setCurE(e0);
+  const key=col.map(c=>c.join(',')).join(';'); let M=_mzFamC.get(chords); if(!M){ M=new Map(); _mzFamC.set(chords,M); } const hit=M.get(key); if(hit) return hit;
+  const ar=new Array(12).fill(0); for(const c of chords){ const n=(c&&(c.n||c.notes))||[]; for(const q of n){ const m=q.m!==undefined?q.m:q; if(typeof m!=='number'||isNaN(m)) continue; ar[((Math.round(m)%12)+12)%12]+=1/n.length; } }
+  const tot=ar.reduce((a,b)=>a+b,0)||1, ord=[...Array(12).keys()].sort((a,b)=>ar[b]-ar[a]), F=[];
+  for(const pc of ord){ if(ar[pc]<=0) continue; const h=_mzHue(col[pc]); let k=-1; for(let j=0;j<F.length;j++){ const d=Math.min(Math.abs(F[j].h-h),360-Math.abs(F[j].h-h)); if(d<45){ k=j; break; } } if(k<0){ F.push({pc,h,col:col[pc],area:0,pcs:[]}); k=F.length-1; } F[k].area+=ar[pc]/tot; F[k].pcs.push(pc); }
+  F.sort((a,b)=>b.area-a.area); F.of=(pc)=>{ for(let j=0;j<F.length;j++) if(F[j].pcs.includes(pc)) return j; return -1; }; F.col=col;
+  if(M.size>8) M.clear(); M.set(key,F); return F; }
+function _mzSoft(c){ return _bhxPigment(c,0.425,0.705,0.42,0.6,0.028,0.3,null); }   // a family colour at the middle strength (approved 27 Nov 2026)
+// The palette a fusion paints with: the Mosaic's families at the middle strength — four colours at least (a family's second
+// tone added where the piece has fewer families)
+function _mzFusePal(chords,gc){ const FF=_mzFams(chords,gc); const P=FF.slice(0,6).map(f=>_mzSoft(f.col));
+  for(const f of FF){ if(P.length>=4) break; for(const pc of f.pcs.slice(1)){ if(P.length>=4) break; P.push(_mzSoft(FF.col[pc])); } } return P; }
 function _mixIdx(chords,idx,gc,isBW,mode){ const n=idx.length; if(!n) return [120,100,160]; const m=[0,0,0], hr=[0,0,0], N=[], plain=isBW||mode==='harmony';
   for(const i of idx){ const q=_picChord(chords,i,gc,isBW).rgb; m[0]+=q[0]/n; m[1]+=q[1]/n; m[2]+=q[2]/n; if(plain) continue;
     const ch=chords[Math.min(chords.length-1,Math.max(0,i))]; const nt=ch&&(ch.n||ch.notes||[]); const L=nt?nt.length:0; if(!L){ hr[0]+=q[0]/n; hr[1]+=q[1]/n; hr[2]+=q[2]/n; continue; }
@@ -9797,10 +9821,16 @@ function _klListen(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
     const dx=(x0+x1)/2/CW-0.5, dy=((y0+y1)/2/CH-0.5)*CH/CW; cells.push({x:x0,y:y0,w:x1-x0,h:y1-y0,d:Math.hypot(dx,dy)+r()*0.03}); }
   cells.sort((a,b)=>a.d-b.d); const dmax=cells[cells.length-1].d||1;
   const g=Math.max(1.5,D*0.007);
+  const FF=isBW?null:_mzFams(chords,gc), T3=FF?FF.slice(0,3):null;   // the Mosaic's three largest colour families (27 Nov 2026)
   cells.forEach((q,k)=>{ const t=Math.min(cn-1,Math.floor(k/cells.length*cn)); if(t>=played) return;
     const e=A.ev[t]||{v:0.6,top:60}, glow=Math.pow(1-q.d/dmax,1.3), pc=((Math.round(e.top)%12)+12)%12;
-    let best=top3[0], bd=99; for(const c of top3){ const dd=Math.min(Math.abs(c-pc),12-Math.abs(c-pc)); if(dd<bd){ bd=dd; best=c; } }
-    const L=0.1+0.5*glow+0.1*clamp(e.v,0,1), c0=pig(A.pcCol(best,60),L,L+0.06), c=isBW?c0:mix(c0,mix(EARTH,[0,0,0],1-glow*0.9),0.28);
+    const L=0.1+0.5*glow+0.1*clamp(e.v,0,1); let c;
+    if(T3 && T3.length){ // the cell's tone in its family; a tone of a smaller family goes to the nearest of the three by hue
+      let j=FF.of(pc); if(j<0||j>=T3.length){ const h=_mzHue(FF.col[pc]); let bd2=999; for(let q2=0;q2<T3.length;q2++){ const d=Math.min(Math.abs(T3[q2].h-h),360-Math.abs(T3[q2].h-h)); if(d<bd2){ bd2=d; j=q2; } } }
+      const fam=T3[Math.max(0,j)], L2=(fam.h>=30&&fam.h<=95)?Math.max(0.3,L):L;   // a yellow is not darkened into olive
+      const q0=_bhxPigment(fam.col,0.36,0.64,L2,L2+0.06,0.051,0.425,null); c=mix(q0,mix(mix(q0,[0,0,0],0.6),[0,0,0],1-glow*0.9),0.28); }
+    else { let best=top3[0], bd=99; for(const c1 of top3){ const dd=Math.min(Math.abs(c1-pc),12-Math.abs(c1-pc)); if(dd<bd){ bd=dd; best=c1; } }
+      const c0=pig(A.pcCol(best,60),L,L+0.06); c=isBW?c0:mix(c0,mix(EARTH,[0,0,0],1-glow*0.9),0.28); }
     const R=_seedRnd(900+k,ss,0,0); R(); const jx=(R()-0.5)*g*1.4, jy=(R()-0.5)*g*1.4, x0=q.x+g+jx, y0=q.y+g+jy, w=q.w-2*g, h=q.h-2*g;
     ctx.fillStyle=css(c); ctx.fillRect(x0,y0,w,h);
     // his oil on board: a second, lighter coat that does not quite reach the edge, and a few strokes of the brush in it
@@ -22186,7 +22216,7 @@ function _fuTone(rgb, F, r1){
   let [r,g,b]=rgb; let R=0,G=0,B=0;
   for(const t in F.tones){ const w=F.tones[t]; let x=r,y=g,z=b;
     if(t==='pastel'){ x=r+(255-r)*.45; y=g+(255-g)*.45; z=b+(255-b)*.45; }
-    else if(t==='dark'){ x=r*.62; y=g*.62; z=b*.62; }
+    else if(t==='dark'){ x=r*.62; y=g*.62; z=b*.62; const mx=Math.max(r,g,b), mn=Math.min(r,g,b); if(mx-mn>40 && b<=mn+1 && g>r*0.55){ x=r*.85; y=g*.85; z=b*.5; } }   // a yellow darkened stays yellow, not olive
     else if(t==='gold'){ x=r*.6+212*.4; y=g*.6+175*.4; z=b*.6+55*.4; }
     else if(t==='mono'){ const l=r*.299+g*.587+b*.114; const k=l>128?250:17; x=y=z=k; }
     else if(t==='primary'){ // snap to the nearest flat primary
@@ -23309,13 +23339,16 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
   const FPs=PDs.map(pd=>(pd.edge===F.edge && pd.alpha===F.alpha) ? F : Object.assign({},F,{edge:pd.edge,alpha:pd.alpha}));
   // E: one hand for every form (F); a form keeps the scale of the parent it comes from (_own); ONE palette for the whole
   // painting — the parents' sampled palettes interleaved (≤6), unless a parent keeps the song's own colours (Monet, a monochrome variant)
-  const _own={}; let _palE=null;
+  const _own={}; let _palE=null; const _mzPal=(mode!=='bw') ? _mzFusePal(chords,gc) : null;
   const _v2=(F.rv|0)>=2;
   if(_E){ PDs.forEach((pd,i)=>{ for(const k in pd.mark){ const q=_v2 ? ((_v3 ? _FU_SYN_MAP3 : _FU_SYN_MAP)[k]||k) : k; if(_own[q]===undefined || pd.mark[k]>(PDs[_own[q]].mark[q]||0)) _own[q]=i; } });
     let P=[]; if(!F.keys.some((k,i)=>k==='monet'||PDs[i].nosnap)){ const _il=(get)=>{ const Q=[]; for(let q=0;q<6;q++) for(let i=0;i<SM.length && Q.length<6;i++){ const p=SM[i]&&get(SM[i]); if(p&&p[q]) Q.push(p[q]); } return Q; };
       P=_il(s=>s.pal);
       /* a palette of one hue (Klimt's golds, Klee's ochres, Hokusai's greens) painted the whole new painter in it: then the parents' colours gathered by family */
-      if(P.length>=3 && _fuSpread(P)<=110){ const P2=_il(s=>s.palE||s.pal), w=_fuSpread(P); if(P2.length>=3 && (_fuSpread(P2)>=w+40 || (!_fuVivid(P) && _fuVivid(P2)))) P=P2; } }
+      if(P.length>=3 && _fuSpread(P)<=110){ const P2=_il(s=>s.palE||s.pal), w=_fuSpread(P); if(P2.length>=3 && (_fuSpread(P2)>=w+40 || (!_fuVivid(P) && _fuVivid(P2)))) P=P2; }
+      // the Mosaic's colours (27 Nov 2026): the new painter paints in the piece's colour families; a parent whose colours are
+      // his style (Mondrian…) adds his own
+      if(_mzPal){ const own=[]; F.keys.forEach((k,i)=>{ if(_OWN_PAL.has(k) && SM[i] && SM[i].pal) own.push(...SM[i].pal.slice(0,3)); }); P=own.length ? _mzPal.slice(0,4).concat(own).slice(0,7) : _mzPal.slice(); } }
     _palE=P.length>=3 ? P : null; }
   const _dAvg = _E ? 0.3+0.5*F.density : PDs.reduce((s,pd)=>s+(0.3+0.5*pd.density),0)/PDs.length;   // the compressed density the loop really uses
   let _exp=0; for(let ly=0; ly<F.layers; ly++){ const lf=(ly+1)/F.layers; _exp += Math.ceil(n/stride)*Math.min(1, _dAvg*(0.45+lf*0.55)*bigCap*crowd); }
@@ -23411,7 +23444,7 @@ function drawFusionOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phas
         }
         const [cr,cg,cb]=gc(m,v);
         // Monet's touches are the song's own colours, broken — never snapped to a sampled palette
-        const _pal=_E ? _palE : ((F.keys[_pi]==='monet' || PD.nosnap) ? null : (SM[_pi]&&SM[_pi].pal));   // a variant whose solo palette is a monochrome wash (Picasso's analytic browns) keeps the song's colours in a fusion
+        const _pal=_E ? _palE : ((F.keys[_pi]==='monet' || PD.nosnap) ? null : ((_mzPal && _mzPal.length>=3 && !_OWN_PAL.has(F.keys[_pi])) ? _mzPal : (SM[_pi]&&SM[_pi].pal)));   // Collage: the Mosaic's colours, an own-palette parent his own (27 Nov 2026)   // a variant whose solo palette is a monochrome wash (Picasso's analytic browns) keeps the song's colours in a fusion
         let col=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([cr,cg,cb],_pal)) : _fuTone([cr,cg,cb],F,R());
         const n2=ns[(j+1)%ns.length]; const [c2r,c2g,c2b]=gc(n2.m!==undefined?n2.m:60, n2.v!==undefined?n2.v:80);
         let col2=(_pal&&_pal.length>=3) ? (p=>`rgb(${p[0]},${p[1]},${p[2]})`)(_fuSnap([c2r,c2g,c2b],_pal)) : _fuTone([c2r,c2g,c2b],F,R());
