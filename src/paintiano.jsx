@@ -2646,6 +2646,18 @@ function _mzFams(chords,gc){
   for(const pc of ord){ if(ar[pc]<=0) continue; const h=_mzHue(col[pc]); let k=-1; for(let j=0;j<F.length;j++){ const d=Math.min(Math.abs(F[j].h-h),360-Math.abs(F[j].h-h)); if(d<45){ k=j; break; } } if(k<0){ F.push({pc,h,col:col[pc],area:0,pcs:[]}); k=F.length-1; } F[k].area+=ar[pc]/tot; F[k].pcs.push(pc); }
   F.sort((a,b)=>b.area-a.area); F.of=(pc)=>{ for(let j=0;j<F.length;j++) if(F[j].pcs.includes(pc)) return j; return -1; }; F.col=col;
   if(M.size>8) M.clear(); M.set(key,F); return F; }
+// The piece's ONE colour (for a painter who paints with one): the Mosaic's largest family — not the mean of its chords or its
+// single most saturated tone, which in a colourful piece came out olive, grey-green or a colour the Mosaic hardly has
+function _mzLead(chords,gc){ const FF=_mzFams(chords,gc); return FF.length ? FF[0].col.slice() : [120,120,120]; }
+// a chord's colour without mud: its tone from the largest family (the loudest of those), exactly as the Mosaic paints it
+function _mzTone(chords,i,gc,FF){ const cn=chords.length; const ch=chords[Math.min(cn-1,Math.max(0,i|0))]; const n=(ch&&(ch.n||ch.notes))||[]; if(!n.length) return [120,120,120]; FF=FF||_mzFams(chords,gc); _setCurE(ch&&ch._E);
+  let best=null,br=99,bv=-1; for(const q of n){ const m=q.m!==undefined?q.m:q, v=q.v!==undefined?q.v:80; if(typeof m!=='number'||isNaN(m)) continue; const r=FF.of(((Math.round(m)%12)+12)%12), rr=r<0?99:r; if(rr<br||(rr===br&&v>bv)){ br=rr; bv=v; best=[m,v]; } }
+  if(!best) return [120,120,120]; const c=gc(best[0],best[1]); return [c[0],c[1],c[2]]; }
+// a passage's colour without mud: the family with the largest share of the passage's tones (counted as the Mosaic counts
+// them), in the colour of its most frequent tone there
+function _mzSpan(chords,gc,I,FF){ FF=FF||_mzFams(chords,gc); if(!FF.length) return [120,120,120]; const w=new Array(FF.length).fill(0), pw=new Array(12).fill(0);
+  for(const i of I){ const ch=chords[Math.min(chords.length-1,Math.max(0,i|0))]; const n=(ch&&(ch.n||ch.notes))||[]; for(const q of n){ const m=q.m!==undefined?q.m:q; if(typeof m!=='number'||isNaN(m)) continue; const pc=((Math.round(m)%12)+12)%12, f=FF.of(pc); if(f>=0){ w[f]+=1/n.length; pw[pc]+=1/n.length; } } }
+  let fb=0; for(let f=1;f<w.length;f++) if(w[f]>w[fb]) fb=f; let pb=FF[fb].pcs[0]; for(const pc of FF[fb].pcs) if(pw[pc]>pw[pb]) pb=pc; return FF.col[pb].slice(); }
 function _mzSoft(c){ return _bhxPigment(c,0.425,0.705,0.42,0.6,0.028,0.3,null); }   // a family colour at the middle strength (approved 27 Nov 2026)
 // The palette a fusion paints with: the Mosaic's families at the middle strength — four colours at least (a family's second
 // tone added where the piece has fewer families)
@@ -3702,7 +3714,7 @@ function _rkRect(ctx,x,y,w,h,f,rnd){
 function _rkVeil(ctx,v,rnd){ const e=v.feather*(1-v.k); ctx.fillStyle=_rkCss(v.col,v.a); _rkRect(ctx,v.x-e,v.y-e,v.w+2*e,v.h+2*e,v.feather*0.22*(1-v.k*0.4),rnd); }
 function _rkSetup(chords,gc,mode){ const isBW=mode==='bw'; const cn=chords.length; const ch=(typeof computeSongCharacter==='function')?computeSongCharacter(chords):null;
   const col=(t)=>_picChord(chords,_rkClamp(Math.floor(t*cn),0,cn-1),gc,isBW).rgb;
-  const avg=(t0,t1)=>{ const I=[]; for(let t=t0;t<=t1;t+=Math.max(0.01,(t1-t0)/12)) I.push(_rkClamp(Math.floor(t*cn),0,cn-1)); return _mixIdx(chords,I,gc,isBW,mode); };   /* the passage's chords fused — and never to grey (_mixIdx) */
+  const avg=(t0,t1)=>{ const I=[]; for(let t=t0;t<=t1;t+=Math.max(0.01,(t1-t0)/12)) I.push(_rkClamp(Math.floor(t*cn),0,cn-1)); return isBW ? _mixIdx(chords,I,gc,isBW,mode) : _mzSoft(_mzSpan(chords,gc,I)); };   /* the passage's colour: its largest family of the Mosaic at the middle strength (27 Nov 2026; was the chords fused, _mixIdx — olive and grey-green in a colourful piece) */
   return {cn,isBW,energy:ch?ch.energy:0.5,density:ch?ch.density:0.4,register:ch?ch.register:0.5,col,avg}; }
 function _rkDraw(ctx,list,reveal,ss){ list.sort((a,b)=>(a.t-b.t)||(a.id-b.id)); const n=Math.ceil(list.length*_rkClamp(reveal,0,1)); for(let i=0;i<n;i++){ const v=list[i]; const rnd=_rkR(v.id*29+61001,ss); rnd(); _rkVeil(ctx,v,rnd); } }
 function _rkGround(ctx,CW,CH,c,ss){ ctx.fillStyle=_rkCss(_rkMix(c,[0,0,0],0.3)); ctx.fillRect(0,0,CW,CH); const rnd=_rkR(61000,ss|0); rnd(); const f=Math.min(CW,CH)*0.05;   // the stain: darker at the edges, three feathered veils of the ground colour inward — paths only, so the SVG export matches to the pixel
@@ -9049,9 +9061,9 @@ function francisPhaseEdge(ctx,CW,CH,chords,lim,gc,ss0,mode){
 // glinting inside it, only the borders left white, heavy drips running off below.
 function francisPhaseBigRed(ctx,CW,CH,chords,lim,gc,ss,mode){
   _frGround(ctx,CW,CH,mode==='bw');
-  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const cx=CW*0.5, cy=CH*0.46; const n=Math.round((120+S.density*90)*_dW(S.density)); const dom=S.pal[0]; let id=0;
+  _frBuild(ctx,CW,CH,chords,lim,gc,ss,mode,(S,D,CW,CH)=>{ const list=[]; const cx=CW*0.5, cy=CH*0.46; const n=Math.round((120+S.density*90)*_dW(S.density)); const _mz=!S.isBW, _FF=_mz?_mzFams(chords,gc):null, colT=(t)=>_mz?_frWet(_mzTone(chords,Math.floor(t*S.cn),gc,_FF)):S.col(t); const dom=_mz?_frWet(_mzLead(chords,gc)):S.pal[0]; let id=0;   /* the cluster in the Mosaic's largest family (27 Nov 2026) */
     for(let i=0;i<n;i++){ const r=_frR(82000+i,ss); r(); const t=i/n; const a=r()*6.2832, dd=Math.pow(r(),0.55); const x=cx+Math.cos(a)*dd*CW*0.44, y=cy+Math.sin(a)*dd*CH*0.4;
-      const own=r()<0.16; const col=own?S.col(t):_frMix(dom,S.col(t),0.1);
+      const own=r()<0.16; const col=own?colT(t):_frMix(dom,colT(t),0.1);
       list.push({id:id++,t,x,y,r:D*(0.035+r()*0.055),sx:0.85+r()*0.4,sy:0.85+r()*0.4,col,alpha:0.36+r()*0.3,drip:y>cy?0.5:0.15,dripLen:1.8,spat:0.3,spatR:1.4,edge:0.8,bleed:0.5}); }
     return list; });
 }
@@ -10096,11 +10108,11 @@ function drawKleeOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     const ax=CW*(0.45+rr()*0.1), ay=CH*(0.16+rr()*0.06), bl=CW*0.08, br=CW*0.92, by=CH*0.84;
     const inTri=(x,y)=>{ if(y<ay||y>by) return false; const u=(y-ay)/(by-ay); return x>ax+(bl-ax)*u && x<ax+(br-ax)*u; };
     const sunX=CW*(0.78+rr()*0.1), sunY=CH*(0.12+rr()*0.06), sunR=S*0.07;
-    const cols=Math.ceil(CW/step), rows=Math.ceil(CH/step), tot=cols*rows, vis=Math.ceil(tot*Math.min(1,N/cn));
+    const cols=Math.ceil(CW/step), rows=Math.ceil(CH/step), tot=cols*rows, vis=Math.ceil(tot*Math.min(1,N/cn)); const _adFF=(mode!=='bw')?_mzFams(chords,gc):null;   // a dab is its chord's tone, not the chord's colours mixed (27 Nov 2026)
     for(let i=0;i<vis;i++){ const gx=i%cols, gy=Math.floor(i/cols); const x=(gx+0.5)*step, y=(gy+0.5)*step; const ni=Math.min(cn-1,(i/tot*cn)|0); const m=meta(ni);
       const r=_seedRnd(4200+i,ss,0,0); r(); const inside=inTri(x,y), sun=Math.hypot(x-sunX,y-sunY)<sunR;
-      const c0=col(ni,0.9+m.vel*0.3), mixT=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];   // outside: muted into the ochre; inside: lit; the sun: burning
-      const c= sun?mixT(c0,[255,170,60],0.45) : inside?mixT(c0,[250,232,196],0.3) : mixT(c0,[160,124,74],0.58); const jx=(r()-.5)*step*0.25, jy=(r()-.5)*step*0.25, sz=step*(0.62+r()*0.18);
+      const c0=_adFF ? _mzTone(chords,ni,gc,_adFF).map(v=>Math.min(255,v*(0.9+m.vel*0.3))) : col(ni,0.9+m.vel*0.3), mixT=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];   // outside: muted into the ochre; inside: lit; the sun: burning
+      const c= sun?mixT(c0,[255,170,60],0.45) : inside?mixT(c0,[250,232,196],0.3) : mixT(c0,[160,124,74],_adFF?0.42:0.58); const jx=(r()-.5)*step*0.25, jy=(r()-.5)*step*0.25, sz=step*(0.62+r()*0.18);
       ctx.fillStyle=css(c,0.92); ctx.fillRect(x-sz/2+jx,y-sz/2+jy,sz,sz);
       if(r()<0.55){ const s2=sz*0.45; ctx.fillStyle=css(shade(c,inside?1.25:0.75),0.75); ctx.fillRect(x+step*0.25-s2/2,y+step*0.25-s2/2,s2,s2); } }
     const dx=ax+(rr()-.5)*CW*0.06, dw=CW*0.07, dh=CH*0.11;
@@ -12950,8 +12962,10 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     if(_rpick===6){ rileyPhaseFall(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
     if(_rpick===7){ rileyPhaseSquares(ctx,CW,CH,chords,lim,gc,ss,mode); return; }
   }
-  const darkC = chordCol(0, 0.5);
-  const liteC = chordCol(Math.floor(cn/2), 1.25);
+  // the stripes and the ground in the Mosaic's largest family (27 Nov 2026; was the first chord's mixed colour — salmon in a green piece)
+  const _mzR = mode!=='bw', _lead = _mzR ? _mzLead(chords,gc) : null;
+  const darkC = _mzR ? _lead.map(v=>v*0.5) : chordCol(0, 0.5);
+  const liteC = _mzR ? _lead.map(v=>Math.min(255,v*1.25)) : chordCol(Math.floor(cn/2), 1.25);
 
   // Light ground.
   ctx.fillStyle = css([Math.min(255,liteC[0]+60),Math.min(255,liteC[1]+60),Math.min(255,liteC[2]+60)]);
@@ -12982,7 +12996,7 @@ function drawWaveOverlay(ctx, CW, CH, chords, lim, gc, sessionSeed, mode, phaseI
     for(let i=-w;i<w;i++) add(i,1);
     for(let i=0;i<cn;i++){ add(i+w,1); add(i-w-1,-1); if(pv[i]!=null && n>0 && sum/n>_cxVel){ _cxVel=sum/n; _cxIdx=i; } } }
   const accentBand = Math.min(BANDS-1, Math.floor((_cxIdx/cn)*BANDS));
-  const accentCol = chordCol(_cxIdx, 1.1);
+  const accentCol = _mzR ? _mzTone(chords,_cxIdx,gc).map(v=>Math.min(255,v*1.1)) : chordCol(_cxIdx, 1.1);
 
   for(let b=0; b<visBands; b++){
     const t = BANDS<=1 ? 0 : b/(BANDS-1);
@@ -14815,6 +14829,8 @@ function kusamaPhaseB(ctx, CW, CH, chords, lim, gc, sessionSeed){
   const energy=Math.max(0,Math.min(1,(aV/c-30)/90));
   const avgLum=aLum/c; // 0..255 — drives light vs dark ground
 
+  // the family hue is the Mosaic's largest family (27 Nov 2026; was the single most saturated tone — red in a green piece)
+  { const L=_mzLead(chords,gc); domR=L[0]; domG=L[1]; domB=L[2]; domSat=Math.max(L[0],L[1],L[2])-Math.min(L[0],L[1],L[2]); }
   // Force the family color to full saturation, preserving hue.
   // Pastel tone: skip the push so the Kusama field stays soft.
   let fR=domR,fG=domG,fB=domB;
