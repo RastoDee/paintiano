@@ -3498,12 +3498,12 @@ const STUDIO_HOME_CSS = `
 .pf-lh-bars.off{opacity:0}
 .pf-lh-bars s{display:block;flex:0 0 6px;border-radius:3px 3px 0 0;transform-origin:bottom;animation:pfLhBar .8s ease-in-out infinite alternate}
 @keyframes pfLhBar{from{transform:scaleY(.2)}to{transform:scaleY(1)}}
-.pf-lh-cta{display:inline-flex;align-items:center;gap:10px;max-width:92%;filter:drop-shadow(0 1px 8px rgba(0,0,0,.85))}   /* tap to hear it: bold, a light running through the words, the gold bars of an equaliser before them */
-.pf-lh-cta b{font-family:'Outfit','Helvetica Neue',Arial,sans-serif;font-size:calc(var(--pf-read-scale,1) * 17px);font-weight:700;letter-spacing:.01em;white-space:nowrap;background:linear-gradient(100deg,rgba(255,255,255,.62) 38%,#fff 50%,rgba(255,255,255,.62) 62%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:pfLhSh 2.6s linear infinite}
-.pf-lh-cta.on b{background-image:linear-gradient(100deg,rgba(255,255,255,.82) 38%,#fff 50%,rgba(255,255,255,.82) 62%)}   /* brighter once the painting is done */
+.pf-lh-cta{display:inline-flex;align-items:center;gap:10px;max-width:92%;filter:drop-shadow(0 1px 8px rgba(0,0,0,.85))}   /* tap to hear it: in the composer's line style (small capitals, wide spacing — one style less on the first screen, 27 Nov 2026), a light running through the words, the gold bars of an equaliser before them */
+.pf-lh-cta b{font-family:'Outfit','Helvetica Neue',Arial,sans-serif;font-size:calc(var(--pf-read-scale,1) * 12px);font-weight:400;letter-spacing:.22em;text-transform:uppercase;white-space:nowrap;background:linear-gradient(100deg,rgba(255,255,255,.72) 38%,#fff 50%,rgba(255,255,255,.72) 62%);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:pfLhSh 2.6s linear infinite}
+.pf-lh-cta.on b{background-image:linear-gradient(100deg,rgba(255,255,255,.85) 38%,#fff 50%,rgba(255,255,255,.85) 62%)}   /* brighter once the painting is done */
 @keyframes pfLhSh{from{background-position:130% 0}to{background-position:-30% 0}}
-.pf-lh-eq{display:inline-flex;align-items:flex-end;gap:2.5px;height:16px;flex:none}
-.pf-lh-eq i{display:block;width:3px;height:16px;border-radius:2px;background:#f0c75e;transform-origin:bottom;animation:pfLhEq .8s ease-in-out infinite alternate}
+.pf-lh-eq{display:inline-flex;align-items:flex-end;gap:2.5px;height:13px;flex:none}
+.pf-lh-eq i{display:block;width:3px;height:13px;border-radius:2px;background:#f0c75e;transform-origin:bottom;animation:pfLhEq .8s ease-in-out infinite alternate}
 .pf-lh-eq i:nth-child(2){animation-delay:-.3s}.pf-lh-eq i:nth-child(3){animation-delay:-.55s}.pf-lh-eq i:nth-child(4){animation-delay:-.15s}
 @keyframes pfLhEq{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
 @keyframes pfLhFade{from{opacity:0}to{opacity:1}}
