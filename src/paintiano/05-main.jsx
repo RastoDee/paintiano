@@ -3235,6 +3235,7 @@ const STUDIO_FX_CSS = `
 .pf-st-bar{position:fixed;left:0;right:0;z-index:10001;display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px max(18px, env(safe-area-inset-right, 0px)) 0 max(18px, env(safe-area-inset-left, 0px));pointer-events:none}
 .pf-st-bar:has(.pf-st-meta.hide)::before{opacity:.45}
 .pf-st-bar::before{transition:opacity .6s ease;content:"";position:absolute;left:0;right:0;top:0;bottom:calc(-1 * (env(safe-area-inset-bottom, 0px) + 140px));background:linear-gradient(180deg,rgba(6,6,12,0) 0,rgba(6,6,12,.72) calc(100% - env(safe-area-inset-bottom, 0px) - 140px),rgba(6,6,12,.72) 100%);z-index:-1}   /* down to the screen's very edge: no seam under the buttons (full display) */
+.pf-st-bar:not(:has(*))::before{opacity:0}   /* nothing in the bar (the quiet first screen): no shade either — it lay over the piece's colour bars there, a dark band that dimmed them (27 Nov 2026) */
 .pf-st-quiet .pf-st-min{display:none!important}
 .pf-live-1 .pf-st-bar-live,.pf-live-1 .pf-st-min,.pf-live-1 .pf-st-tabs2.st{display:none!important}   /* Compose / Mic, one spread: only the painting and what plays it */
 .pf-live-2 .pf-transport-dock > *:not(.pf-piano-dock),.pf-live-2 .pf-st-micdock,.pf-live-2 .pf-mic-clock,.pf-live-2 .pf-st-livehint{display:none!important}   /* two: the whole screen, Compose keeps its keys */
@@ -3494,7 +3495,7 @@ const STUDIO_HOME_CSS = `
 .pf-lh-card b{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:46px;line-height:1.02;color:#fff;margin:8px 0;max-width:100%;overflow-wrap:anywhere;text-shadow:0 4px 30px rgba(0,0,0,.95)}
 .pf-lh-card i{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;color:#f0c75e;text-shadow:0 2px 16px rgba(0,0,0,.95)}
 .pf-lh-foot{position:absolute;left:0;right:0;bottom:calc(90px + env(safe-area-inset-bottom, 0px));display:flex;flex-direction:column;align-items:center;gap:10px;z-index:4;pointer-events:none}   /* the line to the sound */
-.pf-lh-bars{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:flex-end;justify-content:center;gap:3px;padding:0 12px;z-index:2;pointer-events:none;background:linear-gradient(rgba(4,4,8,0),rgba(4,4,8,.8));animation:pfLhFade .6s ease both;transition:opacity .5s}   /* the piece's colours pulsing beneath, while it paints */
+.pf-lh-bars{position:absolute;left:0;right:0;bottom:0;height:110px;display:flex;align-items:flex-end;justify-content:center;gap:3px;padding:0 12px;z-index:2;pointer-events:none;animation:pfLhFade .6s ease both;transition:opacity .5s}   /* the piece's colours pulsing beneath, while it paints — straight on the painting, no dark band under them (27 Nov 2026) */
 .pf-lh-bars.off{opacity:0}
 .pf-lh-bars s{display:block;flex:0 0 6px;border-radius:3px 3px 0 0;transform-origin:bottom;animation:pfLhBar .8s ease-in-out infinite alternate}
 @keyframes pfLhBar{from{transform:scaleY(.2)}to{transform:scaleY(1)}}
