@@ -3111,6 +3111,11 @@ const STUDIO_FX_CSS = `
 .pf-st-ttl{display:flex!important;justify-content:center;align-items:center;min-width:0;text-overflow:clip!important}
 .pf-st-ttl>i{flex:none;font-style:normal;color:#f0c040;font-weight:700;margin-left:6px}
 .pf-st-ttl>i.ar{font-size:1.45em;line-height:.7;margin-left:5px}
+.pf-st-tt.skl .pf-st-ttl{animation:pfSkL .38s cubic-bezier(.2,.8,.2,1)}.pf-st-tt.skr .pf-st-ttl{animation:pfSkR .38s cubic-bezier(.2,.8,.2,1)}
+@keyframes pfSkL{0%{transform:translateX(46px);opacity:0}100%{transform:none;opacity:1}}@keyframes pfSkR{0%{transform:translateX(-46px);opacity:0}100%{transform:none;opacity:1}}
+.pf-st-tt.skn .pf-st-ttl{animation:pfSkN 1.5s ease-in-out}   /* For You: the title shows once that it moves — ← another piece */
+@keyframes pfSkN{0%,100%{transform:none}30%,55%{transform:translateX(-26px)}}
+@media (prefers-reduced-motion: reduce){.pf-st-tt.skl .pf-st-ttl,.pf-st-tt.skr .pf-st-ttl,.pf-st-tt.skn .pf-st-ttl{animation:none}}
 .pf-st-tt .pf-st-meta-e{font-size:calc(var(--pf-read-scale,1) * 19px)}
 .pf-mq{display:block;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .pf-mq>span{display:inline-block}
@@ -5697,6 +5702,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // 🔀 on (ALL) is the only state where ▶ and a new song draw by themselves; off keeps the painting on
   // screen until Next / swipe up / Show asks for another variant.
   const artAllRef = useRef(false); artAllRef.current = _artMode===2;
+  const studioFsRef = useRef(false);   // set where studioFs is known: the Studio (and For You) never draw a painting on ▶ by themselves
   // 🔀 has two states. Off = the painter you chose, and Next / Play bring more of its variants
   // (randomMode stays on under the hood with an artist chosen — see the effect below). On = ALL:
   // every painter in your set.
@@ -5769,6 +5775,12 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(painterStage.length) setPainterStage([]);
     if(style!==null){ const keep=style; setStyleTo(null); const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix); }
   };
+  // your tap on the gold solo (27 Nov 2026): the same painting — same painter, same variant — now white; ↑ then brings other painters, a Solo still
+  const soloWhiteTapRef = useRef(false), soloWhitePrevRef = useRef(null), soloWhiteCTapRef = useRef(false);   // see _soloWhiteP: your white holds
+  const _stSoloWhite = ()=>{ const keep=style; if(!keep) return; soloWhiteTapRef.current=true;
+    if(!randomMode) _shuffleOn(); if(mosaicShuffleLock) setMosaicShuffleLock(false);
+    const ix=_shuffleIndexFor(keep); if(ix>=0) setShuffleArtistIndex(ix);
+    setShufVariant(phaseIndex|0); setStructureSeedLock(null); setStyle(null); };
   const _cycleArt = ()=>{
     if(working||anim) return;
     if(_artMode!==2){                                               // → on (ALL)
@@ -13132,7 +13144,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       // a picture is played by its composers (or Scan), not by the painters: no painter roll on its Play — with the painters' Fusion on
       // it rolled the palette too, and a picture opened on its ✦ Signature lost it the moment it started (Mood from image paints: it rolls)
       const _picPlay = viewModeRef.current==='image' && !moodFromImgRef.current;   // refs: startPlay is memoised
-      if(randomModeRef.current && artAllRef.current && !(opts && opts.keep) && !_picPlay){
+      // the Studio and For You: a white painter (a white Fusion) changes on ↑ only — ▶, a piece played again or taken to For You keep the painting (27 Nov 2026)
+      if(randomModeRef.current && artAllRef.current && !(opts && opts.keep) && !_picPlay && !studioFsRef.current){
         setStructureSeedLock(null);
         nextRollInProgressRef.current = true;
         // Manual artist → rotate style. Shuffle (no manual artist) → rotate
@@ -16528,7 +16541,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   const studioLiveSrc = composeMode || micActive || ((micArmed || micContext) && !(loadedSource || moodFromImg || viewMode==='image' || (moodContext && chords.length>0 && !_micCanvas)));
   // anything active in the Studio is shown in the Studio — also while the AI composes, a recording or a score is read (an empty canvas waits in black): never the Atelier
   const studioSrcOk = studioOn && isActiveView && !favView && !demoReelOn;
-  const studioFs = studioOn && immersive;
+  const studioFs = studioOn && immersive; studioFsRef.current = studioFs;
   studioClrRef.current = studioFs;
   // the Studio's palette editor closes with the tray, or when Custom is left
   useEffect(()=>{ if(stPalEdit && (!stripOpen || !studioFs || mode!=='custom')) setStPalEdit(false); },[stripOpen, studioFs, mode, stPalEdit]);
@@ -18090,6 +18103,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   },[stTip, _tipQuiet, favReadyAny, favHitAny]);
   const feedResumeRef = useRef(null);   // ↓ from the first surprise back home: the cards wait for ↑
   const [feedFly, setFeedFly] = useState(null);     // the card flying off: {k, u, t, l, dir}
+  const [feedSkipA, setFeedSkipA] = useState(null);   // ← → on For You's title: the title slides in with the piece it brings ('l' | 'r'), 'n' the one-time nudge
+  const feedSkipRef = useRef({kind:'', bag:[]}), feedSkipTouchRef = useRef(null);
   const [feedFlash, setFeedFlash] = useState(0);    // the look's name over the card, for a moment
   // while a finger drags to a new look (it is put on the card at once), the song's lines under the card stay as they were —
   // the new name comes when the card lands, never mid-drag (and a drag that goes back changes nothing)
@@ -18520,6 +18535,42 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     setFeedCards(arr); setFeedAt(arr.length-1); feedStepsRef.current=[]; setFeedIntro(null);
     _feedLoad(piece, sel, kind); _feedFlashNow();
   };
+  // ← ON FOR YOU'S TITLE (27 Nov 2026, as a song bar in a music app): another piece — any built-in one or yours (My Music; with pictures:
+  // any picture or yours from My Images), drawn without repeats, on its ✦ Signature, playing at once. → the piece before (its card as it was).
+  // The painting's own gestures stay: ↑ another painting, ← → variants, ↓ back. A piece that ends goes on as before (one of today's three).
+  const _feedSkip = (dir)=>{
+    if(feedFly || feedAt<0 || !feedCards[feedAt]) return false;
+    const cur=feedCards[feedAt], kind=cur.kind==='img' ? 'img' : undefined;
+    try{ localStorage.setItem('paintiano_skip_seen','1'); }catch(_){}
+    if(dir>0){ let j=feedAt-1; while(j>=0 && feedCards[j].piece===cur.piece) j--; if(j<0) return false;
+      const pv=feedCards[j];   // the cards after it go: ↑ there brings new looks of that piece, never a jump to another one (↑ is the painting's)
+      setFeedCards(feedCards.slice(0, j+1).map(c=>c.id===pv.id ? {...c, dir:'none'} : c));
+      setFeedAt(j); setFeedIntro(null); _feedGo(pv); _feedFlashNow(); return true; }
+    const mine=(kind==='img' ? feedMineRef.current.img : feedMineRef.current.mus).map(x=>'m'+x.id);
+    const all=(kind==='img' ? _FEED_IMGS.map((_,i)=>i) : _FEED_NAMES.map((_,i)=>i)).concat(mine);
+    const B=feedSkipRef.current, kk=kind || 'mus'; if(B.kind!==kk){ B.kind=kk; B.bag=[]; }
+    B.bag=B.bag.filter(q=>all.includes(q) && q!==cur.piece);
+    if(!B.bag.length){ const a=all.filter(q=>q!==cur.piece); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i]; a[i]=a[j]; a[j]=t; } B.bag=a; }
+    if(!B.bag.length) return false;
+    const piece=B.bag.shift(), sel = kind==='img' ? {img:true} : {sig:true};
+    if(feedDayRef.current==='now') feedDayRef.current=true;
+    const u0=_feedSnap(), sel0=_feedSelNow(), l0=_vidLine();
+    const c={ id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind, piece, sel:(kind==='img' ? null : sel), u:null, l:'', dir:'none' };
+    const base=feedCards.slice(0, feedAt+1).map(x=>x.id===cur.id ? {...x, u:u0||x.u, sel:sel0, l:l0, pu:null} : x).concat([c]);
+    const arr=base.length>10 ? base.slice(base.length-10) : base;
+    setFeedCards(arr); setFeedAt(arr.length-1); feedStepsRef.current=[]; setFeedIntro(null);
+    _feedLoad(piece, sel, kind); _feedFlashNow(); return true; };
+  // the title's own touch: a sideways swipe on it skips (it lies under the painting, outside the card: the painting's swipes are the card's)
+  const _fySkTS = (e)=>{ const t=e.touches && e.touches[0]; feedSkipTouchRef.current = (t && e.touches.length===1) ? {x:t.clientX, y:t.clientY, t:Date.now(), done:false} : null; };
+  const _fySkTE = (e)=>{ const st=feedSkipTouchRef.current, t=e.changedTouches && e.changedTouches[0]; if(!st || !t) return;
+    const dx=t.clientX-st.x, dy=t.clientY-st.y, dt=Date.now()-st.t;
+    if(dt<800 && Math.abs(dx)>=50 && Math.abs(dx)>Math.abs(dy)*1.3){ st.done=Date.now(); const d = dx<0 ? -1 : 1;
+      if(_feedSkip(d)){ setFeedSkipA(d<0 ? 'l' : 'r'); setTimeout(()=>setFeedSkipA(null), 420); _stBuzz(10); } else _stBuzz(4); } };
+  const _fySkClickOk = ()=>{ const st=feedSkipTouchRef.current; return !(st && st.done && Date.now()-st.done<600); };   // the swipe's own click is not a tap on the title
+  // the one-time nudge: once a piece plays a while in For You and ← on the title was never used, the title moves a little to the left and back
+  useEffect(()=>{ if(!studioHome || feedAt<0 || feedLoaded===null || !playing || feedFly) return; let seen=false; try{ seen=localStorage.getItem('paintiano_skip_seen')==='1' || sessionStorage.getItem('paintiano_skip_nudged')==='1'; }catch(_){}
+    if(seen) return; const tm=setTimeout(()=>{ try{ sessionStorage.setItem('paintiano_skip_nudged','1'); }catch(_){} setFeedSkipA('n'); setTimeout(()=>setFeedSkipA(a=>a==='n' ? null : a), 1600); }, 9000);
+    return ()=>clearTimeout(tm); },[studioHome, feedAt, feedLoaded, playing, feedFly]);
   // it played to its end here: the moment the playing stops in For You (not a pause — that holds — and not a card that came already over)
   const feedWasPlayRef = useRef(false);
   useEffect(()=>{ const was=feedWasPlayRef.current; feedWasPlayRef.current=playing; if(was && !playing && studioHome && feedAt>=0) feedPlayedRef.current=Date.now(); },[playing]);
@@ -18736,14 +18787,24 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     const tm=setTimeout(take, Math.max(0, 6000-(Date.now()-w))); return ()=>clearTimeout(tm); },[feedAt, feedCards, feedLoaded, playing]);   // the sound may sleep (iOS): then it goes into the Studio as it is
   const [stTaken, setStTaken] = useState(false); const stTakenRef = useRef(false);
   _stTakenSetRef.current = ()=>{ stTakenRef.current=true; setStTaken(true); };
-  // THE STUDIO HAS NO WHITE SOLO (26 Nov 2026, his rule): one painter (one composer) alone in the Studio is always yours — gold. Whatever
-  // would leave one white there (a kept link, ↑ out of a ✦, a draw) turns gold on the spot, the same painter in the same variant: ↑ then
-  // brings palettes, ← → its variants; another painter is a tap in Look. Painters drawn by chance are For You's (and a Fusion's guests).
+  // A WHITE SOLO ONLY BY YOUR TAP (27 Nov 2026; on 26 Nov the Studio had no white solo at all): a painter (a composer) alone in the Studio is
+  // gold — what you chose. Whatever would leave one white there by itself (a kept link, ↑ out of a ✦, a draw) turns gold on the spot, the same
+  // painter in the same variant: ↑ then brings palettes, ← → its variants. Only your own tap on the gold face in Look makes him white: ↑ then
+  // brings other painters (it stays a Solo), a tap on any face makes that one gold again. For You no longer changes anything (no ✦ Change),
+  // so white here is not For You: it is other painters for YOUR piece. soloWhiteTapRef marks that tap; it holds until you choose again.
   const _soloWhiteP = studioFs && !studioHome && feedAt<0 && viewMode!=='image' && !composeMode && !micActive && !micArmed && !jamOn && !painterStage.length && !sigActive && !cockpitEdit && !working
     && ((stTaken && !!style && !/^(mosaic|notes|mosaicFamily)$/.test(style)) || (randomMode && style===null && !mosaicShuffleLock && !!shuffleStyle && !/^(mosaic|notes|mosaicFamily)$/.test(shuffleStyle)));
-  useEffect(()=>{ if(!_soloWhiteP) return; if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } if(style===null && shuffleStyle){ setPhaseIndex(shufVariant|0); setStyle(shuffleStyle); } },[_soloWhiteP]);
+  useEffect(()=>{ if(!_soloWhiteP || soloWhiteTapRef.current) return; if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } if(style===null && shuffleStyle){ setPhaseIndex(shufVariant|0); setStyle(shuffleStyle); } },[_soloWhiteP]);
   const _soloWhiteC = studioFs && !studioHome && feedAt<0 && viewMode==='image' && !moodFromImg && !crOn && !!imgComposer && composerDice && !imgSigActive && !working && imgPlayMode!=='compose';
-  useEffect(()=>{ if(_soloWhiteC) setComposerDice(false); },[_soloWhiteC]);
+  useEffect(()=>{ if(_soloWhiteC && !soloWhiteCTapRef.current) setComposerDice(false); },[_soloWhiteC]);
+  // your white holds until you choose again: a painter picked (gold), a Fusion, a ✦ — and For You: what comes from there comes gold
+  useEffect(()=>{ const was=soloWhitePrevRef.current; soloWhitePrevRef.current=style; if(!soloWhiteTapRef.current) return;
+    if(feedAt>=0){ soloWhiteTapRef.current=false; return; }
+    if(!(studioFs && !studioHome)) return;
+    if((style!==null && was===null) || jamOn || sigActive) soloWhiteTapRef.current=false; },[studioFs, studioHome, feedAt, style, jamOn, sigActive]);
+  useEffect(()=>{ if(!soloWhiteCTapRef.current) return; if(feedAt>=0){ soloWhiteCTapRef.current=false; return; }
+    if(!(studioFs && !studioHome)) return;
+    if(!composerDice || crOn || imgSigActive) soloWhiteCTapRef.current=false; },[studioFs, studioHome, feedAt, composerDice, crOn, imgSigActive]);
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current && sigActiveRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: its ✦ took over — gone; in the look on screen a white painter stays white (26 Nov 2026)
   const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
@@ -20353,7 +20414,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 {FC && feedUpCue && !feedFly && (<div className="pf-st-tipup rm" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>{_stT(viewMode==='image' ? 'tipUpImg' : 'tipUp')}</div>)}
                 {FC ? (<div className="pf-st-row">
                   <button type="button" className={'pf-st-act pf-st-fav'+(_heartOn?' on':'')+((_fL && stFavPend && !favReadyAny)?' pend':'')+(_hA?'':' off')} disabled={!_hA} aria-hidden={!_hA || undefined} onClick={(e)=>{ e.stopPropagation(); _stBuzz(10); if(!_fL){ _hArm('fav'); return; } if(favReadyAny){ _favToggleAny(); setStFavPend(false); } else { setFeedHeart(Date.now()); setStFavPend(true); } }} aria-label={_heartOn ? _favT('del') : _favT('add')} aria-pressed={!!_heartOn}><svg width="19" height="19" viewBox="0 0 24 24" fill={_heartOn?'currentColor':'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
-                  {(_mt || _ml) ? (<div className={'pf-st-meta'+(_fL ? ' pf-st-tt' : '')+((_fL && (btlChgGlow || _zc3f)) ? ' glow' : '')+((metaHide || feedPeek>0)?' hide':'')} {...(_fL ? {role:'button', tabIndex:0, onClick:(e)=>{ e.stopPropagation(); _fyTake(); }} : {})}>{_isDay && _mt && (<div className="pf-st-meta-d">{_stT('today')}</div>)}{_mt && (<div className="pf-st-meta-t pf-st-ttl"><PfMarquee k={_mt}>{_mt}</PfMarquee>{_fL && (<i className="ar" aria-hidden="true">›</i>)}</div>)}{_ml && (<div className="pf-st-meta-l">{_ml}</div>)}</div>) : (<div style={{flex:1}}/>)}
+                  {(_mt || _ml) ? (<div className={'pf-st-meta'+(_fL ? ' pf-st-tt' : '')+((_fL && (btlChgGlow || _zc3f)) ? ' glow' : '')+((metaHide || feedPeek>0)?' hide':'')+((_fL && feedSkipA) ? ' sk'+feedSkipA : '')} {...(_fL ? {role:'button', tabIndex:0, onTouchStart:_fySkTS, onTouchEnd:_fySkTE, onClick:(e)=>{ e.stopPropagation(); if(!_fySkClickOk()) return; _fyTake(); }} : {})}>{_isDay && _mt && (<div className="pf-st-meta-d">{_stT('today')}</div>)}{_mt && (<div className="pf-st-meta-t pf-st-ttl"><PfMarquee k={_mt}>{_mt}</PfMarquee>{_fL && (<i className="ar" aria-hidden="true">›</i>)}</div>)}{_ml && (<div className="pf-st-meta-l">{_ml}</div>)}</div>) : (<div style={{flex:1}}/>)}
                   <button type="button" className={'pf-st-act'+(_hA?'':' off')} disabled={!_hA} aria-hidden={!_hA || undefined} onClick={(e)=>{ e.stopPropagation(); _stBuzz(8); if(!_fL){ _hArm('share'); return; } _feedOpen(); setTimeout(()=>setStShare(true), 380); }} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
                 </div>) : ((_mt || _ml || _sTap) && (<div className={'pf-st-meta'+(metaHide?' hide':'')}>{_isDay && _mt && (<div className="pf-st-meta-d">{_stT('today')}</div>)}{_mt && (<div className="pf-st-meta-t">{_mt}</div>)}{(_ml || _sTap) && (<div className="pf-st-meta-l">{_sTap ? (()=>{ const x=_stT('supTap'); return x.charAt(0).toUpperCase()+x.slice(1); })() : _ml}</div>)}</div>))}   {/* For You: the title takes the painting into the Studio (›), where it can be changed; Home and the first screen: no buttons */}
               </div>); })()}
@@ -21283,8 +21344,8 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                           if(had>0 && !crPinsRef.current.length && imgPlayModeRef.current==='scan'){ const go=()=>{ _composerRoll(); }; if(playingRef.current) _imgDip(go); else go(); }   // the last gold one let go: a fresh ensemble (2–4)
                           return; }
                         if(crOn && composerDice){ _crPinTap(c.k); return; } if(crOn && imgComposerRef.current){ _crTap(c.k); return; }
-                        if(studioFs && !_aiOn){   // the Studio's Solo: a tap chooses (gold, ↑ keeps it); one composer is always gold — tapped again he stays (26 Nov 2026)
-                          if((imgComposer===c.k || _inSigC) && !composerStage.length){ if(composerDice) setComposerDice(false); else _segShake(e); return; }
+                        if(studioFs && !_aiOn){   // the Studio's Solo: a tap chooses (gold, ↑ keeps it); the gold one tapped again turns white (↑ draws others), by your tap only (27 Nov 2026)
+                          if((imgComposer===c.k || _inSigC) && !composerStage.length){ if(composerDice){ soloWhiteCTapRef.current=false; setComposerDice(false); } else { soloWhiteCTapRef.current=true; setComposerDice(true); } return; }   // the gold one tapped: white — ↑ brings other composers (27 Nov 2026); tapped again: gold
                           _stepNote('comp'); setComposerDice(false); _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); return; }
                         if(!_aiOn && imgComposer===c.k && !composerStage.length){ _toScan(); return; }   // the chosen one tapped again → back to SCAN (an artist → Mosaic)
                         _lastComposerRef.current=c.k; imgComposerRef.current=c.k; setImgComposer(c.k); }}
@@ -21529,11 +21590,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 if(_tk){ stTakenRef.current=false; setStTaken(false); if(_tkMine) return; }   // the kept surprise's own painter tapped: now it is chosen (gold); another one: chosen as usual
                 if(_artMode===2){                               // shuffle ALL: the draw decides — except Ensemble ALL, where a tap pins / unpins
                   // the Studio has no 🔀: a tap picks this painter (↑ draws again, ← its variants); with the Ensemble it starts a new Fusion from it
-                  if(studioFs && !(jamOn && jamAll)){ if(painterStage.length) setPainterStage([]); selectStyle(k); return; }
+                  if(studioFs && !(jamOn && jamAll)){ if(painterStage.length) setPainterStage([]); if(k===shuffleStyle) setPhaseIndex(shufVariant|0); selectStyle(k); return; }   // the white one on screen tapped: gold, the same painting
                   if(jamOn && jamAll && !locked) _jamPinTap(k);
                   return;
                 }
-                if(studioFs && !jamOn && style===k){ _segShake(e); return; }   // the Studio's Solo: one painter is always gold — tapped again he stays (a white solo would be For You; 26 Nov 2026)
+                if(studioFs && !jamOn && style===k){ _stSoloWhite(); return; }   // the Studio's Solo: the gold one tapped turns white — ↑ brings other painters, still a Solo (27 Nov 2026); a tap on any face: gold again
                 if(studioFs && jamOn && _jamStage().length===1 && _jamStage()[0]===k){ _stAllOn(); return; }   // the Fusion: the last gold one tapped again = let go — ↑ draws a new fusion
                 // 🔀 1 needs an artist: taking the LAST one off switches 🔀 off (it
                 // must not slide into ALL just because nothing is selected any more).
