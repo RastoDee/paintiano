@@ -5552,8 +5552,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       setJamFlipN(n=>n+1);
     }catch(_){}
   };
-  const _fsSeg = (kind)=>{ if(proStatus==='free') return null; const v=_fusionStyleOf(kind); if(!v) return null;
-    return (<div className="pf-tray-fs" role="group">{['A','E','G'].map(x=>(<button key={x} type="button" className={x===v ? 'on' : ''} aria-pressed={x===v} onClick={(e)=>{ e.stopPropagation(); _setFusionStyle(kind, x); }}><FsGlyph v={x} w={18} h={13}/>{_fsWord(x, kind)}</button>))}</div>); };
+  // (the panel's Collage · Synthesis · Genesis row is gone, 27 Nov 2026: the mark under the title switches the style; Setup › Ensemble picks which styles are drawn)
   // The names of the fusion / jam in a caption, with the style mark before them (when the mark is shown). For Pro the mark and the names are ONE tap target
   // — like the ✦ Signature label next to them — and a tap switches this very fusion / jam to the other style.
   // tt: the line under the Studio's title — the title is one tap into Change, so there only the MARK is the switch (a finger-sized
@@ -21365,7 +21364,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   onClick={()=>{ if(busy||working) return; if(aiLockedMode('compose')){ setPaywallReason('ai_trial'); return; } if(imgPlayMode!=='compose'){ stopAll(); imgComposeRef.current=false; setAtmoOn(false); setMelodyOn(false); setImgPlayMode('compose'); } }}>
                   ✦ AI{aiLockedMode('compose') && (<span className="pf-seg-lk" aria-hidden="true">🔒</span>)}</button>)}
               </div>
-              {studioFs && crOn && _fsSeg('comp')}
               <div className="pf-art-grid" style={{display:'grid',gridTemplateColumns:`repeat(${_cols},1fr)`,gap:6,rowGap:8,alignItems:'center'}}>
                 <button key="scan" disabled={working} onClick={_toScan} title={t('imgScanHint')!=='imgScanHint'?t('imgScanHint'):'read the picture as a score'}
                   className={_scanSel?'pf-artist pf-artist-on':'pf-artist'}
@@ -21479,7 +21477,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
             )}
           </div>
           )}
-          {studioFs && !cockpitEdit && (loadedSource!=='image' || moodFromImg) && jamOn && _fsSeg('art')}
           {(loadedSource!=='image' || moodFromImg) && (
           <>
           {(()=>{
