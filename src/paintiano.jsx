@@ -22988,6 +22988,11 @@ const _FG_SW={
   hokusai:[[28,58,104],[64,104,150],[150,180,200],[206,110,60]],
   stella:[[255,90,40],[255,200,0],[0,190,170],[230,40,150],[60,90,230]]
 };
+// the Mosaic's colours in Genesis (27 Nov 2026): a painter's own colour only where he has one in the tone's family (within
+// 30° of hue); otherwise the tone keeps its colour, laid in his paint (his colours' mean saturation and lightness)
+function _mzSnapG(c,sw,lim){ const h=_fgHue(c); if(h<0) return sw[0]; let b=sw[0], bd=1e9; for(const s of sw){ const hs=_fgHue(s); const d=Math.min(Math.abs(h-hs),360-Math.abs(h-hs)); if(d<bd){ bd=d; b=s; } } if(bd<=(lim||30)) return b;
+  let sl=0,ll=0; for(const s of sw){ const mx=Math.max(...s)/255, mn=Math.min(...s)/255; ll+=(mx+mn)/2; sl+=(mx-mn)/(1-Math.abs(mx+mn-1)||1); } sl/=sw.length; ll/=sw.length;
+  return _bhxPigment(c,Math.max(0.3,sl-0.08),Math.min(0.95,sl+0.08),Math.max(0.3,ll-0.06),Math.min(0.75,ll+0.06),0.02,0.2,null); }
 function _fgSnap(c,sw){ const h=_fgHue(c); if(h<0) return sw[0]; let b=sw[0], bd=1e9; for(const s of sw){ const hs=_fgHue(s); const d=Math.min(Math.abs(h-hs),360-Math.abs(h-hs)); if(d<bd){ bd=d; b=s; } } return b; }
 function _fgColour(key,A,bw){
   const pig=(c,s0,s1,l0,l1)=>_bhxPigment(c,s0,s1,l0,l1,0.03,0.4,null);
@@ -22995,25 +23000,25 @@ function _fgColour(key,A,bw){
   const P={
     gold:{ground:[178,136,54], ink:[44,30,16], light:[240,214,140], c:(c,r)=> r<0.5 ? _FG_SW.gold[(r*6)|0] : _fgMix(pig(c,0.42,0.66,0.26,0.38),[196,150,60],0.22)},
     monet:{ground:_fgMix(pig(tonic,0.25,0.4,0.78,0.86),[226,222,232],0.5), ink:[70,70,96], light:[246,240,226], c:(c)=>pig(c,0.35,0.55,0.62,0.78)},
-    matisse:{ground:[242,236,222], ink:[30,30,40], light:[250,246,236], c:(c)=>_fgSnap(c,_FG_SW.matisse)},
+    matisse:{ground:[242,236,222], ink:[30,30,40], light:[250,246,236], c:(c)=>_mzSnapG(c,_FG_SW.matisse)},
     hokusai:{ground:[232,220,190], ink:[26,40,70], light:[246,240,222], c:(c,r)=> r<0.7 ? _fgSnap(c,_FG_SW.hokusai.slice(0,3)) : _FG_SW.hokusai[3]},
-    kandinsky:{ground:[238,232,214], ink:[20,20,24], light:[250,246,234], c:(c,r)=> r<0.08 ? [24,22,28] : _fgSnap(c,_FG_SW.kandinsky)},
-    miro:{ground:[236,230,214], ink:[16,16,16], light:[248,244,234], c:(c,r)=> r<0.15 ? [16,16,16] : _fgSnap(c,_FG_SW.miro)},
+    kandinsky:{ground:[238,232,214], ink:[20,20,24], light:[250,246,234], c:(c,r)=> r<0.08 ? [24,22,28] : _mzSnapG(c,_FG_SW.kandinsky)},
+    miro:{ground:[236,230,214], ink:[16,16,16], light:[248,244,234], c:(c,r)=> r<0.15 ? [16,16,16] : _mzSnapG(c,_FG_SW.miro)},
     mondrian:{ground:[244,242,236], ink:[18,18,18], light:[246,244,238], c:(c,r)=> r<0.18 ? [246,244,238] : _fgSnap(c,_FG_SW.mondrian)},
     pop:{ground:pig(tonic,0.85,1,0.5,0.56), ink:[18,16,20], light:[250,248,240], c:(c)=>{ const q=pig(c,0.85,1,0.5,0.6), h=_fgHue(q), g=_fgHue(pig(tonic,0.85,1,0.5,0.56)); return (h>=0&&g>=0&&Math.min(Math.abs(h-g),360-Math.abs(h-g))<50) ? [250,214,20] : q; }},
     rothko:{ground:_fgMix(pig(tonic,0.4,0.6,0.14,0.2),[70,16,30],0.35), ink:[14,9,12], light:[214,110,70], c:(c)=>_fgMix(pig(c,0.42,0.7,0.2,0.36),[112,28,50],0.25)},
-    klint:{ground:[238,228,214], ink:[90,80,100], light:[250,244,236], c:(c)=>_fgSnap(c,_FG_SW.klint)},
+    klint:{ground:[238,228,214], ink:[90,80,100], light:[250,244,236], c:(c)=>_mzSnapG(c,_FG_SW.klint)},
     picasso:{ground:[232,222,200], ink:[44,34,30], light:[244,238,224], c:(c,r)=> r<0.25 ? pig(c,0.4,0.6,0.34,0.46) : _fgSnap(c,_FG_SW.picasso)},
     delaunay:{ground:[226,224,220], ink:[30,30,40], light:[246,240,226], c:(c)=>pig(c,0.75,0.95,0.45,0.58)},
     riley:{ground:[244,242,236], ink:[20,20,24], light:[250,250,246], c:(c,r)=> r<0.5 ? pig(tonic,0.6,0.85,0.4,0.55) : pig(c,0.6,0.85,0.45,0.6)},
     kusama:{ground:[10,8,16], ink:[248,246,240], light:[255,250,240], c:(c)=>pig(c,0.85,1,0.55,0.66)},
     pollock:{ground:[226,210,172], ink:[24,20,20], light:[244,238,222], c:(c,r)=> r<0.3 ? [24,20,20] : r<0.4 ? [244,238,222] : pig(c,0.45,0.78,0.42,0.6)},
-    francis:{ground:[246,244,238], ink:[30,40,80], light:[250,250,246], c:(c,r)=> r<0.12 ? (r<0.06?[210,50,40]:[240,190,40]) : _frWetN(_fgMix(c,[20,50,190],0.6))},
+    francis:{ground:[246,244,238], ink:[30,40,80], light:[250,250,246], c:(c,r)=> _frWetN(r<0.06?_fgMix(c,[0,0,0],0.3):c)},   // the tone in his wet pigment (was 60 % blue and red / yellow accents the Mosaic hardly has)
     thomas:{ground:[246,242,232], ink:[40,40,50], light:[250,248,242], c:(c)=>pig(c,0.7,0.95,0.42,0.56)},
     mitchell:{ground:[238,234,224], ink:[30,30,34], light:[248,246,240], c:(c,r)=>_jmOil(c,0.3+0.45*r,false)},
     lichtenstein:{ground:[248,246,240], ink:[16,16,16], light:[250,250,248], c:(c)=>_fgSnap(c,_FG_SW.lichtenstein)},
-    klee:{ground:[232,216,184], ink:[60,46,40], light:[246,236,214], c:(c)=>_fgSnap(c,_FG_SW.klee)},
-    stella:{ground:[232,226,212], ink:[20,20,24], light:[250,248,240], c:(c)=>_fgSnap(c,_FG_SW.stella)},
+    klee:{ground:[232,216,184], ink:[60,46,40], light:[246,236,214], c:(c)=>_bhxPigment(c,0.4,0.65,0.42,0.62,0.04,0.35,null)},   // the tone in his watercolour, not his seven earth colours (green came out olive)
+    stella:{ground:[232,226,212], ink:[20,20,24], light:[250,248,240], c:(c)=>_mzSnapG(c,_FG_SW.stella)},
     vasarely:{ground:pig(tonic,0.6,0.85,0.32,0.4), ink:[20,20,24], light:[250,248,240], c:(c,r)=> r<0.5 ? pig(c,0.7,0.95,0.55,0.65) : pig([255-tonic[0],255-tonic[1],255-tonic[2]],0.7,0.95,0.5,0.6)},
     bauhaus:{ground:[236,230,214], ink:[20,20,24], light:[248,244,234], c:(c,r)=> r<0.12 ? [24,22,28] : _fgSnap(c,_FG_SW.bauhaus)},
     raffel:{ground:_fgMix([14,8,22],pig(tonic,0.5,0.7,0.1,0.14),0.3), ink:[214,180,96], light:[244,226,170], c:(c,r)=> r<0.1 ? [214,180,96] : pig(c,0.7,0.95,0.5,0.62)}   // his night, the piece's colours lit in it, gold for the accents
