@@ -54,7 +54,7 @@ const GUARDS = [
   { file: '05-main.jsx', label: 'the first screen keeps its picture as a ghost',
     must: ['pf-sh-poster'], symptom: 'the first screen goes black when the piece starts' },
   { file: '05-main.jsx', label: 'the read-scale reaches the Studio text',
-    must: [/\.pf-st-tip\{[^}]*var\(--pf-read-scale/], symptom: 'A/A/A does not change the Studio tips' },
+    must: [/\.pf-st-meta-l\{[^}]*var\(--pf-read-scale/, /\.pf-st-say\{[^}]*var\(--pf-read-scale/], symptom: 'A/A/A does not change the Studio tips (they speak in the line under the title, and over the small ✦ in the Studio without words)' },
   { file: '02-draw.jsx', label: 'a mixed stretch never goes grey (Rothko: the passage\'s Mosaic family, Bauhaus)',
     must: ['function _mixIdx(', 'isBW ? _mixIdx(chords,I,gc,isBW,mode) : _mzSoft(_mzSpan(chords,gc,I))', 'return S.mix(I)', "mode==='harmony'"], symptom: 'Rothko and the Bauhaus Homage come out grey in Spectral / Kontra / Phi, or Rothko olive in a colourful piece' },
   { file: '02-draw.jsx', label: 'paintings take the Mosaic\'s colours (families, one colour = the largest family)',
