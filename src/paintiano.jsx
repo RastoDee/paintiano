@@ -31305,7 +31305,7 @@ const TasteInfoSheet = memo(function TasteInfoSheet({onClose, onPro, T, name, co
   useModalFocusTrap(panelRef);
   return (<>
     <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:100000,background:'rgba(4,4,10,.6)'}}/>
-    <div ref={panelRef} role="dialog" aria-modal="true" data-pf-sheet="" aria-label={T('tasteT')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:100001,maxWidth:560,margin:'0 auto',background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',color:'#f2eee8',fontFamily:'inherit',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
+    <div ref={panelRef} role="dialog" aria-modal="true" data-pf-sheet="" aria-label={T('tasteT')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:100001,maxWidth:560,margin:'0 auto',background:'rgb(14,11,22)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',color:'#f2eee8',fontFamily:'inherit',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
       <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 12px'}}/>
       <div style={{display:'flex',alignItems:'center',gap:14}}>
         <span aria-hidden="true" style={{flex:'0 0 auto',width:52,height:52,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',boxShadow:'0 6px 18px rgba(201,168,76,.35)',fontSize:24,lineHeight:1}}>🔓</span>
@@ -31331,7 +31331,7 @@ const DailyInfoPopover = memo(function DailyInfoPopover({onClose, onPro, ts, art
   // the Studio: a sheet from the bottom like its others — the gold ✦, today's pair, one gold button to Pro; it closes pulled down or by a tap beside
   if(studio) return (<>
     <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:100000,background:'rgba(4,4,10,.6)'}}/>
-    <div ref={panelRef} role="dialog" aria-modal="true" data-pf-sheet="" aria-label={ts('dailyTitle','Artist of the day')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:100001,maxWidth:560,margin:'0 auto',background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',color:'#f2eee8',fontFamily:'inherit',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
+    <div ref={panelRef} role="dialog" aria-modal="true" data-pf-sheet="" aria-label={ts('dailyTitle','Artist of the day')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:100001,maxWidth:560,margin:'0 auto',background:'rgb(14,11,22)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',color:'#f2eee8',fontFamily:'inherit',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
       <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 12px'}}/>
       <div style={{display:'flex',alignItems:'center',gap:14}}>
         <span aria-hidden="true" style={{flex:'0 0 auto',width:52,height:52,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:'#1a1205',background:'linear-gradient(135deg,#f0d78a,#c9a84c)',boxShadow:'0 6px 18px rgba(201,168,76,.35)',fontSize:24,lineHeight:1}}>✦</span>
@@ -33208,13 +33208,26 @@ const STUDIO_FX_CSS = `
 .pf-pnl-a.on>i{box-shadow:0 0 0 2px #121018,0 0 0 3.5px #f0d78a}
 .pf-pnl-a:disabled{opacity:.45;cursor:default}
 .pf-pnl-a .pf-seg-lk{position:absolute;top:-3px;right:4px;font-size:11px}
-.pf-pnl-tabs{gap:6px!important;grid-template-columns:minmax(0,.92fr) minmax(0,.92fr) minmax(0,1.16fr)!important}   /* the third card's name is the longest (Compositeur) */
-.pf-pnl-tabs .pf-chg-tab{flex-direction:row;align-items:center;gap:6px;padding:8px 6px;border-radius:14px}
-.pf-pnl-tabs .pf-chg-tab small,.pf-pnl-tabs .pf-chg-who,.pf-pnl-tabs .pf-chg-cont{display:none}
-.pf-pnl-tabs .pf-chg-sw{width:22px;height:22px;border-radius:7px;flex:none}
-.pf-pnl-tabs .pf-chg-sw svg{width:13px;height:13px}
-.pf-pnl-tabs .pf-chg-tab b{font-size:calc(var(--pf-read-scale,1) * 13px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}   /* Compositeur, Komponist: the whole word fits */
-.pf-pnl-tabs .pf-chg-stk{top:-7px;right:-5px;width:20px;height:26px;border-radius:5px;border-width:1.5px}
+/* the panel's three tabs are words with a line under the open one — the hand of "For You · Studio" at the top of the screen (28 Nov 2026; before: three boxed tiles with an icon each, which read like the cards under them) */
+.pf-pnl-tabs{display:flex!important;justify-content:center;gap:26px!important;padding:0 4px}
+.pf-pnl-tabs .pf-chg-tab,.pf-pnl-tabs .pf-chg-tab.on,.pf-pnl-tabs .pf-chg-tab.who{flex:none;flex-direction:row;align-items:center;gap:6px;padding:8px 2px 9px;border:0;border-radius:0;background:none}
+.pf-pnl-tabs .pf-chg-tab small,.pf-pnl-tabs .pf-chg-who,.pf-pnl-tabs .pf-chg-cont,.pf-pnl-tabs .pf-chg-sw{display:none}
+.pf-pnl-tabs .pf-chg-tab b{font-size:calc(var(--pf-read-scale,1) * 15px);font-weight:700;letter-spacing:.01em;line-height:1.2;color:rgba(255,255,255,.62);white-space:nowrap}
+.pf-pnl-tabs .pf-chg-tab.on b{color:#fff}
+.pf-pnl-tabs .pf-chg-tab.on::after{content:'';position:absolute;left:50%;bottom:1px;width:22px;height:2.5px;margin-left:-11px;border-radius:2px;background:#fff}
+.pf-pnl-tabs .pf-chg-stk{top:-8px;right:8px;margin-right:-32px;width:18px;height:23px;border-radius:5px;border-width:1.5px}   /* an unfinished painting waits there: its small picture stands after the word, in the gap (by a margin: its bobbing owns translate) */
+/* the sources under Music and Image are tiles, two by two (28 Nov 2026; before: four cards one under another, each with a grey line of words — the sheet took half the screen and the painting shrank to half its size) */
+.pf-chg.pnl .pf-chg-rows.src{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+.pf-chg.pnl .pf-chg-rows.src>.pf-chg-row{position:relative;min-width:0;min-height:calc(min(var(--pf-read-scale,1),1.25) * 46px);padding:6px 10px;gap:9px;border-radius:14px;border:1px solid rgba(242,238,232,.1);background:rgba(255,255,255,.04)}
+.pf-chg.pnl .pf-chg-rows.src>.pf-chg-row.on{border-color:rgba(217,183,101,.55)}
+.pf-chg.pnl .pf-chg-rows.src>.pf-chg-row:last-child:nth-child(odd){grid-column:1/-1}   /* a fifth one (save to My Music) takes the whole width */
+.pf-chg.pnl .pf-chg-rows.src .pf-chg-ic{position:static;width:26px;height:26px;border-radius:9px}
+.pf-chg.pnl .pf-chg-rows.src .pf-chg-ic svg{width:15px;height:15px}
+.pf-chg.pnl .pf-chg-rows.src .pf-chg-tx small{display:none}   /* what each takes is said one tap further, where it is chosen */
+.pf-chg.pnl .pf-chg-rows.src .pf-chg-tx b{font-size:calc(var(--pf-read-scale,1) * 13.5px);font-weight:600;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pf-chg.pnl .pf-chg-rows.src .pf-chg-stk{top:-6px;right:-3px;width:20px;height:26px;border-radius:5px;border-width:1.5px}
+/* a long press on a tab or a tile is not a drag: the phone lifted a tilted copy of it and left it on the screen */
+.pf-chg-tab,.pf-chg-row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .pf-chg.pnl{max-height:66dvh;gap:10px;padding-top:9px;box-shadow:0 -12px 40px rgba(0,0,0,.5)}
 .pf-chg.pnl .pf-chg-h{display:none}
 .pf-pnl-head{order:-1;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
@@ -33321,7 +33334,7 @@ const STUDIO_FX_CSS = `
 .pf-st-chg:active{transform:scale(.95)}
 .pf-st-chg.glow{animation:pfStChgGlow 2s ease-in-out infinite}
 @keyframes pfStChgGlow{0%,100%{box-shadow:0 0 0 0 rgba(240,215,138,.55),0 8px 24px -6px rgba(217,183,101,.6)}50%{box-shadow:0 0 0 12px rgba(240,215,138,0),0 8px 24px -6px rgba(217,183,101,.6)}}
-.pf-chg{position:fixed;left:0;right:0;bottom:0;z-index:10007;max-height:86dvh;overflow-y:auto;box-sizing:border-box;background:rgba(14,11,22,.98);border-radius:22px 22px 0 0;border-top:1px solid rgba(242,238,232,.12);padding:10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));box-shadow:0 -18px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px;color:#f2eee8;animation:pfChgUp .26s cubic-bezier(.2,.8,.2,1)}
+.pf-chg{position:fixed;left:0;right:0;bottom:0;z-index:10007;max-height:86dvh;overflow-y:auto;box-sizing:border-box;background:rgb(14,11,22);border-radius:22px 22px 0 0;border-top:1px solid rgba(242,238,232,.12);padding:10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));box-shadow:0 -18px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px;color:#f2eee8;animation:pfChgUp .26s cubic-bezier(.2,.8,.2,1)}
 @keyframes pfChgUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
 .pf-chg-grab{width:40px;height:4px;border-radius:2px;background:rgba(242,238,232,.25);margin:0 auto;flex-shrink:0}
 .pf-chg-h{font-family:'Cormorant Garamond',Georgia,serif;font-size:calc(var(--pf-read-scale,1) * 23px);line-height:1.15;text-align:center}
@@ -33388,7 +33401,7 @@ const STUDIO_FX_CSS = `
 // from the bottom, rows with a coloured circle; the mood sheet comes from the top so the keyboard never covers it.
 const STUDIO_SHEET_CSS = `
 .pf-app-root .pf-st-sheet{align-items:flex-end!important;justify-content:center!important;padding:0!important;background:rgba(4,4,10,.6)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;overflow:hidden!important}
-.pf-app-root .pf-st-sheet>div{width:100%!important;max-width:560px!important;min-width:0!important;box-sizing:border-box!important;margin:0!important;background:rgba(14,11,22,.98)!important;border:0!important;border-top:1px solid rgba(242,238,232,.12)!important;border-radius:22px 22px 0 0!important;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))!important;box-shadow:0 -18px 50px rgba(0,0,0,.6)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;max-height:88dvh!important;overflow-y:auto!important;overscroll-behavior:contain;animation:pfStSheetUp .28s cubic-bezier(.2,.8,.2,1) both}
+.pf-app-root .pf-st-sheet>div{width:100%!important;max-width:560px!important;min-width:0!important;box-sizing:border-box!important;margin:0!important;background:rgb(14,11,22)!important;border:0!important;border-top:1px solid rgba(242,238,232,.12)!important;border-radius:22px 22px 0 0!important;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))!important;box-shadow:0 -18px 50px rgba(0,0,0,.6)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;max-height:88dvh!important;overflow-y:auto!important;overscroll-behavior:contain;animation:pfStSheetUp .28s cubic-bezier(.2,.8,.2,1) both}
 .pf-app-root .pf-st-sheet>div::before{content:"";display:block;flex-shrink:0;width:40px;height:4px;border-radius:2px;background:rgba(242,238,232,.25);margin:0 auto 12px}
 .pf-app-root .pf-st-sheet:not(.pf-st-mm)>div>div:first-of-type{font-size:calc(var(--pf-read-scale,1) * .54rem)!important;font-weight:500!important;letter-spacing:.26em!important;text-transform:uppercase!important;color:rgba(201,168,76,.85)!important;margin-bottom:12px!important;text-align:center!important}
 .pf-app-root .pf-st-sheet.pf-st-top{align-items:flex-start!important}
@@ -49584,7 +49597,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         // the Studio: a sheet like Save and Share — the name, the five places (the gold one is where it goes), gold Save; pulled down / a tap beside cancels
         if(studioOn) return (<>
           <div onClick={_close} style={{position:'fixed',inset:0,zIndex:20000,background:'rgba(4,4,10,.6)'}}/>
-          <div role="dialog" aria-modal="true" data-pf-sheet="" aria-label={_stT('mnSaveM')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:20001,maxWidth:560,margin:'0 auto',background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
+          <div role="dialog" aria-modal="true" data-pf-sheet="" aria-label={_stT('mnSaveM')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:20001,maxWidth:560,margin:'0 auto',background:'rgb(14,11,22)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
             <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 10px'}}/>
             <div style={{textAlign:'center',fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.9)',marginBottom:14}}>{_stT('mnSaveM')}</div>
             {myMusicSaveTargetSlot === null && myMusicCapHit ? (
@@ -50255,7 +50268,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           </>)}
           {stFavShare && (<>
             <div onClick={()=>setStFavShare(false)} onTouchEnd={(e)=>{ e.preventDefault(); e.stopPropagation(); setStFavShare(false); }} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.55)'}}/>
-            <div role="dialog" data-pf-sheet="" aria-label={_stT('share')} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10}}>
+            <div role="dialog" data-pf-sheet="" aria-label={_stT('share')} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgb(14,11,22)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10}}>
               <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 4px'}}/>
               <div style={{textAlign:'center',fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',marginBottom:2}}>{_stT('share')}</div>
               {rows.map(r=>(
@@ -51924,7 +51937,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         const _sv = (d, z)=>(<svg width={z||18} height={z||18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>);
         return (<>
           <div onClick={_prevBack} style={{position:'fixed',inset:0,zIndex:10011,background:'rgba(4,4,10,.62)'}}/>
-          <div role="dialog" aria-modal="true" data-pf-sheet="prev" aria-label={_ttl} style={{position:'fixed',left:0,right:0,bottom:0,top:'max(48px, calc(env(safe-area-inset-top, 0px) + 12px))',zIndex:10012,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
+          <div role="dialog" aria-modal="true" data-pf-sheet="prev" aria-label={_ttl} style={{position:'fixed',left:0,right:0,bottom:0,top:'max(48px, calc(env(safe-area-inset-top, 0px) + 12px))',zIndex:10012,background:'rgb(14,11,22)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',boxShadow:'0 -10px 40px rgba(0,0,0,.5)'}}>
             <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 6px',flexShrink:0}}/>
             <div style={{position:'relative',width:'100%',height:36,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
               <button type="button" onClick={_prevBack} aria-label={_back || 'close'} style={{position:'absolute',left:0,top:1,height:34,padding:_back?'0 13px 0 8px':0,width:_back?undefined:34,borderRadius:17,border:0,background:'rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontFamily:'inherit',fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',gap:3,cursor:'pointer'}}>{_back ? (<>{_sv(<path d="M15 18l-6-6 6-6"/>, 18)}{_back}</>) : '✕'}</button>
@@ -52577,7 +52590,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 <div aria-hidden="true" className="pf-chg-grab"/>
                 <div className="pf-chg-h">{_stT('chT')}</div>
                 {_pnl && (<div className="pf-pnl-bar">{_ibs(true)}</div>)}
-                <div className="pf-chg-rows">
+                <div className="pf-chg-rows src">
                   {_r1.map(r=>(
                     <button key={r.k} type="button" className="pf-chg-row" disabled={!r.ok} onClick={()=>{ if(r.ok){ _stepNote('src'); r.go(); } }}>
                       <span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}{_dr[r.k] && r.k!==_cur && _stk(r.k, r.g)}</span>
@@ -52629,7 +52642,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                   {_pAct.map(r=>(<button key={r.k} type="button" className="pf-chg-row" disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}><span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}</span><span className="pf-chg-tx"><b>{pfIcons(r.t)}{r.lk && (<span className="pf-seg-lk" aria-hidden="true">🔒</span>)}</b>{r.s && (<small>{pfIcons(r.s)}</small>)}</span></button>))}
                   {_pTg.length>0 && (<div className="pf-chg-cc">{_pTg.map(r=>(<button key={r.k} type="button" className={'pf-chg-c'+(r.on?' on':'')} aria-pressed={!!r.on} disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}><span className="pf-chg-ci" style={{'--g':'linear-gradient(135deg,'+r.g+')'}}>{r.ic}</span><span className="pf-chg-tx"><b>{pfIcons(r.t)}{r.lk && (<span className="pf-seg-lk" aria-hidden="true">🔒</span>)}</b>{r.s && (<small>{pfIcons(r.s)}</small>)}</span></button>))}</div>)}
                 </div>) : (
-                <div className="pf-chg-rows" key={stChg}>
+                <div className="pf-chg-rows src" key={stChg}>
                   {(rows[stChg]||[]).map(r=>(
                     <button key={r.k} type="button" className={'pf-chg-row'+(r.on?' on':'')} disabled={!r.ok} onClick={()=>{ if(r.ok) r.go(); }}>
                       <span className="pf-chg-ic" style={{background:'linear-gradient(135deg,'+r.g+')'}}>{r.ic}{_dr[r.k] && r.k!==_cur && _stk(r.k, r.g)}</span>
@@ -52764,7 +52777,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
           ];
           return (<>
             <div onClick={()=>setStShare(false)} onTouchEnd={(e)=>{ e.preventDefault(); setStShare(false); }} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.55)',touchAction:'none'}}/>
-            <div role="dialog" data-pf-sheet="" aria-label={_stT('share')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10,maxHeight:'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)',overflowY:'auto',overscrollBehavior:'contain'}}>
+            <div role="dialog" data-pf-sheet="" aria-label={_stT('share')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgb(14,11,22)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',boxShadow:'0 -18px 50px rgba(0,0,0,.6)',display:'flex',flexDirection:'column',gap:10,maxHeight:'calc(100dvh - env(safe-area-inset-top, 0px) - 24px)',overflowY:'auto',overscrollBehavior:'contain'}}>
               <div aria-hidden="true" style={{width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)',margin:'0 auto 4px',flexShrink:0}}/>
               <div style={{textAlign:'center',fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)',marginBottom:2}}>{_stT('share')}</div>
               {rows.map(r=>(<Fragment key={r.k}>
@@ -52869,7 +52882,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         {/* the finished video: watch it, share it, keep it */}
         {stVid && stVid.phase==='done' && (<>
           <div onClick={_vidClose} style={{position:'fixed',inset:0,zIndex:10006,background:'rgba(4,4,10,.72)'}}/>
-          <div role="dialog" data-pf-sheet="" aria-label={_stT('vDone')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',gap:12,alignItems:'center'}}>
+          <div role="dialog" data-pf-sheet="" aria-label={_stT('vDone')} style={{position:'fixed',left:0,right:0,bottom:0,zIndex:10007,background:'rgb(14,11,22)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))',display:'flex',flexDirection:'column',gap:12,alignItems:'center'}}>
             <div style={{fontSize:(.54*effScale)+'rem',letterSpacing:'.26em',textTransform:'uppercase',color:'rgba(201,168,76,.85)'}}>{_stT('vDone')}</div>
             <video src={stVid.url} playsInline autoPlay loop controls style={{display:'block',height:'min(54dvh, 480px)',aspectRatio:'9 / 16',maxWidth:'100%',borderRadius:14,background:'#000'}}/>
             <div style={{display:'flex',gap:10,width:'100%'}}>
@@ -54808,7 +54821,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       {/* In the Studio: a sheet like the others (pulled down or a tap beside it closes it), the four docs as a row on top */}
       {legalDoc && studioOn && (<>
         <div onClick={()=>setLegalDoc(null)} style={{position:'fixed',inset:0,zIndex:100001,background:'rgba(4,4,10,.62)'}}/>
-        <div role="dialog" aria-modal="true" data-pf-sheet="" aria-label={t('legal'+legalDoc[0].toUpperCase()+legalDoc.slice(1))} style={{position:'fixed',left:0,right:0,bottom:0,top:'max(48px, calc(env(safe-area-inset-top, 0px) + 12px))',zIndex:100002,maxWidth:560,margin:'0 auto',background:'rgba(14,11,22,.98)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',display:'flex',flexDirection:'column',color:'#f2eee8',fontFamily:'inherit',boxShadow:'0 -10px 40px rgba(0,0,0,.5)',animation:'pfStSheetUp .32s cubic-bezier(.2,.8,.2,1) both'}}>
+        <div role="dialog" aria-modal="true" data-pf-sheet="" aria-label={t('legal'+legalDoc[0].toUpperCase()+legalDoc.slice(1))} style={{position:'fixed',left:0,right:0,bottom:0,top:'max(48px, calc(env(safe-area-inset-top, 0px) + 12px))',zIndex:100002,maxWidth:560,margin:'0 auto',background:'rgb(14,11,22)',borderRadius:'22px 22px 0 0',borderTop:'1px solid rgba(242,238,232,.12)',padding:'10px max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px))',boxSizing:'border-box',display:'flex',flexDirection:'column',color:'#f2eee8',fontFamily:'inherit',boxShadow:'0 -10px 40px rgba(0,0,0,.5)',animation:'pfStSheetUp .32s cubic-bezier(.2,.8,.2,1) both'}}>
           <div style={{position:'relative',height:30,flexShrink:0}}>
             <div aria-hidden="true" style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',width:40,height:4,borderRadius:2,background:'rgba(242,238,232,.25)'}}/>
             <button type="button" onClick={()=>setLegalDoc(null)} aria-label="close" style={{position:'absolute',right:0,top:-2,width:30,height:30,borderRadius:15,border:0,padding:0,background:'rgba(255,255,255,.07)',color:'rgba(242,238,232,.85)',fontSize:13,lineHeight:1,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>✕</button>
