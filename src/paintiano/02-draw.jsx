@@ -6350,7 +6350,6 @@ function stellaPhaseInterlock(ctx,CW,CH,chords,lim,gc,sessionSeed,mode){
   const rings=[]; parts.forEach((p,k)=>{ if(k) along+=step; const across=side/2+(p.h.reg-0.5)*side*0.1+(k%2?1:-1)*side*0.05;
     const cx=land?along:across, cy=land?across:along, Rk=p.R, rk=Rk*0.56; const tot=p.g.reduce((s,q)=>s+q.n,0)||1; let rr=rk; const bands=p.g.map(q=>{ const w=(Rk-rk)*q.n/tot; const br=_seedRnd(4400+q.a,ss,0,0); br(); const b={a:rr,b:rr+w,q,col:S.col(Math.min(0.999,(q.a+q.b)/2/cn)),a0:br()*6.2832,dir:(q.dir||0)>=0?1:-1}; if(_mtHearSpan(A,q.a,q.b).dir<0) b.dir=-1; const o=[0,1,2,3]; for(let i=3;i>0;i--){ const j=Math.floor(br()*(i+1)); const t=o[i]; o[i]=o[j]; o[j]=t; } b.ord=o; rr+=w; return b; });
     rings.push({cx,cy,R:Rk,r0:rk,bands}); });
-  try{ globalThis.__ST_RINGS={CW,CH,rings:rings.map(r=>[r.cx,r.cy,r.R,r.r0])}; }catch(_){}   // where the links are (the first screen sets its opening painting by them)
   const gap=Math.max(1.2,D*0.0045);
   const smooth=(x)=>x<=0?0:x>=1?1:x*x*(3-2*x);
   const drawRing=(ring,home)=>{ for(const b of ring.bands){ if(b.q.t0*0.85>reveal) break; const np=4, dt=Math.max(0.004,b.q.t1-b.q.t0), ccw=b.dir<0, sw=6.2832/np;
