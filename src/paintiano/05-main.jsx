@@ -22442,7 +22442,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
               ].concat(_mmOk ? [{k:'mm', ic:_IC_MM(20), g:G.mine, t:_stT('mnSaveM'), s:_stT('miSub').replace(/^[^·]*·\s*/,''), ok:true, go:()=>{ setStChg(null); _openMyMusicSave(); }}] : []),
               image:[
                 {k:'image', ic:IC.image, g:G.image, p:'photo', s2:_stT('chImgS2'), t:_stT('chImg'), s:_stT('chImgS'), ok:!_lk, go:_src('image', ()=>_stNewSrc('image'))},
-                {k:'mfi', ic:IC.mfi, g:G.mfi, p:'mood', s2:_stT('chMfiS2'), t:_sent(t('imgMood')||'mood from image'), s:_stT('chMfiS'), ok:!_lk && aiUsable && !imgAiBusy, go:_src('mfi', ()=>_stNewSrc('imgmood'))}   /* no lock here: its sample plays for everyone — the lock is one step in, on your own picture */,
+                {k:'mfi', ic:IC.mfi, g:G.mfi, p:'mfi', s2:_stT('chMfiS2'), t:_sent(t('imgMood')||'mood from image'), s:_stT('chMfiS'), ok:!_lk && aiUsable && !imgAiBusy, go:_src('mfi', ()=>_stNewSrc('imgmood'))}   /* no lock here: its sample plays for everyone — the lock is one step in, on your own picture */,
               ].concat(_miOk ? [{k:'mi', ic:_IC_MI(20), g:G.mine, t:_stT('mnSaveI'), s:_stT('miSub').replace(/^[^·]*·\s*/,''), ok:true, go:()=>{ setStChg(null); _myImgSave(); }}] : []),
               paint:[
                 {k:'look', ic:IC.look, g:G.paint, t:_img ? _stT('chLookSi') : _stT('look'), s:_img ? '' : _stT('chLookS'), ok:_stHasArt || _live, go:()=>{ setStChg(null); setStripOpen(true); }},
