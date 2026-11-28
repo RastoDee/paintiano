@@ -33131,6 +33131,16 @@ const STUDIO_FX_CSS = `
 .pf-st-cap>.s{font-weight:600}
 .pf-st-cap.ai{color:#e4b2ff}
 .pf-st-cap-dot{display:inline-block;width:7px;height:7px;border-radius:50%;vertical-align:middle}
+/* a painting taken from For You, its first 1.6 s in the Studio: this line says so ("Yours — in the Studio") and the Studio tab lights up;
+   then the painters' line is back. Before (to 28 Nov 2026): a pill at a fixed place, which is the tab row's — it lay on the tabs */
+.pf-st-cap.take>.n{font-weight:700;color:#ffe9a6;letter-spacing:.03em;animation:pfTakeLine 1.6s ease both}
+.pf-st-cap.back{animation:pfLhFade .35s ease both}
+@keyframes pfTakeLine{0%{opacity:0;transform:translateY(3px)}14%,84%{opacity:1;transform:none}100%{opacity:0;transform:none}}
+.pf-st-tabs2.st button.on.take{animation:pfTakeTab 1.6s ease both}
+.pf-st-tabs2.st button.on.take::after{animation:pfTakeBar 1.6s ease both}
+@keyframes pfTakeTab{0%,100%{color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.75)}16%,76%{color:#f6dc8c;text-shadow:0 0 16px rgba(240,192,64,.75),0 1px 10px rgba(0,0,0,.75)}}
+@keyframes pfTakeBar{0%,100%{background:#fff;width:22px;margin-left:-11px;box-shadow:0 1px 6px rgba(0,0,0,.5)}16%,76%{background:#f0c040;width:calc(100% - 8px);margin-left:calc(-50% + 4px);box-shadow:0 0 10px rgba(240,192,64,.8)}}
+@media (prefers-reduced-motion: reduce){.pf-st-cap.take>.n,.pf-st-cap.back{animation:none}.pf-st-tabs2.st button.on.take{animation:none;color:#f6dc8c}.pf-st-tabs2.st button.on.take::after{animation:none;background:#f0c040}}
 .pf-st-tt:active{background:rgba(240,215,138,.10)}
 .pf-st-tt.glow{animation:pfStTtGlow 2s ease-in-out infinite;background:rgba(240,215,138,.08)}
 @keyframes pfStTtGlow{0%,100%{box-shadow:0 0 0 1.5px rgba(240,215,138,.85),0 0 0 0 rgba(240,215,138,.45)}50%{box-shadow:0 0 0 1.5px rgba(240,215,138,.85),0 0 0 10px rgba(240,215,138,0)}}
@@ -47168,7 +47178,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // composer) keeps "inspired by …" — a tribute, not a copy, as the Guide says of the canvas — and it is the last thing to give way.
   // The title is one tap (the panel), so nothing in this line but the mark is a button. The crossed arrows of the old 🔀 before a white
   // painter (composer) are not here (28 Nov 2026, "a relic"): the Studio has no 🔀 — white and gold are seen on the faces in Look.
-  const _capLineSt = ()=>{
+  const _capLineSt = (xc)=>{
     const img = loadedSource==='image' && !moodFromImg, up=(x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
     const pal=_stepAt(2) ? up(t(mode)) : ''; let palN=pal, pre='', mark=null, names='', short='', sig='', ai=false;
     const by=(x)=>String(t('inspiredBy')||'{artist}').replace('{artist}', x);
@@ -47192,7 +47202,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       } else names=up(t('dir_'+imgDir));
       if(imgSig && imgSigActive && imgPlayMode==='scan' && _stepAt(3)) sig='✦ '+_sigT('label');
     }
-    return (<PfCapLine k={[pal, pre, names, sig, mark ? _fusionStyleOf(img ? 'comp' : 'art') : '', (img && mode==='bw' && bwAccent) ? bwAccent.hue : ''].join('|')} cls={ai ? ' ai' : ''} pal={palN} pre={pre} mark={mark} names={names} short={short} sig={sig}/>);
+    return (<PfCapLine k={[pal, pre, names, sig, mark ? _fusionStyleOf(img ? 'comp' : 'art') : '', (img && mode==='bw' && bwAccent) ? bwAccent.hue : ''].join('|')} cls={(ai ? ' ai' : '')+(xc||'')} pal={palN} pre={pre} mark={mark} names={names} short={short} sig={sig}/>);
   };
   // a built-in picture: its kept Atmosphere / Melody (SAMPLE_IMG_BAKE) — no AI call, no trial, no lock
   const _sampleImgT = ()=>{ const n=String(imgNameRef.current||''); const it=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).find(x=>x && (x.t+'.jpg')===n); return it ? it.t : null; };
@@ -48828,7 +48838,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     setFeedIntro(null); _stBuzz(12); _feedOpen();
     if(_ownSame) return;
     stLookHistRef.current = {key:_stHistKey(), st:[], fw:[]};   // what was before it in the Studio is not its past: ↓ and ↑ start anew here
-    if(!_own){ setStTake(Date.now()); setTimeout(()=>setStTake(0), 1600); }
+    if(!_own){ clearTimeout(stTakeTmRef.current); setStTake(Date.now()); stTakeTmRef.current=setTimeout(()=>{ setStTake(-1); stTakeTmRef.current=setTimeout(()=>setStTake(0), 420); }, 1600); }   // the words, then the painters' line again (see .pf-st-cap.take)
     // WHAT YOU CHOOSE IS GOLD: taking a painting from For You is choosing it — it comes exactly as on screen, and GOLD: one painter gold
     // (↑ brings palettes, ← → its variants); a fusion locked 📌 with all its painters gold (↑ = palettes and their variants, no guests — a tap
     // on 📌 lets it go); a fusion you left the Studio with wide open comes back open. Mosaic alone has nobody to hold: it stays as it was.
@@ -48923,7 +48933,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     if(!composerDice || crOn || imgSigActive) soloWhiteCTapRef.current=false; },[studioFs, studioHome, feedAt, composerDice, crOn, imgSigActive]);
   _stTakenClrRef.current = ()=>{ if(stTakenRef.current){ stTakenRef.current=false; setStTaken(false); } };   // the music on the canvas is a kept surprise whose painter you have not chosen yet
   useEffect(()=>{ if(stTakenRef.current && sigActiveRef.current){ stTakenRef.current=false; setStTaken(false); } firstKeptRef.current=false; },[info && info.title, loadedSource]);   // another song: its ✦ took over — gone; in the look on screen a white painter stays white (26 Nov 2026)
-  const [stTake, setStTake] = useState(0);   // ↓ kept a surprise: a short 'Yours · in the Studio' line
+  const [stTake, setStTake] = useState(0); const stTakeTmRef = useRef(null);   // ↓ kept a surprise: 'Yours — in the Studio' in the line under the title for 1.6 s (a time: on; -1: just over; 0: off)
   const _feedOpen = ()=>{ feedResumeRef.current=null; feedTokRef.current++; feedPieceRef.current=false; feedLookRef.current=null; setFeedCards([]); setFeedAt(-1); setFeedLoaded(null); setFeedHiRes(false); feedStartRef.current=null; feedStepsRef.current=[]; setForceSetup(false); };
   // the piece is in → it starts (the sound was woken in the gesture)
   useEffect(()=>{
@@ -51859,7 +51869,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       </div>
       )}
 
-      {studioFs && stTake>0 && (<div role="status" style={{position:'fixed',left:'50%',top:'calc(env(safe-area-inset-top, 0px) + 22px)',transform:'translateX(-50%)',zIndex:10012,padding:'8px 16px',borderRadius:20,background:'rgba(14,11,22,.82)',backdropFilter:'blur(10px)',WebkitBackdropFilter:'blur(10px)',border:'1px solid rgba(240,215,138,.45)',color:'#f0d78a',fontSize:13,fontWeight:700,letterSpacing:'.02em',whiteSpace:'nowrap',pointerEvents:'none',animation:'pfStPausedIn .18s ease-out'}}>✦ {({EN:'Yours — in the Studio',SK:'Tvoja — v Štúdiu',DE:'Deins — im Studio',FR:'À toi — dans le Studio',ES:'Tuya — en el Estudio',PT:'Tua — no Estúdio',zh:'归你了 — 在工作室',zhTW:'歸你了 — 在工作室',ja:'あなたの絵 — スタジオへ'})[lang]||'Yours — in the Studio'}</div>)}
       {camTap && (<div style={{position:'fixed',inset:0,zIndex:10020,background:'rgba(4,4,10,.6)',display:'flex',alignItems:'center',justifyContent:'center'}}><button type="button" onClick={()=>{ try{ camTap(); }catch(_){} }} style={{height:56,padding:'0 26px',borderRadius:28,border:0,cursor:'pointer',fontFamily:'inherit',fontWeight:700,fontSize:16,color:'#1a1408',background:'linear-gradient(135deg,#f0d78a,#c9a84c)'}}>{_stT('camTap')}</button></div>)}
       {/* Studio: the Audio / Notes file card — the dock's save rows sit under the Studio's own dock and can't be seen there,
           so the rendered file comes up here with one Save tap (a fresh tap: iOS opens the share sheet → Save to Files) */}
@@ -52447,7 +52456,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
         return (<>
           {/* the Studio, one screen: ⌄ home (top left), the song and its painter, ♥ · ✦ Change · share — always there, never a rail */}
           {stFill && (<><span className="pf-st-corner l" aria-hidden="true"/><span className="pf-st-corner r" aria-hidden="true"/></>)}   {/* full screen: the top corners rounded, as at home */}
-          {!_vr && (!stripOpen || stLand) && !stChg && !stShare && !demoReelOn && !recording && !micActive && !composeMode && !stSeek && (<div className="pf-st-tabs2 st"><button type="button" onClick={_go(()=>{ _stForYou(); })}>{_stT('sup')}</button><button type="button" className="on" aria-current="page" tabIndex={-1}>{_stT('studio')}</button>{_btlOn() && (<button type="button" className={'pf-btl-tab'+(btlDrag ? (btlDrag.over ? ' drop over' : ' drop') : '')+(btlDot ? ' has' : '')+(btlShow && !btlDrag ? ' show' : '')} onClick={_go(()=>{ _btlTabOpen(); })}>Battle</button>)}</div>)}   {/* the two places, here too: For You leaves to the surprises (your painting waits on the home card) */}
+          {!_vr && (!stripOpen || stLand) && !stChg && !stShare && !demoReelOn && !recording && !micActive && !composeMode && !stSeek && (<div className="pf-st-tabs2 st"><button type="button" onClick={_go(()=>{ _stForYou(); })}>{_stT('sup')}</button><button type="button" className={'on'+(stTake>0 ? ' take' : '')} aria-current="page" tabIndex={-1}>{_stT('studio')}</button>{_btlOn() && (<button type="button" className={'pf-btl-tab'+(btlDrag ? (btlDrag.over ? ' drop over' : ' drop') : '')+(btlDot ? ' has' : '')+(btlShow && !btlDrag ? ' show' : '')} onClick={_go(()=>{ _btlTabOpen(); })}>Battle</button>)}</div>)}   {/* the two places, here too: For You leaves to the surprises (your painting waits on the home card) */}
           {!_vr && ((!stripOpen && !stChg) || stLand) && (<button type="button" className="pf-st-min" onClick={_go(()=>{ _stHome(); })} disabled={recording} aria-label={_stT('home')} title={_stT('home')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>)}
           {!_vr && moodFromImg && (imgMoodThumb || originalImgUrl) && (<button type="button" className="pf-st-thumb" onClick={(e)=>{ e.stopPropagation(); if(stThumbHoldRef.current){ stThumbHoldRef.current=false; return; } _stPeekTap(); }} onPointerDown={(e)=>{ stThumbHoldRef.current=false; _holdStart(e.clientX, e.clientY, true); }} onPointerUp={_thumbUp} onPointerCancel={_thumbUp} onPointerLeave={_thumbUp} onTouchStart={(e)=>e.stopPropagation()} onTouchEnd={(e)=>e.stopPropagation()} onContextMenu={(e)=>e.preventDefault()} aria-label={_stT('fromImg')} style={{background:'#0e0b16 url('+(imgMoodThumb||originalImgUrl)+') center/cover no-repeat'}}/>)}
           {!_vr && (!_live || (!composeMode && !micActive && !(micSong && micSong.phase==='reading'))) && chords.length>0 && !playing && !anim && !working && !demoReelOn && !stChg && !stShare && !stripOpen && !stSeek && !stPlayArm && (<span className={'pf-st-paused'+(stEndQuiet?' gone':'')} aria-hidden="true" style={_live ? {top:'calc(env(safe-area-inset-top, 0px) + '+_lvTop+'px + (100dvh - env(safe-area-inset-top, 0px) - '+_micGap+'px - '+stDockH+'px) / 2)'} : _stPausedAt()}><svg width="30" height="30" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z" fill="#fff"/></svg></span>)}
@@ -52462,7 +52471,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
                 {stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}
                 {_stEmpty ? (<div className="pf-st-meta-e pf-st-ttl"><PfMarquee k="e">{_stT('chEmpty')}</PfMarquee><i aria-hidden="true">✦</i></div>) : _mfiBusy ? (<div className="pf-st-meta-t"><span style={{color:'#dcb4ff'}}>✦</span> {_stT('mfiRead')}</div>) : (<>
                   <div className="pf-st-meta-t pf-st-ttl"><PfMarquee k={_stTt}>{_stTt}</PfMarquee><i aria-hidden="true">✦</i></div>
-                  {(fdMeta && fdMeta.cap) ? fdMeta.cap : _capLineSt()}
+                  {stTake>0 ? (<div className="pf-st-meta-l pf-st-cap take" role="status"><span className="n">{({EN:'Yours — in the Studio',SK:'Tvoja — v Štúdiu',DE:'Deins — im Studio',FR:'À toi — dans le Studio',ES:'Tuya — en el Estudio',PT:'Tua — no Estúdio',zh:'归你了 — 在工作室',zhTW:'歸你了 — 在工作室',ja:'あなたの絵 — スタジオへ'})[lang]||'Yours — in the Studio'}</span></div>) : (fdMeta && fdMeta.cap) ? fdMeta.cap : _capLineSt(stTake<0 ? ' back' : '')}   {/* just taken from For You: the words stand here for 1.6 s (no ✦ before them: ✦ is the Signature's) */}
                 </>)}
               </div>) : (<span className="pf-st-tipw pf-st-starw">{stTip==='chg' && (<span className="pf-st-tip" role="status">{_stT('tipChg')}</span>)}<button type="button" className={'pf-st-star'+(_ttGlow?' glow':'')+(metaHide?' q':'')} onClick={_go(_stOpenP)} aria-label={_stT('chT')}>✦</button></span>)}   {/* the Studio without words (quiet), or Compose / Mic before a note: a small ✦ */}
               <button type="button" className="pf-st-act" onClick={_go(()=>{ setStShare(true); })} disabled={!_stHasArt || _mfiBusy} aria-label={_stT('share')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg></button>
