@@ -110,6 +110,7 @@
     #pf-boot.in .w{opacity:1;transform:none}
     #pf-boot.go{pointer-events:none}
     #pf-boot.clr::before{opacity:0}
+    #pf-boot.landed .w{visibility:hidden}   /* landed: the head's own word shows in the same frame as this one goes (the two drawn over each other read bold) */
     #pf-boot.go .w{transition:opacity .42s ease .12s,transform .62s cubic-bezier(.45,0,.15,1)}
     #pf-boot.go .g{opacity:0}
     html.pf-boot-fly .pf-st-word{opacity:0}   /* the head's own word waits unseen until the rising one has landed on it */
@@ -152,12 +153,14 @@
       var t0=Date.now(); (function w(){ if(clr) return; var on=false; try{ on=!!document.querySelector('.pf-lh'); }catch(e){} if(on || Date.now()-t0>=FLY) clear(); else raf(w); })(); setTimeout(clear, FLY+60);
       ws[0].addEventListener('transitionend', function(e){ if(e.propertyName==='transform') land(); }); setTimeout(land, FLY+500); }
     function clear(){ if(clr) return; clr=Date.now(); el.classList.add('clr'); }
-    // landed: the head's own word shows under it (the same word in the same place), then this one goes — unseen. If the head has moved
+    // landed: the head's own word (the same word in the same place) shows and this one goes, in ONE frame — never both (two words drawn over
+    // each other read bold for those frames), never none. The overlay itself stays until its dark has cleared. If the head has moved
     // meanwhile (a tap went through to the app), this one fades off instead
-    function land(){ if(done) return; done=true; root.classList.remove('pf-boot-fly');
+    function land(){ if(done) return; done=true;
       var same=false; try{ var t=document.querySelector('.pf-st-word'), r=t && box(t), a=box(ws[0]); same=!!r && Math.abs((r.left+r.width/2)-(a.left+a.width/2))<1.5 && Math.abs((r.top+r.height/2)-(a.top+a.height/2))<1.5; }catch(e){}
-      clear(); var w=Math.max(60, 480-(Date.now()-clr));   // it goes once the dark has cleared: until then it lies on the head's word, the same
-      if(same) setTimeout(gone, w); else{ el.classList.add('out'); setTimeout(gone, 300); } }
+      clear();
+      if(same){ el.classList.add('landed'); root.classList.remove('pf-boot-fly'); setTimeout(gone, Math.max(60, 480-(Date.now()-clr))); }
+      else{ root.classList.remove('pf-boot-fly'); el.classList.add('out'); setTimeout(gone, 300); } }
     setTimeout(function(){ ready=true; fade(); }, 25000);
     el.addEventListener('click', function(){ B.finish(); });
     // the dark colour scheme (the meta in the head) was for the time before the first paint only: once the page has painted it goes,
@@ -166,7 +169,15 @@
     if(window.requestAnimationFrame) requestAnimationFrame(function(){ requestAnimationFrame(csOff); }); setTimeout(csOff, 1200);
     // the wordmark shows once its type is there — it is in the page, so at once (or after .9 s, in whatever type there is): it never changes type on the screen
     var show=function(){ if(shown) return; shown=Date.now(); el.classList.add('in'); plan(); };
-    try{ var tm=setTimeout(show, 900); document.fonts.load('600 56px "PfBoot"').then(function(){ clearTimeout(tm); show(); }, function(){ clearTimeout(tm); show(); }); }catch(e){ show(); }
+    // An iPhone opens a home-screen app in a frame that is the status bar short and makes it whole a frame or two after the first paint.
+    // The word stands in the frame's middle: it came 31 pt too high and jumped down. So there it waits for the whole height (the
+    // screen's) and for a moment at least (150 ms); if the height never gets there, until it has stood still for .3 s (the .9 s cap holds)
+    var whole=function(f){ var st=false; try{ st=navigator.standalone===true; }catch(e){}
+      if(!st || !window.requestAnimationFrame){ f(); return; }
+      var t0=Date.now(), h=window.innerHeight, th=t0, full=0; try{ full=window.innerWidth>window.innerHeight ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height); }catch(e){}
+      (function w(){ if(shown) return; var n=Date.now(), hh=window.innerHeight; if(hh!==h){ h=hh; th=n; }
+        if(n-t0>=150 && ((full && hh>=full-2) || n-th>=300)){ f(); return; } requestAnimationFrame(w); })(); };
+    try{ var tm=setTimeout(show, 900); document.fonts.load('600 56px "PfBoot"').then(function(){ whole(function(){ clearTimeout(tm); show(); }); }, function(){ clearTimeout(tm); show(); }); }catch(e){ show(); }
   })();
   </script>
   <div id="root"></div>
