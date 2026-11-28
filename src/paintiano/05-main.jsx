@@ -3027,14 +3027,14 @@ const STUDIO_FX_CSS = `
 @keyframes pfTakeBar{0%,100%{background:#fff;width:22px;margin-left:-11px;box-shadow:0 1px 6px rgba(0,0,0,.5)}16%,76%{background:#f0c040;width:calc(100% - 8px);margin-left:calc(-50% + 4px);box-shadow:0 0 10px rgba(240,192,64,.8)}}
 @media (prefers-reduced-motion: reduce){.pf-st-cap.take>.n,.pf-st-cap.back{animation:none}.pf-st-tabs2.st button.on.take{animation:none;color:#f6dc8c}.pf-st-tabs2.st button.on.take::after{animation:none;background:#f0c040}}
 /* For You's two hints are spoken here too, in the same gold (28 Nov 2026; before: a cream bubble under the Studio tab, and a labelled card under the lifted painting): "swipe up" while the painting lifts, "tap Studio" while the tab is gold. Then the painters' line comes back */
-.pf-st-meta-l.pf-fy-hint{position:relative;overflow:hidden;text-overflow:clip;color:#ffe9a6;font-weight:700;letter-spacing:.03em;animation:pfFyHint .45s ease both}
+.pf-st-meta-l.pf-fy-hint{position:relative;overflow:hidden;text-overflow:clip;color:#ffe9a6;font-weight:700;letter-spacing:.03em;animation:pfFyLineIn .45s ease both}
 .pf-fy-hint>.z{visibility:hidden}   /* its first words once more, unseen, in the flow: the line is exactly as high as the painters' line in any script (the title does not move) */
 .pf-fy-hint>.w{position:absolute;left:0;right:0;top:0;display:flex;flex-wrap:wrap;justify-content:center}   /* the words are two parts: what to do, and what comes of it. Where both do not fit (a narrow phone, a long language) the second part wraps out of sight — never "…" in the middle of an instruction */
 .pf-fy-hint>.w>span{flex:none;white-space:pre}
 .pf-fy-hint>.w>.a{display:inline-flex;align-items:center;gap:6px}
 .pf-fy-hint>.w>.a>svg{flex:none}
 .pf-st-meta-l.pf-fy-back{animation:pfLhFade .35s ease both}
-@keyframes pfFyHint{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+@keyframes pfFyLineIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){.pf-st-meta-l.pf-fy-hint,.pf-st-meta-l.pf-fy-back{animation:none}}
 .pf-st-tt:active{background:rgba(240,215,138,.10)}
 .pf-st-tt.glow{animation:pfStTtGlow 2s ease-in-out infinite;background:rgba(240,215,138,.08)}
@@ -3544,12 +3544,12 @@ const STUDIO_HOME_CSS = `
    one long italic sentence in the middle, on a dark blot laid over the painting. */
 .pf-sh-intro{--pf-cap:42px;position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 16px calc(112px + env(safe-area-inset-bottom, 0px));text-align:center;pointer-events:none;animation:pfShIntro 6.2s ease 1.5s both}
 .pf-sh-intro::before{content:"";position:absolute;left:0;right:0;bottom:0;height:58%;background:linear-gradient(to top,rgba(6,5,12,.92) 0%,rgba(6,5,12,.84) 26%,rgba(6,5,12,.5) 60%,rgba(6,5,12,0) 100%)}
-.pf-sh-intro>*{position:relative;animation:pfCapIn .5s cubic-bezier(.2,.7,.2,1) 1.9s both}
+.pf-sh-intro>*{position:relative;animation:pfShCapIn .5s cubic-bezier(.2,.7,.2,1) 1.9s both}
 .pf-sh-intro>small{font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 11px);font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,255,255,.72);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pf-sh-intro>small:first-child{animation-delay:1.5s}
 .pf-sh-intro>small.g{color:#e2c477}
 .pf-sh-intro>b{display:block;margin-top:12px;font-family:'Cormorant Garamond','Songti SC','Noto Serif SC','Hiragino Mincho ProN','Yu Mincho',Georgia,serif;font-weight:600;font-size:min(var(--pf-cap),10.8cqw);line-height:1.04;color:#fff8ea;white-space:nowrap;text-shadow:0 2px 18px rgba(0,0,0,.6);animation-delay:1.62s}
-.pf-sh-intro>b em{display:block;font-style:normal;padding-bottom:.12em;background:linear-gradient(95deg,#ffd96e,#f6e7b8 50%,#f0c040);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:pfCapIn .5s cubic-bezier(.2,.7,.2,1) 1.78s both}
+.pf-sh-intro>b em{display:block;font-style:normal;padding-bottom:.12em;background:linear-gradient(95deg,#ffd96e,#f6e7b8 50%,#f0c040);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;animation:pfShCapIn .5s cubic-bezier(.2,.7,.2,1) 1.78s both}
 .pf-sh-intro>b+small{margin-top:14px}
 .pf-sh-key{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px;width:min(100%,340px);margin-top:22px}
 .pf-sh-key span{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
@@ -3557,7 +3557,7 @@ const STUDIO_HOME_CSS = `
 .pf-sh-key span.on i{opacity:1;transform:scale(1.25)}
 .pf-sh-key b{font-family:'Outfit',sans-serif;font-size:calc(var(--pf-read-scale,1) * 10px);font-weight:500;color:rgba(246,231,184,.55);white-space:nowrap}
 .pf-sh-key span.on b{font-weight:700;color:#f6e7b8}
-@keyframes pfCapIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes pfShCapIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media (max-height:560px){.pf-sh-intro{--pf-cap:28px;padding-bottom:calc(84px + env(safe-area-inset-bottom, 0px))}.pf-sh-intro>b{margin-top:8px}.pf-sh-key{margin-top:12px;width:min(100%,280px)}.pf-sh-intro>b+small{margin-top:8px}}
 @media (prefers-reduced-motion: reduce){.pf-sh-intro>*,.pf-sh-intro>b em{animation:none}}
 @keyframes pfShIntro{0%{opacity:0}8%{opacity:1}88%{opacity:1}100%{opacity:0}}
