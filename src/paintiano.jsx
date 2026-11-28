@@ -32868,11 +32868,15 @@ function PfMarquee({ children, k }){
 function PfCapLine({ k, cls, pal, pre, ico, mark, names, short, sig }){
   const box=useRef(null), nm=useRef(null), wR=useRef(0); const [lv,setLv]=useState(0); const [tk,setTk]=useState(0);
   useLayoutEffect(()=>{ setLv(0); },[k]);
-  useLayoutEffect(()=>{ const n=nm.current; if(n && lv<4 && n.scrollWidth>n.clientWidth+0.5) setLv(lv+1); },[k, lv, tk]);
+  // (measured to the fraction of a pixel: scrollWidth is a whole number, so names 0.4 px too wide showed their … with everything else still there)
+  useLayoutEffect(()=>{ const n=nm.current; if(!n || lv>=4) return; let over=n.scrollWidth>n.clientWidth;
+    if(!over){ try{ const r=document.createRange(); r.selectNodeContents(n); over = r.getBoundingClientRect().width > n.getBoundingClientRect().width+0.05; }catch(_){} }
+    if(over) setLv(lv+1); },[k, lv, tk]);
   useEffect(()=>{ const b=box.current; if(!b) return; let ro=null, off=false; wR.current=b.clientWidth; const again=()=>{ if(off) return; setLv(0); setTk(x=>x+1); };
     try{ if(window.ResizeObserver){ ro=new ResizeObserver(()=>{ const w=b.clientWidth; if(Math.abs(w-wR.current)>1){ wR.current=w; again(); } }); ro.observe(b); } }catch(_){}
     try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(again); }catch(_){}   // measured before the type came: once more with it
-    return ()=>{ off=true; try{ if(ro) ro.disconnect(); }catch(_){} }; },[]);
+    try{ if(document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', again); }catch(_){}   // … and with a weight that comes later
+    return ()=>{ off=true; try{ if(ro) ro.disconnect(); }catch(_){} try{ if(document.fonts && document.fonts.removeEventListener) document.fonts.removeEventListener('loadingdone', again); }catch(_){} }; },[]);
   return (<div ref={box} className={'pf-st-meta-l pf-st-cap'+(cls||'')}>
     {pre && lv<3 && (<span className="b">{pre}{' · '}</span>)}
     {pal && lv<1 && (<span className="p">{pal}{' · '}</span>)}
