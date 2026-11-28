@@ -12668,15 +12668,9 @@ function kusamaPhaseSpheres(ctx,CW,CH,chords,lim,gc,sessionSeed){
 function kusamaPhaseAccum(ctx,CW,CH,chords,lim,gc,sessionSeed){
   const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim));
   const reveal = Math.max(0, Math.min(1, N/cn));
-  // Dominant (most-saturated) chord = ground colour.
-  let domR=80,domG=80,domB=110,domSat=-1;
-  // Scan the WHOLE piece so the ground colour is fixed from the first frame.
-  const upto = cn;
-  for(let i=0;i<upto;i++){
-    const {rgb} = _kusChord(chords, i, gc);
-    const sat = Math.max(rgb[0], rgb[1], rgb[2]) - Math.min(rgb[0], rgb[1], rgb[2]);
-    if(sat > domSat){ domSat = sat; domR = rgb[0]; domG = rgb[1]; domB = rgb[2]; }
-  }
+  // The ground: the Mosaic's largest colour family (28 Nov 2026), the same from the first frame. It was the piece's single most
+  // saturated chord — a colour the Mosaic may hardly have (yellow under a violet-blue Liebestraum).
+  const [domR,domG,domB] = _mzLead(chords,gc);
   ctx.fillStyle = `rgb(${domR|0},${domG|0},${domB|0})`;
   ctx.fillRect(0, 0, CW, CH);
   // Black/cream dot field — scales with reveal.
@@ -12718,11 +12712,12 @@ function kusamaPhaseAccum(ctx,CW,CH,chords,lim,gc,sessionSeed){
 // ── Kusama F2: Dot chains — variant 6 since Nov 2026 (the Tendril nets below are retired, their code kept). ──
 function kusamaPhaseChains(ctx,CW,CH,chords,lim,gc,sessionSeed){
   /* Dot chains (Nov 2026, in place of the Tendril nets): one saturated ground and her dots in chains that never touch, swelling and
-     shrinking across the canvas. The piece sets everything: the ground its strongest colour; the chains run the way the
+     shrinking across the canvas. The piece sets everything: the ground the Mosaic's largest colour family (28 Nov 2026; it was the
+     piece's most saturated chord — orange under a violet-blue Liebestraum); the chains run the way the
      piece asks (down, across, on the slant, or in rings round a centre); a dot's size follows the loudness of the music
      at its moment; the accents are the dots in the chord's own colour with a dark heart. It grows chain by chain. */
   const ss=sessionSeed|0,cn=chords.length,N=Math.max(1,Math.min(cn,lim)), reveal=Math.max(0,Math.min(1,N/cn)), D=Math.min(CW,CH);
-  const A=_kd2Analyze(chords,gc), isAcc=_mtAccOf(A), dens=_pieceDens(chords); const PK=_pieceCols(chords,gc,false,4);
+  const A=_kd2Analyze(chords,gc), isAcc=_mtAccOf(A), dens=_pieceDens(chords); const PK=[_mzLead(chords,gc)];
   const pr=_seedRnd(61900,_mrPieceKey(chords),0,0); pr(); const lay=Math.floor(pr()*4)%4, inv=pr()<0.3, ang=lay===2?(pr()<0.5?-1:1)*(0.5+0.4*pr()):lay===1?Math.PI/2:0, fx=0.6+1.6*pr(), fy=0.6+1.8*pr(), ph=pr()*6.28, warp=0.5+1.2*pr(), wobA=0.25+0.5*pr(), wobL=0.25+0.5*pr(), ccx=CW*(0.25+0.5*pr()), ccy=CH*(0.25+0.5*pr());
   const sat=(c)=>{ const m=(c[0]+c[1]+c[2])/3; return c.map(v=>Math.max(0,Math.min(255,m+(v-m)*1.1)*0.94+8)); }; const lum=(c)=>(c[0]*0.299+c[1]*0.587+c[2]*0.114)/255;
   const G0=sat(PK[0]||[230,190,40]); const ground=inv?[10,10,12]:G0, ink=inv?G0:(lum(G0)>0.42?[10,10,12]:[246,234,216]); const css=(c)=>'rgb('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+')';
