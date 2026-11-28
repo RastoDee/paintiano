@@ -33451,7 +33451,7 @@ const STUDIO_HOME_CSS = `
 .pf-studio-home .pf-topbar button[aria-label="menu"]{background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.1)!important;width:40px!important;height:40px!important;border-radius:50%!important}
 .pf-studio-home .pf-topbar button[aria-label="menu"] svg{stroke:#f2eee8}
 .pf-studio-home .pf-topbar button[aria-label="menu"]:not(.pf-st-word){visibility:hidden}
-.pf-st-word{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:0;border-radius:20px;background:none;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:24px;line-height:1;color:#f0c040;text-shadow:0 2px 18px rgba(0,0,0,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pf-st-word{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:0;border-radius:20px;background:none;font-family:'PfBoot','Cormorant Garamond',Georgia,serif;font-weight:600;font-size:24px;line-height:1;color:#f0c040;text-shadow:0 2px 18px rgba(0,0,0,.6);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .pf-st-word:active{transform:translate(-50%,-50%) scale(.95)}
 .pf-st-word.txt{cursor:default}.pf-st-word.txt:active{transform:translate(-50%,-50%)}   /* the first screen: the word alone, it does not press in */
 .pf-st-word{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
