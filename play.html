@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
   <meta name="google" content="notranslate" />
+  <meta name="color-scheme" content="dark" id="pf-cs" />   <!-- dark before the first paint too (no white under the launch); taken away once the page has painted — see the boot intro: the app's controls are styled for the light scheme -->
   <meta name="theme-color" content="#06060c" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -28,6 +29,52 @@
   <meta name="twitter:image" content="https://paintiano.app/og-cover.png" />
   <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
   <link rel="apple-touch-icon" href="/paintiano-icon.png" />
+  <!-- the launch from an iPhone's or iPad's home screen: the boot intro's own dark, in every screen's exact size (iOS takes no other).
+       Without these iOS opens with its picture of the app's LAST screen — a painting and its words light up and go dark before the app is there -->
+  <link rel="apple-touch-startup-image" href="/splash/640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/1136x640.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/1334x750.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2208x1242.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2436x1125.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/1792x828.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2688x1242.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2532x1170.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2778x1284.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2556x1179.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2796x1290.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2622x1206.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2868x1320.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1260x2736.png" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2736x1260.png" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1536x2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2048x1536.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1620x2160.png" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2160x1620.png" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1640x2360.png" media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2360x1640.png" media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1668x2224.png" media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2224x1668.png" media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1668x2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2388x1668.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1668x2420.png" media="(device-width: 834px) and (device-height: 1210px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2420x1668.png" media="(device-width: 834px) and (device-height: 1210px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2732x2048.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/2064x2752.png" media="(device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2752x2064.png" media="(device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+  <link rel="apple-touch-startup-image" href="/splash/1488x2266.png" media="(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/splash/2266x1488.png" media="(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
   <link rel="manifest" href="/manifest.webmanifest" />
   <title>Paintiano</title>
   <style>
@@ -47,14 +94,17 @@
        connection would otherwise sit on a black screen). When the app is here, the wordmark flies to its place in the app's
        head and this lets go: the opening itself is the app's first screen. Before: 4.6 s of paint thrown on the dark, played
        out even when the app had long been there, with "tap to skip" under it. -->
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&display=swap">
+  <!-- nothing here waits for the network (a stylesheet from the type's server held the first paint back: the launch showed white under it for
+       a few frames). The wordmark's type — its letters only — is in the page; the head's word in the app is set in the same -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="image" type="image/webp" href="/studio/first.webp">   <!-- the first painter's painting (Klimt's Fifth): at hand when the app's first screen asks for it -->
   <style>
+    @font-face{font-family:'PfBoot';font-weight:600;font-style:normal;font-display:block;src:url(data:font/woff2;base64,d09GMgABAAAAAAWMAA8AAAAAC6gAAAUzAAQAQgAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbgTgcgX4GYD9TVEFURABUEQgKiUyHbQE2AiQDJAsUAAQgBYQ8ByAbsglRlFHODgA/D2xj2oNFjBIjFiErVju0KC8WyhIokBtO+LTok2/xPP1+tHPf+ysq0xGLrlml0/C0ielErWRIiSbeiez3n9/PnTdvngwuQ0XaF7HWoXRa3E/vZW82W2UWcgl/9aTPpHX2IKrG////Y6+++ImRnAn26SNnUrRFL+raoo+vdT6bZeunpe4MuMDnOz4QmroVIgc6xslVzWJsJ/gb7M0F/YAiolsEvbY4UDh4cfeG9vXMN9G+7UsG2g+40EZbAc4PeF/ybVSAyDSKdnQr9nwTDvpR0MEMa399k044s6LdnvEq8+Pv4KJLwwgnWn2Xv4CLQNBWeMhrdt9nzujc93NOpg68vJGlE8B+ZOv03Rk5uniMSq8uvtzGn+L09JlhFmZlNrBD5wNHMDGR6RxdoVv0QP8MBBpaaAetnUanQduax9ihleMYwuvUYR1FU+ZZVRlloy+EEzvJJawYgHEO1z9qfhX8Q5Gwzt98AppjTA0QyLPiAZblZVdzjPfQOnioqCHD/NDIinFEY7iOdK1vp4qSAZpGQdXJ5aXPK9gb7tc/qHEWR+MId8uLEPvD2g/tqnZOO7OdCsUjT1v19XrAKBggn0D+AoAGEEWRtlwOTr8E53K2kBdc9wzjV1JzdmA3RTI3X+h4gB7rr5qHCHruysCJhG5Vb9wwLrme+yCZlbKZ8llyN56xArsv3UL0zYsks3w2YHptHUL0XCgpmU4s07hyVgYzgFoMQK1ZA59M1zJriYF1z5avAWoei4uOroparmAuh5TcXTlHu8l3H3bf0AXlzM2biL51Kz4OUCmXOyJ01fI6UDeulDM7N3q/h4N2XdLPcgOssu+KfMbOlu2MWGkD6sBd2SefJUW3XLL/+ru/5ukko5qpilq+nWQOInrTuchKRG8lmdXzJbNXU9OHzt0qkSsSZfss6QwLJRU0QlnTl6/G77FKfqlM9/CcP8EhDDnIz/xFORpv/LOhd0m7/u9IeffKp2ZFnoclvsEQmakirLlJQfkKO6a3GjwJAULDg72MI03ZUeHG7JN+8tnztOBXOYSpw7nT9FDoHb4jSCoBlEkpAsTuJ7AydJezw0RwCIlQozZmfVedUymabVGuU0RMJRFH1TpnRnX7GaDm800uEUfEH//wIcMDkc+sl0FSMaB0JiazyJXd7MPP14dExaZEH5nzQPC2P6E6OrgpKsyemxSUJ7cmVscG1IcnxNY2hxzzC8zLS7c1X7MO/lCyslPM7W9gN1Z8emF+KuurkrAF7CerdxA8duFkumQbK5/0aQ4al0ov/jrdZVR03jWGilgsQXKSLtB/Iq4j2EPwc9PUo6FDlK4+veZqBW4yxyX2qZXrt3McAwFhPFn/p1SRypkatV2fKBZECQQCJE1epPHwaN297aBdovgv8ZHsogJA0Nhv4+Pa5Wrcj+5afwPwpfeREvglFnn25ouODfUP6FRAOOYCzxnc/8WTHo4H9+SfS8UK/ZAm20ML1pWfYEwxunh9uQCM3fIb+JQnN9f12QBCmh68BhgrY5dfZTHos7I6bjC/4Sk7zCZE0WlH8oaly3CopOzTn5e4n/nqOQf05r1UDlfGp1GoQmTFkmXryBuVhGrOZ/VyHDtlnviYXCcRBh+LhNQbBsgUhVZrEd7CBR2WRae4Qrmg1uYuOLrrBRZXW3rag9wlDglb84Miav1KYtGcYBO+kCgiJruxZsFSbLVdDx7bdc7tpsm1Hc+jD6/3LtY8Up91xckx9OnfjV/oWohj0gheOCwcWx5o5wthAA==) format('woff2')}   /* Cormorant Garamond SemiBold, the letters of the wordmark */
     #pf-boot{position:fixed;inset:0;z-index:2147483000;cursor:pointer;overflow:hidden;transition:opacity .24s ease}
     #pf-boot::before{content:"";position:absolute;inset:0;background:#07060c;transition:opacity .45s ease;will-change:opacity}   /* the dark under the wordmark: it clears (.clr) while the word rises, once the first screen is there under it */
     #pf-boot.out{opacity:0;pointer-events:none}
-    #pf-boot .w{position:absolute;left:0;right:0;top:50%;margin-top:-.55em;text-align:center;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:min(56px,15vw);line-height:1.1;white-space:nowrap;transform-origin:50% 50%;opacity:0;transform:scale(.94);transition:opacity .35s ease,transform .6s cubic-bezier(.2,.7,.2,1);will-change:transform,opacity}
+    #pf-boot .w{position:absolute;left:0;right:0;top:50%;margin-top:-.55em;text-align:center;font-family:'PfBoot','Cormorant Garamond',Georgia,serif;font-weight:600;font-size:min(56px,15vw);line-height:1.1;white-space:nowrap;transform-origin:50% 50%;opacity:0;transform:scale(.94);transition:opacity .35s ease,transform .6s cubic-bezier(.2,.7,.2,1);will-change:transform,opacity}
     #pf-boot .s{color:#f0c040}   /* the head's own gold, under the gradient: the gradient fades off it on the way up — the word's light never dips */
     #pf-boot .g{background:linear-gradient(95deg,#ffd96e,#f6e7b8 50%,#f0c040);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
     #pf-boot.in .w{opacity:1;transform:none}
@@ -110,9 +160,13 @@
       if(same) setTimeout(gone, w); else{ el.classList.add('out'); setTimeout(gone, 300); } }
     setTimeout(function(){ ready=true; fade(); }, 25000);
     el.addEventListener('click', function(){ B.finish(); });
-    // the wordmark shows once its type is there (or after .9 s, in whatever type there is): it never changes type on the screen
+    // the dark colour scheme (the meta in the head) was for the time before the first paint only: once the page has painted it goes,
+    // the app's own controls are styled for the light one
+    var cs=document.getElementById('pf-cs'), csOff=function(){ if(!cs) return; try{ cs.setAttribute('content','light'); cs.parentNode && cs.parentNode.removeChild(cs); }catch(e){} cs=null; };
+    if(window.requestAnimationFrame) requestAnimationFrame(function(){ requestAnimationFrame(csOff); }); setTimeout(csOff, 1200);
+    // the wordmark shows once its type is there — it is in the page, so at once (or after .9 s, in whatever type there is): it never changes type on the screen
     var show=function(){ if(shown) return; shown=Date.now(); el.classList.add('in'); plan(); };
-    try{ var tm=setTimeout(show, 900); document.fonts.load('600 56px "Cormorant Garamond"').then(function(){ clearTimeout(tm); show(); }, function(){ clearTimeout(tm); show(); }); }catch(e){ show(); }
+    try{ var tm=setTimeout(show, 900); document.fonts.load('600 56px "PfBoot"').then(function(){ clearTimeout(tm); show(); }, function(){ clearTimeout(tm); show(); }); }catch(e){ show(); }
   })();
   </script>
   <div id="root"></div>
