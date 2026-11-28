@@ -18947,8 +18947,11 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
     let cs=null; try{ cs=_liveChords(it.piece); }catch(_){ cs=null; }
     if(cs && typeof cs.then==='function'){ if(!rec.w){ rec.w=1; cs.then((x)=>{ rec.w=0; if(!x || !x.length) rec.bad=1; }).catch(()=>{ rec.w=0; rec.bad=1; }); } return null; }
     if(!cs || !cs.length){ rec.bad=1; return null; }
-    const P=_lhPrep(it.mos ? {piece:it.piece, style:null, phase:0} : it, cs, box); if(!P){ rec.bad=1; return null; }
-    P.fv.lim=cs.length; const c=document.createElement('canvas'); try{ _favPaint(c, P.fv, {chords:cs}, S, tone, P.lay); }catch(_){ rec.bad=1; return null; }
+    // a painter paints in the card's frame. The Mosaic keeps its own (its grid is laid out for that one) and covers the card from the middle,
+    // exactly as For You shows it once it plays (_feedDraw) — painted at the size it is shown at, so its blocks stay sharp
+    const P=_lhPrep(it.mos ? {piece:it.piece, style:null, phase:0} : it, cs, it.mos ? null : box); if(!P){ rec.bad=1; return null; }
+    const S1=it.mos ? Math.min(4, S*Math.max(bw/Math.max(1,P.lay.CW), bh/Math.max(1,P.lay.CH))) : S;
+    P.fv.lim=cs.length; const c=document.createElement('canvas'); try{ _favPaint(c, P.fv, {chords:cs}, S1, tone, P.lay); }catch(_){ rec.bad=1; return null; }
     rec.c = (c.width===W && c.height===H) ? c : fit(c, c.width||1, c.height||1); rec.f=null; return rec.c; };
   // the step j under the first screen's shade (PF_SHADE), as a finger coming down from For You's first painting brings it
   const _lhFrame = (j)=>{ const cv0=liveCvRef.current, box=(cv0 && cv0.parentElement) || feedCardRef.current; if(!box) return null; const bw=box.clientWidth, bh=box.clientHeight; if(!(bw>40 && bh>40)) return null;
