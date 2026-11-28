@@ -51,30 +51,38 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&display=swap">
   <link rel="preload" as="image" type="image/webp" href="/studio/first.webp">   <!-- the first painter's painting (Klimt's Fifth): at hand when the app's first screen asks for it -->
   <style>
-    #pf-boot{position:fixed;inset:0;z-index:2147483000;background:#07060c;cursor:pointer;overflow:hidden;transition:opacity .24s ease}
+    #pf-boot{position:fixed;inset:0;z-index:2147483000;cursor:pointer;overflow:hidden;transition:opacity .24s ease}
+    #pf-boot::before{content:"";position:absolute;inset:0;background:#07060c;transition:opacity .45s ease;will-change:opacity}   /* the dark under the wordmark: it clears (.clr) while the word rises, once the first screen is there under it */
     #pf-boot.out{opacity:0;pointer-events:none}
-    #pf-boot .w{position:absolute;left:0;right:0;top:50%;margin-top:-.55em;text-align:center;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:min(56px,15vw);line-height:1.1;white-space:nowrap;transform-origin:50% 50%;opacity:0;transform:scale(.94);transition:opacity .3s ease,transform .5s cubic-bezier(.2,.7,.2,1);will-change:transform,opacity}
+    #pf-boot .w{position:absolute;left:0;right:0;top:50%;margin-top:-.55em;text-align:center;font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;font-size:min(56px,15vw);line-height:1.1;white-space:nowrap;transform-origin:50% 50%;opacity:0;transform:scale(.94);transition:opacity .35s ease,transform .6s cubic-bezier(.2,.7,.2,1);will-change:transform,opacity}
+    #pf-boot .s{color:#f0c040}   /* the head's own gold, under the gradient: the gradient fades off it on the way up — the word's light never dips */
     #pf-boot .g{background:linear-gradient(95deg,#ffd96e,#f6e7b8 50%,#f0c040);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-    #pf-boot .s{color:#f0c040}
-    #pf-boot.in .w{transform:none}
-    #pf-boot.in .g{opacity:1}
-    #pf-boot.go .w{transition:opacity .3s ease .14s,transform .46s cubic-bezier(.5,0,.2,1)}
+    #pf-boot.in .w{opacity:1;transform:none}
+    #pf-boot.go{pointer-events:none}
+    #pf-boot.clr::before{opacity:0}
+    #pf-boot.go .w{transition:opacity .42s ease .12s,transform .62s cubic-bezier(.45,0,.15,1)}
     #pf-boot.go .g{opacity:0}
-    #pf-boot.go .s{opacity:1}
+    html.pf-boot-fly .pf-st-word{opacity:0}   /* the head's own word waits unseen until the rising one has landed on it */
     @media (prefers-reduced-motion: reduce){#pf-boot .w{transform:none;transition:opacity .3s ease}}
   </style>
 </head>
 <body>
-    <div id="pf-boot" aria-hidden="true"><div class="w g">Paintiano</div><div class="w s">Paintiano</div></div>
+    <div id="pf-boot" aria-hidden="true"><div class="w s">Paintiano</div><div class="w g">Paintiano</div></div>
   <script>
   (function(){
-    var el=document.getElementById('pf-boot'), ws=el.querySelectorAll('.w'), cbs=[], T0=Date.now(), MIN=460, done=false, ready=false, going=false, skip=false;
-    // ready: the app has mounted underneath. The wordmark has had its breath (MIN) — it flies to the word in the app's head and the
-    // overlay fades; a tap lets go at once. A hard cap of 25 s in case the app never comes.
+    var el=document.getElementById('pf-boot'), ws=el.querySelectorAll('.w'), root=document.documentElement, cbs=[], HOLD=800, FLY=620, shown=0, clr=0, tw=null, done=false, ready=false, going=false, skip=false;
+    // The wordmark comes once its type is there, stands for a while (HOLD, counted from when it CAME — it was counted from the page's
+    // start: on a quick phone the app was there before the type, and the word flashed and left), then rises to the word in the app's
+    // head while the first screen comes up under it (the app is told as the word lifts off). A tap lets go at once.
+    // ready: the app has mounted underneath. A hard cap of 25 s in case it never comes.
     var B=window.__pfBoot={ done:false, onDone:function(f){ if(B.done) f(); else cbs.push(f); },
-      ready:function(){ if(ready) return; ready=true; var w=skip ? 0 : MIN-(Date.now()-T0); if(w>0) setTimeout(go, w); else go(); },
+      ready:function(){ if(ready) return; ready=true; plan(); },
       finish:function(){ skip=true; if(ready) fade(); } };
-    function fade(){ if(done) return; done=true; B.done=true; el.classList.add('out'); setTimeout(function(){ el.parentNode && el.parentNode.removeChild(el); },300); cbs.forEach(function(f){ try{ f(); }catch(e){} }); }
+    function plan(){ if(!ready || done || going) return; if(skip){ go(); return; } if(!shown) return;   // not on the screen yet: show() plans again
+      var w=HOLD-(Date.now()-shown); clearTimeout(tw); if(w>0) tw=setTimeout(go, w); else go(); }
+    function tell(){ if(B.done) return; B.done=true; cbs.forEach(function(f){ try{ f(); }catch(e){} }); }
+    function gone(){ el.parentNode && el.parentNode.removeChild(el); }
+    function fade(){ if(done) return; done=true; root.classList.remove('pf-boot-fly'); el.classList.add('out'); setTimeout(gone, 300); tell(); }
     function box(n){ try{ var c=n.firstChild; while(c && c.nodeType!==3) c=c.nextSibling; if(c){ var g=document.createRange(); g.selectNodeContents(c); var q=g.getBoundingClientRect(); if(q.width>0 && q.height>0) return q; } }catch(e){} return n.getBoundingClientRect(); }
     function go(){ if(done || going) return; going=true;
       var reduce=false; try{ reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
@@ -83,12 +91,27 @@
       if(skip || reduce || !r || !(r.width>0 && r.height>0) || !(a.width>0)){ fade(); return; }
       var k=(parseFloat(getComputedStyle(t).fontSize)||24)/(parseFloat(getComputedStyle(ws[0]).fontSize)||56);
       var dx=(r.left+r.width/2)-(a.left+a.width/2), dy=(r.top+r.height/2)-(a.top+a.height/2);
+      root.classList.add('pf-boot-fly');
+      try{ ws[0].style.textShadow='0 '+(2/k).toFixed(2)+'px '+(18/k).toFixed(2)+'px rgba(0,0,0,.6)'; }catch(e){}   // the head word's own shadow, at this one's size: nothing changes when they swap
       el.classList.add('in'); el.classList.add('go'); for(var i=0;i<ws.length;i++) ws[i].style.transform='translate('+dx.toFixed(1)+'px,'+dy.toFixed(1)+'px) scale('+k.toFixed(4)+')';
-      setTimeout(fade, 480); }
+      // the app is told once the word is on its way (two frames on: its rise is the compositor's by then, the app's first work cannot hold
+      // it back) — its first screen comes up under the rising word. Landed: when the rise has ended (or, at the latest, a while after)
+      var raf=window.requestAnimationFrame ? function(f){ requestAnimationFrame(f); } : function(f){ setTimeout(f, 16); };
+      raf(function(){ raf(tell); }); setTimeout(tell, 140);
+      // the dark clears once the app's first screen stands under it (what the app shows before that is not for the eye) — at the latest when the word lands
+      var t0=Date.now(); (function w(){ if(clr) return; var on=false; try{ on=!!document.querySelector('.pf-lh'); }catch(e){} if(on || Date.now()-t0>=FLY) clear(); else raf(w); })(); setTimeout(clear, FLY+60);
+      ws[0].addEventListener('transitionend', function(e){ if(e.propertyName==='transform') land(); }); setTimeout(land, FLY+500); }
+    function clear(){ if(clr) return; clr=Date.now(); el.classList.add('clr'); }
+    // landed: the head's own word shows under it (the same word in the same place), then this one goes — unseen. If the head has moved
+    // meanwhile (a tap went through to the app), this one fades off instead
+    function land(){ if(done) return; done=true; root.classList.remove('pf-boot-fly');
+      var same=false; try{ var t=document.querySelector('.pf-st-word'), r=t && box(t), a=box(ws[0]); same=!!r && Math.abs((r.left+r.width/2)-(a.left+a.width/2))<1.5 && Math.abs((r.top+r.height/2)-(a.top+a.height/2))<1.5; }catch(e){}
+      clear(); var w=Math.max(60, 480-(Date.now()-clr));   // it goes once the dark has cleared: until then it lies on the head's word, the same
+      if(same) setTimeout(gone, w); else{ el.classList.add('out'); setTimeout(gone, 300); } }
     setTimeout(function(){ ready=true; fade(); }, 25000);
     el.addEventListener('click', function(){ B.finish(); });
     // the wordmark shows once its type is there (or after .9 s, in whatever type there is): it never changes type on the screen
-    var show=function(){ el.classList.add('in'); };
+    var show=function(){ if(shown) return; shown=Date.now(); el.classList.add('in'); plan(); };
     try{ var tm=setTimeout(show, 900); document.fonts.load('600 56px "Cormorant Garamond"').then(function(){ clearTimeout(tm); show(); }, function(){ clearTimeout(tm); show(); }); }catch(e){ show(); }
   })();
   </script>
