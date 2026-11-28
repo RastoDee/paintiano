@@ -33237,6 +33237,7 @@ const STUDIO_FX_CSS = `
 .pf-chg.pnl .pf-chg-rows.src>.pf-chg-row.pic .pf-chg-tx{position:relative;gap:1px}
 .pf-chg.pnl .pf-chg-rows.src>.pf-chg-row.pic .pf-chg-tx b{font-size:calc(var(--pf-read-scale,1) * 15.5px);font-weight:700;text-shadow:0 1px 8px rgba(0,0,0,.75)}
 .pf-chg.pnl .pf-chg-rows.src>.pf-chg-row.pic .pf-chg-tx small{display:block;font-size:calc(var(--pf-read-scale,1) * 11.5px);line-height:1.25;color:rgba(242,238,232,.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 6px rgba(0,0,0,.85)}
+@media (max-width:350px){.pf-chg.pnl .pf-chg-rows.src>.pf-chg-row.pic{padding:0 9px 9px}.pf-chg.pnl .pf-chg-rows.src>.pf-chg-row.pic .pf-chg-tx small{font-size:calc(var(--pf-read-scale,1) * 10.5px)}}
 /* a long press on a tab or a tile is not a drag: the phone lifted a tilted copy of it and left it on the screen */
 .pf-chg-tab,.pf-chg-row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
 .pf-chg.pnl{max-height:66dvh;gap:10px;padding-top:9px;box-shadow:0 -12px 40px rgba(0,0,0,.5)}
