@@ -32865,7 +32865,7 @@ function PfMarquee({ children, k }){
 // into two to five lines in the title's narrow column. Here the names stay whole as long as they can: what does not fit gives way in
 // this order — the palette's name, the word after ✦ (Signature → ✦), the badge, "inspired by" (the name alone stays: short) — and only
 // then the names end in …
-function PfCapLine({ k, cls, pal, pre, ico, mark, names, short, sig }){
+function PfCapLine({ k, cls, pal, pre, mark, names, short, sig }){
   const box=useRef(null), nm=useRef(null), wR=useRef(0); const [lv,setLv]=useState(0); const [tk,setTk]=useState(0);
   useLayoutEffect(()=>{ setLv(0); },[k]);
   // (measured to the fraction of a pixel: scrollWidth is a whole number, so names 0.4 px too wide showed their … with everything else still there)
@@ -32880,7 +32880,7 @@ function PfCapLine({ k, cls, pal, pre, ico, mark, names, short, sig }){
   return (<div ref={box} className={'pf-st-meta-l pf-st-cap'+(cls||'')}>
     {pre && lv<3 && (<span className="b">{pre}{' · '}</span>)}
     {pal && lv<1 && (<span className="p">{pal}{' · '}</span>)}
-    {ico}{mark}
+    {mark}
     <span ref={nm} className="n">{(lv>=4 && short) ? short : names}</span>
     {sig && (<span className="s">{' · '}{lv>=2 ? sig.split(' ')[0] : sig}</span>)}
   </div>);
@@ -33260,7 +33260,6 @@ const STUDIO_FX_CSS = `
 .pf-st-cap>*{flex:none;white-space:pre}
 .pf-st-cap>.n{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .pf-st-cap>.s{font-weight:600}
-.pf-st-cap>svg{margin-right:5px;opacity:.85}
 .pf-st-cap.ai{color:#e4b2ff}
 .pf-st-cap-dot{display:inline-block;width:7px;height:7px;border-radius:50%;vertical-align:middle}
 .pf-st-tt:active{background:rgba(240,215,138,.10)}
@@ -47300,16 +47299,15 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
   // painter (a fusion: its style mark — a tap = the next style — and the names); a picture: the composer(s) and the form. ✦ Signature is
   // there only when it is ON (the old caption kept it dimmed when off — it read as on; the switch itself is in Look). One painter (one
   // composer) keeps "inspired by …" — a tribute, not a copy, as the Guide says of the canvas — and it is the last thing to give way.
-  // The title is one tap (the panel), so nothing in this line but the mark is a button.
+  // The title is one tap (the panel), so nothing in this line but the mark is a button. The crossed arrows of the old 🔀 before a white
+  // painter (composer) are not here (28 Nov 2026, "a relic"): the Studio has no 🔀 — white and gold are seen on the faces in Look.
   const _capLineSt = ()=>{
     const img = loadedSource==='image' && !moodFromImg, up=(x)=>x ? String(x)[0].toUpperCase()+String(x).slice(1) : '';
-    const dice=(<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>);
-    const pal=_stepAt(2) ? up(t(mode)) : ''; let palN=pal, pre='', ico=null, mark=null, names='', short='', sig='', ai=false;
+    const pal=_stepAt(2) ? up(t(mode)) : ''; let palN=pal, pre='', mark=null, names='', short='', sig='', ai=false;
     const by=(x)=>String(t('inspiredBy')||'{artist}').replace('{artist}', x);
     if(!img){
       const es=effectiveStyle;
       if(es && es!=='notes' && es!=='mosaic' && STYLE_INSPIRED[es]){
-        if(!style && _stepAt(3)) ico=dice;
         if(proStatus==='free' && tastePreviewKey && tastePreviewKey===es && !isDailyArtist(es)) pre='🔓 '+_stT('tasteBadge');
         else if(isDailyArtist(es) && _stepAt(2)) pre='✦ '+ts('dailyTitle','Artist of the day');
         if(painterStage.length){ mark=_fsMarkSt('art'); names=_stageNames('art'); }
@@ -47320,7 +47318,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       if(pal && mode==='bw' && bwAccent) palN=(<>{pal}{' · '}<i className="pf-st-cap-dot" style={{background:`hsl(${bwAccent.hue},85%,55%)`}}/>{' '}{({EN:'accent',SK:'akcent',DE:'Akzent',FR:'accent',ES:'acento',PT:'acento',zh:'强调色',zhTW:'強調色',ja:'アクセント'})[lang]||'accent'}</>);
       if(imgPlayMode==='compose'){ ai=true; names=up(t('imgCompose')!=='imgCompose' ? t('imgCompose') : 'AI compose'); }
       else if(imgComposer){
-        if(composerDice && _stepAt(3)) ico=dice;
         if(proStatus==='free' && tasteCKey && tasteCKey===imgComposer && !isDailyComposer(imgComposer)) pre='🔓 '+_stT('tasteBadge');
         else if(isDailyComposer(imgComposer) && _stepAt(2)) pre='✦ '+ts('dailyTitle','Artist of the day');
         if(composerStage.length){ mark=_fsMarkSt('comp'); names=_stageNames('comp'); }
@@ -47328,7 +47325,7 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       } else names=up(t('dir_'+imgDir));
       if(imgSig && imgSigActive && imgPlayMode==='scan' && _stepAt(3)) sig='✦ '+_sigT('label');
     }
-    return (<PfCapLine k={[pal, pre, names, sig, mark ? _fusionStyleOf(img ? 'comp' : 'art') : '', ico ? 1 : 0, (img && mode==='bw' && bwAccent) ? bwAccent.hue : ''].join('|')} cls={ai ? ' ai' : ''} pal={palN} pre={pre} ico={ico} mark={mark} names={names} short={short} sig={sig}/>);
+    return (<PfCapLine k={[pal, pre, names, sig, mark ? _fusionStyleOf(img ? 'comp' : 'art') : '', (img && mode==='bw' && bwAccent) ? bwAccent.hue : ''].join('|')} cls={ai ? ' ai' : ''} pal={palN} pre={pre} mark={mark} names={names} short={short} sig={sig}/>);
   };
   // a built-in picture: its kept Atmosphere / Melody (SAMPLE_IMG_BAKE) — no AI call, no trial, no lock
   const _sampleImgT = ()=>{ const n=String(imgNameRef.current||''); const it=(typeof SAMPLE_IMAGES!=='undefined' ? SAMPLE_IMAGES : []).find(x=>x && (x.t+'.jpg')===n); return it ? it.t : null; };
