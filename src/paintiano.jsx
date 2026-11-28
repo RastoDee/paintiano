@@ -33174,9 +33174,18 @@ const STUDIO_FX_CSS = `
 .pf-st-star:active{transform:scale(.92)}
 .pf-st-starw{flex:1;justify-content:center}
 .pf-st-bar:has(.pf-st-star.q)::before{opacity:.45}
-.pf-hb-lbl{position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:6px 10px;border-radius:10px;background:#fff;color:#1a1408;font-size:calc(var(--pf-read-scale,1) * 12.5px);font-weight:600;box-shadow:0 6px 16px rgba(0,0,0,.45);pointer-events:none;animation:pfStTipIn .18s ease-out both;z-index:2}
-.pf-hb-lbl.r{left:auto;right:-46px;transform:none;animation-name:pfStTipInL}   /* "again to clear" at the Clear button itself (its right edge on the row's), not up on the painting (28 Nov 2026) */
+/* a held button's name: the panel's own small label under the button, in gold — where the chips' names stand (28 Nov 2026; before: a white box over the Music / Image / Look tiles) */
+.pf-hb-lbl{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;font-size:calc(var(--pf-read-scale,1) * 9px);font-weight:600;letter-spacing:.08em;text-transform:uppercase;line-height:1.15;color:#f0d78a;pointer-events:none;animation:pfHbIn .18s ease-out both;z-index:2}
+@keyframes pfHbIn{from{opacity:0;transform:translate(-50%,-3px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes pfHbInR{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.pf-pnl-ib:has(>.pf-hb-lbl:not(.r)){color:#f0d78a;border-color:rgba(240,215,138,.6)}   /* … and the held button lights gold */
+.pf-hb-lbl.r{left:auto;right:-46px;transform:none;color:#ff9aa6;animation-name:pfHbInR}   /* "again to clear" at the Clear button itself (its right edge on the row's), not up on the painting (28 Nov 2026) */
 .pf-pnl-ib.warn .pf-hb-lbl:not(.r){display:none}
+.pf-pnl-ib:has(>.pf-hb-lbl):active{transform:none}   /* held long enough for its name: the button stands still, so its name does not move with it */
+/* a row with no chips beside the buttons (Music, Image, the first level) has no line of names under it — a name there would lie on the first row below. There it stands on the row itself, left of the buttons (each button knows how far left that is) */
+.pf-pnl-bar:not(:has(.pf-pnl-acts)) .pf-hb-lbl,.pf-pnl-bar:not(:has(.pf-pnl-acts)) .pf-hb-lbl.r{top:50%;left:auto;right:calc(100% + 10px + var(--hbx,0px));transform:translateY(-50%);width:max-content;max-width:min(138px, calc(100vw - 216px));white-space:normal;text-align:right;animation-name:pfHbInS}
+.pf-pnl-ibs>.pf-pnl-ib:nth-child(2){--hbx:46px}.pf-pnl-ibs>.pf-pnl-ib:nth-child(3){--hbx:92px}.pf-pnl-ibs>.pf-pnl-ib:nth-child(4){--hbx:138px}
+@keyframes pfHbInS{from{opacity:0}to{opacity:1}}
 /* the panel (a tap on the title in the Studio): the painting whole above it, three cards, round buttons (held: their names) */
 .pf-pnl-ib{position:relative;flex:none;width:40px;height:40px;padding:0;border-radius:50%;border:1px solid rgba(242,238,232,.2);background:rgba(255,255,255,.05);color:#f2eee8;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .pf-pnl-ib svg{width:18px;height:18px}
