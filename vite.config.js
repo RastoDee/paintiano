@@ -84,7 +84,7 @@ export default defineConfig({
         // and never the landing page (we don't want offline navigations to
         // accidentally hit a cached version while the PWA is being served).
         globPatterns: ['**/*.{js,css,svg,png,ico,woff2}', 'play.html', 'salamander/*.mp3'],   // the piano samples too: offline from the first install
-        globIgnores: ['**/api/**', 'index.html', 'concept.html'],
+        globIgnores: ['**/api/**', 'index.html', 'concept.html', 'splash/**'],   // the launch images are iOS's to fetch, not the worker's (44 of them)
         // The SPA navigation fallback now targets play.html (the PWA shell),
         // restricted to /play* URLs only. Root / and /landing.html stay
         // un-intercepted by the SW.
