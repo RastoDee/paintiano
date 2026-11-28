@@ -3086,10 +3086,6 @@ const STUDIO_FX_CSS = `
 .pf-pnl-head{order:-1;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
 .pf-app-root .pf-strip-grid.pf-tray:has(.pf-pnl-head){max-height:66dvh!important}
 .pf-app-root .pf-strip-grid.pf-tray:has(.pf-pnl-head)::before{display:none!important}
-/* the fusion's type, in Look: Collage · Synthesis · Genesis (Pro) — the caption only tells it now */
-.pf-tray-fs{display:flex;background:rgba(255,255,255,.06);border-radius:12px;padding:3px;gap:2px}
-.pf-tray-fs button{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 4px;border:0;border-radius:9px;background:none;color:#cfc8d8;font-family:inherit;font-size:calc(var(--pf-read-scale,1) * 12.5px);font-weight:600;letter-spacing:.02em;text-transform:none;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap}
-.pf-tray-fs button.on{background:#f0d78a;color:#1a1408}
 .pf-st-tip{position:absolute;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:8px 12px;border-radius:12px;background:#fff;color:#1a1408;font-size:calc(var(--pf-read-scale,1) * 13px);font-weight:600;box-shadow:0 8px 20px rgba(0,0,0,.45);pointer-events:none;animation:pfStTipIn .3s cubic-bezier(.2,.8,.2,1) both}
 .pf-st-tip::after{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;margin-left:-5px;background:#fff;transform:rotate(45deg)}
 .pf-st-tip.l{left:-4px;transform:none;animation-name:pfStTipInL}
@@ -5460,18 +5456,6 @@ const FREE_COMPOSER_KEYS = ['chopin','satie','gershwin'];
       const ns=_fsNext(_fsNorm(J.style),'comp');
       globalThis.__JAM_STYLE_PIN={ sig:J.sig, h:J.h, style:ns };
       globalThis.__COMP_JAM_STYLE={ sig:J.sig, h:J.h, style:ns, roles:null };   // until the jam is composed again (then __onJamStyle re-reads it)
-      setJamFlipN(n=>n+1);
-    }catch(_){}
-  };
-  // the fusion's (jam's) type set to v at once — Look's switch: Collage A · Synthesis E · Genesis G
-  const _setFusionStyle = (kind, v)=>{
-    try{
-      if(kind==='art'){ const fa=painterStage.length ? _fusionAddr(_jamStage(), phaseIndexRef.current|0) : null; if(!fa || _fsNorm(fa.fs)===v) return;
-        setPhaseIndex(fa.phs[0]|0); _setFuRoll({ keys:fa.keys.slice(), phs:fa.phs.slice(), fs:v }); return; }
-      const J=globalThis.__COMP_JAM_STYLE; const ks=[imgComposer, ...composerStage].filter(Boolean);
-      if(!J || J.h==null || J.sig!==ks.join() || _fsNorm(J.style)===v) return;
-      globalThis.__JAM_STYLE_PIN={ sig:J.sig, h:J.h, style:v };
-      globalThis.__COMP_JAM_STYLE={ sig:J.sig, h:J.h, style:v, roles:null };
       setJamFlipN(n=>n+1);
     }catch(_){}
   };
